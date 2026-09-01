@@ -389,6 +389,52 @@
     .sim-tab-content { display: none; }
     .sim-tab-content.active { display: block; }
 
+    /* ── 선박 스케줄 관리 패널 ── */
+    #shipMgrPanel {
+      position: fixed;
+      top: 60px; left: 50px; right: auto; bottom: auto;
+      z-index: 1010;
+      background: rgba(8,20,45,0.94);
+      border: 1px solid rgba(80,160,255,0.4);
+      border-radius: 10px;
+      padding: 10px 16px;
+      color: #e8f4ff;
+      font-size: 12px;
+      width: 340px;
+      max-height: 80vh;
+      overflow-y: auto;
+      backdrop-filter: blur(6px);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      display: none;
+    }
+    #shipMgrPanel.visible { display: block; }
+    .ship-row {
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 7px; padding: 7px 9px; margin-bottom: 8px;
+      background: rgba(255,255,255,0.04);
+    }
+    .ship-row-top { display: flex; align-items: center; gap: 5px; margin-bottom: 5px; }
+    .ship-row input[type="text"], .ship-row input[type="number"], .ship-row input[type="time"], .ship-row select {
+      background: rgba(40,80,140,0.8); border: 1px solid rgba(80,160,255,0.4);
+      color: #fff; border-radius: 4px; padding: 2px 4px; font-size: 11px; font-family: inherit;
+    }
+    .ship-row input[type="color"] {
+      width: 22px; height: 22px; padding: 0; border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 4px; background: none; cursor: pointer;
+    }
+    .ship-row-name { flex: 1; min-width: 0; }
+    .ship-row-del {
+      background: rgba(200,40,40,0.3); border: 1px solid rgba(255,80,80,0.4);
+      color: #ff9999; border-radius: 4px; padding: 1px 7px; cursor: pointer; font-size: 12px;
+    }
+    .ship-row-del:hover { background: rgba(200,40,40,0.6); }
+    .ship-row-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 6px; font-size: 10px; color: #88aabb; margin-bottom: 5px; }
+    .ship-row-grid label { display: flex; flex-direction: column; gap: 2px; }
+    .ship-row-grid select, .ship-row-grid input { width: 100%; box-sizing: border-box; }
+    .ship-row-coords { display: flex; gap: 4px; margin-top: 2px; }
+    .ship-row-coords input { width: 50%; }
+    .ship-row-calc { font-size: 10px; color: #7ecfff; background: rgba(255,255,255,0.05); border-radius: 4px; padding: 4px 6px; }
+
     /* 항로 거리 라벨 */
     .route-dist-label {
       font-size: 11px; font-weight: 700;
@@ -396,6 +442,20 @@
       pointer-events: none;
       text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.8);
     }
+
+    /* 항구 POI 라벨 (지도에 상시 노출) */
+    .port-label {
+      background: rgba(8,20,45,0.88) !important;
+      border: 1px solid rgba(255,255,255,0.25) !important;
+      border-radius: 8px;
+      padding: 2px 8px !important;
+      color: #eaf2ff;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    }
+    .port-label::before { border: none !important; }
 
     /* 선박 마커 */
     .ship-icon-wrap {
@@ -450,25 +510,34 @@
   </div>
   <div class="sim-body">
 
-  <!-- 속도 설정 (공통) -->
+  <!-- 속도·출항시각 설정 (공통) -->
   <div style="background:rgba(255,255,255,0.05);border-radius:7px;padding:7px 10px;margin-bottom:8px;font-size:11px;color:#aac8e8">
-    <div style="color:#7ecfff;font-weight:700;margin-bottom:5px">⚙ 순항속도 설정</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+      <div style="color:#7ecfff;font-weight:700">⚙ 순항속도 · 출항시각 설정</div>
+      <div style="color:#ffee88;font-weight:700">🕐 <span id="wallClock">09:00</span></div>
+    </div>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <label>⛴ 산타모니카
         <input id="smKtsInput" type="number" value="42" min="10" max="80" step="0.1"
           style="width:52px;margin-left:4px;background:rgba(40,80,140,0.8);border:1px solid rgba(80,160,255,0.4);color:#fff;border-radius:4px;padding:2px 4px;font-size:11px"
           oninput="document.getElementById('smKmh').textContent='('+(+this.value*1.852).toFixed(1)+'km/h)'"> kts
         <span id="smKmh" style="color:#ffcc44">(77.8km/h)</span>
+        · 출항
+        <input id="smDepartInput" type="time" value="09:00"
+          style="width:76px;margin-left:2px;background:rgba(40,80,140,0.8);border:1px solid rgba(80,160,255,0.4);color:#fff;border-radius:4px;padding:2px 4px;font-size:11px">
       </label>
       <label>🚢 퀸비틀
         <input id="qbKtsInput" type="number" value="29" min="10" max="80" step="0.1"
           style="width:52px;margin-left:4px;background:rgba(40,80,140,0.8);border:1px solid rgba(80,160,255,0.4);color:#fff;border-radius:4px;padding:2px 4px;font-size:11px"
           oninput="document.getElementById('qbKmh').textContent='('+(+this.value*1.852).toFixed(1)+'km/h)'"> kts
         <span id="qbKmh" style="color:#66ccff"></span>
+        · 출항
+        <input id="qbDepartInput" type="time" value="09:00"
+          style="width:76px;margin-left:2px;background:rgba(40,80,140,0.8);border:1px solid rgba(80,160,255,0.4);color:#fff;border-radius:4px;padding:2px 4px;font-size:11px">
       </label>
       <button onclick="applySimSpeeds()" style="padding:3px 9px;background:rgba(0,160,80,0.4);border:1px solid rgba(0,200,100,0.4);color:#88ffbb;border-radius:5px;font-size:11px;cursor:pointer;font-family:inherit">적용</button>
     </div>
-    <div style="font-size:10px;color:#667788;margin-top:4px" id="simSpeedNote">※ 스케줄 역산 기준</div>
+    <div style="font-size:10px;color:#667788;margin-top:4px" id="simSpeedNote">※ 스케줄 역산 기준 · 출항시각은 선박마다 다르게 설정 가능 (가장 이른 출항 기준으로 동시 재생)</div>
   </div>
 
   <!-- 탭 버튼 -->
@@ -484,7 +553,10 @@
     <div style="border:1px solid rgba(255,200,0,0.3);border-radius:7px;padding:7px 10px;margin-bottom:7px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
         <div style="font-size:12px;font-weight:700;color:#ffcc44">⛴ 산타모니카호 (경유)</div>
-        <div style="font-size:11px;color:#aac8e8">왕복 <span id="smEstTime" style="color:#ffcc44;font-weight:700">—</span></div>
+        <div style="text-align:right;font-size:11px;color:#aac8e8">
+          <div>편도 도착 <span id="smOnewayTime" style="color:#ffcc44;font-weight:700">—</span></div>
+          <div>왕복 <span id="smEstTime" style="color:#ffcc44;font-weight:700">—</span></div>
+        </div>
       </div>
       <div class="sim-specs" style="margin-bottom:3px">Incat 76m · 최고속력 45노트(78km/h) · 승객 621명 · 히타카츠 25분 경유</div>
       <div class="sim-specs" style="margin-bottom:3px;color:#ffaa66">※ 참고 — 엘도라도호(포항↔울릉도): 평균 45노트(83km/h) · 최고 51노트(95km/h)</div>
@@ -502,7 +574,10 @@
     <div style="border:1px solid rgba(80,180,255,0.3);border-radius:7px;padding:7px 10px;margin-bottom:7px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
         <div style="font-size:12px;font-weight:700;color:#66ccff">🚢 퀸비틀 (직항)</div>
-        <div style="font-size:11px;color:#aac8e8">왕복 <span id="qbEstTime" style="color:#66ccff;font-weight:700">—</span></div>
+        <div style="text-align:right;font-size:11px;color:#aac8e8">
+          <div>편도 도착 <span id="qbOnewayTime" style="color:#66ccff;font-weight:700">—</span></div>
+          <div>왕복 <span id="qbEstTime" style="color:#66ccff;font-weight:700">—</span></div>
+        </div>
       </div>
       <div class="sim-specs" style="margin-bottom:5px">JR큐슈고속선 · <span id="qbKtsDisp"></span>노트 역산</div>
       <div class="sim-specs">부산→하카타 직항 213km(115해리) · 스케줄 3시간 40분</div>
@@ -524,7 +599,10 @@
     <div style="border:1px solid rgba(68,255,221,0.3);border-radius:7px;padding:7px 10px;margin-bottom:7px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
         <div style="font-size:12px;font-weight:700;color:#44ffdd">⛴ 산타모니카호 (하카타 직항)</div>
-        <div style="font-size:11px;color:#aac8e8">왕복 <span id="sm2EstTime" style="color:#44ffdd;font-weight:700">—</span></div>
+        <div style="text-align:right;font-size:11px;color:#aac8e8">
+          <div>편도 도착 <span id="sm2OnewayTime" style="color:#44ffdd;font-weight:700">—</span></div>
+          <div>왕복 <span id="sm2EstTime" style="color:#44ffdd;font-weight:700">—</span></div>
+        </div>
       </div>
       <div class="sim-specs" style="margin-bottom:3px">Incat 76m · <span id="sm2KtsDisp">42</span>노트 순항 · 히타카츠 미경유</div>
       <div class="sim-specs">부산→하카타 직항 213km(115해리) · 경유 없이 왕복</div>
@@ -537,16 +615,35 @@
       <div class="sim-progress"><div class="sim-progress-bar" id="sm2Bar" style="width:0%;background:linear-gradient(90deg,#00bb88,#44ffdd)"></div></div>
     </div>
 
-    <!-- 시나리오 1 vs 2 비교 -->
+    <!-- 퀸비틀 (직항, 시나리오2도 함께 비교) -->
+    <div style="border:1px solid rgba(80,180,255,0.3);border-radius:7px;padding:7px 10px;margin-bottom:7px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+        <div style="font-size:12px;font-weight:700;color:#66ccff">🚢 퀸비틀 (직항)</div>
+        <div style="text-align:right;font-size:11px;color:#aac8e8">
+          <div>편도 도착 <span id="qb2OnewayTime" style="color:#66ccff;font-weight:700">—</span></div>
+          <div>왕복 <span id="qb2EstTime" style="color:#66ccff;font-weight:700">—</span></div>
+        </div>
+      </div>
+      <div class="sim-specs" style="margin-bottom:5px">JR큐슈고속선 · <span id="qbKtsDisp2"></span>노트 역산</div>
+      <div class="sim-specs">부산→하카타 직항 213km(115해리) · 스케줄 3시간 40분</div>
+      <div class="sim-info" style="margin-bottom:5px">
+        <div class="sim-info-box"><div class="label">경과</div><div class="val" id="qb2Elapsed">0:00</div></div>
+        <div class="sim-info-box"><div class="label">남은</div><div class="val" id="qb2Remain">—</div></div>
+      </div>
+      <div style="text-align:center;margin-bottom:5px"><span class="sim-status sailing" id="qb2Status">대기 중</span></div>
+      <div class="sim-progress"><div class="sim-progress-bar" id="qb2Bar" style="width:0%;background:linear-gradient(90deg,#3399ff,#66ccff)"></div></div>
+    </div>
+
+    <!-- 산타모니카 직항 vs 퀸비틀 직항 비교 -->
     <div style="background:rgba(255,255,255,0.04);border-radius:7px;padding:7px 10px;margin-bottom:3px;font-size:11px">
-      <div style="color:#7ecfff;font-weight:700;margin-bottom:4px">📊 시나리오 비교</div>
+      <div style="color:#7ecfff;font-weight:700;margin-bottom:4px">📊 직항 대 직항 비교</div>
       <div style="display:flex;justify-content:space-between;margin-bottom:3px">
-        <span style="color:#ffcc44">⛴ 경유 왕복</span>
-        <span id="cmp1Time" style="color:#ffcc44;font-weight:700">—</span>
+        <span style="color:#44ffdd">⛴ 산타모니카 직항</span>
+        <span id="cmp2Time" style="color:#44ffdd;font-weight:700">—</span>
       </div>
       <div style="display:flex;justify-content:space-between;margin-bottom:3px">
-        <span style="color:#44ffdd">⛴ 직항 왕복</span>
-        <span id="cmp2Time" style="color:#44ffdd;font-weight:700">—</span>
+        <span style="color:#66ccff">🚢 퀸비틀 직항</span>
+        <span id="cmpQBTime" style="color:#66ccff;font-weight:700">—</span>
       </div>
       <div style="border-top:1px solid rgba(80,160,255,0.2);margin-top:5px;padding-top:5px;text-align:center" id="simDiff2" style="color:#aac8e8">—</div>
     </div>
@@ -570,6 +667,21 @@
   </div>
 
   </div><!-- /.sim-body -->
+</div>
+
+<!-- 선박 스케줄 관리 패널 -->
+<div id="shipMgrPanel">
+  <div class="sim-title">
+    🚢 선박 스케줄 관리
+    <div class="sim-title-btns">
+      <button class="sim-title-btn" onclick="document.getElementById('shipMgrPanel').classList.remove('visible')" title="닫기">✕</button>
+    </div>
+  </div>
+  <div class="sim-body">
+    <div style="font-size:10px;color:#88aabb;margin-bottom:8px">타 선사 배편을 등록해 출항시각·소요시간을 비교하고 선석 겹침 여부를 검토하세요. 항구는 목록에서 고르거나 "직접 입력"으로 좌표를 넣을 수 있습니다.</div>
+    <div id="shipMgrList"></div>
+    <button class="sim-btn primary" style="width:100%;margin-top:2px" onclick="addCustomShip()">+ 선박 추가</button>
+  </div>
 </div>
 
 <div id="map"></div>
@@ -672,7 +784,11 @@ ports.forEach(p => {
   L.marker([p.lat, p.lng], { icon: makeIcon(p.color, p.highlight) })
     .addTo(map)
     .bindPopup(`<div class="popup-title">${p.name}</div><div class="popup-body"><b style="color:${p.color}">${p.role}</b><br/>${p.desc}<br/><br/>${tags}<div class="popup-coords">📍 ${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}</div></div>`,
-      { className: 'custom-popup', maxWidth: 280 });
+      { className: 'custom-popup', maxWidth: 280 })
+    .bindTooltip(p.name, {
+      permanent: true, direction: 'top', offset: [0, p.highlight ? -12 : -9],
+      className: 'port-label'
+    });
 });
 
 // Centripetal Catmull-Rom — 구간 길이 비례 파라미터화로 오버슈트 방지
@@ -1425,7 +1541,42 @@ let _tlSM2, _tlSM2ret, _totalMinSM2, _totalMinSM2ret;
 let sim2Marker = null;
 let _activeSimTab = 1;
 
+// ── 선박별 출항시각 ──
+// 각 배는 자기 자신의 타임라인(0분 = 자신의 출항 시점) 위에서 움직이고,
+// 실제 화면 표시 시에만 "가장 이른 출항" 대비 지연분(_delay)만큼 대기 상태로 붙잡아 둔다.
+let simSMDepartHM = '09:00';
+let simQBDepartHM = '09:00';
+let _smDelay = 0, _qbDelay = 0, _baseMin = 9*60;
+// 사용자가 등록하는 임의 선박 목록 (선석 확보 검토용)
+let customShips = [];
+let _customTL = {};       // id -> {outTL, retTL, totalOut, totalRet}
+let _customMarkers = {};  // id -> L.Marker
+let _shipIdSeq = 1;
+
+function _hmToMin(hm) {
+  const parts = (hm || '09:00').split(':');
+  return (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0);
+}
+function _minToHM(min) {
+  let m = Math.round(min) % 1440;
+  if (m < 0) m += 1440;
+  return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+}
+// 모든 선박(산타모니카·퀸비틀·커스텀 선박)의 출항시각 중 가장 이른 시각을 기준(0분)으로 잡고,
+// 각 배의 지연분(_delay)을 계산한다.
+function _computeDelays() {
+  const smDep = _hmToMin(simSMDepartHM);
+  const qbDep = _hmToMin(simQBDepartHM);
+  let base = Math.min(smDep, qbDep);
+  customShips.forEach(s => { base = Math.min(base, _hmToMin(s.departHM)); });
+  _baseMin = base;
+  _smDelay = smDep - base;
+  _qbDelay = qbDep - base;
+  customShips.forEach(s => { s._delay = _hmToMin(s.departHM) - base; });
+}
+
 function rebuildSim() {
+  _computeDelays();
   const smKmh = simSMkts * 1.852;
   const qbKmh = simQBkts * 1.852;
   // 시나리오 1: SM 경유 + QB 직항
@@ -1444,7 +1595,15 @@ function rebuildSim() {
   _totalMinSM2    = _tlSM2[_tlSM2.length-1].cumMin;
   _tlSM2ret = _buildTL(_retWP, _totalMinSM2 + SIM_RETURN_WAIT, smKmh);
   _totalMinSM2ret = _tlSM2ret[_tlSM2ret.length-1].cumMin;
-  _totalMin = Math.max(_totalMinSMret, _totalMinQBret, _totalMinSM2ret);
+  // 커스텀 선박 타임라인도 함께 재계산
+  rebuildCustomShips();
+  const _customEnds = Object.values(_customTL).map(t => t.delay + t.totalRet);
+  _totalMin = Math.max(
+    _smDelay + _totalMinSMret, _qbDelay + _totalMinQBret, _smDelay + _totalMinSM2ret,
+    ..._customEnds, 0
+  );
+  const wcEl = document.getElementById('wallClock');
+  if (wcEl) wcEl.textContent = _minToHM(_baseMin + simSimMin);
   // UI 업데이트
   const smEl  = document.getElementById('smEstTime');
   const qbEl  = document.getElementById('qbEstTime');
@@ -1452,17 +1611,28 @@ function rebuildSim() {
   if (smEl)  smEl.textContent  = _fmtMin(_totalMinSMret);
   if (qbEl)  qbEl.textContent  = _fmtMin(_totalMinQBret);
   if (sm2El) sm2El.textContent = _fmtMin(_totalMinSM2ret);
-  const c1 = document.getElementById('cmp1Time');
+  // 편도 도착 시간 (출항~하카타 도착까지, 경유 구간은 정박시간 포함)
+  const smOw  = document.getElementById('smOnewayTime');
+  const qbOw  = document.getElementById('qbOnewayTime');
+  const sm2Ow = document.getElementById('sm2OnewayTime');
+  const qb2Ow = document.getElementById('qb2OnewayTime');
+  if (smOw)  smOw.textContent  = _fmtMin(_totalMinSM);
+  if (qbOw)  qbOw.textContent  = _fmtMin(_totalMinQB);
+  if (sm2Ow) sm2Ow.textContent = _fmtMin(_totalMinSM2);
+  if (qb2Ow) qb2Ow.textContent = _fmtMin(_totalMinQB);
+  const qb2El  = document.getElementById('qb2EstTime');
+  const cmpQB  = document.getElementById('cmpQBTime');
   const c2 = document.getElementById('cmp2Time');
-  if (c1) c1.textContent = _fmtMin(_totalMinSMret);
+  if (qb2El) qb2El.textContent = _fmtMin(_totalMinQBret);
+  if (cmpQB) cmpQB.textContent = _fmtMin(_totalMinQBret);
   if (c2) c2.textContent = _fmtMin(_totalMinSM2ret);
   if (simSimMin === 0) {
     const d = _totalMinSMret - _totalMinQBret;
     const diffEl = document.getElementById('simDiff');
-    if (diffEl) diffEl.textContent = `왕복 기준 산타모니카 ${_fmtMin(Math.abs(d))} ${d>0?'더 소요':'단축'}`;
-    const d2 = _totalMinSM2ret - _totalMinSMret;
+    if (diffEl) diffEl.textContent = `왕복 기준 산타모니카 ${_fmtMin(Math.abs(d))} ${d>0?'더 소요':'단축'} (경유 포함)`;
+    const d2 = _totalMinSM2ret - _totalMinQBret;
     const diff2El = document.getElementById('simDiff2');
-    if (diff2El) diff2El.textContent = `직항 시 경유 대비 ${_fmtMin(Math.abs(d2))} ${d2<0?'단축':'추가 소요'}`;
+    if (diff2El) diff2El.textContent = `산타모니카 직항이 퀸비틀 대비 ${_fmtMin(Math.abs(d2))} ${d2>0?'더 소요':'단축'}`;
   }
   const sm2Disp = document.getElementById('sm2KtsDisp');
   if (sm2Disp) sm2Disp.textContent = simSMkts;
@@ -1473,7 +1643,12 @@ function applySimSpeeds() {
   const qbV = parseFloat(document.getElementById('qbKtsInput').value);
   if (!isNaN(smV) && smV>5) simSMkts = smV;
   if (!isNaN(qbV) && qbV>5) simQBkts = qbV;
+  const smD = document.getElementById('smDepartInput').value;
+  const qbD = document.getElementById('qbDepartInput').value;
+  if (smD) simSMDepartHM = smD;
+  if (qbD) simQBDepartHM = qbD;
   simReset();
+  renderShipMgrList();
 }
 
 function _interpTL(tl, simMin) {
@@ -1524,23 +1699,33 @@ function _simTick(realNow) {
   simLastReal = realNow;
   simSimMin = Math.min(simSimMin, _totalMin);
 
-  // ── 산타모니카 ──
+  const wcEl = document.getElementById('wallClock');
+  if (wcEl) wcEl.textContent = _minToHM(_baseMin + simSimMin);
+
+  // 각 배는 자기 타임라인(0분=자신의 출항) 기준으로 움직인다.
+  // smLocal/qbLocal < 0 이면 아직 출항 전(대기 중).
+  const smLocal = simSimMin - _smDelay;
+  const qbLocal = simSimMin - _qbDelay;
+
+  // ── 산타모니카 (경유) ──
   let pos, hdg, statusTxt, statusCls, seg;
-  if (simSimMin <= _hitaArrMin) {
-    const r=_interpTL(_tl1, simSimMin);
+  if (smLocal < 0) {
+    pos=_tl1[0].pt; hdg=0; statusTxt=`출항 대기 (${_fmtMin(-smLocal)} 후 출항)`; statusCls='stopping'; seg='출항 대기';
+  } else if (smLocal <= _hitaArrMin) {
+    const r=_interpTL(_tl1, smLocal);
     pos=r.pos; hdg=r.hdg; statusTxt='항해 중'; statusCls='sailing'; seg='부산→히타카츠';
-  } else if (simSimMin <= _hitaArrMin+SIM_STOP_MIN) {
+  } else if (smLocal <= _hitaArrMin+SIM_STOP_MIN) {
     pos=_tl1[_tl1.length-1].pt; hdg=0;
-    const left=Math.ceil(_hitaArrMin+SIM_STOP_MIN-simSimMin);
+    const left=Math.ceil(_hitaArrMin+SIM_STOP_MIN-smLocal);
     statusTxt=`히타카츠 경유 (출항까지 ${left}분)`; statusCls='stopping'; seg='히타카츠 정박';
-  } else if (simSimMin <= _totalMinSM) {
-    const r=_interpTL(_tl2, simSimMin);
+  } else if (smLocal <= _totalMinSM) {
+    const r=_interpTL(_tl2, smLocal);
     pos=r.pos; hdg=r.hdg; statusTxt='항해 중'; statusCls='sailing'; seg='히타카츠→하카타';
-  } else if (simSimMin <= _totalMinSM+SIM_RETURN_WAIT) {
+  } else if (smLocal <= _totalMinSM+SIM_RETURN_WAIT) {
     pos=_tl2[_tl2.length-1].pt; hdg=180;
     statusTxt='복귀 준비 중'; statusCls='stopping'; seg='하카타 대기';
-  } else if (simSimMin <= _totalMinSMret) {
-    const r=_interpTL(_tl3, simSimMin);
+  } else if (smLocal <= _totalMinSMret) {
+    const r=_interpTL(_tl3, smLocal);
     pos=r.pos; hdg=r.hdg; statusTxt='복귀 항해 중'; statusCls='sailing'; seg='하카타→부산';
   } else {
     pos=_tl3[_tl3.length-1].pt; hdg=0; statusTxt='부산 귀항 완료'; statusCls='arrived'; seg='부산 도착';
@@ -1548,7 +1733,7 @@ function _simTick(realNow) {
 
   // ── 히타카츠 정박 라벨 ──
   if (seg === '히타카츠 정박') {
-    const leftMin = Math.ceil(_hitaArrMin + SIM_STOP_MIN - simSimMin);
+    const leftMin = Math.ceil(_hitaArrMin + SIM_STOP_MIN - smLocal);
     const hitaHtml = `<div style="background:rgba(40,0,0,0.92);border:1.5px solid #ff4444;border-radius:10px;padding:4px 10px;color:#ff4444;font-size:11px;font-weight:700;white-space:nowrap;text-align:center;box-shadow:0 2px 8px rgba(200,0,0,0.5)">⛴ 산타모니카호<br>정박 중 · 출항까지 ${leftMin}분</div>`;
     if (!_hitaStopLabel) {
       _hitaStopLabel = L.marker(_HITA_PT, {
@@ -1558,11 +1743,13 @@ function _simTick(realNow) {
     } else {
       _hitaStopLabel.setIcon(L.divIcon({ html: hitaHtml, className: '', iconAnchor: [70, -8] }));
     }
+    // 히타카츠 경유는 시나리오1(경유) 전용 — 시나리오2(직항)에서는 표시하지 않음
+    _hitaStopLabel.setOpacity(_activeSimTab === 1 ? 1 : 0);
   } else if (_hitaStopLabel) {
     map.removeLayer(_hitaStopLabel); _hitaStopLabel = null;
   }
 
-  const smElapsedStr = _fmtMin(Math.min(simSimMin, _totalMinSMret));
+  const smElapsedStr = _fmtMin(Math.max(0, Math.min(smLocal, _totalMinSMret)));
   const smLabel = `⛴ 산타모니카호<br>${smElapsedStr} / ${_fmtMin(_totalMinSMret)}`;
   if (!simMarker) {
     simMarker = L.marker(pos,{icon:_makeShipIcon(hdg,'#ffcc00','#cc8800',smLabel),zIndexOffset:910}).addTo(map)
@@ -1570,29 +1757,31 @@ function _simTick(realNow) {
   } else { simMarker.setLatLng(pos); simMarker.setIcon(_makeShipIcon(hdg,'#ffcc00','#cc8800',smLabel)); }
 
   document.getElementById('smElapsed').textContent = smElapsedStr;
-  document.getElementById('smRemain').textContent  = simSimMin<_totalMinSMret ? _fmtMin(_totalMinSMret-simSimMin) : '완료';
+  document.getElementById('smRemain').textContent  = smLocal<_totalMinSMret ? _fmtMin(_totalMinSMret-smLocal) : '완료';
   document.getElementById('smSeg').textContent     = seg;
   document.getElementById('smStatus').textContent  = statusTxt;
   document.getElementById('smStatus').className    = `sim-status ${statusCls}`;
-  document.getElementById('smBar').style.width     = (Math.min(simSimMin,_totalMinSMret)/_totalMinSMret*100).toFixed(1)+'%';
+  document.getElementById('smBar').style.width     = (Math.max(0,Math.min(smLocal,_totalMinSMret))/_totalMinSMret*100).toFixed(1)+'%';
   document.getElementById('smEstTime').textContent = _fmtMin(_totalMinSMret);
 
   // ── 퀸비틀 ──
   let qbPos, qbHdg, qbTxt, qbCls;
-  if (simSimMin <= _totalMinQB) {
-    const r=_interpTL(_tlQB, simSimMin);
+  if (qbLocal < 0) {
+    qbPos=_tlQB[0].pt; qbHdg=0; qbTxt=`출항 대기 (${_fmtMin(-qbLocal)} 후 출항)`; qbCls='stopping';
+  } else if (qbLocal <= _totalMinQB) {
+    const r=_interpTL(_tlQB, qbLocal);
     qbPos=r.pos; qbHdg=r.hdg; qbTxt='항해 중'; qbCls='sailing';
-  } else if (simSimMin <= _totalMinQB+SIM_RETURN_WAIT) {
+  } else if (qbLocal <= _totalMinQB+SIM_RETURN_WAIT) {
     qbPos=_tlQB[_tlQB.length-1].pt; qbHdg=180;
     qbTxt='복귀 준비 중'; qbCls='stopping';
-  } else if (simSimMin <= _totalMinQBret) {
-    const r=_interpTL(_tlQBret, simSimMin);
+  } else if (qbLocal <= _totalMinQBret) {
+    const r=_interpTL(_tlQBret, qbLocal);
     qbPos=r.pos; qbHdg=r.hdg; qbTxt='복귀 항해 중'; qbCls='sailing';
   } else {
     qbPos=_tlQBret[_tlQBret.length-1].pt; qbHdg=0; qbTxt='부산 귀항 완료'; qbCls='arrived';
   }
 
-  const qbElapsedStr = _fmtMin(Math.min(simSimMin, _totalMinQBret));
+  const qbElapsedStr = _fmtMin(Math.max(0, Math.min(qbLocal, _totalMinQBret)));
   const qbLabel = `🚢 퀸비틀<br>${qbElapsedStr} / ${_fmtMin(_totalMinQBret)}`;
   if (!qbMarker) {
     qbMarker = L.marker(qbPos,{icon:_makeShipIcon(qbHdg,'#66ccff','#1155aa',qbLabel),zIndexOffset:900}).addTo(map)
@@ -1600,37 +1789,48 @@ function _simTick(realNow) {
   } else { qbMarker.setLatLng(qbPos); qbMarker.setIcon(_makeShipIcon(qbHdg,'#66ccff','#1155aa',qbLabel)); }
 
   document.getElementById('qbElapsed').textContent = qbElapsedStr;
-  document.getElementById('qbRemain').textContent  = simSimMin<_totalMinQBret ? _fmtMin(_totalMinQBret-simSimMin) : '완료';
+  document.getElementById('qbRemain').textContent  = qbLocal<_totalMinQBret ? _fmtMin(_totalMinQBret-qbLocal) : '완료';
   document.getElementById('qbStatus').textContent  = qbTxt;
   document.getElementById('qbStatus').className    = `sim-status ${qbCls}`;
-  document.getElementById('qbBar').style.width     = (Math.min(simSimMin,_totalMinQBret)/_totalMinQBret*100).toFixed(1)+'%';
+  document.getElementById('qbBar').style.width     = (Math.max(0,Math.min(qbLocal,_totalMinQBret))/_totalMinQBret*100).toFixed(1)+'%';
   document.getElementById('qbEstTime').textContent = _fmtMin(_totalMinQBret);
+
+  // 퀸비틀 — 시나리오2 탭 표시분 (동일 항로/타임라인, 표시만 별도)
+  document.getElementById('qb2Elapsed').textContent = qbElapsedStr;
+  document.getElementById('qb2Remain').textContent  = qbLocal<_totalMinQBret ? _fmtMin(_totalMinQBret-qbLocal) : '완료';
+  document.getElementById('qb2Status').textContent  = qbTxt;
+  document.getElementById('qb2Status').className    = `sim-status ${qbCls}`;
+  document.getElementById('qb2Bar').style.width     = (Math.max(0,Math.min(qbLocal,_totalMinQBret))/_totalMinQBret*100).toFixed(1)+'%';
+  document.getElementById('qb2EstTime').textContent = _fmtMin(_totalMinQBret);
+  document.getElementById('cmpQBTime').textContent  = _fmtMin(_totalMinQBret);
 
   // 왕복 시간 차이 (탭1)
   const diff = _totalMinSMret - _totalMinQBret;
   document.getElementById('simDiff').textContent =
     `왕복 기준 산타모니카 ${_fmtMin(Math.abs(diff))} ${diff>0?'더 소요':'단축'} (경유 포함)`;
 
-  // 탭1 마커 가시성
+  // 마커 가시성 — 퀸비틀은 두 탭 모두에서 운항하므로 항상 표시
   if (simMarker) simMarker.setOpacity(_activeSimTab === 1 ? 1 : 0);
-  if (qbMarker)  qbMarker.setOpacity(_activeSimTab === 1 ? 1 : 0);
+  if (qbMarker)  qbMarker.setOpacity(1);
 
-  // ── 시나리오 2: SM 하카타 직항 ──
+  // ── 시나리오 2: SM 하카타 직항 (산타모니카와 동일 출항시각 사용) ──
   let sm2Pos, sm2Hdg, sm2Txt, sm2Cls, sm2Seg;
-  if (simSimMin <= _totalMinSM2) {
-    const r=_interpTL(_tlSM2, simSimMin);
+  if (smLocal < 0) {
+    sm2Pos=_tlSM2[0].pt; sm2Hdg=0; sm2Txt=`출항 대기 (${_fmtMin(-smLocal)} 후 출항)`; sm2Cls='stopping'; sm2Seg='출항 대기';
+  } else if (smLocal <= _totalMinSM2) {
+    const r=_interpTL(_tlSM2, smLocal);
     sm2Pos=r.pos; sm2Hdg=r.hdg; sm2Txt='항해 중'; sm2Cls='sailing'; sm2Seg='부산→하카타';
-  } else if (simSimMin <= _totalMinSM2+SIM_RETURN_WAIT) {
+  } else if (smLocal <= _totalMinSM2+SIM_RETURN_WAIT) {
     sm2Pos=_tlSM2[_tlSM2.length-1].pt; sm2Hdg=180;
     sm2Txt='복귀 준비 중'; sm2Cls='stopping'; sm2Seg='하카타 대기';
-  } else if (simSimMin <= _totalMinSM2ret) {
-    const r=_interpTL(_tlSM2ret, simSimMin);
+  } else if (smLocal <= _totalMinSM2ret) {
+    const r=_interpTL(_tlSM2ret, smLocal);
     sm2Pos=r.pos; sm2Hdg=r.hdg; sm2Txt='복귀 항해 중'; sm2Cls='sailing'; sm2Seg='하카타→부산';
   } else {
     sm2Pos=_tlSM2ret[_tlSM2ret.length-1].pt; sm2Hdg=0; sm2Txt='부산 귀항 완료'; sm2Cls='arrived'; sm2Seg='부산 도착';
   }
 
-  const sm2ElapsedStr = _fmtMin(Math.min(simSimMin, _totalMinSM2ret));
+  const sm2ElapsedStr = _fmtMin(Math.max(0, Math.min(smLocal, _totalMinSM2ret)));
   const sm2Label = `⛴ 산타모니카 직항<br>${sm2ElapsedStr} / ${_fmtMin(_totalMinSM2ret)}`;
   if (!sim2Marker) {
     sim2Marker = L.marker(sm2Pos,{icon:_makeShipIcon(sm2Hdg,'#44ffdd','#008866',sm2Label),zIndexOffset:905}).addTo(map)
@@ -1639,17 +1839,19 @@ function _simTick(realNow) {
   sim2Marker.setOpacity(_activeSimTab === 2 ? 1 : 0);
 
   document.getElementById('sm2Elapsed').textContent = sm2ElapsedStr;
-  document.getElementById('sm2Remain').textContent  = simSimMin<_totalMinSM2ret ? _fmtMin(_totalMinSM2ret-simSimMin) : '완료';
+  document.getElementById('sm2Remain').textContent  = smLocal<_totalMinSM2ret ? _fmtMin(_totalMinSM2ret-smLocal) : '완료';
   document.getElementById('sm2Seg').textContent     = sm2Seg;
   document.getElementById('sm2Status').textContent  = sm2Txt;
   document.getElementById('sm2Status').className    = `sim-status ${sm2Cls}`;
-  document.getElementById('sm2Bar').style.width     = (Math.min(simSimMin,_totalMinSM2ret)/_totalMinSM2ret*100).toFixed(1)+'%';
+  document.getElementById('sm2Bar').style.width     = (Math.max(0,Math.min(smLocal,_totalMinSM2ret))/_totalMinSM2ret*100).toFixed(1)+'%';
   document.getElementById('sm2EstTime').textContent = _fmtMin(_totalMinSM2ret);
-  document.getElementById('cmp1Time').textContent   = _fmtMin(_totalMinSMret);
   document.getElementById('cmp2Time').textContent   = _fmtMin(_totalMinSM2ret);
-  const diff2 = _totalMinSM2ret - _totalMinSMret;
+  const diff2 = _totalMinSM2ret - _totalMinQBret;
   document.getElementById('simDiff2').textContent =
-    `직항 시 경유 대비 ${_fmtMin(Math.abs(diff2))} ${diff2<0?'단축':'추가 소요'}`;
+    `산타모니카 직항이 퀸비틀 대비 ${_fmtMin(Math.abs(diff2))} ${diff2>0?'더 소요':'단축'}`;
+
+  // ── 등록된 임의 선박들 ──
+  _tickCustomShips(simSimMin);
 
   if (simSimMin >= _totalMin) {
     simRunning=false;
@@ -1676,6 +1878,7 @@ function simReset() {
   if (qbMarker){map.removeLayer(qbMarker);qbMarker=null;}
   if (sim2Marker){map.removeLayer(sim2Marker);sim2Marker=null;}
   if (_hitaStopLabel){map.removeLayer(_hitaStopLabel);_hitaStopLabel=null;}
+  Object.keys(_customMarkers).forEach(id => { map.removeLayer(_customMarkers[id]); delete _customMarkers[id]; });
   rebuildSim();
   // 탭1 리셋
   document.getElementById('smElapsed').textContent='0:00';
@@ -1699,9 +1902,14 @@ function simReset() {
   document.getElementById('sm2Status').textContent='대기 중';
   document.getElementById('sm2Status').className='sim-status sailing';
   document.getElementById('sm2Bar').style.width='0%';
-  const d2=_totalMinSM2ret-_totalMinSMret;
+  document.getElementById('qb2Elapsed').textContent='0:00';
+  document.getElementById('qb2Remain').textContent=_fmtMin(_totalMinQBret);
+  document.getElementById('qb2Status').textContent='대기 중';
+  document.getElementById('qb2Status').className='sim-status sailing';
+  document.getElementById('qb2Bar').style.width='0%';
+  const d2=_totalMinSM2ret-_totalMinQBret;
   document.getElementById('simDiff2').textContent=
-    `직항 시 경유 대비 ${_fmtMin(Math.abs(d2))} ${d2<0?'단축':'추가 소요'}`;
+    `산타모니카 직항이 퀸비틀 대비 ${_fmtMin(Math.abs(d2))} ${d2>0?'더 소요':'단축'}`;
   document.getElementById('btnSimPlay').textContent='▶ 동시 출항';
 }
 
@@ -1711,12 +1919,375 @@ function switchSimTab(n) {
   document.getElementById('tabBtn2').classList.toggle('active', n === 2);
   document.getElementById('simTabContent1').classList.toggle('active', n === 1);
   document.getElementById('simTabContent2').classList.toggle('active', n === 2);
+  // 퀸비틀은 두 탭 모두에서 운항 중이므로 항상 표시
   if (simMarker)  simMarker.setOpacity(n === 1 ? 1 : 0);
-  if (qbMarker)   qbMarker.setOpacity(n === 1 ? 1 : 0);
   if (sim2Marker) sim2Marker.setOpacity(n === 2 ? 1 : 0);
+  if (_hitaStopLabel) _hitaStopLabel.setOpacity(n === 1 ? 1 : 0);
 }
 
+// ════════════════════════════════════════════════════
+//  선박 스케줄 관리 — 임의 선박 추가/수정 (선석 확보 검토용)
+// ════════════════════════════════════════════════════
+const SHIP_COLORS = ['#ff8844','#aa88ff','#88ddaa','#ffee66','#ff6699','#66ddff','#ddaa44','#99ff77'];
+
+function _loadCustomShips() {
+  try {
+    const raw = localStorage.getItem('hanjil_customShips');
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) customShips = arr;
+      arr.forEach(s => { const n = parseInt(String(s.id).replace(/\D/g,''),10); if (n>=_shipIdSeq) _shipIdSeq = n+1; });
+    }
+  } catch(e) { /* localStorage 사용 불가 — 빈 목록으로 시작 */ }
+}
+function _saveCustomShips() {
+  try { localStorage.setItem('hanjil_customShips', JSON.stringify(customShips)); } catch(e) {}
+}
+
+// 팬스타·스타라인·대아고속해운의 대마도 정기 여객선 스케줄을 최초 1회 등록한다.
+// (사용자가 지운 뒤에는 재등록하지 않도록 hanjil_seeded 플래그로 표시)
+// 출항/도착 시각은 각 사 공식 홈페이지 공지 기준, 속력(kts)은 부산-대마도 직선거리와
+// 공식 스케줄 소요시간을 역산해 우리 시뮬레이션 엔진에 맞춘 근사값이다.
+function _seedDefaultCompetitorShips() {
+  let seeded = null;
+  try { seeded = localStorage.getItem('hanjil_seeded'); } catch(e) {}
+  if (seeded) return;
+  const busan = ports.find(p => p.id === 'busan');
+  const hita  = ports.find(p => p.id === 'hitakatsu');
+  const izu   = ports.find(p => p.id === 'izuhara');
+  const mkShip = (name, color, kts, departHM, turnMin, to, sourceUrl, sourceLabel) => ({
+    id: 'cs' + (_shipIdSeq++), name, color, kts, departHM, turnMin, roundTrip: true,
+    from: { mode:'known', name: busan.name, lat: busan.lat, lng: busan.lng },
+    to:   { mode:'known', name: to.name,    lat: to.lat,    lng: to.lng },
+    sourceUrl, sourceLabel
+  });
+  customShips.push(
+    mkShip('팬스타 쓰시마링크호 (히타카츠)', '#ff8844', 27.8, '08:40', 410, hita,
+      'https://www.panstar.co.kr/business/cruise/tsushima_link', '팬스타크루즈 쓰시마링크 공식페이지'),
+    mkShip('스타라인 노바호 (히타카츠)', '#aa88ff', 23.0, '09:10', 330, hita,
+      'https://www.thestarline.co.kr/html/?pcode=27', '스타라인 공식 운항스케줄'),
+    mkShip('대아고속해운 씨플라워호 (히타카츠)', '#66cc88', 25.9, '09:40', 260, hita,
+      'http://www.daea.com/info/schedule', '대아고속해운 공식 운항일정'),
+    mkShip('대아고속해운 씨플라워호 (이즈하라)', '#339966', 24.1, '09:10', 230, izu,
+      'http://www.daea.com/info/schedule', '대아고속해운 공식 운항일정')
+  );
+  try { localStorage.setItem('hanjil_seeded', '1'); } catch(e) {}
+  _saveCustomShips();
+}
+
+// 경쟁사 대마도 정기항로 — 참고용 직선 표시 (클릭 시 스케줄·출처 링크 확인)
+function _drawCompetitorRoutes() {
+  const busan = ports.find(p => p.id === 'busan');
+  const hita  = ports.find(p => p.id === 'hitakatsu');
+  const izu   = ports.find(p => p.id === 'izuhara');
+  L.polyline([[busan.lat,busan.lng],[hita.lat,hita.lng]], { color:'#ffaa66', weight:2.5, opacity:0.55, dashArray:'2 7' })
+    .addTo(map).bindPopup(
+      `<div class="popup-title" style="color:#ffaa66">부산 ↔ 히타카츠 (정기 여객선)</div>
+       <div class="popup-body">
+         팬스타 쓰시마링크호 · 부산 08:40 출항<br>
+         스타라인 노바호 · 부산 09:10 출항<br>
+         대아고속해운 씨플라워호 · 부산 09:40 출항<br><br>
+         <a href="https://www.panstar.co.kr/business/cruise/tsushima_link" target="_blank" rel="noopener" style="color:#7ecfff">🔗 팬스타크루즈 공식페이지</a><br>
+         <a href="https://www.thestarline.co.kr/html/?pcode=27" target="_blank" rel="noopener" style="color:#7ecfff">🔗 스타라인 공식 스케줄</a><br>
+         <a href="http://www.daea.com/info/schedule" target="_blank" rel="noopener" style="color:#7ecfff">🔗 대아고속해운 공식 스케줄</a>
+       </div>`, { className:'custom-popup', maxWidth:260 });
+  L.polyline([[busan.lat,busan.lng],[izu.lat,izu.lng]], { color:'#66aacc', weight:2.5, opacity:0.55, dashArray:'2 7' })
+    .addTo(map).bindPopup(
+      `<div class="popup-title" style="color:#66aacc">부산 ↔ 이즈하라 (정기 여객선)</div>
+       <div class="popup-body">
+         대아고속해운 씨플라워호 · 부산 09:10 출항 (화·목요일)<br>
+         팬스타 쓰시마링크호 · 이즈하라 경유편 (화·목요일)<br><br>
+         <a href="http://www.daea.com/info/schedule" target="_blank" rel="noopener" style="color:#7ecfff">🔗 대아고속해운 공식 스케줄</a><br>
+         <a href="https://www.panstar.co.kr/business/cruise/tsushima_link" target="_blank" rel="noopener" style="color:#7ecfff">🔗 팬스타크루즈 공식페이지</a>
+       </div>`, { className:'custom-popup', maxWidth:260 });
+}
+
+function addCustomShip() {
+  const id = 'cs' + (_shipIdSeq++);
+  const color = SHIP_COLORS[customShips.length % SHIP_COLORS.length];
+  customShips.push({
+    id, name: '신규 선박', color, kts: 30, departHM: '09:00',
+    turnMin: 30, roundTrip: true,
+    from: { mode:'known', name: ports[0].name, lat: ports[0].lat, lng: ports[0].lng },
+    to:   { mode:'known', name: ports[3].name, lat: ports[3].lat, lng: ports[3].lng }
+  });
+  _saveCustomShips();
+  renderShipMgrList();
+  rebuildSim();
+}
+
+function removeCustomShip(id) {
+  customShips = customShips.filter(s => s.id !== id);
+  if (_customMarkers[id]) { map.removeLayer(_customMarkers[id]); delete _customMarkers[id]; }
+  delete _customTL[id];
+  _saveCustomShips();
+  renderShipMgrList();
+  rebuildSim();
+}
+
+function updateCustomShip(id, field, value) {
+  const s = customShips.find(x => x.id === id);
+  if (!s) return;
+  if (field === 'kts')          s.kts = Math.max(1, parseFloat(value) || s.kts);
+  else if (field === 'departHM') s.departHM = value || s.departHM;
+  else if (field === 'turnMin')  s.turnMin = Math.max(0, parseFloat(value) || 0);
+  else if (field === 'roundTrip') s.roundTrip = !!value;
+  else if (field === 'name')     s.name = value || '이름 없음';
+  else if (field === 'color')    s.color = value;
+  else if (field === 'sourceUrl')   s.sourceUrl = value;
+  else if (field === 'sourceLabel') s.sourceLabel = value;
+  _saveCustomShips();
+  rebuildSim();
+  renderShipMgrList();
+}
+
+// 출발/도착항 드롭다운 변경 — 알려진 항구 선택 또는 "직접 입력" 전환
+function setCustomShipPort(id, which, portIdOrCustom) {
+  const s = customShips.find(x => x.id === id);
+  if (!s) return;
+  if (portIdOrCustom === 'custom') {
+    s[which].mode = 'custom';
+  } else {
+    const p = ports.find(p => p.id === portIdOrCustom);
+    if (p) s[which] = { mode:'known', name: p.name, lat: p.lat, lng: p.lng };
+  }
+  _saveCustomShips();
+  rebuildSim();
+  renderShipMgrList();
+}
+
+// 직접 입력 모드에서 이름/위도/경도 수정
+function updateCustomShipPortField(id, which, field, value) {
+  const s = customShips.find(x => x.id === id);
+  if (!s) return;
+  if (field === 'lat' || field === 'lng') s[which][field] = parseFloat(value) || 0;
+  else if (field === 'name') s[which].name = value;
+  _saveCustomShips();
+  rebuildSim();
+  renderShipMgrList();
+}
+
+// 선박 1척의 편도 거리/소요시간/출도착 시각을 계산 (관리 패널 표시용)
+function _customShipCalc(s) {
+  const dist = _simDist([s.from.lat, s.from.lng], [s.to.lat, s.to.lng]);
+  const kmh = s.kts * 1.852;
+  const oneWayMin = kmh > 0 ? dist / kmh * 60 : 0;
+  const departMin = _hmToMin(s.departHM);
+  const arriveMin = departMin + oneWayMin;
+  const retArriveMin = s.roundTrip ? arriveMin + s.turnMin + oneWayMin : null;
+  return { dist, oneWayMin, departMin, arriveMin, retArriveMin };
+}
+
+// 모든 커스텀 선박의 애니메이션 타임라인 재계산 (rebuildSim()에서 호출)
+function rebuildCustomShips() {
+  customShips.forEach(s => {
+    const kmh = s.kts * 1.852;
+    const pts = [[s.from.lat, s.from.lng], [s.to.lat, s.to.lng]];
+    const outTL = _buildTL(pts, 0, kmh);
+    const totalOut = outTL[outTL.length - 1].cumMin;
+    let retTL = null, totalRet = totalOut;
+    if (s.roundTrip) {
+      retTL = _buildTL([pts[1], pts[0]], totalOut + s.turnMin, kmh);
+      totalRet = retTL[retTL.length - 1].cumMin;
+    }
+    _customTL[s.id] = { outTL, retTL, totalOut, totalRet, delay: s._delay || 0 };
+  });
+  // 삭제된 배의 타임라인 캐시 정리
+  Object.keys(_customTL).forEach(id => {
+    if (!customShips.some(s => s.id === id)) delete _customTL[id];
+  });
+}
+
+function _tickCustomShips(simMin) {
+  customShips.forEach(s => {
+    const tl = _customTL[s.id];
+    if (!tl) return;
+    const local = simMin - tl.delay;
+    let pos, hdg, cls, txt;
+    if (local < 0) {
+      pos = tl.outTL[0].pt; hdg = 0; cls = 'stopping'; txt = `출항 대기 (${_fmtMin(-local)} 후 출항)`;
+    } else if (local <= tl.totalOut) {
+      const r = _interpTL(tl.outTL, local);
+      pos = r.pos; hdg = r.hdg; cls = 'sailing'; txt = '항해 중';
+    } else if (s.roundTrip && tl.retTL) {
+      if (local <= tl.totalOut + s.turnMin) {
+        pos = tl.outTL[tl.outTL.length-1].pt; hdg = 180; cls = 'stopping'; txt = '정박/대기 중';
+      } else if (local <= tl.totalRet) {
+        const r = _interpTL(tl.retTL, local);
+        pos = r.pos; hdg = r.hdg; cls = 'sailing'; txt = '복귀 항해 중';
+      } else {
+        pos = tl.retTL[tl.retTL.length-1].pt; hdg = 0; cls = 'arrived'; txt = '도착 완료';
+      }
+    } else {
+      pos = tl.outTL[tl.outTL.length-1].pt; hdg = 0; cls = 'arrived'; txt = '도착 완료';
+    }
+    const elapsedStr = _fmtMin(Math.max(0, Math.min(local, tl.totalRet)));
+    const label = `⛴ ${s.name}<br>${elapsedStr} / ${_fmtMin(tl.totalRet)}`;
+    const sourceHtml = s.sourceUrl
+      ? `<br><a href="${s.sourceUrl}" target="_blank" rel="noopener" style="color:#7ecfff">🔗 ${s.sourceLabel || '출처 보기'}</a>`
+      : '';
+    let mk = _customMarkers[s.id];
+    if (!mk) {
+      mk = L.marker(pos, { icon: _makeShipIcon(hdg, s.color, s.color, label), zIndexOffset: 890 }).addTo(map)
+        .bindPopup(`<div class="popup-title" style="color:${s.color}">⛴ ${s.name}</div><div class="popup-body">${s.kts}노트 · ${s.from.name} → ${s.to.name}${s.roundTrip?' (왕복)':' (편도)'}<br>출항 ${s.departHM}${sourceHtml}</div>`, { className:'custom-popup', maxWidth:260 });
+      _customMarkers[s.id] = mk;
+    } else {
+      mk.setLatLng(pos);
+      mk.setIcon(_makeShipIcon(hdg, s.color, s.color, label));
+    }
+  });
+}
+
+function _portOptionsHtml(portObj) {
+  let html = ports.map(p =>
+    `<option value="${p.id}" ${portObj.mode==='known' && portObj.name===p.name ? 'selected' : ''}>${p.name}</option>`
+  ).join('');
+  html += `<option value="custom" ${portObj.mode==='custom' ? 'selected' : ''}>직접 입력(좌표)</option>`;
+  return html;
+}
+
+// 시뮬레이션에 이미 등록된 기본 선박(산타모니카·퀸비틀)의 출항시각·속력을 스케줄러에서도
+// 그대로 보고 수정할 수 있게 한다. 값은 위쪽 "순항속도·출항시각 설정" 패널과 완전히 공유된다.
+function updateBuiltinShip(which, field, value) {
+  if (which === 'sm') {
+    if (field === 'kts') { const v = parseFloat(value); if (!isNaN(v) && v > 5) simSMkts = v; }
+    else if (field === 'departHM' && value) simSMDepartHM = value;
+  } else if (which === 'qb') {
+    if (field === 'kts') { const v = parseFloat(value); if (!isNaN(v) && v > 5) simQBkts = v; }
+    else if (field === 'departHM' && value) simQBDepartHM = value;
+  }
+  const smKtsIn = document.getElementById('smKtsInput'); if (smKtsIn) smKtsIn.value = simSMkts;
+  const qbKtsIn = document.getElementById('qbKtsInput'); if (qbKtsIn) qbKtsIn.value = simQBkts.toFixed(1);
+  const smDepIn = document.getElementById('smDepartInput'); if (smDepIn) smDepIn.value = simSMDepartHM;
+  const qbDepIn = document.getElementById('qbDepartInput'); if (qbDepIn) qbDepIn.value = simQBDepartHM;
+  const smKmhEl = document.getElementById('smKmh'); if (smKmhEl) smKmhEl.textContent = '(' + (simSMkts*1.852).toFixed(1) + 'km/h)';
+  const qbKmhEl = document.getElementById('qbKmh'); if (qbKmhEl) qbKmhEl.textContent = '(' + (simQBkts*1.852).toFixed(1) + 'km/h)';
+  simReset();
+  renderShipMgrList();
+}
+
+// 시뮬레이션에 이미 등록된 기본 선박들의 스케줄 요약 카드
+function _builtinShipsHtml() {
+  const smDep = _hmToMin(simSMDepartHM);
+  const qbDep = _hmToMin(simQBDepartHM);
+  const rows = [
+    { which:'sm', color:'#ffcc00', name:'⛴ 산타모니카호 (경유)', route:'부산 → 히타카츠 → 하카타',
+      dist: SM_DIST_LEG1 + SM_DIST_LEG2, kts: simSMkts, departHM: simSMDepartHM,
+      oneWay: _totalMinSM, roundTrip: _totalMinSMret, editable: true },
+    { which:'qb', color:'#66ccff', name:'🚢 퀸비틀 (직항)', route:'부산 → 하카타',
+      dist: QB_DIST_KM, kts: simQBkts, departHM: simQBDepartHM,
+      oneWay: _totalMinQB, roundTrip: _totalMinQBret, editable: true },
+    { which:'sm', color:'#44ffdd', name:'⛴ 산타모니카호 (직항 · 시나리오2)', route:'부산 → 하카타',
+      dist: QB_DIST_KM, kts: simSMkts, departHM: simSMDepartHM,
+      oneWay: _totalMinSM2, roundTrip: _totalMinSM2ret, editable: false }
+  ];
+  return rows.map(r => {
+    const departMin = _hmToMin(r.departHM);
+    const arriveClock = _minToHM(departMin + r.oneWay);
+    const retClock = _minToHM(departMin + r.roundTrip);
+    return `
+    <div class="ship-row" style="border-color:${r.color}88">
+      <div class="ship-row-top">
+        <span style="width:14px;height:14px;border-radius:50%;background:${r.color};display:inline-block;flex-shrink:0"></span>
+        <span class="ship-row-name" style="font-weight:700;color:${r.color}">${r.name}</span>
+        <span style="font-size:9px;color:#88aabb;border:1px solid #556677;border-radius:8px;padding:1px 6px;flex-shrink:0">기본</span>
+      </div>
+      <div style="font-size:10px;color:#88aabb;margin-bottom:5px">${r.route}</div>
+      ${r.editable ? `
+      <div class="ship-row-grid">
+        <label>속력(kts)
+          <input type="number" min="1" max="80" step="0.1" value="${r.kts.toFixed(1)}" onchange="updateBuiltinShip('${r.which}','kts',this.value)">
+        </label>
+        <label>출항시각
+          <input type="time" value="${r.departHM}" onchange="updateBuiltinShip('${r.which}','departHM',this.value)">
+        </label>
+      </div>` : `<div style="font-size:10px;color:#667788;margin-bottom:5px">※ 산타모니카호와 속력·출항시각을 공유 (위 카드에서 함께 수정됨)</div>`}
+      <div class="ship-row-calc">
+        📏 ${r.dist}km · 편도 ${_fmtMin(r.oneWay)}<br>
+        🕐 출항 ${r.departHM} → 도착 ${arriveClock} · 복귀도착 ${retClock}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderShipMgrList() {
+  const list = document.getElementById('shipMgrList');
+  if (!list) return;
+  let html = `<div style="font-size:10px;color:#7ecfff;font-weight:700;margin:2px 0 6px">🧭 시뮬레이션 등록 선박 (기본)</div>`
+    + _builtinShipsHtml()
+    + `<div style="font-size:10px;color:#7ecfff;font-weight:700;margin:12px 0 6px">➕ 등록한 선박</div>`;
+  if (customShips.length === 0) {
+    html += '<div style="font-size:11px;color:#667788;text-align:center;padding:8px 0">등록된 선박이 없습니다.<br>아래 버튼으로 추가하세요.</div>';
+    list.innerHTML = html;
+    return;
+  }
+  html += customShips.map(s => {
+    const calc = _customShipCalc(s);
+    const fromCoords = s.from.mode === 'custom'
+      ? `<div class="ship-row-coords">
+           <input type="text" placeholder="항구명" value="${s.from.name}" onchange="updateCustomShipPortField('${s.id}','from','name',this.value)">
+           <input type="number" step="0.0001" placeholder="위도" value="${s.from.lat}" onchange="updateCustomShipPortField('${s.id}','from','lat',this.value)">
+           <input type="number" step="0.0001" placeholder="경도" value="${s.from.lng}" onchange="updateCustomShipPortField('${s.id}','from','lng',this.value)">
+         </div>` : '';
+    const toCoords = s.to.mode === 'custom'
+      ? `<div class="ship-row-coords">
+           <input type="text" placeholder="항구명" value="${s.to.name}" onchange="updateCustomShipPortField('${s.id}','to','name',this.value)">
+           <input type="number" step="0.0001" placeholder="위도" value="${s.to.lat}" onchange="updateCustomShipPortField('${s.id}','to','lat',this.value)">
+           <input type="number" step="0.0001" placeholder="경도" value="${s.to.lng}" onchange="updateCustomShipPortField('${s.id}','to','lng',this.value)">
+         </div>` : '';
+    return `
+    <div class="ship-row">
+      <div class="ship-row-top">
+        <input type="color" value="${s.color}" onchange="updateCustomShip('${s.id}','color',this.value)">
+        <input type="text" class="ship-row-name" value="${s.name}" onchange="updateCustomShip('${s.id}','name',this.value)">
+        <button class="ship-row-del" onclick="removeCustomShip('${s.id}')" title="삭제">✕</button>
+      </div>
+      <div class="ship-row-grid">
+        <label>출발항
+          <select onchange="setCustomShipPort('${s.id}','from',this.value)">${_portOptionsHtml(s.from)}</select>
+          ${fromCoords}
+        </label>
+        <label>도착항
+          <select onchange="setCustomShipPort('${s.id}','to',this.value)">${_portOptionsHtml(s.to)}</select>
+          ${toCoords}
+        </label>
+        <label>속력(kts)
+          <input type="number" min="1" max="80" step="0.1" value="${s.kts}" onchange="updateCustomShip('${s.id}','kts',this.value)">
+        </label>
+        <label>출항시각
+          <input type="time" value="${s.departHM}" onchange="updateCustomShip('${s.id}','departHM',this.value)">
+        </label>
+        <label>정박/대기(분)
+          <input type="number" min="0" step="5" value="${s.turnMin}" onchange="updateCustomShip('${s.id}','turnMin',this.value)" ${s.roundTrip?'':'disabled'}>
+        </label>
+        <label style="justify-content:center;flex-direction:row;align-items:center;gap:4px">
+          <input type="checkbox" ${s.roundTrip?'checked':''} onchange="updateCustomShip('${s.id}','roundTrip',this.checked)"> 왕복
+        </label>
+      </div>
+      <div class="ship-row-grid" style="grid-template-columns:1fr 1fr">
+        <label>출처명 (선택)
+          <input type="text" placeholder="예: 팬스타 공식페이지" value="${s.sourceLabel||''}" onchange="updateCustomShip('${s.id}','sourceLabel',this.value)">
+        </label>
+        <label>출처 URL (선택)
+          <input type="text" placeholder="https://..." value="${s.sourceUrl||''}" onchange="updateCustomShip('${s.id}','sourceUrl',this.value)">
+        </label>
+      </div>
+      <div class="ship-row-calc">
+        📏 ${calc.dist.toFixed(0)}km · 편도 ${_fmtMin(calc.oneWayMin)}<br>
+        🕐 출항 ${_minToHM(calc.departMin)} → 도착 ${_minToHM(calc.arriveMin)}${s.roundTrip ? ` · 복귀도착 ${_minToHM(calc.retArriveMin)}` : ''}
+        ${s.sourceUrl ? `<br>🔗 <a href="${s.sourceUrl}" target="_blank" rel="noopener" style="color:#7ecfff">${s.sourceLabel||'출처 보기'}</a>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+  list.innerHTML = html;
+}
+
+_loadCustomShips();
+_seedDefaultCompetitorShips();
+_drawCompetitorRoutes();
+
 rebuildSim();
+renderShipMgrList();
 
 // 커스텀 컨트롤에 시뮬레이션 버튼 추가
 const SimControl = L.Control.extend({
@@ -1730,6 +2301,14 @@ const SimControl = L.Control.extend({
       L.DomEvent.preventDefault(e);
       const p = document.getElementById('simPanel');
       p.classList.toggle('visible');
+    });
+    const b = L.DomUtil.create('a', 'map-ctrl-btn', wrap);
+    b.href='#'; b.title='선박 스케줄 관리'; b.innerHTML='🚢';
+    L.DomEvent.on(b,'click', e => {
+      L.DomEvent.preventDefault(e);
+      const p = document.getElementById('shipMgrPanel');
+      p.classList.toggle('visible');
+      if (p.classList.contains('visible')) renderShipMgrList();
     });
     return wrap;
   }
@@ -1745,6 +2324,8 @@ new SimControl().addTo(map);
     document.getElementById('qbKmh').textContent = '(' + (simQBkts*1.852).toFixed(1) + 'km/h)';
     const qd = document.getElementById('qbKtsDisp');
     if (qd) qd.textContent = simQBkts.toFixed(1);
+    const qd2 = document.getElementById('qbKtsDisp2');
+    if (qd2) qd2.textContent = simQBkts.toFixed(1);
   }
   const note = document.getElementById('simSpeedNote');
   if (note) note.textContent = `※ 산타모니카: 42노트 / 퀸비틀: 공식거리 213km÷3h40m=${simQBkts.toFixed(1)}노트(${(simQBkts*1.852).toFixed(1)}km/h) 역산`;
@@ -1805,19 +2386,6 @@ setTimeout(() => {
   }).start();
 }, 1000);
 
-// ════════════════════════════════════════════════════
-//  히타카츠 자동 팝업
-// ════════════════════════════════════════════════════
-map.whenReady(() => {
-  setTimeout(() => {
-    map.eachLayer(layer => {
-      if (layer instanceof L.Marker) {
-        const ll = layer.getLatLng();
-        if (Math.abs(ll.lat - 34.655985) < 0.001) layer.openPopup();
-      }
-    });
-  }, 600);
-});
 </script>
 </body>
 </html>
