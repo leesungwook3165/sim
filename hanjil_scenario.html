@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
   <link rel="stylesheet" href="https://unpkg.com/intro.js/minified/introjs.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-timeline/8.5.4/vis-timeline-graph2d.min.css" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; }
@@ -56,6 +57,99 @@
     }
     #measureInfo.visible { display: block; }
 
+    /* 상단 중앙 24시간 시계 — 오전 07:00부터 시작해 시뮬레이션 경과에 따라 하루(24h)를 순환 */
+    #topDayClock {
+      position: fixed;
+      top: 64px; left: 50%; transform: translateX(-50%);
+      z-index: 1006;
+      font-size: 26px; font-weight: 700;
+      color: #ffee88;
+      padding: 8px 28px;
+      background: rgba(10,25,50,0.85);
+      border: 1px solid rgba(255,220,120,0.5);
+      border-radius: 26px;
+      white-space: nowrap;
+      pointer-events: none;
+      backdrop-filter: blur(4px);
+      letter-spacing: 1px;
+    }
+
+    /* 화면 하단(푸터) 타임랩스 — 시뮬레이션 팝업이 열려있을 때만 표시. vis-timeline으로
+       각 배가 시간대별로 어느 구간(항해/정박/대기)에 있는지 보여주고, 커스텀 타임 막대를
+       드래그하면 그 시점으로 바로 이동한다. */
+    #simTimelapseBar {
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      z-index: 1006;
+      background: linear-gradient(180deg, rgba(10,22,46,0.88), rgba(6,14,32,0.98));
+      border-top: 1px solid rgba(100,180,255,0.45);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 -6px 24px rgba(0,0,0,0.55);
+      padding: 7px 16px 0;
+    }
+    #simTimelapseHead { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 5px; }
+    #simTimelapseHead .sim-btns { flex-wrap: wrap; }
+    #simTimelapseTitle { font-size: 10px; font-weight: 700; color: #7ecfff; letter-spacing: 0.3px; }
+    .sim-scope-tabs { display: flex; gap: 3px; }
+    .sim-scope-btn {
+      padding: 3px 10px; font-size: 10px; font-weight: 700; border-radius: 12px; cursor: pointer;
+      background: rgba(255,255,255,0.06); color: #88aabb; border: 1px solid rgba(255,255,255,0.14);
+      font-family: inherit;
+    }
+    .sim-scope-btn.active { background: linear-gradient(135deg, rgba(80,160,255,0.45), rgba(120,200,255,0.25)); color: #fff; border-color: rgba(140,200,255,0.8); }
+    .sim-scope-btn:hover:not(.active) { background: rgba(255,255,255,0.1); }
+    #simTimelapseEl { border-radius: 8px 8px 0 0; overflow: hidden; box-shadow: inset 0 1px 0 rgba(255,255,255,0.05); }
+    /* 접기/펼치기 버튼 대신, 푸터 맨 위쪽에 눈에 띄게 붙는 롤러 손잡이 — 잡아끌면 높이가 바뀐다. */
+    #simTimelapseResizeHandle {
+      height: 14px; margin: 0 -16px 5px; cursor: ns-resize;
+      display: flex; align-items: center; justify-content: center;
+      touch-action: none; background: rgba(255,255,255,0.04);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    #simTimelapseResizeHandle:hover, #simTimelapseResizeHandle.dragging { background: rgba(126,207,255,0.14); }
+    #simTimelapseResizeHandle .handle-grip {
+      width: 52px; height: 5px; border-radius: 3px;
+      background: rgba(255,255,255,0.3); transition: background 0.12s;
+    }
+    #simTimelapseResizeHandle:hover .handle-grip, #simTimelapseResizeHandle.dragging .handle-grip { background: rgba(126,207,255,0.95); }
+    /* 항구·선종 드랍다운 + 재생범위 탭을 하나로 묶어 헤더 오른쪽 끝에 붙인다(드랍다운이 '투입고려' 바로 왼쪽에 오도록). */
+    .sim-timelapse-filters { display: flex; align-items: center; gap: 6px; margin-left: auto; flex-wrap: wrap; }
+    /* vis-timeline 폴리시 — 타임랩스 전용 (아이템에 은은한 그라데이션·그림자, 재생 헤드는 굵고 눈에 띄게) */
+    #simTimelapseEl .vis-item { border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.4); border-width: 1px; }
+    #simTimelapseEl .vis-item .vis-item-content { padding: 3px 6px; font-size: 10px; }
+    /* 출항 대기·정박·경유 대기 같은 "멈춰있는" 구간은 항해 구간과 구분되게 빗금 무늬 + 점선 테두리를 준다 */
+    #simTimelapseEl .vis-item.sim-seg-wait {
+      background-image: repeating-linear-gradient(45deg, rgba(0,0,0,0.22) 0, rgba(0,0,0,0.22) 4px, transparent 4px, transparent 9px);
+      border-style: dashed;
+    }
+    /* 맨 아래 "투입가능 선석" 행 — 초록으로 눈에 띄게, 은은한 반짝임으로 다른 배 구간과 구분한다 */
+    #simTimelapseEl .vis-item.sim-seg-avail {
+      border-style: dashed; font-weight: 800;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4), 0 0 6px rgba(34,221,102,0.5);
+    }
+    #simTimelapseEl .vis-labelset .vis-label { background: rgba(255,255,255,0.03); }
+    #simTimelapseEl .vis-custom-time { background-color: #ffee88; width: 3px; box-shadow: 0 0 8px rgba(255,238,136,0.9); }
+    #simTimelapseEl .vis-custom-time:hover { width: 4px; }
+    /* "지금"(실제 현재 시각) 표시선 — 재생 헤드(노란 실선)와 뚜렷이 구분되도록 밝은 초록 점선으로,
+       드래그되지 않게 클릭도 막는다. vis-timeline은 addCustomTime(time,'now')의 id를 그대로
+       클래스명(.now)으로 붙여주므로 그걸 직접 선택자로 쓴다(직접 클래스를 붙이는 방식은
+       엘리먼트를 잘못 잡는 경우가 있어 신뢰할 수 없었다). 물풍선 배지에 분 단위 시각을 적어준다. */
+    #simTimelapseEl .vis-custom-time.now {
+      background: repeating-linear-gradient(180deg, #33ff77 0, #33ff77 6px, transparent 6px, transparent 12px);
+      width: 2px; box-shadow: none; pointer-events: none;
+    }
+    #simTimelapseEl .vis-custom-time.now .vis-custom-time-marker { display: none; }
+    .sim-now-tag {
+      position: fixed; transform: translateX(-50%); z-index: 1007; pointer-events: none;
+      background: #22dd66; color: #06301a; font-size: 10px; font-weight: 800;
+      padding: 2px 9px; border-radius: 999px; white-space: nowrap;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.5), 0 0 6px rgba(51,255,119,0.6);
+    }
+    .sim-now-tag::after {
+      content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+      border: 4px solid transparent; border-top-color: #22dd66;
+    }
+
     /* 지도 내 커스텀 컨트롤 공통 */
     .map-ctrl-btn {
       display: block;
@@ -83,24 +177,27 @@
 
     #map { width: 100vw; height: 100vh; }
 
-    /* 범례 */
-    .legend {
+    /* 범례 — 여닫기·드래그 가능한 패널 */
+    #legendPanel {
+      position: fixed;
+      right: 30px; bottom: 20px; left: auto; top: auto;
+      z-index: 1007;
       background: rgba(10, 25, 50, 0.88);
       color: #e8f4ff;
-      padding: 10px 14px;
       border-radius: 8px;
       font-size: 11.5px;
-      line-height: 1.8;
       border: 1px solid rgba(80,160,255,0.3);
       min-width: 190px;
+      max-height: 70vh;
+      overflow: auto;
+      resize: both;
+      padding: 8px 14px 10px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.45);
+      display: none;
     }
-    .legend h4 {
-      font-size: 12px;
-      color: #7ecfff;
-      margin-bottom: 6px;
-      border-bottom: 1px solid rgba(80,160,255,0.3);
-      padding-bottom: 5px;
-    }
+    #legendPanel.visible { display: block; }
+    #legendPanel .sim-title { font-size: 12px; margin-bottom: 6px; border-bottom: 1px solid rgba(80,160,255,0.3); padding-bottom: 5px; }
+    .legend-body { line-height: 1.8; }
     .legend-item {
       display: flex;
       align-items: center;
@@ -311,6 +408,9 @@
       font-size: 12px;
       min-width: 360px;
       max-width: 480px;
+      max-height: 85vh;
+      overflow: auto;
+      resize: both;
       backdrop-filter: blur(6px);
       box-shadow: 0 4px 20px rgba(0,0,0,0.5);
       display: none;
@@ -373,6 +473,11 @@
       color: #c8e4ff; border-radius: 4px; padding: 2px 4px;
       font-size: 11px; font-family: inherit;
     }
+    .sim-speed-range { width: 90px; accent-color: #7ecfff; cursor: pointer; }
+    .sim-speed-num {
+      width: 52px; background: rgba(40,80,140,0.7); border: 1px solid rgba(80,160,255,0.3);
+      color: #c8e4ff; border-radius: 4px; padding: 2px 4px; font-size: 11px; font-family: inherit;
+    }
 
     /* 시뮬레이션 탭 */
     .sim-tabs { display: flex; gap: 0; margin-bottom: 8px; border-radius: 6px; overflow: hidden; background: rgba(255,255,255,0.05); border: 1px solid rgba(80,160,255,0.15); }
@@ -389,25 +494,58 @@
     .sim-tab-content { display: none; }
     .sim-tab-content.active { display: block; }
 
-    /* ── 선박 스케줄 관리 패널 ── */
-    #shipMgrPanel {
+    /* ── 운항 관리 패널 (선박 스케줄 관리 + 선석 스케줄, 좌우 2열) ── */
+    #opsPanel {
       position: fixed;
-      top: 60px; left: 50px; right: auto; bottom: auto;
+      top: 60px; left: 50%; transform: translateX(-50%);
       z-index: 1010;
-      background: rgba(8,20,45,0.94);
+      background: rgba(8,20,45,0.96);
       border: 1px solid rgba(80,160,255,0.4);
       border-radius: 10px;
-      padding: 10px 16px;
       color: #e8f4ff;
       font-size: 12px;
-      width: 340px;
-      max-height: 80vh;
-      overflow-y: auto;
+      width: min(1320px, 96vw);
+      max-height: 86vh;
+      min-width: 480px;
+      min-height: 320px;
+      overflow: hidden;
+      resize: both;
       backdrop-filter: blur(6px);
       box-shadow: 0 4px 20px rgba(0,0,0,0.5);
       display: none;
+      flex-direction: column;
     }
-    #shipMgrPanel.visible { display: block; }
+    #opsPanel.visible { display: flex; }
+    .ops-body { display: flex; flex: 1; min-height: 0; overflow: hidden; border-top: 1px solid rgba(80,160,255,0.2); }
+    .ops-col { padding: 10px 16px; overflow-y: auto; }
+    /* 스크롤바 커스텀 — 패널들과 어울리는 얇고 둥근 파란 계열 스크롤바 (Firefox + 크로미움 계열 모두 적용) */
+    #simPanel, #legendPanel, .ops-col, #shipMgrList {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(126,207,255,0.55) rgba(255,255,255,0.05);
+    }
+    #simPanel::-webkit-scrollbar, #legendPanel::-webkit-scrollbar,
+    .ops-col::-webkit-scrollbar, #shipMgrList::-webkit-scrollbar { width: 9px; height: 9px; }
+    #simPanel::-webkit-scrollbar-track, #legendPanel::-webkit-scrollbar-track,
+    .ops-col::-webkit-scrollbar-track, #shipMgrList::-webkit-scrollbar-track {
+      background: rgba(255,255,255,0.04); border-radius: 8px;
+    }
+    #simPanel::-webkit-scrollbar-thumb, #legendPanel::-webkit-scrollbar-thumb,
+    .ops-col::-webkit-scrollbar-thumb, #shipMgrList::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, rgba(126,207,255,0.65), rgba(80,160,255,0.45));
+      border-radius: 8px; border: 2px solid rgba(8,20,45,0.9); background-clip: padding-box;
+    }
+    #simPanel::-webkit-scrollbar-thumb:hover, #legendPanel::-webkit-scrollbar-thumb:hover,
+    .ops-col::-webkit-scrollbar-thumb:hover, #shipMgrList::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, rgba(160,220,255,0.85), rgba(110,180,255,0.7));
+      background-clip: padding-box;
+    }
+    #simPanel::-webkit-scrollbar-corner, #legendPanel::-webkit-scrollbar-corner { background: transparent; }
+    .ops-col-left { width: 380px; flex-shrink: 0; border-right: 1px solid rgba(80,160,255,0.2); }
+    .ops-col-right { flex: 1; min-width: 0; }
+    @media (max-width: 860px) {
+      .ops-body { flex-direction: column; }
+      .ops-col-left { width: auto; border-right: none; border-bottom: 1px solid rgba(80,160,255,0.2); max-height: 40vh; }
+    }
     .ship-row {
       border: 1px solid rgba(255,255,255,0.15);
       border-radius: 7px; padding: 7px 9px; margin-bottom: 8px;
@@ -434,6 +572,79 @@
     .ship-row-coords { display: flex; gap: 4px; margin-top: 2px; }
     .ship-row-coords input { width: 50%; }
     .ship-row-calc { font-size: 10px; color: #7ecfff; background: rgba(255,255,255,0.05); border-radius: 4px; padding: 4px 6px; }
+    /* 대범주(한국라인/일본라인) — 그룹(선사)보다 한 단계 위의 트리 헤더 */
+    .ship-nation-header {
+      font-size: 11px; font-weight: 800; color: #7ecfff; margin: 12px 0 4px;
+      padding: 3px 6px; border-radius: 4px; background: rgba(126,207,255,0.1);
+      cursor: pointer; user-select: none;
+    }
+    .ship-nation-header:hover { background: rgba(126,207,255,0.18); }
+    .ship-nation-header:first-child { margin-top: 0; }
+    .ship-group-header {
+      font-size: 10px; font-weight: 700; color: #ffcc66; margin: 8px 0 5px 10px;
+      padding-bottom: 3px; border-bottom: 1px solid rgba(255,204,102,0.3);
+      cursor: pointer; user-select: none;
+    }
+    .ship-group-header:hover { color: #ffe0a0; }
+    .ship-nation-header + .ship-group-header { margin-top: 4px; }
+    .ship-row-days { display: flex; gap: 3px; margin-bottom: 6px; }
+    .ship-day-btn {
+      flex: 1; padding: 3px 0; font-size: 10px; border-radius: 4px; cursor: pointer;
+      background: rgba(255,255,255,0.06); color: #667788; border: 1px solid rgba(255,255,255,0.1);
+      font-family: inherit;
+    }
+    .ship-day-btn.on { background: rgba(80,160,255,0.35); color: #fff; border-color: rgba(120,190,255,0.6); font-weight: 700; }
+
+    /* ── 선석 스케줄(Gantt) — #opsPanel 우측 열에 표시 ── */
+    .berth-settings { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; font-size: 11px; color: #aac8e8; margin: 6px 0 10px; }
+    .berth-settings label { display: flex; align-items: center; gap: 5px; }
+    .berth-settings input {
+      width: 52px; background: rgba(40,80,140,0.8); border: 1px solid rgba(80,160,255,0.4);
+      color: #fff; border-radius: 4px; padding: 2px 4px; font-size: 11px; font-family: inherit;
+    }
+    .berth-legend { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 10px; color: #aac8e8; margin-top: 8px; border-top: 1px solid rgba(80,160,255,0.2); padding-top: 8px; }
+    .berth-legend-item { display: flex; align-items: center; gap: 4px; }
+    .berth-legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+    .berth-port-filter { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 6px; }
+    .berth-filter-btn {
+      padding: 4px 10px; font-size: 11px; font-weight: 700; border-radius: 14px; cursor: pointer;
+      background: rgba(255,255,255,0.06); color: #88aabb; border: 1px solid rgba(255,255,255,0.12);
+      font-family: inherit;
+    }
+    .berth-filter-btn.active { background: rgba(80,160,255,0.3); color: #fff; border-color: rgba(120,190,255,0.7); }
+    .berth-filter-btn:hover:not(.active) { background: rgba(255,255,255,0.1); }
+    .vis-label { cursor: pointer; }
+
+    /* ── 최적 접안 시간대 분석 ── */
+    #berthAnalysis { margin-top: 10px; border-top: 1px solid rgba(80,160,255,0.2); padding-top: 10px; }
+    .berth-scenario-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media (max-width: 640px) { .berth-scenario-grid { grid-template-columns: 1fr; } }
+    .berth-scenario-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(80,160,255,0.2); border-radius: 8px; padding: 8px 10px; }
+    .berth-scenario-title { font-size: 12px; font-weight: 700; color: #7ecfff; margin-bottom: 6px; }
+    .berth-call-row { font-size: 11px; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px dashed rgba(255,255,255,0.1); }
+    .berth-call-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .berth-call-status { font-weight: 700; }
+    .berth-call-status.ok   { color: #44ffaa; }
+    .berth-call-status.conflict { color: #ff5566; }
+    .berth-call-gaps { font-size: 10px; color: #88aabb; margin-top: 2px; }
+
+    /* vis-timeline 다크테마 오버라이드 */
+    #berthTimelineEl { border-radius: 6px; overflow: hidden; }
+    .vis-timeline { border: 1px solid rgba(80,160,255,0.25) !important; font-family: inherit; color: #e8f4ff; background: rgba(255,255,255,0.02); }
+    .vis-panel { border-color: rgba(80,160,255,0.2) !important; }
+    .vis-labelset .vis-label { border-color: rgba(80,160,255,0.15) !important; color: #7ecfff; font-weight: 700; font-size: 11px; background: rgba(255,255,255,0.02); }
+    .vis-label .vis-inner { padding: 6px 8px; }
+    .vis-group { border-color: rgba(80,160,255,0.1) !important; }
+    .vis-time-axis .vis-text { color: #88aabb !important; font-size: 10px; }
+    .vis-time-axis .vis-grid.vis-minor { border-color: rgba(255,255,255,0.05) !important; }
+    .vis-time-axis .vis-grid.vis-major { border-color: rgba(255,255,255,0.18) !important; }
+    .vis-item { border-radius: 4px; font-size: 10px; font-weight: 700; border-width: 1px; }
+    .vis-item .vis-item-content { padding: 2px 5px; }
+    .vis-item.vis-selected { box-shadow: 0 0 0 2px #7ecfff; }
+    .vis-item.berth-conflict { border: 2px solid #ff3355 !important; box-shadow: 0 0 6px rgba(255,51,85,0.8); }
+    .vis-today { background: rgba(255,220,120,0.07) !important; }
+    .vis-current-time { background-color: #ffee88 !important; width: 2px !important; }
+    .vis-tooltip { background: rgba(8,20,45,0.96) !important; color: #e8f4ff !important; border: 1px solid rgba(80,160,255,0.4) !important; font-size: 11px !important; }
 
     /* 항로 거리 라벨 */
     .route-dist-label {
@@ -442,6 +653,19 @@
       pointer-events: none;
       text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.8);
     }
+
+    /* 히타카츠항(경유 구상) 곡선과 동일 경로인 "부산↔히타카츠 정기 여객선" 참고선 —
+       완전히 겹쳐 안 보이지 않도록 화면 픽셀 기준(선 굵기 2.5px만큼)으로만 살짝 띄운다.
+       지리적 오프셋을 주면 확대/축소에 따라 간격이 달라지므로 CSS transform으로 처리. */
+    .route-competitor-offset { transform: translate(2.5px, 2.5px); }
+    /* 이즈하라행(히타카츠 경유) 참고선은 부산~히타카츠 구간이 위 선과 겹치므로, 반대 방향으로 띄운다. */
+    .route-competitor-offset-izu { transform: translate(-2.5px, -2.5px); }
+    /* 이즈하라행(히타카츠 미경유) 참고선은 위 두 선과 또 겹치므로, 세 번째 방향으로 띄운다. */
+    .route-competitor-offset-direct { transform: translate(2.5px, -2.5px); }
+    /* 카멜리아 라인은 "기존 직항(퀸비틀)" 점선과 경로가 완전히 겹치므로, 그 선 굵기(2px)만큼만 띄운다. */
+    .route-competitor-offset-camellia { transform: translate(2px, 2px); }
+    /* 미라클호 라인은 부산~히비키나다 구간이 부관훼리 선(시모노세키)과 겹치므로 살짝 띄운다. */
+    .route-competitor-offset-miracle { transform: translate(-2.5px, 2.5px); }
 
     /* 항구 POI 라벨 (지도에 상시 노출) */
     .port-label {
@@ -510,10 +734,10 @@
   </div>
   <div class="sim-body">
 
-  <!-- 속도·출항시각 설정 (공통) -->
+  <!-- 순항속도 설정 (공통) -->
   <div style="background:rgba(255,255,255,0.05);border-radius:7px;padding:7px 10px;margin-bottom:8px;font-size:11px;color:#aac8e8">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
-      <div style="color:#7ecfff;font-weight:700">⚙ 순항속도 · 출항시각 설정</div>
+      <div style="color:#7ecfff;font-weight:700">⚙ 순항속도 설정</div>
       <div style="color:#ffee88;font-weight:700">🕐 <span id="wallClock">09:00</span></div>
     </div>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
@@ -522,23 +746,21 @@
           style="width:52px;margin-left:4px;background:rgba(40,80,140,0.8);border:1px solid rgba(80,160,255,0.4);color:#fff;border-radius:4px;padding:2px 4px;font-size:11px"
           oninput="document.getElementById('smKmh').textContent='('+(+this.value*1.852).toFixed(1)+'km/h)'"> kts
         <span id="smKmh" style="color:#ffcc44">(77.8km/h)</span>
-        · 출항
-        <input id="smDepartInput" type="time" value="09:00"
-          style="width:76px;margin-left:2px;background:rgba(40,80,140,0.8);border:1px solid rgba(80,160,255,0.4);color:#fff;border-radius:4px;padding:2px 4px;font-size:11px">
       </label>
       <label>🚢 퀸비틀
         <input id="qbKtsInput" type="number" value="29" min="10" max="80" step="0.1"
           style="width:52px;margin-left:4px;background:rgba(40,80,140,0.8);border:1px solid rgba(80,160,255,0.4);color:#fff;border-radius:4px;padding:2px 4px;font-size:11px"
           oninput="document.getElementById('qbKmh').textContent='('+(+this.value*1.852).toFixed(1)+'km/h)'"> kts
         <span id="qbKmh" style="color:#66ccff"></span>
-        · 출항
-        <input id="qbDepartInput" type="time" value="09:00"
-          style="width:76px;margin-left:2px;background:rgba(40,80,140,0.8);border:1px solid rgba(80,160,255,0.4);color:#fff;border-radius:4px;padding:2px 4px;font-size:11px">
       </label>
       <button onclick="applySimSpeeds()" style="padding:3px 9px;background:rgba(0,160,80,0.4);border:1px solid rgba(0,200,100,0.4);color:#88ffbb;border-radius:5px;font-size:11px;cursor:pointer;font-family:inherit">적용</button>
     </div>
-    <div style="font-size:10px;color:#667788;margin-top:4px" id="simSpeedNote">※ 스케줄 역산 기준 · 출항시각은 선박마다 다르게 설정 가능 (가장 이른 출항 기준으로 동시 재생)</div>
+    <div style="font-size:10px;color:#667788;margin-top:4px" id="simSpeedNote">※ 스케줄 역산 기준 · 출항시각·회항 시각은 "🚢 선박 스케줄 관리" 패널에서 선박마다 설정 (가장 이른 출항 기준으로 동시 재생)</div>
   </div>
+
+  <!-- 재생 범위 (기본선박/전체/등록선박만) — 타임랩스 바와 항상 동기화됨 -->
+  <div style="font-size:10px;color:#88aabb;margin-bottom:3px">재생 범위</div>
+  <div class="sim-scope-tabs sim-scope-mount" style="margin-bottom:8px"></div>
 
   <!-- 탭 버튼 -->
   <div class="sim-tabs">
@@ -584,6 +806,7 @@
       <div class="sim-info" style="margin-bottom:5px">
         <div class="sim-info-box"><div class="label">경과</div><div class="val" id="qbElapsed">0:00</div></div>
         <div class="sim-info-box"><div class="label">남은</div><div class="val" id="qbRemain">—</div></div>
+        <div class="sim-info-box"><div class="label">구간</div><div class="val" id="qbSeg" style="font-size:10px">—</div></div>
       </div>
       <div style="text-align:center;margin-bottom:5px"><span class="sim-status sailing" id="qbStatus">대기 중</span></div>
       <div class="sim-progress"><div class="sim-progress-bar" id="qbBar" style="width:0%;background:linear-gradient(90deg,#3399ff,#66ccff)"></div></div>
@@ -629,6 +852,7 @@
       <div class="sim-info" style="margin-bottom:5px">
         <div class="sim-info-box"><div class="label">경과</div><div class="val" id="qb2Elapsed">0:00</div></div>
         <div class="sim-info-box"><div class="label">남은</div><div class="val" id="qb2Remain">—</div></div>
+        <div class="sim-info-box"><div class="label">구간</div><div class="val" id="qb2Seg" style="font-size:10px">—</div></div>
       </div>
       <div style="text-align:center;margin-bottom:5px"><span class="sim-status sailing" id="qb2Status">대기 중</span></div>
       <div class="sim-progress"><div class="sim-progress-bar" id="qb2Bar" style="width:0%;background:linear-gradient(90deg,#3399ff,#66ccff)"></div></div>
@@ -652,36 +876,119 @@
 
   <!-- 공통 컨트롤 버튼 -->
   <div class="sim-btns" style="margin-top:8px">
-    <button class="sim-btn primary" id="btnSimPlay" onclick="simPlay()">▶ 동시 출항</button>
+    <button class="sim-btn primary btn-sim-play" id="btnSimPlay" onclick="simPlay()">▶ 동시 출항</button>
     <button class="sim-btn" onclick="simPause()">⏸ 정지</button>
     <button class="sim-btn" onclick="simReset()">⏮ 초기화</button>
     <div class="sim-speed">배속:
-      <select id="simSpeedSel" onchange="simSpeedFactor=+this.value">
-        <option value="20">20×</option>
-        <option value="60">60×</option>
-        <option value="120">120×</option>
-        <option value="300" selected>300×</option>
-        <option value="500">500×</option>
-      </select>
+      <input type="range" id="simSpeedSel" class="sim-speed-mount sim-speed-range" min="10" max="1000" step="10" value="300" oninput="setSimSpeed(this.value)">
+      <input type="number" class="sim-speed-mount sim-speed-num" min="1" max="5000" step="10" value="300" onchange="setSimSpeed(this.value)">×
     </div>
   </div>
 
   </div><!-- /.sim-body -->
 </div>
 
-<!-- 선박 스케줄 관리 패널 -->
-<div id="shipMgrPanel">
+<!-- 운항 관리 패널 — 좌: 선박 스케줄 관리, 우: 선석 스케줄 -->
+<div id="opsPanel">
   <div class="sim-title">
-    🚢 선박 스케줄 관리
+    🚢 선박 스케줄 관리 · 🏗 선석 스케줄
     <div class="sim-title-btns">
-      <button class="sim-title-btn" onclick="document.getElementById('shipMgrPanel').classList.remove('visible')" title="닫기">✕</button>
+      <button class="sim-title-btn" onclick="document.getElementById('opsPanel').classList.remove('visible')" title="닫기">✕</button>
     </div>
   </div>
-  <div class="sim-body">
-    <div style="font-size:10px;color:#88aabb;margin-bottom:8px">타 선사 배편을 등록해 출항시각·소요시간을 비교하고 선석 겹침 여부를 검토하세요. 항구는 목록에서 고르거나 "직접 입력"으로 좌표를 넣을 수 있습니다.</div>
-    <div id="shipMgrList"></div>
-    <button class="sim-btn primary" style="width:100%;margin-top:2px" onclick="addCustomShip()">+ 선박 추가</button>
+  <div class="ops-body">
+    <div class="ops-col ops-col-left">
+      <div style="font-size:10px;color:#88aabb;margin-bottom:8px">타 선사 배편을 등록해 출항시각·소요시간을 비교하고 선석 겹침 여부를 검토하세요. 항구는 목록에서 고르거나 "직접 입력"으로 좌표를 넣을 수 있습니다.</div>
+      <div id="shipMgrList"></div>
+      <button class="sim-btn primary" style="width:100%;margin-top:2px" onclick="addCustomShip()">+ 선박 추가</button>
+    </div>
+    <div class="ops-col ops-col-right">
+      <div style="font-size:10px;color:#88aabb;margin:0 0 8px">항구별로 요일·시간대별 어떤 선박이 정박(수속) 중인지 보여줍니다. 드래그로 이동, 휠로 확대/축소할 수 있습니다. 겹치는 구간은 빨간 테두리로 표시됩니다.</div>
+      <div class="berth-settings">
+        <label>기본 수속시간(분) <input type="number" min="0" step="5" id="berthDefaultInput" value="30" onchange="updateBerthSetting('default',this.value)"></label>
+        <label>부산→히타카츠→하카타 노선 경유(분) <input type="number" min="0" step="5" id="berthHitaViaInput" value="25" onchange="updateBerthSetting('hitaVia',this.value)"></label>
+      </div>
+      <div class="berth-port-filter" id="berthPortFilter"></div>
+      <div id="berthTimelineEl"></div>
+      <div class="berth-legend" id="berthLegend"></div>
+      <div id="berthAnalysis"></div>
+    </div>
   </div>
+</div>
+
+<div id="topDayClock">🕐 <span id="topDayClockTime">07:00</span></div>
+
+<!-- 범례 — 열고 닫고 드래그로 옮길 수 있는 패널 -->
+<div id="legendPanel" class="visible">
+  <div class="sim-title">
+    📖 범례
+    <div class="sim-title-btns">
+      <button class="sim-title-btn" onclick="legendToggle()" title="닫기">✕</button>
+    </div>
+  </div>
+  <div class="legend-body">
+    <div class="legend-item"><div class="legend-dot" style="background:#3399ff"></div> 부산항 (출발지)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ffaa00;box-shadow:0 0 8px #ffaa00"></div> 히타카츠항 (경유 구상)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#aaaaaa"></div> 이즈하라항 (참고)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ff4466"></div> 하카타항 (목적지)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#0ea5e9"></div> 시모노세키항 (참고)</div>
+    <div style="margin-top:7px;border-top:1px solid rgba(80,160,255,0.3);padding-top:7px">
+      <div class="legend-item"><div style="width:24px;border-top:2px dashed #3399ff;opacity:0.6"></div> 기존 직항</div>
+      <div class="legend-item"><div style="width:24px;border-top:2px dashed #ffaa00"></div> 구상 경유 항로</div>
+      <div class="legend-item"><div style="width:24px;border-top:2px dashed #ff33cc;opacity:0.75"></div> 타 선사 · 부산↔히타카츠</div>
+      <div class="legend-item"><div style="width:24px;border-top:2px dashed #33ddaa;opacity:0.75"></div> 타 선사 · 부산↔이즈하라 (히타카츠 경유)</div>
+      <div class="legend-item"><div style="width:24px;border-top:2px dashed #9955ff;opacity:0.75"></div> 타 선사 · 부산↔이즈하라 (히타카츠 미경유)</div>
+      <div class="legend-item"><div style="width:24px;border-top:2px dashed #00cc66;opacity:0.6"></div> 카멜리아 라인 · 부산↔하카타</div>
+      <div class="legend-item"><div style="width:24px;border-top:2px dashed #0ea5e9;opacity:0.8"></div> 부관훼리 · 부산↔시모노세키</div>
+      <div class="legend-item"><div style="width:24px;border-top:2px dashed #ff9933;opacity:0.8"></div> 팬스타 미라클호 · 부산↔오사카</div>
+      <div class="legend-item"><div style="width:24px;border-top:2px solid #ff9900"></div> 사용자 그리기</div>
+    </div>
+  </div>
+</div>
+
+<!-- 화면 하단(푸터) 타임랩스 — 시간대별로 각 배가 어느 구간에 있는지 보여주는 재생 헤드 -->
+<div id="simTimelapseBar">
+  <div id="simTimelapseResizeHandle" title="드래그해서 높이 조절">
+    <div class="handle-grip"></div>
+  </div>
+  <div id="simTimelapseHead">
+    <div style="display:flex;align-items:center;gap:5px">
+      <div id="simTimelapseTitle">⏱ 타임랩스 — 막대를 드래그해 특정 시점으로 이동</div>
+    </div>
+    <div class="sim-btns">
+      <button class="sim-btn primary btn-sim-play" onclick="simPlay()">▶ 동시 출항</button>
+      <button class="sim-btn" onclick="simPause()">⏸ 정지</button>
+      <button class="sim-btn" onclick="simReset()">⏮ 초기화</button>
+      <div class="sim-speed">배속:
+        <input type="range" class="sim-speed-mount sim-speed-range" min="10" max="1000" step="10" value="300" oninput="setSimSpeed(this.value)">
+        <input type="number" class="sim-speed-mount sim-speed-num" min="1" max="5000" step="10" value="300" onchange="setSimSpeed(this.value)">×
+      </div>
+    </div>
+    <div class="sim-timelapse-filters">
+      <select id="simTimelapsePortFilter" class="sim-speed-num" style="width:auto" onchange="setSimTimelapsePortFilter(this.value)">
+        <option value="all">항구: 전체</option>
+        <option value="busan">부산항</option>
+        <option value="hitakatsu">히타카츠항</option>
+        <option value="izuhara">이즈하라항</option>
+        <option value="hakata">하카타항</option>
+        <option value="shimonoseki">시모노세키항</option>
+        <option value="osaka">오사카항</option>
+      </select>
+      <select id="simTimelapseShipTypeFilter" class="sim-speed-num" style="width:auto" onchange="setSimTimelapseShipTypeFilter(this.value)">
+        <option value="all">선종: 전체</option>
+        <option value="고속선">고속선</option>
+        <option value="로로선(화물여객선)">로로선(화물여객선)</option>
+        <option value="기타">기타</option>
+      </select>
+      <!-- 옵션 목록은 매번 _rebuildSimTimelapse()가 "지금 재생범위에서 보이는 배들"로 다시 채운다 -->
+      <select id="simTimelapseShipFilter" class="sim-speed-num" style="width:auto" onchange="setSimTimelapseShipFilter(this.value)">
+        <option value="all">배: 전체</option>
+      </select>
+      <div class="sim-scope-tabs sim-scope-mount"></div>
+    </div>
+  </div>
+  <div id="simTimelapseResizeHandle" title="드래그해서 높이 조절"></div>
+  <div id="simTimelapseEl"></div>
 </div>
 
 <div id="map"></div>
@@ -691,13 +998,13 @@
   <span>마우스</span>
   <span class="coord-val" id="mouseLat">—</span>
   <span class="coord-val" id="mouseLng">—</span>
-  <span style="color:#556677; font-size:11px">클릭하면 좌표 고정</span>
+  <span style="color:#556677; font-size:11px">우클릭하면 좌표 복사</span>
 </div>
 
-<!-- 클릭 좌표 팝업 -->
+<!-- 우클릭 좌표 팝업 -->
 <div id="coordClick">
   <span class="cc-close" onclick="document.getElementById('coordClick').style.display='none'">✕</span>
-  <div class="cc-title">📍 클릭 좌표</div>
+  <div class="cc-title">📍 우클릭 좌표</div>
   <div class="cc-val" id="clickCoordVal">—</div>
   <div>
     <span class="cc-copy" onclick="copyCoord('dd')">복사 (DD)</span>
@@ -728,6 +1035,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 <script src="https://unpkg.com/intro.js/minified/intro.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vis-timeline/8.5.4/vis-timeline-graph2d.min.js"></script>
 <script>
 // ════════════════════════════════════════════════════
 //  레이어 정의
@@ -767,8 +1075,10 @@ L.control.layers(
 const ports = [
   { id:'busan',     name:'부산항 국제여객터미널',   lat:35.115670, lng:129.048312, color:'#3399ff', role:'출발지',         desc:'시월드고속훼리 산타모니카호 출항지. 현재 퀸비틀 하카타 직항 운항 중.', tags:['출발지','부산 북항'] },
   { id:'hitakatsu', name:'히타카츠 국제여객터미널', lat:34.655985, lng:129.469543, color:'#ffaa00', role:'경유지 (구상)', desc:'쓰시마 최북단 히타카츠항. 규슈유센 우미테라스 취항 중. 오션플라워2호 접안 가능 여부 검토 필요. 공명당 제안 경유지 후보.', tags:['경유지 구상','쓰시마 히타카츠','POI'], highlight:true },
-  { id:'izuhara',   name:'이즈하라항',             lat:34.2019, lng:129.2886, color:'#aaaaaa', role:'참고 (기존 경유지)', desc:'쓰시마 남부 이즈하라항. 기존 일부 국제여객선이 이용. 히타카츠 대비 접근성 차이 있음.', tags:['참고','쓰시마 이즈하라'] },
-  { id:'hakata',    name:'하카타항 국제터미널',     lat:33.5904, lng:130.3939, color:'#ff4466', role:'목적지',         desc:'후쿠오카 하카타항. 퀸비틀 부산 직항 운항 중. 산타모니카호 도입 시 공석률·유류비가 핵심 변수.', tags:['목적지','후쿠오카 하카타'] }
+  { id:'izuhara',   name:'이즈하라항',             lat:34.197831, lng:129.291133, color:'#aaaaaa', role:'참고 (기존 경유지)', desc:'쓰시마 남부 이즈하라항. 기존 일부 국제여객선이 이용. 히타카츠 대비 접근성 차이 있음.', tags:['참고','쓰시마 이즈하라'] },
+  { id:'hakata',    name:'하카타항 국제터미널',     lat:33.607400, lng:130.400591, color:'#ff4466', role:'목적지',         desc:'후쿠오카 하카타항. 퀸비틀·카멜리아 부산 직항 운항 중. 산타모니카호 도입 시 공석률·유류비가 핵심 변수.', tags:['목적지','후쿠오카 하카타'] },
+  { id:'shimonoseki', name:'시모노세키항', lat:33.946998, lng:130.925274, color:'#0ea5e9', role:'참고 (타 항로)', desc:'부관훼리 취항지(간몬해협 카라토 터미널). 성희호(한국적)·하마유호(일본적)가 매일 야간 교대 운항.', tags:['참고','시모노세키','부관훼리'] },
+  { id:'osaka',       name:'오사카항 국제페리터미널', lat:34.643200, lng:135.422051, color:'#ff9933', role:'참고 (타 항로)', desc:'오사카시 스미노에구 소재, 오사카메트로 뉴트램 "페리터미널역"과 연결(코스모스퀘어역에서 팬스타 무료 셔틀버스 운행). 세토내해를 지나는 크루즈형 훼리 취항지 — 팬스타 미라클호(22,000톤급)가 부산-오사카를 왕복 운항.', tags:['참고','오사카','미라클호'] }
 ];
 
 function makeIcon(color, highlight) {
@@ -779,16 +1089,30 @@ function makeIcon(color, highlight) {
   });
 }
 
+// 재생 범위(simPlayScope) 탭에 따라 지도에서 숨기고 보일 POI 마커·참고 항로선을 모아둔다.
+// (실제 add/remove는 스크립트 맨 아래, 모든 배 데이터가 준비된 뒤 _applyMapScopeVisibility()에서)
+const _portMarkers = {};
+const _scopeLines = {};
+
 ports.forEach(p => {
   const tags = p.tags.map(t => `<span class="tag">${t}</span>`).join('');
-  L.marker([p.lat, p.lng], { icon: makeIcon(p.color, p.highlight) })
+  const mk = L.marker([p.lat, p.lng], { icon: makeIcon(p.color, p.highlight) })
     .addTo(map)
-    .bindPopup(`<div class="popup-title">${p.name}</div><div class="popup-body"><b style="color:${p.color}">${p.role}</b><br/>${p.desc}<br/><br/>${tags}<div class="popup-coords">📍 ${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}</div></div>`,
-      { className: 'custom-popup', maxWidth: 280 })
+    // 팝업 내용을 함수로 넘기면 열 때마다 새로 계산한다 — 이 시점이면 시뮬레이션·등록 선박 데이터가
+    // 이미 다 준비돼 있으므로, 이 항구를 오가는 배들의 편도·왕복 소요시간을 매번 최신값으로 보여준다.
+    .bindPopup(() => {
+      const timingLines = _portTimingLines(p.id);
+      const timingHtml = timingLines.length
+        ? `<div style="margin-top:6px;padding-top:6px;border-top:1px dashed rgba(255,255,255,0.25);font-size:11px;line-height:1.7">
+             <b style="color:#7ecfff">⏱ 편도 · 왕복 소요시간</b><br>${timingLines.join('<br>')}
+           </div>` : '';
+      return `<div class="popup-title">${p.name}</div><div class="popup-body"><b style="color:${p.color}">${p.role}</b><br/>${p.desc}<br/><br/>${tags}${timingHtml}<div class="popup-coords">📍 ${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}</div></div>`;
+    }, { className: 'custom-popup', maxWidth: 300 })
     .bindTooltip(p.name, {
       permanent: true, direction: 'top', offset: [0, p.highlight ? -12 : -9],
       className: 'port-label'
     });
+  _portMarkers[p.id] = mk;
 });
 
 // Centripetal Catmull-Rom — 구간 길이 비례 파라미터화로 오버슈트 방지
@@ -826,7 +1150,7 @@ function catmullRom(pts, steps = 40) {
 }
 
 // 항로선
-L.polyline([
+_scopeLines.qbDirect = L.polyline([
   [35.115670, 129.048312],
   [35.078828, 129.107552],
   [34.698719, 129.622192],
@@ -834,7 +1158,7 @@ L.polyline([
   [33.607614, 130.399261]
 ], { color:'#3399ff', weight:2, opacity:0.45, dashArray:'8 6' })
   .addTo(map).bindPopup('<div style="color:#3399ff;font-weight:700">기존 직항 (퀸비틀)</div><div style="font-size:12px;color:#aac8e8">부산 ↔ 하카타 직항</div>', { className:'custom-popup' });
-L.polyline(
+_scopeLines.smLeg1 = L.polyline(
   catmullRom([
     [35.115670, 129.048312],
   [35.078828, 129.107552],
@@ -847,7 +1171,7 @@ L.polyline(
   ], 60),
   { color:'#ffaa00', weight:3, opacity:0.9, dashArray:'10 4' }
 ).addTo(map).bindPopup('<div style="color:#ffaa00;font-weight:700">구상 항로 ① 부산→히타카츠</div><div style="font-size:12px;color:#aac8e8">산타모니카호 시나리오<br/>쓰시마 북부 연안 경유</div>', { className:'custom-popup' });
-L.polyline(
+_scopeLines.smLeg2 = L.polyline(
   catmullRom([
     [34.655649, 129.469231],
     [34.653906, 129.474081],
@@ -1018,25 +1342,38 @@ _routeLabel(34.10, 129.85,
 })();
 
 // ════════════════════════════════════════════════════
-//  범례
+//  범례 — 여닫기 + 드래그 이동 가능한 패널 (Leaflet control 대신 일반 fixed 패널로 구현)
 // ════════════════════════════════════════════════════
-const legend = L.control({ position: 'bottomright' });
-legend.onAdd = () => {
-  const d = L.DomUtil.create('div', 'legend');
-  d.innerHTML = `
-    <h4>범례</h4>
-    <div class="legend-item"><div class="legend-dot" style="background:#3399ff"></div> 부산항 (출발지)</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#ffaa00;box-shadow:0 0 8px #ffaa00"></div> 히타카츠항 (경유 구상)</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#aaaaaa"></div> 이즈하라항 (참고)</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#ff4466"></div> 하카타항 (목적지)</div>
-    <div style="margin-top:7px;border-top:1px solid rgba(80,160,255,0.3);padding-top:7px">
-      <div class="legend-item"><div style="width:24px;border-top:2px dashed #3399ff;opacity:0.6"></div> 기존 직항</div>
-      <div class="legend-item"><div style="width:24px;border-top:2px dashed #ffaa00"></div> 구상 경유 항로</div>
-      <div class="legend-item"><div style="width:24px;border-top:2px solid #ff9900"></div> 사용자 그리기</div>
-    </div>`;
-  return d;
-};
-legend.addTo(map);
+function legendToggle() {
+  document.getElementById('legendPanel').classList.toggle('visible');
+}
+(function() {
+  const panel = document.getElementById('legendPanel');
+  const title = panel.querySelector('.sim-title');
+  let dragging = false, ox = 0, oy = 0;
+  title.addEventListener('mousedown', function(e) {
+    if (e.target.classList.contains('sim-title-btn')) return;
+    const r = panel.getBoundingClientRect();
+    ox = e.clientX - r.left;
+    oy = e.clientY - r.top;
+    panel.style.left = r.left + 'px';
+    panel.style.top = r.top + 'px';
+    panel.style.right = 'auto';
+    panel.style.bottom = 'auto';
+    dragging = true;
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    let x = e.clientX - ox;
+    let y = e.clientY - oy;
+    x = Math.max(0, Math.min(window.innerWidth  - panel.offsetWidth,  x));
+    y = Math.max(0, Math.min(window.innerHeight - panel.offsetHeight, y));
+    panel.style.left = x + 'px';
+    panel.style.top  = y + 'px';
+  });
+  document.addEventListener('mouseup', function() { dragging = false; });
+})();
 
 
 // ════════════════════════════════════════════════════
@@ -1412,7 +1749,9 @@ map.on('mousemove', e => {
   document.getElementById('mouseLng').textContent = e.latlng.lng.toFixed(6) + '° E';
 });
 
-map.on('click', e => {
+// 좌표 확인·복사는 우클릭으로 — 좌클릭은 POI·항로선 팝업 등 다른 지도 상호작용에 그대로 쓰인다.
+map.on('contextmenu', e => {
+  L.DomEvent.preventDefault(e.originalEvent); // 브라우저 기본 우클릭 메뉴 대신 좌표 팝업을 띄운다
   if (measuring) return;  // 거리재기 모드에선 좌표팝업 생략
   lastClickLL = e.latlng;
 
@@ -1468,8 +1807,47 @@ function copyCoord(fmt) {
 // ════════════════════════════════════════════════════
 const SIM_SPEED_KTS = 37;                        // 순항 속도 (최고 42kts의 약 88%)
 const SIM_SPEED_KMH = SIM_SPEED_KTS * 1.852;
-const SIM_STOP_MIN   = 25;  // 히타카츠 경유 시간(분)
-const SIM_RETURN_WAIT = 2;  // 하카타 복귀 준비 시간(분) — 60배속 약 2초
+let SIM_STOP_MIN   = 25;  // 히타카츠 경유 시간(분) — 산타모니카호(경유) 전용, 수동 조정 가능
+
+// ── 선석 스케줄(수속시간) 관련 기본값 ──
+// 기본 수속시간(분) — 등록 선박(경쟁사 등)이 각 항구에 도착했을 때 선석을 점유하는
+// 기준 시간. 산타모니카호(경유)가 히타카츠에 정박하는 시간만 SIM_STOP_MIN을 그대로 쓴다.
+let BERTH_DEFAULT_MIN = 30;
+function _allWeekDays() { return ['토','일','월','화','수','목','금']; }
+
+// 선박 스케줄 관리 목록의 그룹(선사) 트리 — 접힌 그룹을 담아둔다(키: "대범주|선사").
+const _shipMgrCollapsedGroups = new Set();
+function toggleShipGroupCollapse(groupKey) {
+  if (_shipMgrCollapsedGroups.has(groupKey)) _shipMgrCollapsedGroups.delete(groupKey);
+  else _shipMgrCollapsedGroups.add(groupKey);
+  renderShipMgrList();
+}
+// 대범주(한국라인/일본라인) 트리 — 그룹(선사)보다 한 단계 위. 접힌 대범주 이름을 담아둔다.
+const _shipMgrCollapsedNations = new Set();
+function toggleShipNationCollapse(nationName) {
+  if (_shipMgrCollapsedNations.has(nationName)) _shipMgrCollapsedNations.delete(nationName);
+  else _shipMgrCollapsedNations.add(nationName);
+  renderShipMgrList();
+}
+
+// 선박 이름에서 선사(그룹)를 추정한다 — 기존 데이터 마이그레이션과 신규 등록 기본값에 쓰인다.
+function _inferShipGroup(name) {
+  if (!name) return '기타';
+  if (name.startsWith('팬스타')) return '팬스타';
+  if (name.startsWith('스타라인')) return '스타라인';
+  if (name.startsWith('대아고속해운')) return '대아고속해운';
+  if (name.startsWith('카멜리아')) return '카멜리아';
+  if (name.includes('부관훼리') || name.startsWith('성희호') || name.startsWith('하마유호')) return '부관훼리';
+  return '기타';
+}
+// 대범주 — 선사가 아니라 "한국 선적/한국 선사 라인"인지 "일본 선적/일본 선사 라인"인지로 나눈다.
+// 부관훼리처럼 같은 선사 안에서도 배마다 선적이 다른 경우가 있어 그룹과는 별도 필드로 둔다.
+const NATION_TYPES = ['한국라인', '일본라인'];
+function _inferShipNation(name) {
+  if (!name) return '한국라인';
+  if (name.includes('하마유호')) return '일본라인'; // 부관훼리 중 일본적 선박
+  return '한국라인'; // 팬스타·스타라인·대아고속해운·성희호(한국적)·카멜리아(한일 합작, 편의상 한국라인)
+}
 
 // 복귀 노선 (퀸비틀 직항 역방향)
 const _retWP = [
@@ -1490,6 +1868,29 @@ const _simWP2 = [
   [34.645919, 129.492116],[33.752890, 130.000534],
   [33.679497, 130.231719],[33.619837, 130.380163],
   [33.608901, 130.394754],[33.607614, 130.399261]
+];
+
+// 히타카츠→이즈하라 분기 구간 — 히타카츠항에서 출발해 경유 구상 항로(_simWP2)를
+// 잠시 따라가다가 남쪽 이즈하라항으로 갈라진다. 히타카츠 경유 이즈하라행 선박(2구간 중 2구간)에 사용.
+const _izuharaBranchWP = [
+  [34.655649, 129.469231],[34.653906, 129.474081],
+  [34.645919, 129.492116],[34.589552, 129.528465],
+  [34.324016, 129.443493],[34.197463, 129.336891],
+  [34.190337, 129.299705],[34.195467, 129.291154],
+  [34.197834, 129.290867]
+];
+// 부산→이즈하라 직항 전체 경로 — 부산→히타카츠 구간은 히타카츠항(경유 구상) 항로(_simWP1)와
+// 동일하고, 그 뒤로 위 분기 구간을 그대로 이어붙인다.
+const _izuharaWP = [..._simWP1, ..._izuharaBranchWP.slice(1)];
+
+// 부산→이즈하라 "직항(히타카츠 미경유)" 경로 — 히타카츠항 접안 진입 구간(_izuharaBranchWP
+// 앞부분)은 타지 않고, 히타카츠 동쪽 먼바다 쪽으로 돌아나가 하나의 완만한 곡선으로
+// 남쪽 분기 구간(34.307144,129.441261 이남)에 합류한다.
+const _izuharaDirectWP = [
+  ..._simWP1.slice(0, 2),
+  [34.739073, 129.523659],[34.526076, 129.526405],
+  [34.307144, 129.441261],
+  ..._izuharaBranchWP.slice(5)
 ];
 
 function _simDist(a, b) {
@@ -1516,11 +1917,79 @@ function _buildTL(pts, startMin, speedKmh) {
   return tl;
 }
 
+// 부산→히타카츠 구간은 선사에 관계없이 산타모니카호와 동일한 구상 항로(_simWP1)를 공유한다.
+// (실제로 같은 해협을 지나가므로 등록 선박마다 직선이 아닌 동일 경로로 표시)
+const _BUSAN_PT = [35.115670, 129.048312];
+function _isNearPt(pt, ref, km) { return _simDist(pt, ref) < km; }
+function _isNearPort(pt, portId) {
+  const p = ports.find(pp => pp.id === portId);
+  return p ? _isNearPt(pt, [p.lat, p.lng], 3) : false;
+}
+function _legPath(fromPt, toPt) {
+  if (_isNearPt(fromPt, _BUSAN_PT, 5) && _isNearPort(toPt, 'hitakatsu')) return catmullRom(_simWP1, 60);
+  if (_isNearPt(toPt, _BUSAN_PT, 5) && _isNearPort(fromPt, 'hitakatsu')) return catmullRom(_simWP1, 60).slice().reverse();
+  // 부산→이즈하라 직항(경유지 없이 등록된 배)은 히타카츠 항구까지는 들어가지 않는 미경유 항로를 쓴다.
+  if (_isNearPt(fromPt, _BUSAN_PT, 5) && _isNearPort(toPt, 'izuhara')) return catmullRom(_izuharaDirectWP, 60);
+  if (_isNearPt(toPt, _BUSAN_PT, 5) && _isNearPort(fromPt, 'izuhara')) return catmullRom(_izuharaDirectWP, 60).slice().reverse();
+  if (_isNearPort(fromPt, 'hitakatsu') && _isNearPort(toPt, 'izuhara')) return catmullRom(_izuharaBranchWP, 60);
+  if (_isNearPort(toPt, 'hitakatsu') && _isNearPort(fromPt, 'izuhara')) return catmullRom(_izuharaBranchWP, 60).slice().reverse();
+  // 부산↔하카타 직항(카멜리아 등)은 퀸비틀과 동일한 노선(_qbWP)을 공유한다.
+  if (_isNearPt(fromPt, _BUSAN_PT, 5) && _isNearPort(toPt, 'hakata')) return _qbWP;
+  if (_isNearPt(toPt, _BUSAN_PT, 5) && _isNearPort(fromPt, 'hakata')) return _qbWP.slice().reverse();
+  // 부산↔시모노세키(부관훼리)는 실측 경유점을 직선 구간으로만 연결한다 — 곡선 보간 시
+  // 간몬해협이 좁아 육지를 가로지르는 문제가 있어 원본(rentacar 레포지토리)에서도 곡선을 쓰지 않았다.
+  if (_isNearPt(fromPt, _BUSAN_PT, 5) && _isNearPort(toPt, 'shimonoseki')) return _shimonosekiWP;
+  if (_isNearPt(toPt, _BUSAN_PT, 5) && _isNearPort(fromPt, 'shimonoseki')) return _shimonosekiWP.slice().reverse();
+  // 부산↔오사카(팬스타 미라클호)는 시모노세키 항로와 간몬해협 진입 직전까지 동일한 경로를
+  // 타다가, 카라토 터미널로 들어가지 않고 히비키나다에서 동쪽 세토내해로 갈라져 나간다.
+  // 세토내해는 섬 사이 좁은 수로가 많아 곡선 보간 없이 실측 경유점을 직선으로만 연결한다.
+  if (_isNearPt(fromPt, _BUSAN_PT, 5) && _isNearPort(toPt, 'osaka')) return _miracleWP;
+  if (_isNearPt(toPt, _BUSAN_PT, 5) && _isNearPort(fromPt, 'osaka')) return _miracleWP.slice().reverse();
+  return [fromPt, toPt];
+}
+
 // 퀸비틀 직항 노선 경유점
 const _qbWP = [
   [35.115670, 129.048312],[35.078828, 129.107552],
   [34.698719, 129.622192],[33.662139, 130.277510],
   [33.607614, 130.399261]
+];
+
+// 부관훼리 항로 (부산항국제여객터미널 ↔ 시모노세키항) — 대한해협을 건넌 뒤 히비키나다(響灘)를
+// 지나 간몬해협(関門海峡) 서쪽 입구로 진입해 카라토(唐戸) 터미널로 들어오는 실제 항로.
+// 좌표는 rentacar 레포지토리(부관훼리 시모노세키 렌터카 사업 기획)에서 그대로 가져온 실측 경유점.
+// 원본에서도 "곡선 보간 시 해협이 좁아 육지를 가로지르는 문제"로 직선 구간만 연결했으므로 동일하게 처리.
+const _shimonosekiWP = [
+  [35.116685, 129.051225],
+  [33.972586, 130.815582],
+  [33.918992, 130.881500],
+  [33.904696, 130.908623],
+  [33.903541, 130.922270],
+  [33.915020, 130.930853],
+  [33.935914, 130.935059],
+  [33.946998, 130.925274]
+];
+
+// 팬스타 미라클호 항로 (부산항국제여객터미널 ↔ 오사카항 국제여객터미널) — 대한해협을 건너
+// 히비키나다까지는 부관훼리와 동일한 경로를 타다가, 간몬해협(카라토 터미널)으로는 들어가지 않고
+// 동쪽 세토내해(이요나다·히로시마 앞바다·빈고나다·하리마나다)를 거쳐 오사카만으로 진입한다.
+// 사용자 제공 실측 경유점(구글맵 기준)을 그대로 사용 — 좁은 수로가 많아 곡선 보간 없이 직선 연결.
+const _miracleWP = [
+  ..._shimonosekiWP.slice(0, 6), // 부산 → 히비키나다 진입까지는 시모노세키 항로와 동일
+  [33.931682, 130.934715],
+  [33.962013, 130.960121],[33.976962, 130.993423],[33.971267, 131.029129],
+  [33.861293, 131.194611],[33.692352, 132.131195],
+  [33.763165, 132.411346],[33.770586, 132.430573],
+  [33.830498, 132.554169],[33.897777, 132.615967],
+  [33.950195, 132.707291],[34.152159, 132.902298],
+  [34.155568, 132.952423],[34.128290, 133.000488],
+  [34.106688, 133.000488],[34.082237, 133.033447],
+  [34.204420, 133.256607],[34.372912, 133.801804],
+  [34.371778, 133.838196],[34.434098, 134.059296],
+  [34.395012, 134.226151],[34.400111, 134.348373],
+  [34.621908, 134.998627],[34.585171, 135.074158],
+  [34.598172, 135.323410],[34.647119, 135.413189],
+  [34.644789, 135.422802],[34.643200, 135.422051]
 ];
 // ── 속도 변수 ──
 // 산타모니카: 42노트 순항 (부산-제주 92마일/1.5h 스케줄 기준)
@@ -1531,7 +2000,19 @@ let simSMkts = 42;
 const SM_DIST_LEG1 = 74;   // 부산→히타카츠 공식 거리 (km)
 const SM_DIST_LEG2 = 132;  // 히타카츠→하카타 공식 거리 (km)
 const QB_DIST_KM   = 213;  // 부산→하카타 공식 거리 (km)
-let simQBkts = (QB_DIST_KM / (220 / 60)) / 1.852; // 213km ÷ 3h40m ≈ 31.4 노트
+let simQBkts = 37; // 실측 순항속력 기준 37노트로 수정(舊: 공식거리÷소요시간 역산값 31.4노트)
+
+// 회항(정박) 대기시간 — 목적항(하카타) 도착 후 승하선·급유·정비 등을 마치고
+// 다시 부산으로 출항하기까지 걸리는 시간(분). 왕복 소요시간 계산에 반영된다.
+let simSMTurnMin = 60;
+let simQBTurnMin = 60;
+
+// 선종·총톤수 — 산타모니카호는 Incat社 76m급 고속카타마란(국제총톤수 3,500톤, 621명+차량 86대,
+// 진도-제주 항로에 실제 운항 중인 동형 선박 기준). 퀸비틀은 호주 Austal 조선 트라이마란형
+// 고속선으로 배수량 약 2,582톤(⚠ 정확한 총톤수는 확인 필요) — 2024년 2월 선체 침수 사고로
+// 운항 중단 후 팬스타에 매각된 것으로 파악됨(경쟁 구도 변화 반영 필요).
+let simSMShipType = '고속선', simSMTonnage = 3500;
+let simQBShipType = '고속선', simQBTonnage = 2582;
 
 // 라이브 타임라인 (rebuildSim 으로 생성)
 let _tl1, _tl2, _tlQB, _tl3, _tlQBret;
@@ -1541,12 +2022,76 @@ let _tlSM2, _tlSM2ret, _totalMinSM2, _totalMinSM2ret;
 let sim2Marker = null;
 let _activeSimTab = 1;
 
+// ── 재생 범위(어떤 배를 움직여서 보여줄지) ──
+// 'core'=투입고려(퀸비틀·산타모니카), 'custom'=타선사선박(기존 운항 중인 등록 선박),
+// 'all'=전체, 'pending'=타선사 진입예정(아직 취항 전인 등록 선박 — 예: 그레이스호)
+let simPlayScope = 'core';
+const SIM_SCOPE_OPTS = [
+  { id:'core',    label:'🚢 투입고려' },
+  { id:'pending', label:'🕓 타선사 진입예정' },
+  { id:'custom',  label:'⛴ 타선사선박' },
+  { id:'all',     label:'🌐 전체' }
+];
+function _simCoreVisible()    { return simPlayScope === 'core' || simPlayScope === 'all'; }    // 퀸비틀·산타모니카 표시 여부
+function _simCustomVisible()  { return simPlayScope === 'custom' || simPlayScope === 'all'; }  // 기존 운항 중인 등록 선박 표시 여부 (운항예정 제외)
+function _simPendingVisible() { return simPlayScope === 'pending' || simPlayScope === 'all'; }  // 타선사 진입예정(운항예정) 선박만 표시 여부
+// 등록 선박(customShips) 한 척이 현재 재생 범위에서 보여야 하는지 — '전체'는 전부,
+// 'pending'은 운항예정만, 'custom'은 운항예정을 뺀 나머지만, 'core'는 아예 표시 안 함.
+function _shouldShowCustomShip(s) {
+  if (simPlayScope === 'all') return true;
+  if (simPlayScope === 'pending') return !!s.pending;
+  if (simPlayScope === 'custom') return !s.pending;
+  return false;
+}
+// 지금 재생 범위(scope)에서 실제로 보이는 배들 중 가장 이른 출항 시각(분)을 구한다 —
+// 탭을 바꿀 때마다 쓸데없는 "출항 대기" 구간을 건너뛰고 바로 그 시각으로 당겨서 보여주기 위함.
+function _earliestVisibleDepartMin() {
+  const vals = [];
+  if (_simCoreVisible()) vals.push(_smDelay, _qbDelay);
+  customShips.forEach(s => {
+    if (!_shouldShowCustomShip(s)) return;
+    const tl = _customTL[s.id];
+    if (!tl) return;
+    vals.push(tl.delay || 0);
+  });
+  return vals.length ? Math.max(0, Math.min(...vals)) : 0;
+}
+function setSimPlayScope(scope) {
+  simPlayScope = scope;
+  _renderSimScopeTabs();
+  // 범위와 무관하게 항상, 지금 탭에서 보이는 배들 중 가장 빨리 출항하는 배 기준으로 시간을
+  // 당겨서(대기시간 없이) 바로 시뮬레이션이 가동되도록 한다.
+  simSimMin = _earliestVisibleDepartMin();
+  _simRenderFrame();
+  simPlay();
+  _rebuildSimTimelapse();
+  _applyMapScopeVisibility();
+}
+// 재생 범위 탭은 simPanel과 타임랩스 바 양쪽에 똑같이 떠 있어야 하므로, id 대신
+// .sim-scope-mount 클래스가 붙은 모든 자리에 동시에 그려서 항상 서로 동기화되게 한다.
+function _renderSimScopeTabs() {
+  const html = SIM_SCOPE_OPTS.map(o =>
+    `<button type="button" class="sim-scope-btn${simPlayScope===o.id?' active':''}" onclick="setSimPlayScope('${o.id}')">${o.label}</button>`
+  ).join('');
+  document.querySelectorAll('.sim-scope-mount').forEach(el => { el.innerHTML = html; });
+}
+
+// 배속 셀렉트도 simPanel·타임랩스 바 두 군데에 있으므로, 값이 바뀌면 나머지 하나도 같이 맞춘다.
+function setSimSpeed(value) {
+  simSpeedFactor = +value;
+  document.querySelectorAll('.sim-speed-mount').forEach(el => { el.value = value; });
+}
+
+// 재생 버튼 문구(▶ 동시 출항 / ▶ 출항 중 / ▶ 다시 출항)도 두 군데 버튼에 동시에 반영한다.
+function _setSimPlayLabel(text) {
+  document.querySelectorAll('.btn-sim-play').forEach(el => { el.textContent = text; });
+}
+
 // ── 선박별 출항시각 ──
 // 각 배는 자기 자신의 타임라인(0분 = 자신의 출항 시점) 위에서 움직이고,
 // 실제 화면 표시 시에만 "가장 이른 출항" 대비 지연분(_delay)만큼 대기 상태로 붙잡아 둔다.
 let simSMDepartHM = '09:00';
 let simQBDepartHM = '09:00';
-let _smDelay = 0, _qbDelay = 0, _baseMin = 9*60;
 // 사용자가 등록하는 임의 선박 목록 (선석 확보 검토용)
 let customShips = [];
 let _customTL = {};       // id -> {outTL, retTL, totalOut, totalRet}
@@ -1562,17 +2107,565 @@ function _minToHM(min) {
   if (m < 0) m += 1440;
   return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
 }
-// 모든 선박(산타모니카·퀸비틀·커스텀 선박)의 출항시각 중 가장 이른 시각을 기준(0분)으로 잡고,
-// 각 배의 지연분(_delay)을 계산한다.
+// 하루 기준(0분)을 오전 07:00으로 고정한다 — 이전에는 등록된 선박 중 가장 이른 출항시각을
+// 기준으로 삼았지만, 부관훼리(19:45·21:00 출항)처럼 저녁~야간에 출항하는 선박이 늘면서
+// "하루 전체(24시간) 시계"로 한눈에 보기 위해 항상 07:00부터 시작하도록 고정했다.
+const DAY_START_MIN = 7 * 60; // 07:00
+let _smDelay = 0, _qbDelay = 0, _baseMin = DAY_START_MIN;
+// 각 배의 출항 지연분(_delay = 하루 기준 07:00 대비 몇 분 뒤에 출항하는지)을 계산한다.
 function _computeDelays() {
   const smDep = _hmToMin(simSMDepartHM);
   const qbDep = _hmToMin(simQBDepartHM);
-  let base = Math.min(smDep, qbDep);
-  customShips.forEach(s => { base = Math.min(base, _hmToMin(s.departHM)); });
-  _baseMin = base;
-  _smDelay = smDep - base;
-  _qbDelay = qbDep - base;
-  customShips.forEach(s => { s._delay = _hmToMin(s.departHM) - base; });
+  _baseMin = DAY_START_MIN;
+  _smDelay = smDep - _baseMin;
+  _qbDelay = qbDep - _baseMin;
+  customShips.forEach(s => { s._delay = _hmToMin(s.departHM) - _baseMin; });
+}
+
+// 상단 패널의 시계(wallClock)와 화면 상단 중앙의 24시간 시계(topDayClock)를 함께 갱신한다.
+function _updateWallClocks() {
+  const hm = _minToHM(_baseMin + simSimMin);
+  const wcEl = document.getElementById('wallClock');
+  if (wcEl) wcEl.textContent = hm;
+  const topEl = document.getElementById('topDayClockTime');
+  if (topEl) topEl.textContent = hm;
+}
+
+// 하단 타임랩스 슬라이더의 길이(max)와 손잡이 위치, 경과/전체 시간 라벨을 동기화한다.
+// ════════════════════════════════════════════════════
+//  화면 하단(푸터) 타임랩스 — vis-timeline으로 각 배가 시간대별로 어느 구간(항해/정박/대기)에
+//  있는지 보여주고, 커스텀 타임 막대(재생 헤드)를 드래그하면 그 시점으로 바로 이동한다.
+// ════════════════════════════════════════════════════
+const SIM_EPOCH = new Date(2000, 0, 1).getTime(); // 임의 기준일 — simSimMin을 실제 시:분 축으로 환산하기 위한 앵커
+function _simTimeAt(min) { return new Date(SIM_EPOCH + (_baseMin + min) * 60000); }
+function _simMinAt(date) { return (date.getTime() - SIM_EPOCH) / 60000 - _baseMin; }
+// 지금(실제 현재 시각)을 하루 기준(07:00=0분) 상대 분으로 환산한다 — 자정을 넘겼으면 다음날로 본다.
+function _nowSimMin() {
+  const now = new Date();
+  let rel = (now.getHours() * 60 + now.getMinutes()) - _baseMin;
+  if (rel < 0) rel += 1440;
+  return rel;
+}
+// "지금" 세로선 위에 떠 있는 "🕐 지금 HH:MM" 배지 텍스트를 갱신한다(없으면 새로 만든다).
+// 배지를 vis-timeline이 관리하는(overflow:hidden으로 잘리는) 영역 안에 자식으로 붙이면
+// 화면에는 안 보이고 마우스를 올렸을 때 브라우저 기본 툴팁으로만 보이는 문제가 있었다.
+// 그래서 배지를 body에 직접(position:fixed) 붙이고, 세로선의 실제 화면 좌표를 계산해
+// 매번 그 위치로 옮겨준다 — 잘릴 걱정 없이 항상 보인다.
+function _updateNowTag() {
+  const bar = document.querySelector('#simTimelapseEl .vis-custom-time.now');
+  if (!bar) { const old = document.getElementById('simNowTag'); if (old) old.remove(); return; }
+  // vis-timeline이 자동으로 붙이는 영문 title 툴팁("Time: Saturday, January 1st...")을 없앤다 —
+  // 이제 배지가 항상 보이니 굳이 마우스오버 툴팁이 따로 필요 없다.
+  if (bar.hasAttribute('title')) bar.removeAttribute('title');
+  let tag = document.getElementById('simNowTag');
+  if (!tag) {
+    tag = document.createElement('div');
+    tag.id = 'simNowTag';
+    tag.className = 'sim-now-tag';
+    document.body.appendChild(tag);
+  }
+  const r = bar.getBoundingClientRect();
+  tag.style.left = (r.left + r.width / 2) + 'px';
+  tag.style.top  = (r.top - 22) + 'px';
+  const now = new Date();
+  tag.textContent = `🕐 지금 ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} (한국시간)`;
+}
+
+// 타임랩스는 SIM_EPOCH(2000-01-01)를 임의 기준일로 쓰기 때문에, vis-timeline이 자체적으로
+// "Sat 1 January" 같은 의미 없는 실제 날짜를 보여줄 수 있다 — 선석 스케줄과 같은 방식으로
+// "08:00"류 시:분 눈금은 그대로 두고, 그 외 날짜 텍스트만 요일 이름으로 바꿔친다.
+// 실제 달력 날짜(getWindow() 등)는 전혀 안 보고, 화면에 보이는 순서대로 무조건
+// "토·일·월·화·수·목·금"을 반복해서 매긴다 — 오늘이 며칠이든 항상 이 순서로만 보인다.
+let _simTimelapseRelabeling = false;
+function _simTimelapseRelabelDays() {
+  if (_simTimelapseRelabeling || !_simTimelapse) return;
+  const container = document.getElementById('simTimelapseEl');
+  if (!container) return;
+  _simTimelapseRelabeling = true;
+  try {
+    const week = _allWeekDays();
+    const isTimeLike = txt => /^\d{1,2}:\d{2}$/.test(txt);
+    ['vis-major', 'vis-minor'].forEach(cls => {
+      let idx = 0;
+      container.querySelectorAll('.vis-text.' + cls).forEach(el => {
+        const txt = el.textContent.trim();
+        if (isTimeLike(txt)) return;
+        const label = week[idx % 7];
+        if (el.textContent !== label) el.textContent = label;
+        idx++;
+      });
+    });
+  } finally {
+    _simTimelapseRelabeling = false;
+  }
+}
+
+let _simTimelapse = null;
+
+// 현재 탭(경유/직항)의 산타모니카호 + 퀸비틀 구간을 vis-timeline item으로 만든다.
+// hex 색상을 밝게/어둡게 만든다 (percent: -1~1, 음수면 어둡게) — 등록 선박의 "항해 중"/"대기 중" 구간을 구분하는 데 쓴다.
+function _shadeColor(hex, percent) {
+  const num = parseInt((hex || '#888888').replace('#',''), 16);
+  const clamp = v => Math.max(0, Math.min(255, v));
+  const r = clamp((num >> 16) + Math.round(255 * percent));
+  const g = clamp(((num >> 8) & 0xff) + Math.round(255 * percent));
+  const b = clamp((num & 0xff) + Math.round(255 * percent));
+  return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+}
+
+// 구간(group id: 'sm'/'qb'/'c_<id>')이 가리키는 배의 표시용 이름·총톤수를 찾는다 — 툴팁에 쓰인다.
+function _groupShipLabel(groupId) {
+  if (groupId === 'sm') return _activeSimTab === 1 ? '산타모니카호(경유)' : '산타모니카호(직항)';
+  if (groupId === 'qb') return '퀸비틀';
+  const s = customShips.find(x => 'c_' + x.id === groupId);
+  return s ? s.name : groupId;
+}
+function _groupTonnage(groupId) {
+  if (groupId === 'sm') return simSMTonnage;
+  if (groupId === 'qb') return simQBTonnage;
+  const s = customShips.find(x => 'c_' + x.id === groupId);
+  return s ? s.tonnage : null;
+}
+
+function _buildSimTimelapseItems() {
+  const items = [];
+  let seq = 1;
+  // waiting=true인 구간(출항 대기·정박·경유 대기)은 빗금 패턴(className: sim-seg-wait)을 얹어서
+  // 항해 중인 구간과 한눈에 구분되게 한다. 이때는 배경을 shorthand(background)가 아니라
+  // background-color로 지정해야 CSS의 배경 이미지(빗금)가 인라인 스타일에 지워지지 않는다.
+  // title에는 정확한 시:분 구간·소요시간·선종·총톤수를 담아 마우스를 올리면(선택하면) 툴팁으로 보여준다.
+  const seg = (group, color, label, startMin, endMin, waiting) => {
+    if (endMin <= startMin) return;
+    const type = _groupShipType(group), ton = _groupTonnage(group);
+    items.push({
+      id: seq++, group, content: label,
+      start: _simTimeAt(startMin), end: _simTimeAt(endMin),
+      className: waiting ? 'sim-seg-wait' : '',
+      style: `background-color:${color};border-color:rgba(0,0,0,0.4);color:#08142d;`,
+      title: `<b>${_groupShipLabel(group)}</b> · ${label}<br>${_minToHM(startMin)} ~ ${_minToHM(endMin)} (${_fmtMin(endMin - startMin)} 소요)`
+        + (type ? `<br>${type}${ton ? ' · ' + ton.toLocaleString() + '톤' : ''}` : '')
+    });
+  };
+
+  if (_simCoreVisible()) {
+    if (_activeSimTab === 1) {
+      seg('sm', '#665500', '출항 대기',        0, _smDelay, true);
+      seg('sm', '#ffcc00', '부산→히타카츠',     _smDelay, _smDelay + _hitaArrMin, false);
+      seg('sm', '#cc8800', '히타카츠 정박(경유)', _smDelay + _hitaArrMin, _smDelay + _hitaArrMin + SIM_STOP_MIN, true);
+      seg('sm', '#ffcc00', '히타카츠→하카타',   _smDelay + _hitaArrMin + SIM_STOP_MIN, _smDelay + _totalMinSM, false);
+      seg('sm', '#cc8800', '하카타 대기',       _smDelay + _totalMinSM, _smDelay + _totalMinSM + simSMTurnMin, true);
+      seg('sm', '#ffcc00', '하카타→부산',       _smDelay + _totalMinSM + simSMTurnMin, _smDelay + _totalMinSMret, false);
+    } else {
+      seg('sm', '#665500', '출항 대기',   0, _smDelay, true);
+      seg('sm', '#44ffdd', '부산→하카타', _smDelay, _smDelay + _totalMinSM2, false);
+      seg('sm', '#008866', '하카타 대기', _smDelay + _totalMinSM2, _smDelay + _totalMinSM2 + simSMTurnMin, true);
+      seg('sm', '#44ffdd', '하카타→부산', _smDelay + _totalMinSM2 + simSMTurnMin, _smDelay + _totalMinSM2ret, false);
+    }
+    seg('qb', '#334455', '출항 대기',   0, _qbDelay, true);
+    seg('qb', '#66ccff', '부산→하카타', _qbDelay, _qbDelay + _totalMinQB, false);
+    seg('qb', '#1155aa', '하카타 대기', _qbDelay + _totalMinQB, _qbDelay + _totalMinQB + simQBTurnMin, true);
+    seg('qb', '#66ccff', '하카타→부산', _qbDelay + _totalMinQB + simQBTurnMin, _qbDelay + _totalMinQBret, false);
+  }
+
+  if (_simCustomVisible() || _simPendingVisible()) {
+    customShips.forEach(s => {
+      if (!_shouldShowCustomShip(s)) return;
+      const tl = _customTL[s.id];
+      if (!tl) return;
+      const g = 'c_' + s.id, delay = tl.delay || 0, waitColor = _shadeColor(s.color, -0.35);
+      seg(g, '#333344', '출항 대기', 0, delay, true);
+      if (s.via) {
+        seg(g, s.color, '항해 중', delay, delay + tl.viaArrive, false);
+        seg(g, waitColor, `${s.via.name} 정박(경유)`, delay + tl.viaArrive, delay + tl.viaDepart, true);
+        seg(g, s.color, '항해 중', delay + tl.viaDepart, delay + tl.totalOut, false);
+      } else {
+        seg(g, s.color, '항해 중', delay, delay + tl.totalOut, false);
+      }
+      if (s.roundTrip) {
+        seg(g, waitColor, '정박 대기', delay + tl.totalOut, delay + tl.totalOut + s.turnMin, true);
+        if (s.via) {
+          seg(g, s.color, '복귀 항해 중', delay + tl.totalOut + s.turnMin, delay + tl.retViaArrive, false);
+          seg(g, waitColor, `${s.via.name} 정박(경유)`, delay + tl.retViaArrive, delay + tl.retViaDepart, true);
+          seg(g, s.color, '복귀 항해 중', delay + tl.retViaDepart, delay + tl.totalRet, false);
+        } else {
+          seg(g, s.color, '복귀 항해 중', delay + tl.totalOut + s.turnMin, delay + tl.totalRet, false);
+        }
+      }
+    });
+  }
+
+  return items;
+}
+
+// 배 구간(item)이 바뀌는 시점(리셋·탭 전환·재생 범위 변경·설정 변경 등)에만 호출 — 통째로 다시 만든다.
+// 타임랩스 높이 — 롤러 블라인드처럼 손잡이를 잡아끌어 조절한다. null이면 배(그룹) 개수에 맞춘
+// 자동 높이를 쓰고, 한 번이라도 드래그하면 그 값을 그대로 유지한다(그룹 수가 바뀌어도 유지).
+// _rebuildSimTimelapse()가 페이지 로드 초기부터 이 값을 읽으므로, 반드시 그보다 앞에서 선언해야 한다.
+let simTimelapseManualHeight = null;
+// 타임랩스 왼쪽 배 목록 행을 마우스로 끌어 바꾼 순서 — { groupId: order숫자 }. rebuild할 때마다
+// groups를 새로 만들지만 이 값이 있으면 그대로 적용해 사용자가 정렬한 순서를 유지한다.
+let _simTimelapseGroupOrder = {};
+// 항구 필터(전체 또는 특정 항구) — 배 목록 행을 그 항구를 오가는 배로만 좁혀 보여준다. 필터일 뿐이고
+// 맨 아래 "투입가능 선석" 행은 필터 값과 무관하게 항상 나온다(전체일 땐 공용 허브인 부산 기준).
+let simTimelapsePortFilter = 'all';
+function setSimTimelapsePortFilter(v) {
+  simTimelapsePortFilter = v;
+  _rebuildSimTimelapse();
+  _applyMapScopeVisibility(); // 항구를 특정하면 지도에서도 그 항구를 지나는 POI·항로선만 남긴다
+}
+// 선종 필터(전체/고속선/로로선(화물여객선)/기타) — 항구 필터와 마찬가지로 배 목록 행만 좁힌다.
+let simTimelapseShipTypeFilter = 'all';
+function setSimTimelapseShipTypeFilter(v) {
+  simTimelapseShipTypeFilter = v;
+  _rebuildSimTimelapse();
+}
+// 특정 선박 필터 — 옵션 목록 자체를 "지금 재생범위에서 보이는 배들"로 매번 다시 채운다
+// (_rebuildSimTimelapse에서 호출). 그 배가 범위 밖으로 사라지면 자동으로 "전체"로 되돌린다.
+let simTimelapseShipFilter = 'all';
+function setSimTimelapseShipFilter(v) {
+  simTimelapseShipFilter = v;
+  _rebuildSimTimelapse();
+}
+function _groupShipType(groupId) {
+  if (groupId === 'sm') return simSMShipType;
+  if (groupId === 'qb') return simQBShipType;
+  const s = customShips.find(x => 'c_' + x.id === groupId);
+  return s ? (s.shipType || '고속선') : null;
+}
+// 기본/등록 선박이 주어진 항구를 오가는지 — 항구 필터에 쓰인다.
+function _shipTouchesPort(kind, portId) {
+  if (kind === 'sm') return (_activeSimTab === 1 ? ['busan','hitakatsu','hakata'] : ['busan','hakata']).includes(portId);
+  if (kind === 'qb') return ['busan','hakata'].includes(portId);
+  return false;
+}
+function _customShipTouchesPort(s, portId) {
+  return _portIdByName(s.from.name) === portId || _portIdByName(s.to.name) === portId ||
+    (s.via && _portIdByName(s.via.name) === portId);
+}
+// 항구 POI 팝업에 넣을 소요시간 목록 — 이 항구를 오가는 배마다 "출항 · 대기 · 귀항"을 나눠 보여주고,
+// 왕복(출항+대기+귀항을 다 알 수 있는 배)이면 그 합계를 "통합(왕복+대기)시간"으로 따로 표시한다.
+// 경유지로만 들르는 배는 여기 도착까지의 출항 시간·경유 대기만(귀항 구간이 없는 경우 생략),
+// 편도선(roundTrip:false, 예: 미라클호처럼 가는 편·오는 편을 각각 등록한 배)은 출항 시간만 보여준다
+// — 그래서 가는 편·오는 편의 시간이 서로 다르면(예: 미라클호 18h vs 17h) 두 줄이 다 나온다.
+function _portTimingLines(portId) {
+  const lines = [];
+  const add = (label, outMin, waitMin, retMin) => {
+    let s = `<b>${label}</b><br>&nbsp;&nbsp;출항: ${_fmtMin(outMin)}`;
+    if (waitMin != null) s += ` · 대기: ${_fmtMin(waitMin)}`;
+    if (retMin != null)  s += ` · 귀항: ${_fmtMin(retMin)}`;
+    if (waitMin != null && retMin != null) {
+      s += `<br>&nbsp;&nbsp;통합(왕복+대기)시간: ${_fmtMin(outMin + waitMin + retMin)}`;
+    }
+    lines.push(s);
+  };
+  if (_activeSimTab === 1) {
+    // 히타카츠는 경유지일 뿐 산타모니카호의 복귀 항로(하카타→부산 직항)가 다시 들르지 않으므로
+    // "귀항" 구간이 없다 — 출항·대기만 보여준다.
+    if (portId === 'hitakatsu') add('🚢 산타모니카(경유) 부산→히타카츠', _hitaArrMin, SIM_STOP_MIN, null);
+    if (portId === 'hakata') {
+      add('🚢 산타모니카(경유) 부산→하카타(히타카츠 경유)', _totalMinSM, simSMTurnMin, _totalMinSMret - _totalMinSM - simSMTurnMin);
+    }
+  } else {
+    if (portId === 'hakata') {
+      add('🚢 산타모니카(직항) 부산→하카타', _totalMinSM2, simSMTurnMin, _totalMinSM2ret - _totalMinSM2 - simSMTurnMin);
+    }
+  }
+  if (portId === 'hakata') {
+    add('🚢 퀸비틀 부산→하카타', _totalMinQB, simQBTurnMin, _totalMinQBret - _totalMinQB - simQBTurnMin);
+  }
+  customShips.forEach(s => {
+    const tl = _customTL[s.id];
+    if (!tl) return;
+    const viaPortId  = s.via ? _portIdByName(s.via.name) : null;
+    const toPortId   = _portIdByName(s.to.name);
+    const fromPortId = _portIdByName(s.from.name);
+    const tag = s.pending ? '🕓' : '⛴';
+    if (viaPortId === portId) {
+      const wait = tl.viaDepart - tl.viaArrive;
+      const ret = s.roundTrip ? (tl.totalRet - tl.retViaArrive) : null;
+      add(`${tag} ${s.name} ${s.from.name}→${s.via.name}`, tl.viaArrive, wait, ret);
+    }
+    if (toPortId === portId) {
+      if (s.roundTrip) add(`${tag} ${s.name} ${s.from.name}→${s.to.name}`, tl.totalOut, s.turnMin, tl.totalRet - tl.totalOut - s.turnMin);
+      else add(`${tag} ${s.name} ${s.from.name}→${s.to.name}`, tl.totalOut, null, null);
+    }
+    if (!s.roundTrip && fromPortId === portId) {
+      add(`${tag} ${s.name} ${s.from.name}→${s.to.name}`, tl.totalOut, null, null);
+    }
+  });
+  return lines;
+}
+
+// 참고 항로선 키마다 실제로 지나는 항구들 — 항구 필터(simTimelapsePortFilter)로 "이 항구를
+// 지나는 선만" 걸러낼 때 쓴다.
+const _LINE_PORTS = {
+  smLeg1: ['busan', 'hitakatsu'],
+  smLeg2: ['hitakatsu', 'hakata'],
+  qbDirect: ['busan', 'hakata'],
+  hitakatsuRef: ['busan', 'hitakatsu'],
+  izuharaViaRef: ['busan', 'hitakatsu', 'izuhara'],
+  izuharaDirectRef: ['busan', 'izuhara'],
+  camelliaRef: ['busan', 'hakata'],
+  shimonosekiRef: ['busan', 'shimonoseki'],
+  miracleRef: ['busan', 'osaka']
+};
+// ── 재생 범위(simPlayScope) 탭 + 항구 필터(simTimelapsePortFilter)에 맞춰 POI 마커·참고
+// 항로선도 함께 걸러 보여준다. 부산은 모든 배가 공유하는 허브라 항상 보인다. 나머지 항구·
+// 항로선은 "지금 이 탭에서 실제로 보이는 배가 그 항구/구간을 지나는가"를 기준으로 판단하고,
+// 항구 필터가 특정 항구로 설정돼 있으면 그 항구를 지나지 않는 항로/항구는 추가로 더 숨긴다.
+function _portVisibleForScope(portId) {
+  if (portId === 'busan') return true;
+  let show;
+  if (portId === 'hitakatsu') {
+    show = (_simCoreVisible() && _activeSimTab === 1) || _simCustomVisible() || _simPendingVisible();
+  } else if (portId === 'izuhara') {
+    show = _simCustomVisible() || _simPendingVisible();
+  } else if (portId === 'hakata') {
+    show = _simCoreVisible() || _simCustomVisible() || _simPendingVisible();
+  } else if (portId === 'shimonoseki' || portId === 'osaka') {
+    // 시모노세키(부관훼리)·오사카(미라클호)는 현재 둘 다 취항예정 없는 "타선사선박"만 오간다.
+    show = _simCustomVisible();
+  } else {
+    show = true;
+  }
+  if (!show) return false;
+  const filter = simTimelapsePortFilter;
+  if (filter === 'all' || portId === filter) return show;
+  // 필터로 고른 항구와 같은 항로(선)를 공유하는 항구만 추가로 보여준다.
+  return Object.keys(_LINE_PORTS).some(key => {
+    const p = _LINE_PORTS[key];
+    return p.includes(filter) && p.includes(portId) && _lineVisibleForScope(key, true);
+  });
+}
+// 참고 항로선 키별로 "지금 탭에서 이 구간을 쓰는 배가 있는가" — 어떤 배들이 이 선을 쓰는지는
+// 고정돼 있으므로(SM 자체 구상항로/히타카츠 왕래선/이즈하라 경유·직항/카멜리아/부관훼리/미라클호)
+// 각 선별로 직접 명시한다. skipPortFilter=true면 항구 필터는 무시하고 범위(탭) 조건만 본다
+// (위 _portVisibleForScope에서 "같은 항로 공유 여부"를 판단할 때 재귀적으로 걸리지 않게 하기 위함).
+function _lineVisibleForScope(key, skipPortFilter) {
+  let show;
+  switch (key) {
+    case 'smLeg1': case 'smLeg2':
+      show = _simCoreVisible(); break; // 산타모니카호 자체 구상 항로
+    case 'qbDirect':
+      // 퀸비틀(투입고려) + 카멜리아(타선사선박) + 그레이스호 하카타직항(진입예정) 모두가 쓰는 구간
+      show = _simCoreVisible() || _simCustomVisible() || _simPendingVisible(); break;
+    case 'hitakatsuRef': case 'izuharaViaRef':
+      // 쓰시마링크호 등 기존 취항선(타선사선박) + 그레이스호 히타카츠 관련편(진입예정)이 함께 쓴다
+      show = _simCustomVisible() || _simPendingVisible(); break;
+    case 'izuharaDirectRef': case 'camelliaRef': case 'shimonosekiRef': case 'miracleRef':
+      // 대아·스타라인 이즈하라 직항 / 카멜리아 / 부관훼리 / 미라클호 — 전부 기존 취항 중인 타선사선박
+      show = _simCustomVisible(); break;
+    default:
+      show = true;
+  }
+  if (!show || skipPortFilter) return show;
+  const filter = simTimelapsePortFilter;
+  if (filter === 'all') return true;
+  const p = _LINE_PORTS[key];
+  return !p || p.includes(filter);
+}
+function _applyMapScopeVisibility() {
+  ports.forEach(p => {
+    const mk = _portMarkers[p.id];
+    if (!mk) return;
+    const show = _portVisibleForScope(p.id);
+    if (show && !map.hasLayer(mk)) mk.addTo(map);
+    else if (!show && map.hasLayer(mk)) map.removeLayer(mk);
+  });
+  Object.keys(_scopeLines).forEach(key => {
+    const line = _scopeLines[key];
+    if (!line) return;
+    const show = _lineVisibleForScope(key);
+    if (show && !map.hasLayer(line)) line.addTo(map);
+    else if (!show && map.hasLayer(line)) map.removeLayer(line);
+  });
+}
+
+// 항구 하나에 대해, 재생 범위와 무관하게 등록된 모든 배(기본+등록)의 점유 구간을 시뮬레이션
+// 타임라인(0~_totalMin 분) 기준으로 모아 병합한 뒤, 비어있는(=투입가능) 구간을 구한다.
+function _simPortOccupiedIntervals(portId) {
+  const iv = [];
+  const push = (s, e) => { if (e > s) iv.push({ start: s, end: e }); };
+  if (_activeSimTab === 1) {
+    if (portId === 'hitakatsu') push(_smDelay + _hitaArrMin, _smDelay + _hitaArrMin + SIM_STOP_MIN);
+    if (portId === 'hakata')    push(_smDelay + _totalMinSM, _smDelay + _totalMinSM + simSMTurnMin);
+    if (portId === 'busan')     push(_smDelay + _totalMinSMret, _smDelay + _totalMinSMret + BERTH_DEFAULT_MIN);
+  } else {
+    if (portId === 'hakata') push(_smDelay + _totalMinSM2, _smDelay + _totalMinSM2 + simSMTurnMin);
+    if (portId === 'busan')  push(_smDelay + _totalMinSM2ret, _smDelay + _totalMinSM2ret + BERTH_DEFAULT_MIN);
+  }
+  if (portId === 'hakata') push(_qbDelay + _totalMinQB, _qbDelay + _totalMinQB + simQBTurnMin);
+  if (portId === 'busan')  push(_qbDelay + _totalMinQBret, _qbDelay + _totalMinQBret + BERTH_DEFAULT_MIN);
+  customShips.forEach(s => {
+    const tl = _customTL[s.id]; if (!tl) return;
+    const delay = tl.delay || 0, buf = s.berthMin != null ? s.berthMin : BERTH_DEFAULT_MIN;
+    const toPortId = _portIdByName(s.to.name), fromPortId = _portIdByName(s.from.name);
+    const viaPortId = s.via ? _portIdByName(s.via.name) : null;
+    if (s.via && viaPortId === portId) push(delay + tl.viaArrive, delay + tl.viaArrive + buf);
+    if (toPortId === portId) push(delay + tl.totalOut, delay + tl.totalOut + buf);
+    if (s.roundTrip) {
+      if (s.via && viaPortId === portId) push(delay + tl.retViaArrive, delay + tl.retViaArrive + buf);
+      if (fromPortId === portId) push(delay + tl.totalRet, delay + tl.totalRet + buf);
+    }
+  });
+  return iv;
+}
+function _simPortFreeGaps(portId, minGapMin) {
+  const merged = [];
+  _simPortOccupiedIntervals(portId).sort((a, b) => a.start - b.start).forEach(v => {
+    const last = merged[merged.length - 1];
+    if (last && v.start <= last.end) last.end = Math.max(last.end, v.end);
+    else merged.push({ ...v });
+  });
+  const gaps = [], total = Math.max(_totalMin, 1);
+  let cursor = 0;
+  merged.forEach(m => {
+    if (m.start - cursor >= minGapMin) gaps.push({ start: cursor, end: m.start });
+    cursor = Math.max(cursor, m.end);
+  });
+  if (total - cursor >= minGapMin) gaps.push({ start: cursor, end: total });
+  return gaps;
+}
+
+function _rebuildSimTimelapse() {
+  const container = document.getElementById('simTimelapseEl');
+  if (!container) return;
+  if (typeof vis === 'undefined') {
+    container.innerHTML = '<div style="padding:8px;color:#ff8888;font-size:11px">⚠ 타임랩스 라이브러리(vis-timeline)를 불러오지 못했습니다.</div>';
+    return;
+  }
+  let items = _buildSimTimelapseItems();
+  let groups = [];
+  if (_simCoreVisible()) {
+    groups.push({ id:'sm', content: _activeSimTab === 1 ? '⛴ 산타모니카(경유)' : '⛴ 산타모니카(직항)' });
+    groups.push({ id:'qb', content: '🚢 퀸비틀' });
+  }
+  if (_simCustomVisible() || _simPendingVisible()) {
+    customShips.forEach(s => { if (_shouldShowCustomShip(s) && _customTL[s.id]) groups.push({ id:'c_'+s.id, content: `${s.pending ? '🕓' : '⛴'} ${s.name}` }); });
+  }
+  // 특정 선박 필터 드랍박스 — 옵션 목록을 "지금 재생범위에서 보이는 배들"로 매번 다시 채운다.
+  // 선택돼 있던 배가 범위 밖으로 사라지면 자동으로 "전체"로 되돌린다.
+  const shipSel = document.getElementById('simTimelapseShipFilter');
+  if (shipSel) {
+    shipSel.innerHTML = '<option value="all">배: 전체</option>'
+      + groups.map(g => `<option value="${g.id}">${g.content}</option>`).join('');
+    if (!groups.some(g => g.id === simTimelapseShipFilter)) simTimelapseShipFilter = 'all';
+    shipSel.value = simTimelapseShipFilter;
+  }
+  if (simTimelapseShipFilter !== 'all') {
+    groups = groups.filter(g => g.id === simTimelapseShipFilter);
+  }
+  // 항구 필터 — 선택된 항구를 오가지 않는 배는 행에서 뺀다 ("전체"면 필터하지 않는다).
+  const portSel = document.getElementById('simTimelapsePortFilter');
+  if (portSel) portSel.value = simTimelapsePortFilter;
+  if (simTimelapsePortFilter !== 'all') {
+    groups = groups.filter(g => {
+      if (g.id === 'sm') return _shipTouchesPort('sm', simTimelapsePortFilter);
+      if (g.id === 'qb') return _shipTouchesPort('qb', simTimelapsePortFilter);
+      const s = customShips.find(x => 'c_' + x.id === g.id);
+      return s && _customShipTouchesPort(s, simTimelapsePortFilter);
+    });
+  }
+  // 선종 필터 — 선택된 선종이 아닌 배도 행에서 뺀다 ("전체"면 필터하지 않는다).
+  const typeSel = document.getElementById('simTimelapseShipTypeFilter');
+  if (typeSel) typeSel.value = simTimelapseShipTypeFilter;
+  if (simTimelapseShipTypeFilter !== 'all') {
+    groups = groups.filter(g => _groupShipType(g.id) === simTimelapseShipTypeFilter);
+  }
+  if (simTimelapseShipFilter !== 'all' || simTimelapsePortFilter !== 'all' || simTimelapseShipTypeFilter !== 'all') {
+    const keepIds = new Set(groups.map(g => g.id));
+    items = items.filter(it => keepIds.has(it.group));
+  }
+  // 맨 아래 "투입가능 선석" 행 — 필터와 무관하게 항상 붙는다. "전체"일 땐 모든 배가 공통으로
+  // 거치는 부산을 기준으로 보여준다.
+  const availPortId = simTimelapsePortFilter === 'all' ? 'busan' : simTimelapsePortFilter;
+  const availLabel = (BERTH_PORT_ROWS.find(r => r.id === availPortId) || {}).label || availPortId;
+  groups.push({ id:'avail', content:`🟢 투입가능 선석(${availLabel})` });
+  let availSeq = 900000;
+  _simPortFreeGaps(availPortId, 15).forEach(g => {
+    items.push({
+      id: availSeq++, group:'avail', content:'투입가능',
+      start: _simTimeAt(g.start), end: _simTimeAt(g.end),
+      className: 'sim-seg-avail',
+      style: 'background-color:#22dd66;border-color:rgba(0,0,0,0.4);color:#06301a;',
+      title: `<b>${availLabel} 투입가능 선석</b><br>${_minToHM(g.start)} ~ ${_minToHM(g.end)} (${_fmtMin(g.end - g.start)} 비어있음)`
+    });
+  });
+  // 사용자가 마우스로 끌어서 바꾼 행 순서(_simTimelapseGroupOrder)가 있으면 그 순서를 그대로
+  // 적용한다 — 매 rebuild마다 groups를 새로 만들지만, 순서는 이렇게 기억해뒀다가 되살린다.
+  groups = groups.map(g => _simTimelapseGroupOrder[g.id] != null ? { ...g, order: _simTimelapseGroupOrder[g.id] } : g);
+  const timelapseHeight = simTimelapseManualHeight != null
+    ? simTimelapseManualHeight
+    : Math.min(Math.max(Math.max(groups.length, 1) * 42 + 30, 200), 360);
+  // 실제 배 운항이 끝나는 시점(_totalMin) 이후로도 최소 한 주(토일월화수목금)까지는 오른쪽으로
+  // 계속 스크롤/확대해서 볼 수 있게 바깥쪽 한계(min~max)를 넉넉히 잡는다. 다만 처음 보여줄 창은
+  // 2일 정도로 좁혀서(initialWindowEnd) 화면이 너무 늘어지지 않게 하고, 그 밖은 스크롤로 이동한다.
+  const WEEK_MIN = 7 * 1440;
+  const rangeStart = _simTimeAt(0);
+  const rangeMaxMin = Math.max(_totalMin, WEEK_MIN);
+  const rangeEnd = _simTimeAt(rangeMaxMin);
+  const initialWindowEnd = _simTimeAt(Math.min(Math.max(_totalMin, 1), 2 * 1440));
+  try {
+    if (!_simTimelapse) {
+      _simTimelapse = new vis.Timeline(container, new vis.DataSet(items), new vis.DataSet(groups), {
+        stack: false,
+        start: rangeStart, end: initialWindowEnd, min: rangeStart, max: rangeEnd,
+        zoomMin: 1000 * 60 * 5,
+        zoomMax: rangeMaxMin * 60000,
+        // 마우스 휠은 확대/축소 대신 좌우 스크롤(패닝)로 동작하게 해서, 처음엔 2일치만 보여도
+        // 휠로 계속 오른쪽까지 넘겨보며 일주일 전체(토일월화수목금)를 볼 수 있게 한다.
+        // 확대/축소는 Ctrl+휠로만 가능(zoomKey).
+        horizontalScroll: true,
+        verticalScroll: false,
+        zoomKey: 'ctrlKey',
+        margin: { item: 4, axis: 6 },
+        orientation: 'top',
+        height: timelapseHeight + 'px',
+        tooltip: { followMouse: true },
+        editable: false, selectable: false,
+        // 왼쪽 배 목록 행을 마우스로 끌어서 순서를 바꿀 수 있게 한다. 순서는 onMoveGroup에서
+        // _simTimelapseGroupOrder에 저장해두고, 위에서 매 rebuild마다 다시 적용해 유지시킨다.
+        groupEditable: { order: true, add: false, remove: false, updateGroup: false },
+        onMoveGroup: (group, callback) => {
+          _simTimelapseGroupOrder[group.id] = group.order;
+          callback(group);
+        }
+      });
+      _simTimelapse.addCustomTime(rangeStart, 'playhead');
+      _simTimelapse.on('timechange', props => {
+        if (props.id !== 'playhead') return;
+        simPause();
+        simSimMin = Math.max(0, Math.min(_simMinAt(props.time), _totalMin));
+        _simRenderFrame();
+      });
+      // "지금" 실제 현재 시각을 가리키는 점선 — 드래그되지 않도록 CSS에서 pointer-events:none 처리하고,
+      // 무슨 선인지 바로 알 수 있게 "🕐 지금 HH:MM" 배지를 달아준다. vis-timeline이 id('now')를
+      // 그대로 클래스명으로 붙여주므로(.vis-custom-time.now) 별도로 클래스를 찾아 붙일 필요가 없다.
+      _simTimelapse.addCustomTime(_simTimeAt(_nowSimMin()), 'now');
+      _updateNowTag();
+      // 확대/축소·이동으로 축이 다시 그려질 때마다 날짜 라벨을 요일로 바꿔친다 (+ DOM 감시로 이중 보험).
+      _simTimelapse.on('changed', _simTimelapseRelabelDays);
+      new MutationObserver(() => _simTimelapseRelabelDays())
+        .observe(container, { childList: true, subtree: true, characterData: true });
+    } else {
+      _simTimelapse.setGroups(new vis.DataSet(groups));
+      _simTimelapse.setItems(new vis.DataSet(items));
+      _simTimelapse.setOptions({ min: rangeStart, max: rangeEnd, zoomMax: rangeMaxMin * 60000, height: timelapseHeight + 'px' });
+      _simTimelapse.setWindow(rangeStart, initialWindowEnd);
+      try { _simTimelapse.setCustomTime(_simTimeAt(_nowSimMin()), 'now'); } catch (e) {}
+      _updateNowTag();
+    }
+    setTimeout(() => { if (_simTimelapse) { _simTimelapse.redraw(); _simTimelapseRelabelDays(); } }, 0);
+  } catch (err) {
+    container.innerHTML = `<div style="padding:8px;color:#ff8888;font-size:11px">⚠ 타임랩스를 그리는 중 오류가 발생했습니다: ${err.message}</div>`;
+    console.error('_rebuildSimTimelapse error', err);
+  }
+}
+
+// 재생 프레임마다(또는 스크러빙 시) 재생 헤드 위치만 가볍게 갱신한다 — item을 다시 만들지 않는다.
+function _updateSimTimelapsePlayhead() {
+  if (!_simTimelapse) return;
+  try { _simTimelapse.setCustomTime(_simTimeAt(simSimMin), 'playhead'); } catch (e) {}
 }
 
 function rebuildSim() {
@@ -1586,14 +2679,14 @@ function rebuildSim() {
   _totalMinSM = _tl2[_tl2.length-1].cumMin;
   _tlQB = _buildTL(_qbWP, 0, qbKmh);
   _totalMinQB = _tlQB[_tlQB.length-1].cumMin;
-  _tl3     = _buildTL(catmullRom(_retWP, 60), _totalMinSM + SIM_RETURN_WAIT, smKmh);
-  _tlQBret = _buildTL(_retWP, _totalMinQB + SIM_RETURN_WAIT, qbKmh);
+  _tl3     = _buildTL(catmullRom(_retWP, 60), _totalMinSM + simSMTurnMin, smKmh);
+  _tlQBret = _buildTL(_retWP, _totalMinQB + simQBTurnMin, qbKmh);
   _totalMinSMret  = _tl3[_tl3.length-1].cumMin;
   _totalMinQBret  = _tlQBret[_tlQBret.length-1].cumMin;
   // 시나리오 2: SM 하카타 직항
   _tlSM2    = _buildTL(_qbWP, 0, smKmh);
   _totalMinSM2    = _tlSM2[_tlSM2.length-1].cumMin;
-  _tlSM2ret = _buildTL(_retWP, _totalMinSM2 + SIM_RETURN_WAIT, smKmh);
+  _tlSM2ret = _buildTL(_retWP, _totalMinSM2 + simSMTurnMin, smKmh);
   _totalMinSM2ret = _tlSM2ret[_tlSM2ret.length-1].cumMin;
   // 커스텀 선박 타임라인도 함께 재계산
   rebuildCustomShips();
@@ -1602,8 +2695,7 @@ function rebuildSim() {
     _smDelay + _totalMinSMret, _qbDelay + _totalMinQBret, _smDelay + _totalMinSM2ret,
     ..._customEnds, 0
   );
-  const wcEl = document.getElementById('wallClock');
-  if (wcEl) wcEl.textContent = _minToHM(_baseMin + simSimMin);
+  _updateWallClocks();
   // UI 업데이트
   const smEl  = document.getElementById('smEstTime');
   const qbEl  = document.getElementById('qbEstTime');
@@ -1643,12 +2735,8 @@ function applySimSpeeds() {
   const qbV = parseFloat(document.getElementById('qbKtsInput').value);
   if (!isNaN(smV) && smV>5) simSMkts = smV;
   if (!isNaN(qbV) && qbV>5) simQBkts = qbV;
-  const smD = document.getElementById('smDepartInput').value;
-  const qbD = document.getElementById('qbDepartInput').value;
-  if (smD) simSMDepartHM = smD;
-  if (qbD) simQBDepartHM = qbD;
   simReset();
-  renderShipMgrList();
+  _refreshOpenPanels();
 }
 
 function _interpTL(tl, simMin) {
@@ -1698,9 +2786,20 @@ function _simTick(realNow) {
     simSimMin += (realNow - simLastReal)/1000 * simSpeedFactor/60;
   simLastReal = realNow;
   simSimMin = Math.min(simSimMin, _totalMin);
+  _simRenderFrame();
+  if (simSimMin >= _totalMin) {
+    simRunning=false;
+    _setSimPlayLabel('▶ 다시 출항');
+    return;
+  }
+  simRAF = requestAnimationFrame(_simTick);
+}
 
-  const wcEl = document.getElementById('wallClock');
-  if (wcEl) wcEl.textContent = _minToHM(_baseMin + simSimMin);
+// simSimMin 값을 기준으로 화면(시계·타임랩스 재생 헤드·배 위치·상태·진행바)을 다시 그린다.
+// 재생 중 자동 호출(_simTick)뿐 아니라, 하단 타임랩스에서 특정 시점을 지정했을 때도 그대로 호출한다.
+function _simRenderFrame() {
+  _updateWallClocks();
+  _updateSimTimelapsePlayhead();
 
   // 각 배는 자기 타임라인(0분=자신의 출항) 기준으로 움직인다.
   // smLocal/qbLocal < 0 이면 아직 출항 전(대기 중).
@@ -1721,9 +2820,10 @@ function _simTick(realNow) {
   } else if (smLocal <= _totalMinSM) {
     const r=_interpTL(_tl2, smLocal);
     pos=r.pos; hdg=r.hdg; statusTxt='항해 중'; statusCls='sailing'; seg='히타카츠→하카타';
-  } else if (smLocal <= _totalMinSM+SIM_RETURN_WAIT) {
+  } else if (smLocal <= _totalMinSM+simSMTurnMin) {
     pos=_tl2[_tl2.length-1].pt; hdg=180;
-    statusTxt='복귀 준비 중'; statusCls='stopping'; seg='하카타 대기';
+    const smTurnLeft=Math.ceil(_totalMinSM+simSMTurnMin-smLocal);
+    statusTxt=`하카타 회항 대기 (출항까지 ${smTurnLeft}분)`; statusCls='stopping'; seg='하카타 대기';
   } else if (smLocal <= _totalMinSMret) {
     const r=_interpTL(_tl3, smLocal);
     pos=r.pos; hdg=r.hdg; statusTxt='복귀 항해 중'; statusCls='sailing'; seg='하카타→부산';
@@ -1765,20 +2865,21 @@ function _simTick(realNow) {
   document.getElementById('smEstTime').textContent = _fmtMin(_totalMinSMret);
 
   // ── 퀸비틀 ──
-  let qbPos, qbHdg, qbTxt, qbCls;
+  let qbPos, qbHdg, qbTxt, qbCls, qbSeg;
   if (qbLocal < 0) {
-    qbPos=_tlQB[0].pt; qbHdg=0; qbTxt=`출항 대기 (${_fmtMin(-qbLocal)} 후 출항)`; qbCls='stopping';
+    qbPos=_tlQB[0].pt; qbHdg=0; qbTxt=`출항 대기 (${_fmtMin(-qbLocal)} 후 출항)`; qbCls='stopping'; qbSeg='출항 대기';
   } else if (qbLocal <= _totalMinQB) {
     const r=_interpTL(_tlQB, qbLocal);
-    qbPos=r.pos; qbHdg=r.hdg; qbTxt='항해 중'; qbCls='sailing';
-  } else if (qbLocal <= _totalMinQB+SIM_RETURN_WAIT) {
+    qbPos=r.pos; qbHdg=r.hdg; qbTxt='항해 중'; qbCls='sailing'; qbSeg='부산→하카타';
+  } else if (qbLocal <= _totalMinQB+simQBTurnMin) {
     qbPos=_tlQB[_tlQB.length-1].pt; qbHdg=180;
-    qbTxt='복귀 준비 중'; qbCls='stopping';
+    const qbTurnLeft=Math.ceil(_totalMinQB+simQBTurnMin-qbLocal);
+    qbTxt=`하카타 회항 대기 (출항까지 ${qbTurnLeft}분)`; qbCls='stopping'; qbSeg='하카타 대기';
   } else if (qbLocal <= _totalMinQBret) {
     const r=_interpTL(_tlQBret, qbLocal);
-    qbPos=r.pos; qbHdg=r.hdg; qbTxt='복귀 항해 중'; qbCls='sailing';
+    qbPos=r.pos; qbHdg=r.hdg; qbTxt='복귀 항해 중'; qbCls='sailing'; qbSeg='하카타→부산';
   } else {
-    qbPos=_tlQBret[_tlQBret.length-1].pt; qbHdg=0; qbTxt='부산 귀항 완료'; qbCls='arrived';
+    qbPos=_tlQBret[_tlQBret.length-1].pt; qbHdg=0; qbTxt='부산 귀항 완료'; qbCls='arrived'; qbSeg='부산 도착';
   }
 
   const qbElapsedStr = _fmtMin(Math.max(0, Math.min(qbLocal, _totalMinQBret)));
@@ -1790,6 +2891,7 @@ function _simTick(realNow) {
 
   document.getElementById('qbElapsed').textContent = qbElapsedStr;
   document.getElementById('qbRemain').textContent  = qbLocal<_totalMinQBret ? _fmtMin(_totalMinQBret-qbLocal) : '완료';
+  document.getElementById('qbSeg').textContent     = qbSeg;
   document.getElementById('qbStatus').textContent  = qbTxt;
   document.getElementById('qbStatus').className    = `sim-status ${qbCls}`;
   document.getElementById('qbBar').style.width     = (Math.max(0,Math.min(qbLocal,_totalMinQBret))/_totalMinQBret*100).toFixed(1)+'%';
@@ -1798,6 +2900,7 @@ function _simTick(realNow) {
   // 퀸비틀 — 시나리오2 탭 표시분 (동일 항로/타임라인, 표시만 별도)
   document.getElementById('qb2Elapsed').textContent = qbElapsedStr;
   document.getElementById('qb2Remain').textContent  = qbLocal<_totalMinQBret ? _fmtMin(_totalMinQBret-qbLocal) : '완료';
+  document.getElementById('qb2Seg').textContent     = qbSeg;
   document.getElementById('qb2Status').textContent  = qbTxt;
   document.getElementById('qb2Status').className    = `sim-status ${qbCls}`;
   document.getElementById('qb2Bar').style.width     = (Math.max(0,Math.min(qbLocal,_totalMinQBret))/_totalMinQBret*100).toFixed(1)+'%';
@@ -1809,9 +2912,10 @@ function _simTick(realNow) {
   document.getElementById('simDiff').textContent =
     `왕복 기준 산타모니카 ${_fmtMin(Math.abs(diff))} ${diff>0?'더 소요':'단축'} (경유 포함)`;
 
-  // 마커 가시성 — 퀸비틀은 두 탭 모두에서 운항하므로 항상 표시
-  if (simMarker) simMarker.setOpacity(_activeSimTab === 1 ? 1 : 0);
-  if (qbMarker)  qbMarker.setOpacity(1);
+  // 마커 가시성 — 퀸비틀은 두 탭 모두에서 운항하므로 항상 표시. 재생 범위(simPlayScope)가
+  // "등록 선박만"이면 기본 선박(퀸비틀·산타모니카)은 숨긴다.
+  if (simMarker) simMarker.setOpacity((_activeSimTab === 1 && _simCoreVisible()) ? 1 : 0);
+  if (qbMarker)  qbMarker.setOpacity(_simCoreVisible() ? 1 : 0);
 
   // ── 시나리오 2: SM 하카타 직항 (산타모니카와 동일 출항시각 사용) ──
   let sm2Pos, sm2Hdg, sm2Txt, sm2Cls, sm2Seg;
@@ -1820,9 +2924,10 @@ function _simTick(realNow) {
   } else if (smLocal <= _totalMinSM2) {
     const r=_interpTL(_tlSM2, smLocal);
     sm2Pos=r.pos; sm2Hdg=r.hdg; sm2Txt='항해 중'; sm2Cls='sailing'; sm2Seg='부산→하카타';
-  } else if (smLocal <= _totalMinSM2+SIM_RETURN_WAIT) {
+  } else if (smLocal <= _totalMinSM2+simSMTurnMin) {
     sm2Pos=_tlSM2[_tlSM2.length-1].pt; sm2Hdg=180;
-    sm2Txt='복귀 준비 중'; sm2Cls='stopping'; sm2Seg='하카타 대기';
+    const sm2TurnLeft=Math.ceil(_totalMinSM2+simSMTurnMin-smLocal);
+    sm2Txt=`하카타 회항 대기 (출항까지 ${sm2TurnLeft}분)`; sm2Cls='stopping'; sm2Seg='하카타 대기';
   } else if (smLocal <= _totalMinSM2ret) {
     const r=_interpTL(_tlSM2ret, smLocal);
     sm2Pos=r.pos; sm2Hdg=r.hdg; sm2Txt='복귀 항해 중'; sm2Cls='sailing'; sm2Seg='하카타→부산';
@@ -1836,7 +2941,7 @@ function _simTick(realNow) {
     sim2Marker = L.marker(sm2Pos,{icon:_makeShipIcon(sm2Hdg,'#44ffdd','#008866',sm2Label),zIndexOffset:905}).addTo(map)
       .bindPopup(`<div class="popup-title" style="color:#44ffdd">⛴ 산타모니카호 (직항)</div><div class="popup-body">시나리오 2 · 하카타 직항 · ${simSMkts}노트 · 213km(115해리)</div>`,{className:'custom-popup'});
   } else { sim2Marker.setLatLng(sm2Pos); sim2Marker.setIcon(_makeShipIcon(sm2Hdg,'#44ffdd','#008866',sm2Label)); }
-  sim2Marker.setOpacity(_activeSimTab === 2 ? 1 : 0);
+  sim2Marker.setOpacity((_activeSimTab === 2 && _simCoreVisible()) ? 1 : 0);
 
   document.getElementById('sm2Elapsed').textContent = sm2ElapsedStr;
   document.getElementById('sm2Remain').textContent  = smLocal<_totalMinSM2ret ? _fmtMin(_totalMinSM2ret-smLocal) : '완료';
@@ -1852,13 +2957,6 @@ function _simTick(realNow) {
 
   // ── 등록된 임의 선박들 ──
   _tickCustomShips(simSimMin);
-
-  if (simSimMin >= _totalMin) {
-    simRunning=false;
-    document.getElementById('btnSimPlay').textContent='▶ 다시 출항';
-    return;
-  }
-  simRAF = requestAnimationFrame(_simTick);
 }
 
 function simPlay() {
@@ -1866,7 +2964,7 @@ function simPlay() {
   document.getElementById('simPanel').classList.add('visible');
   simRunning=true; simLastReal=null;
   simRAF=requestAnimationFrame(_simTick);
-  document.getElementById('btnSimPlay').textContent='▶ 출항 중';
+  _setSimPlayLabel('▶ 출항 중');
 }
 function simPause() {
   simRunning=false; simLastReal=null;
@@ -1880,12 +2978,14 @@ function simReset() {
   if (_hitaStopLabel){map.removeLayer(_hitaStopLabel);_hitaStopLabel=null;}
   Object.keys(_customMarkers).forEach(id => { map.removeLayer(_customMarkers[id]); delete _customMarkers[id]; });
   rebuildSim();
+  _rebuildSimTimelapse();
   // 탭1 리셋
   document.getElementById('smElapsed').textContent='0:00';
   document.getElementById('qbElapsed').textContent='0:00';
   document.getElementById('smRemain').textContent=_fmtMin(_totalMinSMret);
   document.getElementById('qbRemain').textContent=_fmtMin(_totalMinQBret);
   document.getElementById('smSeg').textContent='—';
+  document.getElementById('qbSeg').textContent='—';
   document.getElementById('smStatus').textContent='대기 중';
   document.getElementById('smStatus').className='sim-status sailing';
   document.getElementById('qbStatus').textContent='대기 중';
@@ -1904,13 +3004,14 @@ function simReset() {
   document.getElementById('sm2Bar').style.width='0%';
   document.getElementById('qb2Elapsed').textContent='0:00';
   document.getElementById('qb2Remain').textContent=_fmtMin(_totalMinQBret);
+  document.getElementById('qb2Seg').textContent='—';
   document.getElementById('qb2Status').textContent='대기 중';
   document.getElementById('qb2Status').className='sim-status sailing';
   document.getElementById('qb2Bar').style.width='0%';
   const d2=_totalMinSM2ret-_totalMinQBret;
   document.getElementById('simDiff2').textContent=
     `산타모니카 직항이 퀸비틀 대비 ${_fmtMin(Math.abs(d2))} ${d2>0?'더 소요':'단축'}`;
-  document.getElementById('btnSimPlay').textContent='▶ 동시 출항';
+  _setSimPlayLabel('▶ 동시 출항');
 }
 
 function switchSimTab(n) {
@@ -1920,15 +3021,17 @@ function switchSimTab(n) {
   document.getElementById('simTabContent1').classList.toggle('active', n === 1);
   document.getElementById('simTabContent2').classList.toggle('active', n === 2);
   // 퀸비틀은 두 탭 모두에서 운항 중이므로 항상 표시
-  if (simMarker)  simMarker.setOpacity(n === 1 ? 1 : 0);
-  if (sim2Marker) sim2Marker.setOpacity(n === 2 ? 1 : 0);
+  if (simMarker)  simMarker.setOpacity((n === 1 && _simCoreVisible()) ? 1 : 0);
+  if (sim2Marker) sim2Marker.setOpacity((n === 2 && _simCoreVisible()) ? 1 : 0);
   if (_hitaStopLabel) _hitaStopLabel.setOpacity(n === 1 ? 1 : 0);
+  _rebuildSimTimelapse(); // 탭마다 산타모니카호 구간(경유/직항)이 다르므로 다시 그린다
 }
 
 // ════════════════════════════════════════════════════
 //  선박 스케줄 관리 — 임의 선박 추가/수정 (선석 확보 검토용)
 // ════════════════════════════════════════════════════
 const SHIP_COLORS = ['#ff8844','#aa88ff','#88ddaa','#ffee66','#ff6699','#66ddff','#ddaa44','#99ff77'];
+const SHIP_TYPES = ['고속선', '로로선(화물여객선)', '기타'];
 
 function _loadCustomShips() {
   try {
@@ -1945,61 +3048,648 @@ function _saveCustomShips() {
 }
 
 // 팬스타·스타라인·대아고속해운의 대마도 정기 여객선 스케줄을 최초 1회 등록한다.
-// (사용자가 지운 뒤에는 재등록하지 않도록 hanjil_seeded 플래그로 표시)
+// (사용자가 지운 뒤에는 재등록하지 않도록 hanjil_seeded / hanjil_seeded_v2 플래그로 표시)
 // 출항/도착 시각은 각 사 공식 홈페이지 공지 기준, 속력(kts)은 부산-대마도 직선거리와
 // 공식 스케줄 소요시간을 역산해 우리 시뮬레이션 엔진에 맞춘 근사값이다.
 function _seedDefaultCompetitorShips() {
-  let seeded = null;
-  try { seeded = localStorage.getItem('hanjil_seeded'); } catch(e) {}
-  if (seeded) return;
   const busan = ports.find(p => p.id === 'busan');
   const hita  = ports.find(p => p.id === 'hitakatsu');
   const izu   = ports.find(p => p.id === 'izuhara');
-  const mkShip = (name, color, kts, departHM, turnMin, to, sourceUrl, sourceLabel) => ({
+  const mkShip = (name, color, kts, departHM, turnMin, to, sourceUrl, sourceLabel, via, viaStopMin, days) => ({
     id: 'cs' + (_shipIdSeq++), name, color, kts, departHM, turnMin, roundTrip: true,
     from: { mode:'known', name: busan.name, lat: busan.lat, lng: busan.lng },
+    via:  via ? { mode:'known', name: via.name, lat: via.lat, lng: via.lng } : null,
+    viaStopMin: via ? (viaStopMin || 30) : null,
     to:   { mode:'known', name: to.name,    lat: to.lat,    lng: to.lng },
+    berthMin: BERTH_DEFAULT_MIN, days: days || _allWeekDays(),
+    shipType: '고속선', tonnage: null, // 아래 v5 마이그레이션에서 선박별 실제 값으로 채운다
     sourceUrl, sourceLabel
   });
-  customShips.push(
-    mkShip('팬스타 쓰시마링크호 (히타카츠)', '#ff8844', 27.8, '08:40', 410, hita,
-      'https://www.panstar.co.kr/business/cruise/tsushima_link', '팬스타크루즈 쓰시마링크 공식페이지'),
-    mkShip('스타라인 노바호 (히타카츠)', '#aa88ff', 23.0, '09:10', 330, hita,
-      'https://www.thestarline.co.kr/html/?pcode=27', '스타라인 공식 운항스케줄'),
-    mkShip('대아고속해운 씨플라워호 (히타카츠)', '#66cc88', 25.9, '09:40', 260, hita,
-      'http://www.daea.com/info/schedule', '대아고속해운 공식 운항일정'),
-    mkShip('대아고속해운 씨플라워호 (이즈하라)', '#339966', 24.1, '09:10', 230, izu,
-      'http://www.daea.com/info/schedule', '대아고속해운 공식 운항일정')
-  );
-  try { localStorage.setItem('hanjil_seeded', '1'); } catch(e) {}
+
+  let seeded = null;
+  try { seeded = localStorage.getItem('hanjil_seeded'); } catch(e) {}
+  if (!seeded) {
+    customShips.push(
+      // kts는 부산→히타카츠 공식거리(74km) ÷ 공식 소요시간으로 역산한 뒤, 실제 항로가
+      // 곡선(_simWP1, 약 76.7km)으로 바뀐 만큼 소요시간은 그대로 유지되도록 다시 보정한 값이다.
+      mkShip('팬스타 쓰시마링크호 (히타카츠)', '#ff8844', 28.8, '08:40', 410, hita,
+        'https://www.panstar.co.kr/business/cruise/tsushima_link', '팬스타크루즈 쓰시마링크 공식페이지'),
+      mkShip('스타라인 노바호 (히타카츠)', '#aa88ff', 23.8, '09:10', 330, hita,
+        'https://www.thestarline.co.kr/html/?pcode=27', '스타라인 공식 운항스케줄'),
+      mkShip('대아고속해운 씨플라워호 (히타카츠)', '#66cc88', 26.8, '09:40', 260, hita,
+        'http://www.daea.com/info/schedule', '대아고속해운 공식 운항일정'),
+      // 이즈하라 직항은 히타카츠를 피해 동쪽으로 크게 돌아나가는 실제 항로(약 131km)를 쓰기 때문에
+      // 직선거리 기준 kts보다 훨씬 빠르게(30kts대) 보정해야 원래 소요시간이 유지된다.
+      mkShip('대아고속해운 씨플라워호 (이즈하라)', '#339966', 30.3, '09:10', 230, izu,
+        'http://www.daea.com/info/schedule', '대아고속해운 공식 운항일정', null, null, ['화','목'])
+    );
+    try { localStorage.setItem('hanjil_seeded', '1'); } catch(e) {}
+  }
+
+  // v2: 이즈하라를 오가는 편들 추가 등록 — 팬스타는 히타카츠 경유 후 이즈하라로 가는 편(화·목),
+  // 스타라인 노바호는 특정월에 부산-이즈하라 직항을 운항한 이력이 있다.
+  // ⚠ 출항시각·속력·정박시간은 히타카츠행 편의 값을 재사용한 추정치이며, 경유 대기 30분만
+  // 실측(역산) 근거가 있다 — 실제 시각표로 검증 필요.
+  let seededV2 = null;
+  try { seededV2 = localStorage.getItem('hanjil_seeded_v2'); } catch(e) {}
+  if (!seededV2) {
+    customShips.push(
+      // 히타카츠 경유 시간은 부산→히타카츠→하카타 노선(SIM_STOP_MIN, 25분)과 달리 기본값인
+      // 30분을 그대로 쓴다 — 히타카츠에 들르는 다른 항로라고 해서 25분을 적용하지 않는다.
+      mkShip('팬스타 쓰시마링크호 (히타카츠 경유·이즈하라행, 화·목)', '#ffaa88', 28.8, '08:40', 410, izu,
+        'https://www.panstar.co.kr/business/cruise/tsushima_link',
+        '팬스타크루즈 쓰시마링크 공식페이지 (히타카츠 경유 이즈하라행 · 시각표 확인 필요)', hita, 30, ['화','목']),
+      mkShip('스타라인 노바호 (이즈하라 직항 · 특정월)', '#cc99ff', 23.8, '09:10', 330, izu,
+        'https://www.thestarline.co.kr/html/?pcode=27',
+        '스타라인 공식 운항스케줄 (특정월에만 운항 · 시기·시각표 확인 필요)')
+    );
+    try { localStorage.setItem('hanjil_seeded_v2', '1'); } catch(e) {}
+  }
+
+  // v3: 부산↔하카타 직항(카멜리아) + 부산↔시모노세키(부관훼리) 등록.
+  // ⚠ 카멜리아는 출항시각·속력이 미확인 추정치 — 실제 시각표로 검증 필요.
+  //   부관훼리(성희호·하마유호)는 rentacar 레포지토리에 실려 있던 실제 스케줄을 그대로 가져온 값.
+  let seededV3 = null;
+  try { seededV3 = localStorage.getItem('hanjil_seeded_v3'); } catch(e) {}
+  if (!seededV3) {
+    const hakata = ports.find(p => p.id === 'hakata');
+    const smsk   = ports.find(p => p.id === 'shimonoseki');
+    customShips.push(
+      mkShip('카멜리아 (뉴카멜리아호)', '#00cc66', 21.0, '13:00', 480, hakata,
+        null, '⚠ 출항시각·속력 미확인 추정치 — 실제 시각표 확인 필요'),
+      {
+        id: 'cs' + (_shipIdSeq++), name: '성희호 (부관훼리)', color:'#003478',
+        kts: 11.0, departHM: '21:00', turnMin: 0, roundTrip: false,
+        from: { mode:'known', name: busan.name, lat: busan.lat, lng: busan.lng },
+        via: null, viaStopMin: null,
+        to:   { mode:'known', name: smsk.name,  lat: smsk.lat,  lng: smsk.lng },
+        berthMin: BERTH_DEFAULT_MIN, days: _allWeekDays(),
+        sourceUrl: null, sourceLabel: '부산 21:00 출항 → 시모노세키 익일 08:00 도착 (rentacar 레포지토리 실측 스케줄)'
+      },
+      {
+        id: 'cs' + (_shipIdSeq++), name: '하마유호 (부관훼리)', color:'#bc002d',
+        kts: 10.1, departHM: '19:45', turnMin: 0, roundTrip: false,
+        from: { mode:'known', name: smsk.name,  lat: smsk.lat,  lng: smsk.lng },
+        via: null, viaStopMin: null,
+        to:   { mode:'known', name: busan.name, lat: busan.lat, lng: busan.lng },
+        berthMin: BERTH_DEFAULT_MIN, days: _allWeekDays(),
+        sourceUrl: null, sourceLabel: '시모노세키 19:45 출항 → 부산 익일 07:45 도착 (rentacar 레포지토리 실측 스케줄)'
+      }
+    );
+    try { localStorage.setItem('hanjil_seeded_v3', '1'); } catch(e) {}
+  }
+
+  // v4: 히타카츠/이즈하라행 경쟁사 항로를 직선에서 실제 곡선 경로로 바꾸면서 이동거리가 늘었다.
+  // 도착시각(=원래 공지된 소요시간)은 그대로 유지하고 kts만 새 경로 길이에 맞게 다시 역산한다.
+  // (이미 저장된 브라우저의 배 데이터도 이름으로 찾아 kts만 1회 보정 — 위 mkShip 호출값과 동일)
+  let ktsFixed = null;
+  try { ktsFixed = localStorage.getItem('hanjil_kts_recalib_v1'); } catch(e) {}
+  if (!ktsFixed) {
+    const ktsFix = {
+      '팬스타 쓰시마링크호 (히타카츠)': 28.8,
+      '스타라인 노바호 (히타카츠)': 23.8,
+      '대아고속해운 씨플라워호 (히타카츠)': 26.8,
+      '대아고속해운 씨플라워호 (이즈하라)': 30.3,
+      '팬스타 쓰시마링크호 (히타카츠 경유·이즈하라행, 화·목)': 28.8,
+      '스타라인 노바호 (이즈하라 직항 · 특정월)': 23.8
+    };
+    customShips.forEach(s => { if (ktsFix[s.name] != null) s.kts = ktsFix[s.name]; });
+    try { localStorage.setItem('hanjil_kts_recalib_v1', '1'); } catch(e) {}
+  }
+
+  // 선석 스케줄(요일별 수속시간) 기능에 필요한 필드를 이미 저장된 배에도 채워 넣는다.
+  // 화·목요일 전용 편(팬스타 히타카츠경유·이즈하라행, 씨플라워 이즈하라)만 요일을 제한하고
+  // 나머지는 매일 운항으로 간주한다.
+  const _tueThuOnly = ['팬스타 쓰시마링크호 (히타카츠 경유·이즈하라행, 화·목)', '대아고속해운 씨플라워호 (이즈하라)'];
+  customShips.forEach(s => {
+    if (s.berthMin == null) s.berthMin = BERTH_DEFAULT_MIN;
+    if (!s.days) s.days = _tueThuOnly.includes(s.name) ? ['화','목'] : _allWeekDays();
+    if (!s.group) s.group = _inferShipGroup(s.name);
+    if (!s.nation) s.nation = _inferShipNation(s.name);
+  });
+
+  // v5: 선종·총톤수 조사 결과를 채워 넣는다 (웹 검색으로 확인한 실제 공식 제원 기준).
+  // 팬스타·스타라인·대아고속해운 배는 모두 카타마란형 고속선, 부관훼리(성희호·하마유호)는
+  // 여객+화물(TEU)을 함께 싣는 대형 로로선(화물여객선)이다.
+  let shipSpecFixed = null;
+  try { shipSpecFixed = localStorage.getItem('hanjil_shipspec_v1'); } catch(e) {}
+  if (!shipSpecFixed) {
+    const spec = {
+      '팬스타 쓰시마링크호 (히타카츠)': { shipType:'고속선', tonnage:668 },
+      '스타라인 노바호 (히타카츠)': { shipType:'고속선', tonnage:388 },
+      '대아고속해운 씨플라워호 (히타카츠)': { shipType:'고속선', tonnage:590 },
+      '대아고속해운 씨플라워호 (이즈하라)': { shipType:'고속선', tonnage:590 },
+      '팬스타 쓰시마링크호 (히타카츠 경유·이즈하라행, 화·목)': { shipType:'고속선', tonnage:668 },
+      '스타라인 노바호 (이즈하라 직항 · 특정월)': { shipType:'고속선', tonnage:388 },
+      '카멜리아 (뉴카멜리아호)': { shipType:'로로선(화물여객선)', tonnage:19961 },
+      '성희호 (부관훼리)': { shipType:'로로선(화물여객선)', tonnage:16875 },
+      '하마유호 (부관훼리)': { shipType:'로로선(화물여객선)', tonnage:16187 }
+    };
+    customShips.forEach(s => { if (spec[s.name]) { s.shipType = spec[s.name].shipType; s.tonnage = spec[s.name].tonnage; } });
+    try { localStorage.setItem('hanjil_shipspec_v1', '1'); } catch(e) {}
+  }
+
+  // v6: 퀸비틀이 "그레이스호"로 개명되어 팬스타 소속으로 재취항할 예정(2026년 기준 미확정).
+  // 팬스타 쓰시마링크호와 동일한 3항로 구조(하카타 직항 · 히타카츠 직항 · 히타카츠 경유
+  // 이즈하라행)로 "운항예정" 상태로 등록한다 — 공식 시각표가 나오기 전까지는 하카타 직항은
+  // 퀸비틀 시절 스케줄(선체·속력 그대로)을, 히타카츠 관련 2편은 쓰시마링크호 스케줄을 준용한
+  // 추정치이며 전 항목에 ⚠ 확인 필요 표시를 남긴다. 선체 제원(총톤수 2,582톤)도 퀸비틀 값을 유지.
+  let seededV6 = null;
+  try { seededV6 = localStorage.getItem('hanjil_seeded_v4'); } catch(e) {}
+  if (!seededV6) {
+    const hakata = ports.find(p => p.id === 'hakata');
+    const graceShips = [
+      mkShip('팬스타 그레이스호 (하카타 직항, 운항예정)', '#ffcc00', 37, '09:00', 60, hakata,
+        'https://www.panstar.co.kr/business/cruise/tsushima_link',
+        '⚠ 운항예정 · 퀸비틀 개명 후 팬스타 편입 항로 — 공식 시각표 확정 전 추정치(舊 퀸비틀 스케줄 준용, 실측 순항속력 37노트 반영)'),
+      mkShip('팬스타 그레이스호 (히타카츠 직항, 운항예정)', '#ffe066', 37, '10:20', 410, hita,
+        'https://www.panstar.co.kr/business/cruise/tsushima_link',
+        '⚠ 운항예정 · 쓰시마링크호와 동일 항로 구조 — 출항시각 미확정(실측 순항속력 37노트 반영)'),
+      mkShip('팬스타 그레이스호 (히타카츠 경유·이즈하라행, 운항예정)', '#ffd699', 37, '10:20', 410, izu,
+        'https://www.panstar.co.kr/business/cruise/tsushima_link',
+        '⚠ 운항예정 · 쓰시마링크호 이즈하라행과 동일 항로 구조 — 출항시각·속력·요일 미확정(추정치)',
+        hita, 30, ['화','목'])
+    ];
+    graceShips.forEach(s => { s.shipType = '고속선'; s.tonnage = 2582; s.group = '팬스타'; s.nation = '한국라인'; s.pending = true; });
+    customShips.push(...graceShips);
+    try { localStorage.setItem('hanjil_seeded_v4', '1'); } catch(e) {}
+  }
+
+  // v7: 팬스타 미라클호 (부산↔오사카, 세토내해 경유) 등록. 왕복 출발시각·요일이 서로 달라
+  // 같은 왕복 스케줄로 표현할 수 없으므로, 성희호·하마유호처럼 편도 2척으로 나눠 등록한다.
+  // 총톤수 22,000톤(대선조선 건조, 2025.4 취항 공식 발표 기준). 실제 항해거리(약 850km 공식
+  // 안내) 대비 우리 시뮬레이션 경로(_miracleWP, 직선 연결 약 684km) 기준으로 kts를 역산해
+  // 공식 소요시간(각 18h/17h)이 그대로 유지되도록 보정했다.
+  // ⚠ 미라클호는 실제로는 1척(동일 선체)이 화·목·일/월·수·금 스케줄을 번갈아 도는 것이지만,
+  // 이 앱의 "왕복" 필드는 같은 요일·같은 소요시간으로 왕복하는 배만 표현할 수 있어 편도 2건으로
+  // 나눠 등록했다 — 부관훼리(성희호·하마유호)처럼 실제로 별개인 선박 2척 체제와는 다르다.
+  // (선박 수를 세거나 신규 등록할 때 이 점 헷갈리지 않도록 sameHull 필드로 표시해둔다.)
+  let seededV7 = null;
+  try { seededV7 = localStorage.getItem('hanjil_seeded_v5'); } catch(e) {}
+  if (!seededV7) {
+    const osaka = ports.find(p => p.id === 'osaka');
+    const miracleShips = [
+      {
+        id: 'cs' + (_shipIdSeq++), name: '팬스타 미라클호 (부산→오사카)', color:'#ff9933',
+        kts: 20.5, departHM: '16:00', turnMin: 0, roundTrip: false,
+        from: { mode:'known', name: busan.name, lat: busan.lat, lng: busan.lng },
+        via: null, viaStopMin: null,
+        to:   { mode:'known', name: osaka.name, lat: osaka.lat, lng: osaka.lng },
+        berthMin: BERTH_DEFAULT_MIN, days: ['화','목','일'],
+        shipType: '로로선(화물여객선)', tonnage: 22000, group: '팬스타', nation: '한국라인',
+        sameHull: 'panstar_miracle', // 아래 오사카→부산 편과 물리적으로 동일한 배(1척)
+        sourceUrl: 'https://www.panstarcruise.com/',
+        sourceLabel: '팬스타크루즈 공식 홈페이지 (부산 16:00 출항 → 오사카 익일 10:00 도착) · ※ 동일 선박(1척)이 왕복 스케줄을 번갈아 운항 — 아래 오사카→부산 편과 같은 배'
+      },
+      {
+        id: 'cs' + (_shipIdSeq++), name: '팬스타 미라클호 (오사카→부산)', color:'#ffb366',
+        kts: 21.7, departHM: '17:00', turnMin: 0, roundTrip: false,
+        from: { mode:'known', name: osaka.name, lat: osaka.lat, lng: osaka.lng },
+        via: null, viaStopMin: null,
+        to:   { mode:'known', name: busan.name, lat: busan.lat, lng: busan.lng },
+        berthMin: BERTH_DEFAULT_MIN, days: ['월','수','금'],
+        shipType: '로로선(화물여객선)', tonnage: 22000, group: '팬스타', nation: '한국라인',
+        sameHull: 'panstar_miracle', // 위 부산→오사카 편과 물리적으로 동일한 배(1척)
+        sourceUrl: 'https://www.panstarcruise.com/',
+        sourceLabel: '팬스타크루즈 공식 홈페이지 (오사카 17:00 출항 → 부산 익일 10:00 도착) · ※ 동일 선박(1척)이 왕복 스케줄을 번갈아 운항 — 위 부산→오사카 편과 같은 배'
+      }
+    ];
+    customShips.push(...miracleShips);
+    try { localStorage.setItem('hanjil_seeded_v5', '1'); } catch(e) {}
+  }
+
+  // v9: 그레이스호(舊 퀸비틀) 실측 순항속력 37노트로 보정 — 이미 저장된 브라우저 데이터도 1회 반영.
+  let graceKtsFixed = null;
+  try { graceKtsFixed = localStorage.getItem('hanjil_grace_kts37_v1'); } catch(e) {}
+  if (!graceKtsFixed) {
+    customShips.forEach(s => { if (s.name && s.name.startsWith('팬스타 그레이스호')) s.kts = 37; });
+    try { localStorage.setItem('hanjil_grace_kts37_v1', '1'); } catch(e) {}
+  }
+
+  // v10: 미라클호는 실제로 1척(동일 선체)이 편도 2건으로 등록된 것 — 이미 저장된 브라우저 데이터도
+  // sameHull 표시를 1회 채워 넣는다(부관훼리처럼 진짜 별개 선박 2척인 경우와 헷갈리지 않도록).
+  let miracleSameHullFixed = null;
+  try { miracleSameHullFixed = localStorage.getItem('hanjil_miracle_samehull_v1'); } catch(e) {}
+  if (!miracleSameHullFixed) {
+    customShips.forEach(s => { if (s.name && s.name.startsWith('팬스타 미라클호')) s.sameHull = 'panstar_miracle'; });
+    try { localStorage.setItem('hanjil_miracle_samehull_v1', '1'); } catch(e) {}
+  }
+
   _saveCustomShips();
 }
 
 // 경쟁사 대마도 정기항로 — 참고용 직선 표시 (클릭 시 스케줄·출처 링크 확인)
 function _drawCompetitorRoutes() {
-  const busan = ports.find(p => p.id === 'busan');
-  const hita  = ports.find(p => p.id === 'hitakatsu');
-  const izu   = ports.find(p => p.id === 'izuhara');
-  L.polyline([[busan.lat,busan.lng],[hita.lat,hita.lng]], { color:'#ffaa66', weight:2.5, opacity:0.55, dashArray:'2 7' })
+  // 부산↔히타카츠 정기 여객선 항로는 "히타카츠항(경유 구상)" 곡선 항로(_simWP1)와 실제로 동일하다.
+  // 지리적으로 오프셋을 주면 확대/축소에 따라 간격이 달라지므로, 화면상 픽셀 단위로
+  // (선 굵기만큼) 살짝 띄워서 겹쳐 보이지 않게 표시한다 (className + CSS transform).
+  _scopeLines.hitakatsuRef = L.polyline(catmullRom(_simWP1, 60), { color:'#ff33cc', weight:2.5, opacity:0.75, dashArray:'2 7', className:'route-competitor-offset' })
     .addTo(map).bindPopup(
-      `<div class="popup-title" style="color:#ffaa66">부산 ↔ 히타카츠 (정기 여객선)</div>
+      `<div class="popup-title" style="color:#ff33cc">부산 ↔ 히타카츠 (정기 여객선)</div>
        <div class="popup-body">
          팬스타 쓰시마링크호 · 부산 08:40 출항<br>
          스타라인 노바호 · 부산 09:10 출항<br>
          대아고속해운 씨플라워호 · 부산 09:40 출항<br><br>
+         ※ 히타카츠항(경유 구상) 항로와 동일 경로 — 겹침 방지를 위해 살짝 띄워 표시<br><br>
          <a href="https://www.panstar.co.kr/business/cruise/tsushima_link" target="_blank" rel="noopener" style="color:#7ecfff">🔗 팬스타크루즈 공식페이지</a><br>
          <a href="https://www.thestarline.co.kr/html/?pcode=27" target="_blank" rel="noopener" style="color:#7ecfff">🔗 스타라인 공식 스케줄</a><br>
          <a href="http://www.daea.com/info/schedule" target="_blank" rel="noopener" style="color:#7ecfff">🔗 대아고속해운 공식 스케줄</a>
        </div>`, { className:'custom-popup', maxWidth:260 });
-  L.polyline([[busan.lat,busan.lng],[izu.lat,izu.lng]], { color:'#66aacc', weight:2.5, opacity:0.55, dashArray:'2 7' })
+  // 부산↔이즈하라 정기 여객선 항로 (히타카츠 경유) — 히타카츠항(경유 구상) 항로와 부산~히타카츠
+  // 구간까지는 완전히 동일하고, 그 뒤(_izuharaBranchWP)부터 남쪽 이즈하라항으로 갈라진다.
+  _scopeLines.izuharaViaRef = L.polyline(catmullRom(_izuharaWP, 60), { color:'#33ddaa', weight:2.5, opacity:0.75, dashArray:'2 7', className:'route-competitor-offset-izu' })
     .addTo(map).bindPopup(
-      `<div class="popup-title" style="color:#66aacc">부산 ↔ 이즈하라 (정기 여객선)</div>
+      `<div class="popup-title" style="color:#33ddaa">부산 ↔ 이즈하라 (히타카츠 경유)</div>
        <div class="popup-body">
-         대아고속해운 씨플라워호 · 부산 09:10 출항 (화·목요일)<br>
          팬스타 쓰시마링크호 · 이즈하라 경유편 (화·목요일)<br><br>
-         <a href="http://www.daea.com/info/schedule" target="_blank" rel="noopener" style="color:#7ecfff">🔗 대아고속해운 공식 스케줄</a><br>
+         ※ 부산→히타카츠 구간은 히타카츠항(경유 구상) 항로와 동일 경로 — 겹침 방지를 위해 살짝 띄워 표시<br><br>
          <a href="https://www.panstar.co.kr/business/cruise/tsushima_link" target="_blank" rel="noopener" style="color:#7ecfff">🔗 팬스타크루즈 공식페이지</a>
        </div>`, { className:'custom-popup', maxWidth:260 });
+  // 부산↔이즈하라 정기 여객선 항로 (히타카츠 미경유·직항) — 대마도를 관통할 수 없어 어차피
+  // 히타카츠 인근 영해를 돌아나가지만, 항구 접안 진입 구간까지는 들어가지 않고 바로 이즈하라로 향한다.
+  _scopeLines.izuharaDirectRef = L.polyline(catmullRom(_izuharaDirectWP, 60), { color:'#9955ff', weight:2.5, opacity:0.75, dashArray:'2 7', className:'route-competitor-offset-direct' })
+    .addTo(map).bindPopup(
+      `<div class="popup-title" style="color:#9955ff">부산 ↔ 이즈하라 (히타카츠 미경유 · 직항)</div>
+       <div class="popup-body">
+         대아고속해운 씨플라워호 · 부산 09:10 출항 (화·목요일)<br>
+         스타라인 노바호 · 이즈하라 직항 (특정월)<br><br>
+         ※ 대마도 육지를 관통할 수 없어 히타카츠 인근 영해는 지나가지만, 항구에는 들어가지 않고 바로 이즈하라로 향하는 항로<br><br>
+         <a href="http://www.daea.com/info/schedule" target="_blank" rel="noopener" style="color:#7ecfff">🔗 대아고속해운 공식 스케줄</a><br>
+         <a href="https://www.thestarline.co.kr/html/?pcode=27" target="_blank" rel="noopener" style="color:#7ecfff">🔗 스타라인 공식 스케줄</a>
+       </div>`, { className:'custom-popup', maxWidth:280 });
+  // 카멜리아 라인(뉴카멜리아호)도 퀸비틀과 동일한 부산↔하카타 직항 노선(_qbWP)을 쓴다.
+  // 기존 "기존 직항(퀸비틀)" 점선(weight:2)과 완전히 겹치므로 그 두께만큼만 픽셀 오프셋을 준다.
+  _scopeLines.camelliaRef = L.polyline(_qbWP, { color:'#00cc66', weight:2, opacity:0.6, dashArray:'8 6', className:'route-competitor-offset-camellia' })
+    .addTo(map).bindPopup(
+      `<div class="popup-title" style="color:#00cc66">부산 ↔ 하카타 (카멜리아 라인)</div>
+       <div class="popup-body">
+         카멜리아 라인 · 뉴카멜리아호<br><br>
+         ※ 퀸비틀과 동일한 부산↔하카타 직항 노선 — 겹침 방지를 위해 선 두께만큼 살짝 띄워 표시<br>
+         ⚠ 출항시각·속력은 미확인 추정치 (실제 시각표 확인 필요)
+       </div>`, { className:'custom-popup', maxWidth:260 });
+  // 부관훼리 항로 (부산 ↔ 시모노세키) — rentacar 레포지토리 실측 경유점을 그대로 사용,
+  // 곡선 보간 없이 직선 구간으로만 연결한다 (원본과 동일한 이유: 간몬해협이 좁아 곡선을 쓰면 육지를 가로지름).
+  _scopeLines.shimonosekiRef = L.polyline(_shimonosekiWP, { color:'#0ea5e9', weight:2.5, opacity:0.8, dashArray:'6 8' })
+    .addTo(map).bindPopup(
+      `<div class="popup-title" style="color:#0ea5e9">부산 ↔ 시모노세키 (부관훼리)</div>
+       <div class="popup-body">
+         🇰🇷 성희호 · 부산 21:00 출항 → 시모노세키 익일 08:00 도착<br>
+         🇯🇵 하마유호 · 시모노세키 19:45 출항 → 부산 익일 07:45 도착<br><br>
+         ※ 대한해협→히비키나다(響灘)→간몬해협(関門海峡)을 지나 카라토(唐戸) 터미널로 진입하는 실제 항로<br>
+         (좌표 출처: rentacar 레포지토리 "부관훼리 시모노세키 렌터카 사업 기획")
+       </div>`, { className:'custom-popup', maxWidth:280 });
+  // 팬스타 미라클호 항로 (부산 ↔ 오사카) — 히비키나다까지는 부관훼리와 같은 경로, 이후 세토내해를
+  // 거쳐 오사카만으로 진입. 마우스오버 시 툴팁(bindTooltip)으로 바로 무슨 항로인지 뜨게 하고,
+  // 클릭 시에는 상세 스케줄이 담긴 팝업(bindPopup)이 뜬다.
+  _scopeLines.miracleRef = L.polyline(_miracleWP, { color:'#ff9933', weight:2.5, opacity:0.8, dashArray:'4 6', className:'route-competitor-offset-miracle' })
+    .addTo(map)
+    .bindTooltip('🚢 팬스타 미라클호 (부산 ↔ 오사카, 세토내해 경유)', { sticky:true, className:'custom-popup' })
+    .bindPopup(
+      `<div class="popup-title" style="color:#ff9933">부산 ↔ 오사카 (팬스타 미라클호)</div>
+       <div class="popup-body">
+         부산 → 오사카 (화·목·일) 16:00 출항 → 익일 10:00 도착<br>
+         오사카 → 부산 (월·수·금) 17:00 출항 → 익일 10:00 도착<br><br>
+         ※ 대한해협→히비키나다(響灘)까지는 부관훼리와 동일 경로, 이후 간몬해협 대신 동쪽
+         세토내해(이요나다·빈고나다·하리마나다)를 거쳐 오사카만으로 진입하는 실제 항로<br>
+         ⚠ 계절·기상·현지 사정에 따라 변동 가능 — 공식 시각표 확인 필요<br><br>
+         <a href="https://www.panstarcruise.com/" target="_blank" rel="noopener" style="color:#7ecfff">🔗 팬스타크루즈 공식 홈페이지</a>
+       </div>`, { className:'custom-popup', maxWidth:280 });
+}
+
+// ════════════════════════════════════════════════════
+//  선석 스케줄(Gantt) — chainportal 선석 스케줄 화면을 벤치마킹.
+//  항구별 · 요일별 · 시간대별로 어떤 선박이 수속(선석 점유) 중인지 시각화한다.
+//  수속시간은 기본 BERTH_DEFAULT_MIN(30분)이며, 산타모니카호(경유)가 히타카츠에
+//  정박하는 구간만 "부산→히타카츠→하카타" 노선 전용 SIM_STOP_MIN(기본 25분)을 쓴다.
+//  그 외 선박(팬스타 히타카츠 경유 이즈하라행 등)은 히타카츠를 들르더라도 30분 기본값을 쓴다.
+// ════════════════════════════════════════════════════
+const BERTH_PORT_ROWS = [
+  { id:'busan',       label:'부산항' },
+  { id:'hitakatsu',   label:'히타카츠항' },
+  { id:'izuhara',     label:'이즈하라항' },
+  { id:'hakata',      label:'하카타항' },
+  { id:'shimonoseki', label:'시모노세키항' },
+  { id:'osaka',       label:'오사카항' }
+];
+function _portIdByName(name) {
+  const p = ports.find(pp => pp.name === name);
+  return p ? p.id : null;
+}
+function _shiftDays(days, offset) {
+  if (!offset) return days.slice();
+  const week = _allWeekDays();
+  return days.map(d => {
+    const i = week.indexOf(d);
+    return i < 0 ? d : week[((i + offset) % 7 + 7) % 7];
+  });
+}
+
+// 선박별 각 항구 도착(수속) 이벤트 목록을 계산한다.
+// relMin은 그 배 자신의 출항(0분) 기준 경과분 — departHM과 더해 실제 시각·요일(다음날로 넘어가면 이동)을 구한다.
+function _computeBerthEvents() {
+  const events = [];
+  const pushEvent = (portId, shipName, color, days, departHM, relMin, bufferMin) => {
+    if (!portId || relMin == null || bufferMin <= 0) return;
+    const clockMin = _hmToMin(departHM) + relMin;
+    const offset = Math.floor(clockMin / 1440);
+    const startMin = ((clockMin % 1440) + 1440) % 1440;
+    events.push({ portId, shipName, color, days: _shiftDays(days, offset), startMin, endMin: startMin + bufferMin });
+  };
+
+  const allDays = _allWeekDays();
+  // 산타모니카호 — 현재 열려있는 탭(경유/직항 시나리오)만 반영한다 (같은 배의 대안 시나리오이므로 동시 운항 X)
+  if (_activeSimTab === 1) {
+    pushEvent('hitakatsu', '산타모니카호(경유)', '#ffcc00', allDays, simSMDepartHM, _hitaArrMin, SIM_STOP_MIN);
+    pushEvent('hakata',    '산타모니카호(경유)', '#ffcc00', allDays, simSMDepartHM, _totalMinSM, BERTH_DEFAULT_MIN);
+    pushEvent('busan',     '산타모니카호(경유)', '#ffcc00', allDays, simSMDepartHM, _totalMinSMret, BERTH_DEFAULT_MIN);
+  } else {
+    pushEvent('hakata', '산타모니카호(직항)', '#44ffdd', allDays, simSMDepartHM, _totalMinSM2, BERTH_DEFAULT_MIN);
+    pushEvent('busan',  '산타모니카호(직항)', '#44ffdd', allDays, simSMDepartHM, _totalMinSM2ret, BERTH_DEFAULT_MIN);
+  }
+  // 퀸비틀 — 두 탭 모두에서 운항
+  pushEvent('hakata', '퀸비틀', '#66ccff', allDays, simQBDepartHM, _totalMinQB, BERTH_DEFAULT_MIN);
+  pushEvent('busan',  '퀸비틀', '#66ccff', allDays, simQBDepartHM, _totalMinQBret, BERTH_DEFAULT_MIN);
+
+  // 등록된 선박(경쟁사 등)
+  customShips.forEach(s => {
+    const tl = _customTL[s.id];
+    if (!tl) return;
+    const days = s.days || allDays;
+    const buffer = s.berthMin != null ? s.berthMin : BERTH_DEFAULT_MIN;
+    const toPortId   = _portIdByName(s.to.name);
+    const fromPortId = _portIdByName(s.from.name);
+    const viaPortId  = s.via ? _portIdByName(s.via.name) : null;
+    if (s.via) pushEvent(viaPortId, s.name, s.color, days, s.departHM, tl.viaArrive, buffer);
+    pushEvent(toPortId, s.name, s.color, days, s.departHM, tl.totalOut, buffer);
+    if (s.roundTrip) {
+      if (s.via) pushEvent(viaPortId, s.name, s.color, days, s.departHM, tl.retViaArrive, buffer);
+      pushEvent(fromPortId, s.name, s.color, days, s.departHM, tl.totalRet, buffer);
+    }
+  });
+
+  return events;
+}
+
+// 요일(토일월화수목금)은 실제 달력 날짜가 아니라 매주 반복되는 패턴이므로, vis-timeline에
+// 그리려면 임시로 "이번 주(가장 최근 토요일부터 7일)"를 기준 날짜로 잡아 매핑한다.
+function _berthWeekStart() {
+  const now = new Date();
+  const diffToSat = (now.getDay() + 1) % 7; // Date.getDay(): 0=일...6=토 → 토요일까지 며칠 전인지
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToSat);
+  start.setHours(0, 0, 0, 0);
+  return start;
+}
+
+
+// vis-timeline의 "format" 콜백에 함수를 넣으면 내부에서 문자열 전용 처리를 하다 에러가 나므로,
+// 대신 렌더가 끝난 뒤 DOM에 이미 그려진 날짜 라벨(major/minor 둘 다 — 줌 정도에 따라 "Sat 1 January"
+// 같은 날짜 텍스트가 어느 쪽에 나올지 달라진다)을 직접 요일로 바꿔친다. "08:00"처럼 시:분 형식인
+// 라벨(=시간 눈금)은 건드리지 않는다. 화면에 보이는 첫 라벨을 현재 구간(getWindow) 시작일로 보고
+// 이후 라벨은 하루씩 더한다.
+let _berthRelabeling = false;
+// 실제 달력 날짜는 전혀 보지 않는다 — 선박은 무조건 매주 반복되는 정기 운항이라고 보고,
+// 화면에 보이는 순서 그대로 "토·일·월·화·수·목·금"을 반복해서 매긴다.
+function _berthRelabelDays() {
+  if (_berthRelabeling || !_berthTimeline) return;
+  const container = document.getElementById('berthTimelineEl');
+  if (!container) return;
+  _berthRelabeling = true; // 아래에서 textContent를 바꾸면 MutationObserver가 다시 이 함수를 부르므로 재진입 방지
+  try {
+    const week = _allWeekDays();
+    const isTimeLike = txt => /^\d{1,2}:\d{2}$/.test(txt);
+    ['vis-major', 'vis-minor'].forEach(cls => {
+      let idx = 0;
+      container.querySelectorAll('.vis-text.' + cls).forEach(el => {
+        const txt = el.textContent.trim();
+        if (isTimeLike(txt)) return; // 진짜 시:분 눈금은 그대로 둔다
+        const label = week[idx % 7];
+        if (el.textContent !== label) el.textContent = label;
+        idx++;
+      });
+    });
+  } finally {
+    _berthRelabeling = false;
+  }
+}
+
+// 요일 기준 이벤트를 기준주(weekStart)의 실제 Date로 펼쳐 vis-timeline item 배열을 만든다.
+// 매일 운항하는 배는 7개, 화·목요일 편은 2개 등 이벤트당 여러 개의 item이 생길 수 있다.
+function _berthBuildItems(weekStart) {
+  const events = _computeBerthEvents();
+  const week = _allWeekDays();
+  const items = [];
+  let seq = 1;
+  events.forEach(ev => {
+    ev.days.forEach(d => {
+      const i = week.indexOf(d);
+      if (i < 0) return;
+      const dayBase = weekStart.getTime() + i * 86400000;
+      items.push({
+        id: seq++, group: ev.portId, content: ev.shipName, color: ev.color,
+        start: new Date(dayBase + ev.startMin * 60000),
+        end:   new Date(dayBase + ev.endMin * 60000),
+        style: `background:${ev.color};border-color:rgba(0,0,0,0.4);color:#08142d;`,
+        title: `${ev.shipName} · ${_minToHM(ev.startMin)}~${_minToHM(ev.endMin)}`
+      });
+    });
+  });
+  // 같은 항구(group) 안에서 시간이 겹치는 item은 빨간 테두리로 표시한다.
+  items.forEach((it, i) => {
+    const conflict = items.some((other, j) => j !== i && other.group === it.group &&
+      it.start.getTime() < other.end.getTime() && other.start.getTime() < it.end.getTime());
+    if (conflict) it.className = 'berth-conflict';
+  });
+  return items;
+}
+
+let _berthTimeline = null;
+let _berthFocusPort = 'all'; // 특정 항구를 클릭해 그 항구만 볼 때 사용
+
+function _berthSetFocus(portId) {
+  _berthFocusPort = portId;
+  renderBerthPanel();
+}
+
+function renderBerthPanel() {
+  rebuildSim(); // _customTL·전 구간 시간을 최신화
+
+  const dIn = document.getElementById('berthDefaultInput'); if (dIn) dIn.value = BERTH_DEFAULT_MIN;
+  const hIn = document.getElementById('berthHitaViaInput'); if (hIn) hIn.value = SIM_STOP_MIN;
+
+  // 항구 필터 칩 (전체 + 항구별) — 클릭하면 그 항구 하나만 확대해서 보여준다.
+  const filterEl = document.getElementById('berthPortFilter');
+  if (filterEl) {
+    const opts = [{ id:'all', label:'전체' }, ...BERTH_PORT_ROWS];
+    filterEl.innerHTML = opts.map(o =>
+      `<button type="button" class="berth-filter-btn${_berthFocusPort===o.id?' active':''}" onclick="_berthSetFocus('${o.id}')">${o.label}</button>`
+    ).join('');
+  }
+
+  const weekStart = _berthWeekStart();
+  const weekEnd = new Date(weekStart.getTime() + 7 * 86400000);
+  const allItems = _berthBuildItems(weekStart);
+  const allGroups = BERTH_PORT_ROWS.map(r => ({ id: r.id, content: r.label }));
+  const groups = _berthFocusPort === 'all' ? allGroups : allGroups.filter(g => g.id === _berthFocusPort);
+  const items  = _berthFocusPort === 'all' ? allItems  : allItems.filter(it => it.group === _berthFocusPort);
+  const rowHeight = Math.max(groups.length, 1) * 70 + 30;
+
+  const container = document.getElementById('berthTimelineEl');
+  if (container) {
+    if (typeof vis === 'undefined') {
+      // vis-timeline 라이브러리(CDN)가 로드되지 않은 경우 — 원인을 바로 알 수 있게 표시한다.
+      container.innerHTML = '<div style="padding:12px;color:#ff8888;font-size:11px">⚠ 선석 스케줄 라이브러리(vis-timeline)를 불러오지 못했습니다.<br>네트워크 연결을 확인한 뒤 페이지를 새로고침해 주세요.</div>';
+    } else {
+      try {
+        if (!_berthTimeline) {
+          _berthTimeline = new vis.Timeline(container, new vis.DataSet(items), new vis.DataSet(groups), {
+            stack: true,
+            start: weekStart, end: weekEnd, min: weekStart, max: weekEnd,
+            zoomMin: 1000 * 60 * 60,            // 1시간
+            zoomMax: 1000 * 60 * 60 * 24 * 7,   // 1주
+            margin: { item: 4, axis: 6 },
+            orientation: 'top',
+            height: rowHeight + 'px',
+            tooltip: { followMouse: true }
+            // ※ format.majorLabels에 함수를 넣으면 vis-timeline 8.5.4 내부에서
+            //   "t.replace is not a function" 오류가 나서(문자열 포맷만 지원) 뺐다.
+            //   대신 아래 _berthRelabelDays()가 렌더될 때마다 라벨 텍스트를 직접 요일로 바꿔치기한다.
+          });
+          // 항구 라벨을 직접 클릭해도 그 항구만 보이도록 필터링한다.
+          _berthTimeline.on('click', props => {
+            if (props.what === 'group-label' && props.group) _berthSetFocus(props.group);
+          });
+          // 확대/축소·이동 등으로 축이 다시 그려질 때마다 상단 날짜 라벨을 요일로 바꿔친다.
+          _berthTimeline.on('changed', _berthRelabelDays);
+          // vis-timeline 내부 이벤트 타이밍을 완전히 믿을 수 없어서(버전에 따라 'changed'가
+          // 축만 다시 그릴 땐 안 올 수 있음), DOM 자체를 감시해 날짜 텍스트가 다시 그려지는
+          // 순간을 잡아내는 보험을 하나 더 건다.
+          new MutationObserver(() => _berthRelabelDays())
+            .observe(container, { childList: true, subtree: true, characterData: true });
+        } else {
+          _berthTimeline.setGroups(new vis.DataSet(groups));
+          _berthTimeline.setItems(new vis.DataSet(items));
+          _berthTimeline.setOptions({ height: rowHeight + 'px' });
+        }
+        // 패널이 숨겨져 있던(display:none) 동안 만들어졌거나 다시 열렸을 때 폭 계산이 어긋날 수 있어
+        // 표시된 다음 프레임에 한 번 더 레이아웃을 다시 계산시킨다.
+        setTimeout(() => { if (_berthTimeline) { _berthTimeline.redraw(); _berthRelabelDays(); } }, 0);
+      } catch (err) {
+        container.innerHTML = `<div style="padding:12px;color:#ff8888;font-size:11px">⚠ 선석 스케줄을 그리는 중 오류가 발생했습니다: ${err.message}</div>`;
+        console.error('renderBerthPanel error', err);
+      }
+    }
+  }
+
+  const legendEl = document.getElementById('berthLegend');
+  if (legendEl) {
+    const seen = {}, uniq = [];
+    items.forEach(it => { if (!seen[it.content]) { seen[it.content] = 1; uniq.push(it); } });
+    legendEl.innerHTML = uniq.map(it =>
+      `<div class="berth-legend-item"><div class="berth-legend-dot" style="background:${it.color}"></div>${it.content}</div>`
+    ).join('') || '<span style="color:#667788">등록된 운항 선박이 없습니다.</span>';
+  }
+
+  _renderBerthAnalysis();
+}
+
+// ── 최적 접안 시간대 분석 ──
+// 산타모니카호를 제외한 모든 배(퀸비틀 + 등록된 경쟁사 선박)의 항구별 점유 이벤트만 모은다.
+function _computeCompetitorOnlyEvents() {
+  return _computeBerthEvents().filter(ev => !ev.shipName.startsWith('산타모니카호'));
+}
+
+// events 중 해당 항구의 점유 구간을 병합한 뒤, minGapMin 이상 비어있는 시간대(요일 구분 없이
+// 모든 요일의 점유 구간을 합쳐 계산하므로 "어떤 요일에도 안전한" 구간이다)를 구한다.
+function _freeGapsFromIntervals(events, portId, minGapMin) {
+  const intervals = events.filter(ev => ev.portId === portId)
+    .map(ev => ({ start: ev.startMin, end: Math.min(ev.endMin, 1440) }))
+    .sort((a, b) => a.start - b.start);
+  const merged = [];
+  intervals.forEach(iv => {
+    const last = merged[merged.length - 1];
+    if (last && iv.start <= last.end) last.end = Math.max(last.end, iv.end);
+    else merged.push({ ...iv });
+  });
+  const gaps = [];
+  let cursor = 0;
+  merged.forEach(m => {
+    if (m.start - cursor >= minGapMin) gaps.push({ start: cursor, end: m.start });
+    cursor = Math.max(cursor, m.end);
+  });
+  if (1440 - cursor >= minGapMin) gaps.push({ start: cursor, end: 1440 });
+  return gaps;
+}
+
+// 시나리오 1(경유)·2(직항)별로 산타모니카호의 각 항구 도착이 다른 선사 수속시간과
+// 겹치는지, 그리고 그 항구에서 요일 무관하게 안전한 추천 접안 시간대는 언제인지 계산한다.
+function _analyzeOptimalBerthing() {
+  const competitorEvents = _computeCompetitorOnlyEvents();
+  const depMin = _hmToMin(simSMDepartHM);
+  const calls1 = [
+    { portId:'hitakatsu', label:'히타카츠 정박', rel:_hitaArrMin,    buffer:SIM_STOP_MIN },
+    { portId:'hakata',    label:'하카타 도착',   rel:_totalMinSM,    buffer:BERTH_DEFAULT_MIN },
+    { portId:'busan',     label:'부산 복귀',     rel:_totalMinSMret, buffer:BERTH_DEFAULT_MIN }
+  ];
+  const calls2 = [
+    { portId:'hakata', label:'하카타 도착', rel:_totalMinSM2,    buffer:BERTH_DEFAULT_MIN },
+    { portId:'busan',  label:'부산 복귀',   rel:_totalMinSM2ret, buffer:BERTH_DEFAULT_MIN }
+  ];
+  const evaluate = calls => calls.map(c => {
+    const start = ((depMin + c.rel) % 1440 + 1440) % 1440;
+    const end = start + c.buffer;
+    const busy = competitorEvents.filter(ev => ev.portId === c.portId);
+    const conflict = busy.some(ev => start < ev.endMin && ev.startMin < end);
+    const gaps = _freeGapsFromIntervals(competitorEvents, c.portId, c.buffer)
+      .sort((a, b) => Math.abs(a.start - start) - Math.abs(b.start - start))
+      .slice(0, 3);
+    return { ...c, start, end, conflict, gaps };
+  });
+  return { 1: evaluate(calls1), 2: evaluate(calls2) };
+}
+
+function _renderBerthAnalysis() {
+  const el = document.getElementById('berthAnalysis');
+  if (!el) return;
+  const result = _analyzeOptimalBerthing();
+  const portLabel = id => (BERTH_PORT_ROWS.find(p => p.id === id) || {}).label || id;
+  const renderCard = (title, calls) => `
+    <div class="berth-scenario-card">
+      <div class="berth-scenario-title">${title}</div>
+      ${calls.map(c => `
+        <div class="berth-call-row">
+          <div>${portLabel(c.portId)} · ${c.label} — <span class="berth-call-status ${c.conflict?'conflict':'ok'}">${c.conflict?'⚠ 겹침':'✅ 안전'}</span>
+            (${_minToHM(c.start)}~${_minToHM(c.end)})</div>
+          <div class="berth-call-gaps">추천 접안 시간대: ${c.gaps.length ? c.gaps.map(g=>`${_minToHM(g.start)}~${_minToHM(g.end)}`).join(', ') : '요일 무관 안전 구간 없음(경쟁사 배가 촘촘함)'}</div>
+        </div>
+      `).join('')}
+    </div>`;
+  el.innerHTML = `
+    <div style="font-size:11px;font-weight:700;color:#7ecfff;margin-bottom:6px">📊 최적 접안 시간대 분석 (경쟁사 수속시간 기준 · 요일 무관 항상 안전한 구간)</div>
+    <div class="berth-scenario-grid">
+      ${renderCard('시나리오 1 · 히타카츠 경유', result[1])}
+      ${renderCard('시나리오 2 · 하카타 직항', result[2])}
+    </div>`;
+}
+
+function updateBerthSetting(which, value) {
+  const v = Math.max(0, parseFloat(value) || 0);
+  if (which === 'default') {
+    BERTH_DEFAULT_MIN = v;
+  } else if (which === 'hitaVia') {
+    SIM_STOP_MIN = v;
+    simReset();
+  }
+  _refreshOpenPanels();
+}
+
+// 선박 스케줄 관리 패널과 선석 스케줄 패널은 같은 선박 데이터를 보여주므로, 둘 중 하나라도
+// 열려 있으면 선박 데이터가 바뀔 때마다 항상 함께 다시 그려서 동기화 상태를 유지한다.
+function _refreshOpenPanels() {
+  if (simPlayScope !== 'core') _rebuildSimTimelapse(); // 등록 선박이 타임랩스에도 나오는 범위라면 함께 갱신
+  const p = document.getElementById('opsPanel');
+  if (!p || !p.classList.contains('visible')) return;
+  renderShipMgrList();
+  renderBerthPanel();
 }
 
 function addCustomShip() {
@@ -2009,10 +3699,12 @@ function addCustomShip() {
     id, name: '신규 선박', color, kts: 30, departHM: '09:00',
     turnMin: 30, roundTrip: true,
     from: { mode:'known', name: ports[0].name, lat: ports[0].lat, lng: ports[0].lng },
-    to:   { mode:'known', name: ports[3].name, lat: ports[3].lat, lng: ports[3].lng }
+    to:   { mode:'known', name: ports[3].name, lat: ports[3].lat, lng: ports[3].lng },
+    berthMin: BERTH_DEFAULT_MIN, days: _allWeekDays(), group: '기타', nation: '한국라인',
+    shipType: '고속선', tonnage: null
   });
   _saveCustomShips();
-  renderShipMgrList();
+  _refreshOpenPanels();
   rebuildSim();
 }
 
@@ -2021,7 +3713,7 @@ function removeCustomShip(id) {
   if (_customMarkers[id]) { map.removeLayer(_customMarkers[id]); delete _customMarkers[id]; }
   delete _customTL[id];
   _saveCustomShips();
-  renderShipMgrList();
+  _refreshOpenPanels();
   rebuildSim();
 }
 
@@ -2030,15 +3722,45 @@ function updateCustomShip(id, field, value) {
   if (!s) return;
   if (field === 'kts')          s.kts = Math.max(1, parseFloat(value) || s.kts);
   else if (field === 'departHM') s.departHM = value || s.departHM;
-  else if (field === 'turnMin')  s.turnMin = Math.max(0, parseFloat(value) || 0);
+  else if (field === 'viaStopMin') s.viaStopMin = Math.max(0, parseFloat(value) || 0);
+  else if (field === 'berthMin')  s.berthMin = Math.max(0, parseFloat(value) || 0);
   else if (field === 'roundTrip') s.roundTrip = !!value;
   else if (field === 'name')     s.name = value || '이름 없음';
   else if (field === 'color')    s.color = value;
+  else if (field === 'group')    s.group = value || '기타';
+  else if (field === 'nation')   s.nation = value || '한국라인';
+  else if (field === 'shipType') s.shipType = value || '기타';
+  else if (field === 'tonnage')  s.tonnage = Math.max(0, parseFloat(value) || 0);
   else if (field === 'sourceUrl')   s.sourceUrl = value;
   else if (field === 'sourceLabel') s.sourceLabel = value;
   _saveCustomShips();
   rebuildSim();
-  renderShipMgrList();
+  _refreshOpenPanels();
+}
+
+// "회항 시각"(도착 후 다시 출발하는 실제 시각)을 입력받아 내부적으로 쓰는 정박 대기(turnMin)로 변환한다.
+function updateCustomShipReturnTime(id, value) {
+  const s = customShips.find(x => x.id === id);
+  if (!s || !value) return;
+  const calc = _customShipCalc(s); // 이 시점의(turnMin 변경 전) 도착 시각 기준
+  s.turnMin = _turnMinForReturnClock(calc.arriveMin, value);
+  _saveCustomShips();
+  rebuildSim();
+  _refreshOpenPanels();
+}
+
+// 요일 토글 (선박 스케줄 관리 패널에서 요일 버튼 클릭 시)
+function toggleCustomShipDay(id, day) {
+  const s = customShips.find(x => x.id === id);
+  if (!s) return;
+  if (!s.days) s.days = _allWeekDays();
+  if (s.days.includes(day)) {
+    if (s.days.length > 1) s.days = s.days.filter(d => d !== day); // 최소 1일은 남겨둔다
+  } else {
+    s.days = [..._allWeekDays().filter(d => s.days.includes(d) || d === day)];
+  }
+  _saveCustomShips();
+  _refreshOpenPanels();
 }
 
 // 출발/도착항 드롭다운 변경 — 알려진 항구 선택 또는 "직접 입력" 전환
@@ -2053,7 +3775,7 @@ function setCustomShipPort(id, which, portIdOrCustom) {
   }
   _saveCustomShips();
   rebuildSim();
-  renderShipMgrList();
+  _refreshOpenPanels();
 }
 
 // 직접 입력 모드에서 이름/위도/경도 수정
@@ -2064,33 +3786,99 @@ function updateCustomShipPortField(id, which, field, value) {
   else if (field === 'name') s[which].name = value;
   _saveCustomShips();
   rebuildSim();
-  renderShipMgrList();
+  _refreshOpenPanels();
+}
+
+// 경유항 드롭다운 변경 — "없음"/알려진 항구/"직접 입력" 전환
+function setCustomShipVia(id, portIdOrCustomOrNone) {
+  const s = customShips.find(x => x.id === id);
+  if (!s) return;
+  if (portIdOrCustomOrNone === 'none') {
+    s.via = null; s.viaStopMin = null;
+  } else if (portIdOrCustomOrNone === 'custom') {
+    s.via = (s.via && s.via.mode === 'custom') ? s.via : { mode:'custom', name:'경유항', lat:0, lng:0 };
+    s.via.mode = 'custom';
+    if (s.viaStopMin == null) s.viaStopMin = 30;
+  } else {
+    const p = ports.find(p => p.id === portIdOrCustomOrNone);
+    if (p) s.via = { mode:'known', name: p.name, lat: p.lat, lng: p.lng };
+    if (s.viaStopMin == null) s.viaStopMin = 30;
+  }
+  _saveCustomShips();
+  rebuildSim();
+  _refreshOpenPanels();
+}
+
+// 경유항 직접 입력 모드에서 이름/위도/경도 수정
+function updateCustomShipViaField(id, field, value) {
+  const s = customShips.find(x => x.id === id);
+  if (!s || !s.via) return;
+  if (field === 'lat' || field === 'lng') s.via[field] = parseFloat(value) || 0;
+  else if (field === 'name') s.via.name = value;
+  _saveCustomShips();
+  rebuildSim();
+  _refreshOpenPanels();
 }
 
 // 선박 1척의 편도 거리/소요시간/출도착 시각을 계산 (관리 패널 표시용)
+// via가 설정된 경우 부산→경유항→목적항 2구간 + 경유 대기시간을 편도 소요시간에 반영한다.
 function _customShipCalc(s) {
-  const dist = _simDist([s.from.lat, s.from.lng], [s.to.lat, s.to.lng]);
   const kmh = s.kts * 1.852;
-  const oneWayMin = kmh > 0 ? dist / kmh * 60 : 0;
+  const fromPt = [s.from.lat, s.from.lng], toPt = [s.to.lat, s.to.lng];
   const departMin = _hmToMin(s.departHM);
+  let dist, oneWayMin, viaArriveMin = null, viaDepartMin = null;
+  if (s.via) {
+    const viaPt = [s.via.lat, s.via.lng];
+    const d1 = _simDist(fromPt, viaPt), d2 = _simDist(viaPt, toPt);
+    dist = d1 + d2;
+    const t1 = kmh > 0 ? d1 / kmh * 60 : 0, t2 = kmh > 0 ? d2 / kmh * 60 : 0;
+    oneWayMin = t1 + (s.viaStopMin || 0) + t2;
+    viaArriveMin = departMin + t1;
+    viaDepartMin = viaArriveMin + (s.viaStopMin || 0);
+  } else {
+    dist = _simDist(fromPt, toPt);
+    oneWayMin = kmh > 0 ? dist / kmh * 60 : 0;
+  }
   const arriveMin = departMin + oneWayMin;
   const retArriveMin = s.roundTrip ? arriveMin + s.turnMin + oneWayMin : null;
-  return { dist, oneWayMin, departMin, arriveMin, retArriveMin };
+  return { dist, oneWayMin, departMin, arriveMin, retArriveMin, viaArriveMin, viaDepartMin };
 }
 
 // 모든 커스텀 선박의 애니메이션 타임라인 재계산 (rebuildSim()에서 호출)
+// via가 설정된 선박은 부산→경유항(대기)→목적항 순으로 두 구간을 이어붙인다.
+// 경유항 구간 좌표는 같은 위치(도착시각·출발시각만 다름)이므로 그 사이는 정박 상태로 보간된다.
 function rebuildCustomShips() {
   customShips.forEach(s => {
     const kmh = s.kts * 1.852;
-    const pts = [[s.from.lat, s.from.lng], [s.to.lat, s.to.lng]];
-    const outTL = _buildTL(pts, 0, kmh);
-    const totalOut = outTL[outTL.length - 1].cumMin;
-    let retTL = null, totalRet = totalOut;
-    if (s.roundTrip) {
-      retTL = _buildTL([pts[1], pts[0]], totalOut + s.turnMin, kmh);
-      totalRet = retTL[retTL.length - 1].cumMin;
+    const fromPt = [s.from.lat, s.from.lng], toPt = [s.to.lat, s.to.lng];
+    const viaPt = s.via ? [s.via.lat, s.via.lng] : null;
+    let outTL, totalOut, viaArrive = null, viaDepart = null;
+    if (viaPt) {
+      const leg1 = _buildTL(_legPath(fromPt, viaPt), 0, kmh);
+      viaArrive = leg1[leg1.length - 1].cumMin;
+      viaDepart = viaArrive + (s.viaStopMin || 0);
+      const leg2 = _buildTL(_legPath(viaPt, toPt), viaDepart, kmh);
+      outTL = leg1.concat(leg2);
+      totalOut = leg2[leg2.length - 1].cumMin;
+    } else {
+      outTL = _buildTL(_legPath(fromPt, toPt), 0, kmh);
+      totalOut = outTL[outTL.length - 1].cumMin;
     }
-    _customTL[s.id] = { outTL, retTL, totalOut, totalRet, delay: s._delay || 0 };
+    let retTL = null, totalRet = totalOut, retViaArrive = null, retViaDepart = null;
+    if (s.roundTrip) {
+      if (viaPt) {
+        const rleg1 = _buildTL(_legPath(toPt, viaPt), totalOut + s.turnMin, kmh);
+        retViaArrive = rleg1[rleg1.length - 1].cumMin;
+        retViaDepart = retViaArrive + (s.viaStopMin || 0);
+        const rleg2 = _buildTL(_legPath(viaPt, fromPt), retViaDepart, kmh);
+        retTL = rleg1.concat(rleg2);
+        totalRet = rleg2[rleg2.length - 1].cumMin;
+      } else {
+        retTL = _buildTL(_legPath(toPt, fromPt), totalOut + s.turnMin, kmh);
+        totalRet = retTL[retTL.length - 1].cumMin;
+      }
+    }
+    _customTL[s.id] = { outTL, retTL, totalOut, totalRet, viaArrive, viaDepart, retViaArrive, retViaDepart, delay: s._delay || 0 };
   });
   // 삭제된 배의 타임라인 캐시 정리
   Object.keys(_customTL).forEach(id => {
@@ -2108,13 +3896,23 @@ function _tickCustomShips(simMin) {
       pos = tl.outTL[0].pt; hdg = 0; cls = 'stopping'; txt = `출항 대기 (${_fmtMin(-local)} 후 출항)`;
     } else if (local <= tl.totalOut) {
       const r = _interpTL(tl.outTL, local);
-      pos = r.pos; hdg = r.hdg; cls = 'sailing'; txt = '항해 중';
+      pos = r.pos; hdg = r.hdg;
+      if (tl.viaArrive != null && local > tl.viaArrive && local <= tl.viaDepart) {
+        cls = 'stopping'; txt = `${s.via.name} 경유 대기 (출항까지 ${Math.ceil(tl.viaDepart - local)}분)`;
+      } else {
+        cls = 'sailing'; txt = '항해 중';
+      }
     } else if (s.roundTrip && tl.retTL) {
       if (local <= tl.totalOut + s.turnMin) {
         pos = tl.outTL[tl.outTL.length-1].pt; hdg = 180; cls = 'stopping'; txt = '정박/대기 중';
       } else if (local <= tl.totalRet) {
         const r = _interpTL(tl.retTL, local);
-        pos = r.pos; hdg = r.hdg; cls = 'sailing'; txt = '복귀 항해 중';
+        pos = r.pos; hdg = r.hdg;
+        if (tl.retViaArrive != null && local > tl.retViaArrive && local <= tl.retViaDepart) {
+          cls = 'stopping'; txt = `${s.via.name} 경유 대기 (출항까지 ${Math.ceil(tl.retViaDepart - local)}분)`;
+        } else {
+          cls = 'sailing'; txt = '복귀 항해 중';
+        }
       } else {
         pos = tl.retTL[tl.retTL.length-1].pt; hdg = 0; cls = 'arrived'; txt = '도착 완료';
       }
@@ -2129,41 +3927,56 @@ function _tickCustomShips(simMin) {
     let mk = _customMarkers[s.id];
     if (!mk) {
       mk = L.marker(pos, { icon: _makeShipIcon(hdg, s.color, s.color, label), zIndexOffset: 890 }).addTo(map)
-        .bindPopup(`<div class="popup-title" style="color:${s.color}">⛴ ${s.name}</div><div class="popup-body">${s.kts}노트 · ${s.from.name} → ${s.to.name}${s.roundTrip?' (왕복)':' (편도)'}<br>출항 ${s.departHM}${sourceHtml}</div>`, { className:'custom-popup', maxWidth:260 });
+        .bindPopup(`<div class="popup-title" style="color:${s.color}">⛴ ${s.name}</div><div class="popup-body">${s.kts}노트 · ${s.from.name} → ${s.via ? s.via.name + ' 경유(' + s.viaStopMin + '분) → ' : ''}${s.to.name}${s.roundTrip?' (왕복)':' (편도)'}<br>출항 ${s.departHM}${sourceHtml}</div>`, { className:'custom-popup', maxWidth:260 });
       _customMarkers[s.id] = mk;
     } else {
       mk.setLatLng(pos);
       mk.setIcon(_makeShipIcon(hdg, s.color, s.color, label));
     }
+    // 재생 범위(simPlayScope)에 맞는 배만 지도에 보인다 (예: "타선사 진입예정"이면 운항예정 배만).
+    mk.setOpacity(_shouldShowCustomShip(s) ? 1 : 0);
   });
 }
 
-function _portOptionsHtml(portObj) {
-  let html = ports.map(p =>
-    `<option value="${p.id}" ${portObj.mode==='known' && portObj.name===p.name ? 'selected' : ''}>${p.name}</option>`
+function _portOptionsHtml(portObj, allowNone) {
+  let html = allowNone ? `<option value="none" ${!portObj ? 'selected' : ''}>없음</option>` : '';
+  html += ports.map(p =>
+    `<option value="${p.id}" ${portObj && portObj.mode==='known' && portObj.name===p.name ? 'selected' : ''}>${p.name}</option>`
   ).join('');
-  html += `<option value="custom" ${portObj.mode==='custom' ? 'selected' : ''}>직접 입력(좌표)</option>`;
+  html += `<option value="custom" ${portObj && portObj.mode==='custom' ? 'selected' : ''}>직접 입력(좌표)</option>`;
   return html;
 }
 
 // 시뮬레이션에 이미 등록된 기본 선박(산타모니카·퀸비틀)의 출항시각·속력을 스케줄러에서도
 // 그대로 보고 수정할 수 있게 한다. 값은 위쪽 "순항속도·출항시각 설정" 패널과 완전히 공유된다.
+// 도착 시각(arriveClockMin, 분)을 기준으로 targetHM(회항 시각)에 맞추는 데 필요한 대기(분)을 구한다.
+function _turnMinForReturnClock(arriveClockMin, targetHM) {
+  const arriveMod = ((arriveClockMin % 1440) + 1440) % 1440;
+  let diff = _hmToMin(targetHM) - arriveMod;
+  if (diff < 0) diff += 1440;
+  return diff;
+}
+
 function updateBuiltinShip(which, field, value) {
   if (which === 'sm') {
     if (field === 'kts') { const v = parseFloat(value); if (!isNaN(v) && v > 5) simSMkts = v; }
     else if (field === 'departHM' && value) simSMDepartHM = value;
+    else if (field === 'returnClock' && value) simSMTurnMin = _turnMinForReturnClock(_totalMinSM, value);
+    else if (field === 'shipType') simSMShipType = value;
+    else if (field === 'tonnage') simSMTonnage = Math.max(0, parseFloat(value) || 0);
   } else if (which === 'qb') {
     if (field === 'kts') { const v = parseFloat(value); if (!isNaN(v) && v > 5) simQBkts = v; }
     else if (field === 'departHM' && value) simQBDepartHM = value;
+    else if (field === 'returnClock' && value) simQBTurnMin = _turnMinForReturnClock(_totalMinQB, value);
+    else if (field === 'shipType') simQBShipType = value;
+    else if (field === 'tonnage') simQBTonnage = Math.max(0, parseFloat(value) || 0);
   }
   const smKtsIn = document.getElementById('smKtsInput'); if (smKtsIn) smKtsIn.value = simSMkts;
   const qbKtsIn = document.getElementById('qbKtsInput'); if (qbKtsIn) qbKtsIn.value = simQBkts.toFixed(1);
-  const smDepIn = document.getElementById('smDepartInput'); if (smDepIn) smDepIn.value = simSMDepartHM;
-  const qbDepIn = document.getElementById('qbDepartInput'); if (qbDepIn) qbDepIn.value = simQBDepartHM;
   const smKmhEl = document.getElementById('smKmh'); if (smKmhEl) smKmhEl.textContent = '(' + (simSMkts*1.852).toFixed(1) + 'km/h)';
   const qbKmhEl = document.getElementById('qbKmh'); if (qbKmhEl) qbKmhEl.textContent = '(' + (simQBkts*1.852).toFixed(1) + 'km/h)';
   simReset();
-  renderShipMgrList();
+  _refreshOpenPanels();
 }
 
 // 시뮬레이션에 이미 등록된 기본 선박들의 스케줄 요약 카드
@@ -2172,13 +3985,16 @@ function _builtinShipsHtml() {
   const qbDep = _hmToMin(simQBDepartHM);
   const rows = [
     { which:'sm', color:'#ffcc00', name:'⛴ 산타모니카호 (경유)', route:'부산 → 히타카츠 → 하카타',
-      dist: SM_DIST_LEG1 + SM_DIST_LEG2, kts: simSMkts, departHM: simSMDepartHM,
+      dist: SM_DIST_LEG1 + SM_DIST_LEG2, kts: simSMkts, departHM: simSMDepartHM, turnMin: simSMTurnMin,
+      shipType: simSMShipType, tonnage: simSMTonnage,
       oneWay: _totalMinSM, roundTrip: _totalMinSMret, editable: true },
     { which:'qb', color:'#66ccff', name:'🚢 퀸비틀 (직항)', route:'부산 → 하카타',
-      dist: QB_DIST_KM, kts: simQBkts, departHM: simQBDepartHM,
+      dist: QB_DIST_KM, kts: simQBkts, departHM: simQBDepartHM, turnMin: simQBTurnMin,
+      shipType: simQBShipType, tonnage: simQBTonnage,
       oneWay: _totalMinQB, roundTrip: _totalMinQBret, editable: true },
     { which:'sm', color:'#44ffdd', name:'⛴ 산타모니카호 (직항 · 시나리오2)', route:'부산 → 하카타',
-      dist: QB_DIST_KM, kts: simSMkts, departHM: simSMDepartHM,
+      dist: QB_DIST_KM, kts: simSMkts, departHM: simSMDepartHM, turnMin: simSMTurnMin,
+      shipType: simSMShipType, tonnage: simSMTonnage,
       oneWay: _totalMinSM2, roundTrip: _totalMinSM2ret, editable: false }
   ];
   return rows.map(r => {
@@ -2201,10 +4017,20 @@ function _builtinShipsHtml() {
         <label>출항시각
           <input type="time" value="${r.departHM}" onchange="updateBuiltinShip('${r.which}','departHM',this.value)">
         </label>
-      </div>` : `<div style="font-size:10px;color:#667788;margin-bottom:5px">※ 산타모니카호와 속력·출항시각을 공유 (위 카드에서 함께 수정됨)</div>`}
+        <label>회항 시각
+          <input type="time" value="${_minToHM(departMin + r.oneWay + r.turnMin)}" onchange="updateBuiltinShip('${r.which}','returnClock',this.value)">
+        </label>
+        <label>선종
+          <select onchange="updateBuiltinShip('${r.which}','shipType',this.value)">${SHIP_TYPES.map(t=>`<option value="${t}" ${r.shipType===t?'selected':''}>${t}</option>`).join('')}</select>
+        </label>
+        <label>총톤수
+          <input type="number" min="0" step="1" value="${r.tonnage||0}" onchange="updateBuiltinShip('${r.which}','tonnage',this.value)">
+        </label>
+      </div>` : `<div style="font-size:10px;color:#667788;margin-bottom:5px">※ 산타모니카호와 속력·출항시각·회항 시각·선종·총톤수를 공유 (위 카드에서 함께 수정됨)</div>`}
       <div class="ship-row-calc">
-        📏 ${r.dist}km · 편도 ${_fmtMin(r.oneWay)}<br>
-        🕐 출항 ${r.departHM} → 도착 ${arriveClock} · 복귀도착 ${retClock}
+        📏 ${r.dist}km · 편도 ${_fmtMin(r.oneWay)} · 하카타 회항 시각 ${_minToHM(departMin + r.oneWay + r.turnMin)} (대기 ${r.turnMin}분)<br>
+        🕐 출항 ${r.departHM} → 도착 ${arriveClock} · 복귀도착 ${retClock}<br>
+        🚢 ${r.shipType} · ${r.tonnage ? r.tonnage.toLocaleString() + '톤' : '톤수 미상'}
       </div>
     </div>`;
   }).join('');
@@ -2221,7 +4047,32 @@ function renderShipMgrList() {
     list.innerHTML = html;
     return;
   }
-  html += customShips.map(s => {
+  const _groupedShips = [...customShips].sort((a, b) => {
+    const na = a.nation || '한국라인', nb = b.nation || '한국라인';
+    if (na !== nb) return na.localeCompare(nb, 'ko');
+    return (a.group||'기타').localeCompare(b.group||'기타', 'ko');
+  });
+  let _lastNation = null, _lastGroupKey = null;
+  html += _groupedShips.map(s => {
+    const nationName = s.nation || '한국라인';
+    const groupName = s.group || '기타';
+    const groupKey = nationName + '|' + groupName;
+    let header = '';
+    if (nationName !== _lastNation) {
+      const flag = nationName === '일본라인' ? '🇯🇵' : '🇰🇷';
+      const ncollapsed = _shipMgrCollapsedNations.has(nationName);
+      header += `<div class="ship-nation-header" onclick="toggleShipNationCollapse('${nationName.replace(/'/g, "\\'")}')">${ncollapsed ? '▶' : '▼'} ${flag} ${nationName}</div>`;
+      _lastNation = nationName;
+      _lastGroupKey = null; // 대범주가 바뀌면 그 아래 그룹 헤더도 새로 그린다
+    }
+    if (_shipMgrCollapsedNations.has(nationName)) return header; // 대범주가 접혀 있으면 여기서 끝
+    const collapsed = _shipMgrCollapsedGroups.has(groupKey);
+    if (groupKey !== _lastGroupKey) {
+      header += `<div class="ship-group-header" onclick="toggleShipGroupCollapse('${groupKey.replace(/'/g, "\\'")}')">${collapsed ? '▶' : '▼'} 📁 ${groupName}</div>`;
+      _lastGroupKey = groupKey;
+    }
+    if (collapsed) return header; // 접힌 그룹 — 이 배(및 같은 그룹의 나머지 배)는 목록에서 숨긴다
+    const groupHeader = header;
     const calc = _customShipCalc(s);
     const fromCoords = s.from.mode === 'custom'
       ? `<div class="ship-row-coords">
@@ -2235,14 +4086,34 @@ function renderShipMgrList() {
            <input type="number" step="0.0001" placeholder="위도" value="${s.to.lat}" onchange="updateCustomShipPortField('${s.id}','to','lat',this.value)">
            <input type="number" step="0.0001" placeholder="경도" value="${s.to.lng}" onchange="updateCustomShipPortField('${s.id}','to','lng',this.value)">
          </div>` : '';
-    return `
+    const viaCoords = s.via && s.via.mode === 'custom'
+      ? `<div class="ship-row-coords">
+           <input type="text" placeholder="항구명" value="${s.via.name}" onchange="updateCustomShipViaField('${s.id}','name',this.value)">
+           <input type="number" step="0.0001" placeholder="위도" value="${s.via.lat}" onchange="updateCustomShipViaField('${s.id}','lat',this.value)">
+           <input type="number" step="0.0001" placeholder="경도" value="${s.via.lng}" onchange="updateCustomShipViaField('${s.id}','lng',this.value)">
+         </div>` : '';
+    return groupHeader + `
     <div class="ship-row">
       <div class="ship-row-top">
         <input type="color" value="${s.color}" onchange="updateCustomShip('${s.id}','color',this.value)">
         <input type="text" class="ship-row-name" value="${s.name}" onchange="updateCustomShip('${s.id}','name',this.value)">
+        ${s.pending ? '<span style="font-size:9px;font-weight:700;color:#08142d;background:#ffcc00;border-radius:8px;padding:1px 6px;white-space:nowrap" title="아직 정식 취항 전 · 시각표 미확정">🕓 운항예정</span>' : ''}
+        ${s.sameHull ? `<span style="font-size:9px;font-weight:700;color:#e8f4ff;background:rgba(126,207,255,0.28);border-radius:8px;padding:1px 6px;white-space:nowrap" title="실제로는 1척인 선박을 편도 스케줄 2건으로 나눠 등록 — 선박 수를 셀 때는 1척으로 계산">🔗 동일 선박(1척)</span>` : ''}
         <button class="ship-row-del" onclick="removeCustomShip('${s.id}')" title="삭제">✕</button>
       </div>
       <div class="ship-row-grid">
+        <label>대범주
+          <select onchange="updateCustomShip('${s.id}','nation',this.value)" title="한국 선적·선사 라인인지 일본 선적·선사 라인인지 — 그룹(선사)보다 한 단계 위 분류">${NATION_TYPES.map(n=>`<option value="${n}" ${(s.nation||'한국라인')===n?'selected':''}>${n}</option>`).join('')}</select>
+        </label>
+        <label>그룹(선사)
+          <input type="text" placeholder="예: 팬스타" value="${s.group||'기타'}" onchange="updateCustomShip('${s.id}','group',this.value)" title="선박 스케줄 관리 목록·타임랩스에서 묶어 보는 데 쓰입니다">
+        </label>
+        <label>선종
+          <select onchange="updateCustomShip('${s.id}','shipType',this.value)">${SHIP_TYPES.map(t=>`<option value="${t}" ${(s.shipType||'고속선')===t?'selected':''}>${t}</option>`).join('')}</select>
+        </label>
+        <label>총톤수
+          <input type="number" min="0" step="1" placeholder="GT" value="${s.tonnage||''}" onchange="updateCustomShip('${s.id}','tonnage',this.value)">
+        </label>
         <label>출발항
           <select onchange="setCustomShipPort('${s.id}','from',this.value)">${_portOptionsHtml(s.from)}</select>
           ${fromCoords}
@@ -2251,18 +4122,35 @@ function renderShipMgrList() {
           <select onchange="setCustomShipPort('${s.id}','to',this.value)">${_portOptionsHtml(s.to)}</select>
           ${toCoords}
         </label>
+        <label>경유항 (선택)
+          <select onchange="setCustomShipVia('${s.id}',this.value)">${_portOptionsHtml(s.via, true)}</select>
+          ${viaCoords}
+        </label>
+        ${s.via ? `<label>경유 대기(분)
+          <input type="number" min="0" step="5" value="${s.viaStopMin||0}" onchange="updateCustomShip('${s.id}','viaStopMin',this.value)">
+        </label>` : ''}
         <label>속력(kts)
           <input type="number" min="1" max="80" step="0.1" value="${s.kts}" onchange="updateCustomShip('${s.id}','kts',this.value)">
         </label>
         <label>출항시각
           <input type="time" value="${s.departHM}" onchange="updateCustomShip('${s.id}','departHM',this.value)">
         </label>
-        <label>정박/대기(분)
-          <input type="number" min="0" step="5" value="${s.turnMin}" onchange="updateCustomShip('${s.id}','turnMin',this.value)" ${s.roundTrip?'':'disabled'}>
+        <label>회항 시각
+          <input type="time" value="${_minToHM(calc.arriveMin + s.turnMin)}" onchange="updateCustomShipReturnTime('${s.id}',this.value)" ${s.roundTrip?'':'disabled'}>
+        </label>
+        <label>수속시간(분)
+          <input type="number" min="0" step="5" value="${s.berthMin!=null?s.berthMin:BERTH_DEFAULT_MIN}" onchange="updateCustomShip('${s.id}','berthMin',this.value)" title="선석 스케줄에서 이 배가 각 항구 도착 후 선석을 점유하는 시간 (기본 30분)">
         </label>
         <label style="justify-content:center;flex-direction:row;align-items:center;gap:4px">
           <input type="checkbox" ${s.roundTrip?'checked':''} onchange="updateCustomShip('${s.id}','roundTrip',this.checked)"> 왕복
         </label>
+      </div>
+      <div style="font-size:10px;color:#88aabb;margin:4px 0 2px">운항 요일</div>
+      <div class="ship-row-days">
+        ${_allWeekDays().map(d => {
+          const on = (s.days || _allWeekDays()).includes(d);
+          return `<button type="button" class="ship-day-btn${on?' on':''}" onclick="toggleCustomShipDay('${s.id}','${d}')">${d}</button>`;
+        }).join('')}
       </div>
       <div class="ship-row-grid" style="grid-template-columns:1fr 1fr">
         <label>출처명 (선택)
@@ -2274,7 +4162,8 @@ function renderShipMgrList() {
       </div>
       <div class="ship-row-calc">
         📏 ${calc.dist.toFixed(0)}km · 편도 ${_fmtMin(calc.oneWayMin)}<br>
-        🕐 출항 ${_minToHM(calc.departMin)} → 도착 ${_minToHM(calc.arriveMin)}${s.roundTrip ? ` · 복귀도착 ${_minToHM(calc.retArriveMin)}` : ''}
+        🕐 출항 ${_minToHM(calc.departMin)}${s.via ? ` → ${s.via.name} ${_minToHM(calc.viaArriveMin)} (경유대기 ${s.viaStopMin}분)` : ''} → 도착 ${_minToHM(calc.arriveMin)}${s.roundTrip ? ` · 회항 ${_minToHM(calc.arriveMin + s.turnMin)} · 복귀도착 ${_minToHM(calc.retArriveMin)}` : ''}<br>
+        🚢 ${s.shipType||'고속선'} · ${s.tonnage ? s.tonnage.toLocaleString() + '톤' : '톤수 미상'}
         ${s.sourceUrl ? `<br>🔗 <a href="${s.sourceUrl}" target="_blank" rel="noopener" style="color:#7ecfff">${s.sourceLabel||'출처 보기'}</a>` : ''}
       </div>
     </div>`;
@@ -2287,7 +4176,18 @@ _seedDefaultCompetitorShips();
 _drawCompetitorRoutes();
 
 rebuildSim();
+_renderSimScopeTabs();
+_rebuildSimTimelapse();
 renderShipMgrList();
+_applyMapScopeVisibility(); // 초기 재생 범위(투입고려)에 맞춰 관련 없는 POI·참고 항로선은 처음부터 숨긴다
+
+// 타임랩스의 "지금(현재 시각)" 점선을 1분마다 실제 시간에 맞춰 옮기고, 배지 텍스트도 갱신한다.
+setInterval(() => {
+  if (_simTimelapse) {
+    try { _simTimelapse.setCustomTime(_simTimeAt(_nowSimMin()), 'now'); } catch (e) {}
+    _updateNowTag();
+  }
+}, 60000);
 
 // 커스텀 컨트롤에 시뮬레이션 버튼 추가
 const SimControl = L.Control.extend({
@@ -2303,12 +4203,25 @@ const SimControl = L.Control.extend({
       p.classList.toggle('visible');
     });
     const b = L.DomUtil.create('a', 'map-ctrl-btn', wrap);
-    b.href='#'; b.title='선박 스케줄 관리'; b.innerHTML='🚢';
+    b.href='#'; b.title='선박 스케줄 관리 · 선석 스케줄'; b.innerHTML='🚢';
     L.DomEvent.on(b,'click', e => {
       L.DomEvent.preventDefault(e);
-      const p = document.getElementById('shipMgrPanel');
+      const p = document.getElementById('opsPanel');
       p.classList.toggle('visible');
-      if (p.classList.contains('visible')) renderShipMgrList();
+      if (p.classList.contains('visible')) { renderShipMgrList(); renderBerthPanel(); }
+    });
+    const lg = L.DomUtil.create('a', 'map-ctrl-btn', wrap);
+    lg.href='#'; lg.title='범례'; lg.innerHTML='📖';
+    L.DomEvent.on(lg,'click', e => {
+      L.DomEvent.preventDefault(e);
+      legendToggle();
+    });
+    const c = L.DomUtil.create('a', 'map-ctrl-btn', wrap);
+    c.href='#'; c.title='사용법 가이드 다시보기'; c.innerHTML='❓';
+    L.DomEvent.on(c,'click', e => {
+      L.DomEvent.preventDefault(e);
+      document.getElementById('simPanel').classList.add('visible');
+      _startOnboardingIntro();
     });
     return wrap;
   }
@@ -2329,6 +4242,23 @@ new SimControl().addTo(map);
   }
   const note = document.getElementById('simSpeedNote');
   if (note) note.textContent = `※ 산타모니카: 42노트 / 퀸비틀: 공식거리 213km÷3h40m=${simQBkts.toFixed(1)}노트(${(simQBkts*1.852).toFixed(1)}km/h) 역산`;
+})();
+
+// ── 상단 시계·하단 타임랩스는 시뮬레이션 팝업(simPanel)이 열려 있을 때만 보인다 ──
+(function() {
+  const panel = document.getElementById('simPanel');
+  const clock = document.getElementById('topDayClock');
+  const timelapse = document.getElementById('simTimelapseBar');
+  function syncVisibility() {
+    const on = panel.classList.contains('visible');
+    if (clock) clock.style.display = on ? '' : 'none';
+    if (timelapse) timelapse.style.display = on ? '' : 'none';
+    const nowTag = document.getElementById('simNowTag');
+    if (nowTag) nowTag.style.display = on ? '' : 'none';
+    if (on) { setTimeout(() => { if (_simTimelapse) { _simTimelapse.redraw(); _updateNowTag(); } }, 0); }
+  }
+  syncVisibility();
+  new MutationObserver(syncVisibility).observe(panel, { attributes: true, attributeFilter: ['class'] });
 })();
 
 // ── simPanel 드래그 이동 ──
@@ -2357,17 +4287,88 @@ new SimControl().addTo(map);
   document.addEventListener('mouseup', function() { dragging = false; });
 })();
 
+// ── opsPanel(선박 스케줄 관리·선석 스케줄) 드래그 이동 ──
+// CSS는 left:50%+transform으로 가운데 정렬돼 있으므로, 드래그 시작 시 현재 화면상 위치를
+// 그대로 절대좌표(left/top)로 "고정"하고 transform을 없애야 커서와 팝업이 어긋나지 않는다.
+(function() {
+  const panel = document.getElementById('opsPanel');
+  const title = panel.querySelector('.sim-title');
+  let dragging = false, ox = 0, oy = 0;
+  title.addEventListener('mousedown', function(e) {
+    if (e.target.classList.contains('sim-title-btn')) return;
+    const r = panel.getBoundingClientRect();
+    ox = e.clientX - r.left;
+    oy = e.clientY - r.top;
+    panel.style.left = r.left + 'px';
+    panel.style.top = r.top + 'px';
+    panel.style.transform = 'none';
+    dragging = true;
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    let x = e.clientX - ox;
+    let y = e.clientY - oy;
+    x = Math.max(0, Math.min(window.innerWidth  - panel.offsetWidth,  x));
+    y = Math.max(0, Math.min(window.innerHeight - panel.offsetHeight, y));
+    panel.style.left = x + 'px';
+    panel.style.top  = y + 'px';
+  });
+  document.addEventListener('mouseup', function() { dragging = false; });
+})();
+
 function simPanelToggleMin() {
   const p = document.getElementById('simPanel');
   p.classList.toggle('minimized');
   document.getElementById('btnSimMin').textContent = p.classList.contains('minimized') ? '□' : '─';
 }
 
+// 타임랩스 리사이즈 손잡이 드래그 — 실제 높이 변수(simTimelapseManualHeight) 선언은 위쪽
+// (_rebuildSimTimelapse보다 앞)에 있다. 여기서는 DOM 이벤트만 연결한다.
+(function() {
+  const handle = document.getElementById('simTimelapseResizeHandle');
+  if (!handle) return;
+  const MIN_H = 40;
+  const maxH = () => Math.round(window.innerHeight * 0.75);
+  let dragging = false, startY = 0, startH = 0;
+  const curH = () => {
+    const el = document.getElementById('simTimelapseEl');
+    return el ? el.offsetHeight : 200;
+  };
+  const applyHeight = h => {
+    simTimelapseManualHeight = h;
+    const el = document.getElementById('simTimelapseEl');
+    if (el) el.style.height = h + 'px';
+    if (_simTimelapse) { try { _simTimelapse.setOptions({ height: h + 'px' }); } catch (e) {} }
+    _updateNowTag();
+  };
+  handle.addEventListener('mousedown', e => {
+    dragging = true; startY = e.clientY; startH = curH();
+    handle.classList.add('dragging');
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const h = Math.max(MIN_H, Math.min(maxH(), startH + (startY - e.clientY)));
+    applyHeight(h);
+  });
+  window.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    handle.classList.remove('dragging');
+    document.body.style.userSelect = '';
+    if (_simTimelapse) { try { _simTimelapse.redraw(); } catch (e) {} }
+    _updateNowTag();
+  });
+})();
+
 // ════════════════════════════════════════════════════
-//  intro.js 온보딩 — 동시 출항 버튼 안내
+//  intro.js 온보딩 — 동시 출항 버튼 안내 (최초 접속 시 1회만 표시)
+//  한 번 보여줬거나 건너뛰면 hanjil_introSeen 플래그를 남겨 다음 접속부터는 바로 실행된다.
 // ════════════════════════════════════════════════════
-setTimeout(() => {
-  introJs().setOptions({
+function _startOnboardingIntro() {
+  const intro = introJs().setOptions({
     steps: [{
       element: document.getElementById('btnSimPlay'),
       intro: '▶ <b>동시 출항</b> 버튼을 누르면<br>산타모니카호(경유)와 퀸비틀(직항)이<br>동시에 출항하는 시뮬레이션이 시작됩니다!',
@@ -2383,8 +4384,18 @@ setTimeout(() => {
     nextLabel: '다음 →',
     doneLabel: '시작!',
     tooltipClass: 'introjs-custom'
-  }).start();
-}, 1000);
+  });
+  const _markIntroSeen = () => { try { localStorage.setItem('hanjil_introSeen', '1'); } catch(e) {} };
+  intro.oncomplete(_markIntroSeen);
+  intro.onexit(_markIntroSeen);
+  intro.start();
+}
+(function() {
+  let introSeen = null;
+  try { introSeen = localStorage.getItem('hanjil_introSeen'); } catch(e) {}
+  if (introSeen) return;
+  setTimeout(_startOnboardingIntro, 1000);
+})();
 
 </script>
 </body>
