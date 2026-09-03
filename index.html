@@ -1030,45 +1030,51 @@
     </div>
 
     <div style="border:1px solid rgba(255,119,68,0.35);border-radius:7px;padding:7px 10px;margin-bottom:7px">
-      <div style="font-size:12px;font-weight:700;color:#ff9966;margin-bottom:5px">⛴ 엘도라도 익스프레스호 (기준)</div>
-      <div class="sim-info" style="margin-bottom:0">
-        <div class="sim-info-box"><div class="label">왕복거리</div><div class="val" id="fcEldoDist" style="font-size:11px">—</div></div>
-        <div class="sim-info-box"><div class="label">적용율</div><div class="val" id="fcEldoRate" style="font-size:9.5px">—</div></div>
-        <div class="sim-info-box"><div class="label">소모량</div><div class="val" id="fcEldoTon" style="font-size:10px">—</div></div>
-      </div>
-      <div style="text-align:center;margin-top:5px;font-size:9px;color:#99b8d4">연료비</div>
-      <div style="text-align:center;font-size:13px;font-weight:800;color:#ff9966" id="fcEldoCost">—</div>
-      <div style="text-align:center;margin-top:4px;padding-top:4px;border-top:1px dashed rgba(255,255,255,0.15);font-size:9px;color:#99b8d4">+ 기타운항비용 <span id="fcEldoOther" style="color:#ffaa88">—</span></div>
-      <div style="text-align:center;margin-top:2px;font-size:8.5px;color:#667788">합계(연료비+기타비용)</div>
-      <div style="text-align:center;font-size:14px;font-weight:800;color:#fff" id="fcEldoTotal">—</div>
+      <div style="font-size:12px;font-weight:700;color:#ff9966;margin-bottom:4px">⛴ 엘도라도 익스프레스호 (기준)</div>
+      <div style="font-size:9px;color:#99b8d4;margin-bottom:5px">왕복거리 <span id="fcEldoDist">—</span> · 적용율 <span id="fcEldoRate">—</span></div>
+      <table style="width:100%;border-collapse:collapse;font-size:10.5px">
+        <tr style="font-size:9px;color:#7ecfff"><td></td><td style="text-align:right;padding:2px 4px;font-weight:700">편도</td><td style="text-align:right;padding:2px 4px;font-weight:700">왕복</td></tr>
+        <tr><td style="color:#99b8d4;padding:2px 4px">연료소모량</td><td id="fcEldoTonOne" style="text-align:right;padding:2px 4px">—</td><td id="fcEldoTon" style="text-align:right;padding:2px 4px">—</td></tr>
+        <tr><td style="color:#99b8d4;padding:2px 4px">연료비</td><td id="fcEldoCostOne" style="text-align:right;padding:2px 4px;color:#ff9966;font-weight:700">—</td><td id="fcEldoCost" style="text-align:right;padding:2px 4px;color:#ff9966;font-weight:700">—</td></tr>
+        <tr><td style="color:#99b8d4;padding:2px 4px">기타비용</td><td id="fcEldoOtherOne" style="text-align:right;padding:2px 4px">—</td><td id="fcEldoOther" style="text-align:right;padding:2px 4px">—</td></tr>
+        <tr style="border-top:1px dashed rgba(255,255,255,0.18)">
+          <td style="color:#fff;font-weight:800;padding:4px 4px 2px">합계</td>
+          <td id="fcEldoTotalOne" style="text-align:right;padding:4px 4px 2px;color:#fff;font-weight:800">—</td>
+          <td id="fcEldoTotal" style="text-align:right;padding:4px 4px 2px;color:#fff;font-weight:800">—</td>
+        </tr>
+      </table>
     </div>
 
     <div style="border:1px solid rgba(255,200,0,0.3);border-radius:7px;padding:7px 10px;margin-bottom:7px">
-      <div style="font-size:12px;font-weight:700;color:#ffcc44;margin-bottom:5px">⛴ 산타모니카호 (경유)</div>
-      <div class="sim-info" style="margin-bottom:0">
-        <div class="sim-info-box"><div class="label">왕복거리</div><div class="val" id="fcSmViaDist" style="font-size:11px">—</div></div>
-        <div class="sim-info-box"><div class="label">적용율</div><div class="val" id="fcSmViaRate" style="font-size:9.5px">—</div></div>
-        <div class="sim-info-box"><div class="label">소모량</div><div class="val" id="fcSmViaTon" style="font-size:10px">—</div></div>
-      </div>
-      <div style="text-align:center;margin-top:5px;font-size:9px;color:#99b8d4">연료비</div>
-      <div style="text-align:center;font-size:13px;font-weight:800;color:#ffcc44" id="fcSmViaCost">—</div>
-      <div style="text-align:center;margin-top:4px;padding-top:4px;border-top:1px dashed rgba(255,255,255,0.15);font-size:9px;color:#99b8d4">+ 기타운항비용 <span id="fcSmViaOther" style="color:#ffdd88">—</span></div>
-      <div style="text-align:center;margin-top:2px;font-size:8.5px;color:#667788">합계(연료비+기타비용)</div>
-      <div style="text-align:center;font-size:14px;font-weight:800;color:#fff" id="fcSmViaTotal">—</div>
+      <div style="font-size:12px;font-weight:700;color:#ffcc44;margin-bottom:4px">⛴ 산타모니카호 (경유)</div>
+      <div style="font-size:9px;color:#99b8d4;margin-bottom:5px">왕복거리 <span id="fcSmViaDist">—</span> · 적용율 <span id="fcSmViaRate">—</span></div>
+      <table style="width:100%;border-collapse:collapse;font-size:10.5px">
+        <tr style="font-size:9px;color:#7ecfff"><td></td><td style="text-align:right;padding:2px 4px;font-weight:700">편도</td><td style="text-align:right;padding:2px 4px;font-weight:700">왕복</td></tr>
+        <tr><td style="color:#99b8d4;padding:2px 4px">연료소모량</td><td id="fcSmViaTonOne" style="text-align:right;padding:2px 4px">—</td><td id="fcSmViaTon" style="text-align:right;padding:2px 4px">—</td></tr>
+        <tr><td style="color:#99b8d4;padding:2px 4px">연료비</td><td id="fcSmViaCostOne" style="text-align:right;padding:2px 4px;color:#ffcc44;font-weight:700">—</td><td id="fcSmViaCost" style="text-align:right;padding:2px 4px;color:#ffcc44;font-weight:700">—</td></tr>
+        <tr><td style="color:#99b8d4;padding:2px 4px">기타비용</td><td id="fcSmViaOtherOne" style="text-align:right;padding:2px 4px">—</td><td id="fcSmViaOther" style="text-align:right;padding:2px 4px">—</td></tr>
+        <tr style="border-top:1px dashed rgba(255,255,255,0.18)">
+          <td style="color:#fff;font-weight:800;padding:4px 4px 2px">합계</td>
+          <td id="fcSmViaTotalOne" style="text-align:right;padding:4px 4px 2px;color:#fff;font-weight:800">—</td>
+          <td id="fcSmViaTotal" style="text-align:right;padding:4px 4px 2px;color:#fff;font-weight:800">—</td>
+        </tr>
+      </table>
     </div>
 
     <div style="border:1px solid rgba(68,255,221,0.3);border-radius:7px;padding:7px 10px;margin-bottom:3px">
-      <div style="font-size:12px;font-weight:700;color:#44ffdd;margin-bottom:5px">⛴ 산타모니카호 (직항)</div>
-      <div class="sim-info" style="margin-bottom:0">
-        <div class="sim-info-box"><div class="label">왕복거리</div><div class="val" id="fcSmDirectDist" style="font-size:11px">—</div></div>
-        <div class="sim-info-box"><div class="label">적용율</div><div class="val" id="fcSmDirectRate" style="font-size:9.5px">—</div></div>
-        <div class="sim-info-box"><div class="label">소모량</div><div class="val" id="fcSmDirectTon" style="font-size:10px">—</div></div>
-      </div>
-      <div style="text-align:center;margin-top:5px;font-size:9px;color:#99b8d4">연료비</div>
-      <div style="text-align:center;font-size:13px;font-weight:800;color:#44ffdd" id="fcSmDirectCost">—</div>
-      <div style="text-align:center;margin-top:4px;padding-top:4px;border-top:1px dashed rgba(255,255,255,0.15);font-size:9px;color:#99b8d4">+ 기타운항비용 <span id="fcSmDirectOther" style="color:#88ffe0">—</span></div>
-      <div style="text-align:center;margin-top:2px;font-size:8.5px;color:#667788">합계(연료비+기타비용)</div>
-      <div style="text-align:center;font-size:14px;font-weight:800;color:#fff" id="fcSmDirectTotal">—</div>
+      <div style="font-size:12px;font-weight:700;color:#44ffdd;margin-bottom:4px">⛴ 산타모니카호 (직항)</div>
+      <div style="font-size:9px;color:#99b8d4;margin-bottom:5px">왕복거리 <span id="fcSmDirectDist">—</span> · 적용율 <span id="fcSmDirectRate">—</span></div>
+      <table style="width:100%;border-collapse:collapse;font-size:10.5px">
+        <tr style="font-size:9px;color:#7ecfff"><td></td><td style="text-align:right;padding:2px 4px;font-weight:700">편도</td><td style="text-align:right;padding:2px 4px;font-weight:700">왕복</td></tr>
+        <tr><td style="color:#99b8d4;padding:2px 4px">연료소모량</td><td id="fcSmDirectTonOne" style="text-align:right;padding:2px 4px">—</td><td id="fcSmDirectTon" style="text-align:right;padding:2px 4px">—</td></tr>
+        <tr><td style="color:#99b8d4;padding:2px 4px">연료비</td><td id="fcSmDirectCostOne" style="text-align:right;padding:2px 4px;color:#44ffdd;font-weight:700">—</td><td id="fcSmDirectCost" style="text-align:right;padding:2px 4px;color:#44ffdd;font-weight:700">—</td></tr>
+        <tr><td style="color:#99b8d4;padding:2px 4px">기타비용</td><td id="fcSmDirectOtherOne" style="text-align:right;padding:2px 4px">—</td><td id="fcSmDirectOther" style="text-align:right;padding:2px 4px">—</td></tr>
+        <tr style="border-top:1px dashed rgba(255,255,255,0.18)">
+          <td style="color:#fff;font-weight:800;padding:4px 4px 2px">합계</td>
+          <td id="fcSmDirectTotalOne" style="text-align:right;padding:4px 4px 2px;color:#fff;font-weight:800">—</td>
+          <td id="fcSmDirectTotal" style="text-align:right;padding:4px 4px 2px;color:#fff;font-weight:800">—</td>
+        </tr>
+      </table>
     </div>
 
     <div style="font-size:9px;color:#667788;margin-top:2px">※ 엘도라도 익스프레스호는 실측 기준선이라 공학적 세팅 보정과 무관하게 항상 그대로 적용됩니다.</div>
@@ -4217,19 +4223,24 @@ function _updateFuelCostTab() {
   const smViaRT = (SM_DIST_LEG1 + SM_DIST_LEG2) * 2;   // 산타모니카(경유) 왕복 — 74+132km 편도×2
   const smDirectRT = QB_DIST_KM * 2;                     // 산타모니카(직항) 왕복 — 213km 편도×2
 
-  // 연료비(costLo~costHi)에 기타운항비용(%, 최소~최대)을 더해 합계 범위를 낸다.
-  // 공학적 세팅으로 연료비 자체가 이미 범위인 경우, min은 costLo×기타%최소, max는
-  // costHi×기타%최대로 잡아 두 불확실성 범위를 합친 가장 넓은 범위를 보여준다.
+  // 연료비(costLo~costHi)에 기타운항비용(%, 최소~최대)을 더해 왕복 합계 범위를 내고,
+  // 편도는 왕복값을 그대로 절반해서 나란히 보여준다(같은 항로를 같은 속력으로 왕복하므로
+  // 편도 = 왕복 ÷ 2). 공학적 세팅으로 연료비 자체가 이미 범위인 경우, min은 costLo×기타%최소,
+  // max는 costHi×기타%최대로 잡아 두 불확실성 범위를 합친 가장 넓은 범위를 보여준다.
   const fill = (prefix, est, rt) => {
     const otherLo = est.costLo * fuelOtherPctMin / 100;
     const otherHi = est.costHi * fuelOtherPctMax / 100;
     const totalLo = est.costLo + otherLo, totalHi = est.costHi + otherHi;
-    if (el(prefix + 'Dist'))  el(prefix + 'Dist').textContent = rt.toFixed(0) + 'km';
-    if (el(prefix + 'Rate'))  el(prefix + 'Rate').textContent = est.rateLabel;
-    if (el(prefix + 'Ton'))   el(prefix + 'Ton').textContent = _fmtRange(est.tonLo, est.tonHi, v => v.toFixed(2) + '톤');
-    if (el(prefix + 'Cost'))  el(prefix + 'Cost').textContent = _fmtRange(est.costLo, est.costHi, _fmtWon);
-    if (el(prefix + 'Other')) el(prefix + 'Other').textContent = _fmtRange(otherLo, otherHi, _fmtWon) + ` (${fuelOtherPctMin}~${fuelOtherPctMax}%)`;
-    if (el(prefix + 'Total')) el(prefix + 'Total').textContent = _fmtRange(totalLo, totalHi, _fmtWon);
+    if (el(prefix + 'Dist')) el(prefix + 'Dist').textContent = rt.toFixed(0) + 'km(편도 ' + (rt / 2).toFixed(0) + 'km)';
+    if (el(prefix + 'Rate')) el(prefix + 'Rate').textContent = est.rateLabel;
+    const setPair = (key, lo, hi, fmt) => {
+      if (el(prefix + key + 'One')) el(prefix + key + 'One').textContent = _fmtRange(lo / 2, hi / 2, fmt);
+      if (el(prefix + key))         el(prefix + key).textContent = _fmtRange(lo, hi, fmt);
+    };
+    setPair('Ton', est.tonLo, est.tonHi, v => v.toFixed(2) + '톤');
+    setPair('Cost', est.costLo, est.costHi, _fmtWon);
+    setPair('Other', otherLo, otherHi, _fmtWon);
+    setPair('Total', totalLo, totalHi, _fmtWon);
   };
   fill('fcEldo', _fuelEstimate(eldoRT, false), eldoRT);
   fill('fcSmVia', _fuelEstimate(smViaRT, true), smViaRT);
