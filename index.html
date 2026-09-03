@@ -1021,6 +1021,16 @@
       </div>
     </div>
 
+    <div style="border:1px solid rgba(255,119,68,0.35);border-radius:7px;padding:7px 10px;margin-bottom:7px">
+      <div style="font-size:12px;font-weight:700;color:#ff9966;margin-bottom:5px">⛴ 엘도라도 익스프레스호 (기준)</div>
+      <div class="sim-info" style="margin-bottom:0">
+        <div class="sim-info-box"><div class="label">왕복거리</div><div class="val" id="fcEldoDist" style="font-size:11px">—</div></div>
+        <div class="sim-info-box"><div class="label">적용율</div><div class="val" id="fcEldoRate" style="font-size:9.5px">—</div></div>
+        <div class="sim-info-box"><div class="label">소모량</div><div class="val" id="fcEldoTon" style="font-size:10px">—</div></div>
+      </div>
+      <div style="text-align:center;margin-top:5px;font-size:13px;font-weight:800;color:#ff9966" id="fcEldoCost">—</div>
+    </div>
+
     <div style="border:1px solid rgba(255,200,0,0.3);border-radius:7px;padding:7px 10px;margin-bottom:7px">
       <div style="font-size:12px;font-weight:700;color:#ffcc44;margin-bottom:5px">⛴ 산타모니카호 (경유)</div>
       <div class="sim-info" style="margin-bottom:0">
@@ -1031,7 +1041,7 @@
       <div style="text-align:center;margin-top:5px;font-size:13px;font-weight:800;color:#ffcc44" id="fcSmViaCost">—</div>
     </div>
 
-    <div style="border:1px solid rgba(68,255,221,0.3);border-radius:7px;padding:7px 10px;margin-bottom:7px">
+    <div style="border:1px solid rgba(68,255,221,0.3);border-radius:7px;padding:7px 10px;margin-bottom:3px">
       <div style="font-size:12px;font-weight:700;color:#44ffdd;margin-bottom:5px">⛴ 산타모니카호 (직항)</div>
       <div class="sim-info" style="margin-bottom:0">
         <div class="sim-info-box"><div class="label">왕복거리</div><div class="val" id="fcSmDirectDist" style="font-size:11px">—</div></div>
@@ -1041,17 +1051,7 @@
       <div style="text-align:center;margin-top:5px;font-size:13px;font-weight:800;color:#44ffdd" id="fcSmDirectCost">—</div>
     </div>
 
-    <div style="border:1px solid rgba(80,180,255,0.3);border-radius:7px;padding:7px 10px;margin-bottom:3px">
-      <div style="font-size:12px;font-weight:700;color:#66ccff;margin-bottom:5px">🚢 퀸비틀 (직항)</div>
-      <div class="sim-info" style="margin-bottom:0">
-        <div class="sim-info-box"><div class="label">왕복거리</div><div class="val" id="fcQbDist" style="font-size:11px">—</div></div>
-        <div class="sim-info-box"><div class="label">적용율</div><div class="val" id="fcQbRate" style="font-size:9.5px">—</div></div>
-        <div class="sim-info-box"><div class="label">소모량</div><div class="val" id="fcQbTon" style="font-size:10px">—</div></div>
-      </div>
-      <div style="text-align:center;margin-top:5px;font-size:13px;font-weight:800;color:#66ccff" id="fcQbCost">—</div>
-    </div>
-
-    <div style="font-size:9px;color:#667788;margin-top:2px">※ 퀸비틀은 산타모니카호와 다른 실제 선박(Austal 건조)이라 공학적 세팅 보정 없이 항상 엘도라도호 실측 기준을 그대로 적용합니다.</div>
+    <div style="font-size:9px;color:#667788;margin-top:2px">※ 엘도라도 익스프레스호는 실측 기준선이라 공학적 세팅 보정과 무관하게 항상 그대로 적용됩니다.</div>
 
   </div><!-- /.simTabContent3 -->
 
@@ -4189,8 +4189,9 @@ function _updateFuelCostTab() {
   const krwPerKg = (fuelLsmgoUsdPerMt / 1000) * fuelUsdKrwRate;
   if (el('fuelKrwPerKg')) el('fuelKrwPerKg').textContent = '₩' + krwPerKg.toFixed(1) + '/kg';
 
+  const eldoRT = 434;                                    // 엘도라도 익스프레스호 실측 왕복거리(포항↔울릉도)
   const smViaRT = (SM_DIST_LEG1 + SM_DIST_LEG2) * 2;   // 산타모니카(경유) 왕복 — 74+132km 편도×2
-  const smDirectRT = QB_DIST_KM * 2;                     // 산타모니카(직항)·퀸비틀 왕복 — 213km 편도×2
+  const smDirectRT = QB_DIST_KM * 2;                     // 산타모니카(직항) 왕복 — 213km 편도×2
 
   const fill = (prefix, est, rt) => {
     if (el(prefix + 'Dist')) el(prefix + 'Dist').textContent = rt.toFixed(0) + 'km';
@@ -4198,9 +4199,9 @@ function _updateFuelCostTab() {
     if (el(prefix + 'Ton'))  el(prefix + 'Ton').textContent = est.tonText;
     if (el(prefix + 'Cost')) el(prefix + 'Cost').textContent = est.costText;
   };
+  fill('fcEldo', _fuelEstimate(eldoRT, false), eldoRT);
   fill('fcSmVia', _fuelEstimate(smViaRT, true), smViaRT);
   fill('fcSmDirect', _fuelEstimate(smDirectRT, true), smDirectRT);
-  fill('fcQb', _fuelEstimate(smDirectRT, false), smDirectRT);
 }
 
 // ════════════════════════════════════════════════════
