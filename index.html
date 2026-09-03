@@ -3978,7 +3978,10 @@ function _simRenderFrame() {
 }
 
 function simPlay() {
-  if (simSimMin >= _totalMin) simReset();
+  // simSimMin이 0이면(=처음 화면에서 한 번도 재생한 적 없는 상태) 시뮬레이션이 끝났을 때와
+  // 마찬가지로 첫 출항 시각으로 당겨서 시작한다 — 그래야 첫 재생부터 바로 배가 움직이고
+  // 타임랩스도 같은 시점에서 함께 동작한다.
+  if (simSimMin >= _totalMin || simSimMin === 0) simReset();
   document.getElementById('simPanel').classList.add('visible');
   simRunning=true; simLastReal=null;
   simRAF=requestAnimationFrame(_simTick);
@@ -4546,13 +4549,13 @@ function _berthWeekStart() {
 
 
 // vis-timeline의 "format" 콜백에 함수를 넣으면 내부에서 문자열 전용 처리를 하다 에러가 나므로,
-// 대신 렌더가 끝난 뒤 DOM에 이미 그려진 날짜 라벨(major/minor 둘 다 — 줌 정도에 따라 "Sat 1 January"
-// 같은 날짜 텍스트가 어느 쪽에 나올지 달라진다)을 직접 요일로 바꿔친다. "08:00"처럼 시:분 형식인
-// 라벨(=시간 눈금)은 건드리지 않는다. 화면에 보이는 첫 라벨을 현재 구간(getWindow) 시작일로 보고
-// 이후 라벨은 하루씩 더한다.
+// 대신 렌더가 끝난 뒤 DOM에 이미 그려진 날짜 라벨(major/minor 둘 다)을 직접 요일로 바꿔친다.
+// "08:00"처럼 시:분 형식인 라벨(=시간 눈금)은 건드리지 않는다.
+// SIM_EPOCH(2000-01-01)이 토요일이라 vis-timeline이 자동으로 붙이는 vis-saturday/vis-sunday/…
+// 클래스가 곧 "토·일·월·화·수·목·금" 순서와 정확히 일치한다 — 실제 달력 날짜는 전혀 안 보고
+// 이 클래스만으로 라벨을 정하므로, 화면에 보이는 순서가 항상 토일월화수목금으로 고정 반복된다
+// (_simTimelapseRelabelDays와 완전히 동일한 방식 — _VIS_DAY_LABEL 공용).
 let _berthRelabeling = false;
-// 실제 달력 날짜는 전혀 보지 않는다 — 선박은 무조건 매주 반복되는 정기 운항이라고 보고,
-// 화면에 보이는 순서 그대로 "토·일·월·화·수·목·금"을 반복해서 매긴다.
 function _berthRelabelDays() {
   if (_berthRelabeling || !_berthTimeline) return;
   const container = document.getElementById('berthTimelineEl');
