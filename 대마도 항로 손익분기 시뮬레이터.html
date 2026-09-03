@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>부산~대마도 항로 손익분기 시뮬레이터</title>
+<style>
+  :root{
+    --navy:#154B8C; --sky:#5BA3D9; --ink:#17202B; --muted:#5C6B7F;
+    --rule:#D7DFE9; --canvas:#EDF1F6; --paper:#FFFFFF; --warn:#A8392F;
+    --soft:#E8F1F9; --head:#F6F9FC;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:var(--canvas)}
+  body{
+    font-family:'Pretendard GOV','Pretendard',-apple-system,'Malgun Gothic',sans-serif;
+    color:var(--ink); font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  /* ── 16:9 캔버스 ── */
+  #stage{width:1600px;height:900px;transform-origin:center center;flex:none;
+         padding:22px;display:flex;flex-direction:column;gap:14px}
+
+  .card{background:var(--paper);border:1px solid var(--rule);border-radius:4px;
+        display:flex;flex-direction:column;min-height:0}
+  .card>h2{
+    font-size:12.5px;font-weight:700;margin:0;padding:11px 15px 8px;color:var(--navy);
+    border-bottom:2px solid var(--navy);letter-spacing:-.01em;flex:none;
+    display:flex;justify-content:space-between;align-items:baseline;gap:8px;
+  }
+  .card>h2 em{font-style:normal;font-weight:400;font-size:11px;color:var(--muted)}
+  .body{padding:12px 15px;overflow:auto;flex:1;min-height:0}
+  .body::-webkit-scrollbar{width:6px}
+  .body::-webkit-scrollbar-thumb{background:var(--rule);border-radius:3px}
+
+  /* ── 제목 ── */
+  #head{flex:none;background:var(--navy);color:#fff;border-radius:4px;padding:16px 24px;
+        display:flex;justify-content:space-between;align-items:center;gap:26px}
+  #head h1{font-size:21px;font-weight:700;margin:0 0 3px;letter-spacing:-.015em}
+  #head p{margin:0;font-size:12px;color:#C3D8EF}
+  .heads{display:flex;gap:26px}
+  .hgrp+.hgrp{border-left:1px solid rgba(255,255,255,.25);padding-left:26px}
+  .hgrp .gk{font-size:11.5px;color:#C3D8EF;margin-bottom:5px;text-align:right}
+  .pair{display:flex;gap:22px}
+  .hkpi{text-align:right;min-width:104px}
+  .hkpi .t{font-size:11px;color:#9FC2E4;display:block;margin-bottom:1px}
+  .hkpi .v{font-size:31px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.025em}
+  .hkpi .v small{font-size:14px;font-weight:600;margin-left:1px}
+  .hkpi .s{font-size:10.5px;color:#C3D8EF;margin-top:4px;font-variant-numeric:tabular-nums}
+
+  /* ── 배치 ── */
+  #row{flex:1;display:grid;grid-template-columns:398px 1fr;gap:14px;min-height:0}
+  #right{display:grid;grid-template-rows:340px 1fr;gap:14px;min-height:0}
+  #rtop{display:grid;grid-template-columns:1fr 1fr;gap:14px;min-height:0}
+  #rbot{display:grid;grid-template-columns:1fr 1fr;gap:14px;min-height:0}
+
+  /* ── 입력 ── */
+  .sec{grid-column:1/-1;font-size:11px;font-weight:700;color:var(--muted);
+       margin:11px 0 1px;padding-bottom:3px;border-bottom:1px solid var(--rule)}
+  .sec:first-child{margin-top:0}
+  .fields{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px}
+  .f.wide{grid-column:1/-1}
+  .f label{font-size:11.5px;color:var(--muted);display:block;margin-bottom:2px}
+  .ib{display:flex;align-items:center;background:#fff;border:1px solid var(--rule);
+      border-radius:3px;padding:0 7px}
+  .ib:focus-within{border-color:var(--navy);box-shadow:0 0 0 2px rgba(21,75,140,.12)}
+  .ib input{border:0;outline:0;width:100%;min-width:0;padding:5px 0;background:transparent;
+    font-family:inherit;font-size:13px;font-weight:700;color:var(--navy);
+    text-align:right;font-variant-numeric:tabular-nums}
+  .ib input:disabled{color:var(--muted);-webkit-text-fill-color:var(--muted);opacity:1}
+  .ib .u{font-size:10.5px;color:var(--muted);margin-left:4px;white-space:nowrap;flex:none}
+  .fh{font-size:10.5px;color:var(--muted);margin-top:2px;line-height:1.4}
+  .fh b{color:var(--navy);font-weight:600;font-variant-numeric:tabular-nums}
+  .reset{margin-top:13px;width:100%;padding:7px;background:#fff;border:1px solid var(--rule);
+    border-radius:3px;font-family:inherit;font-size:12px;color:var(--muted);cursor:pointer}
+  .reset:hover{border-color:var(--navy);color:var(--navy)}
+  .reset:focus-visible{outline:2px solid var(--sky);outline-offset:2px}
+
+  /* ── 지표 ── */
+  .minis{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--rule);
+    border:1px solid var(--rule);border-radius:3px;overflow:hidden;margin-bottom:10px}
+  .mini{background:var(--soft);padding:8px 11px}
+  .mini .k{font-size:11px;color:var(--muted);margin-bottom:1px}
+  .mini .v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;line-height:1.2;color:var(--navy)}
+  .mini .v small{font-size:11px;font-weight:600;margin-left:2px;color:var(--muted)}
+  .mini .s{font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums;
+    margin-top:2px;white-space:nowrap}
+  .neg{color:var(--warn)!important}
+
+  /* ── 표 ── */
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th,td{padding:4px 7px;border-bottom:1px solid #EAEFF5;text-align:right;font-variant-numeric:tabular-nums}
+  th{font-weight:700;color:var(--muted);font-size:11px;background:var(--head);border-bottom:1px solid var(--rule)}
+  th:first-child,td:first-child{text-align:left;font-variant-numeric:normal}
+  tbody tr:last-child td{border-bottom:0}
+  tr.sum td{font-weight:700;background:var(--head)}
+  tr.lead td{font-weight:700;background:var(--soft);color:var(--navy)}
+  tr.thin td{color:var(--muted)}
+  td.pass{color:var(--navy);font-weight:700}
+  td.fail{color:var(--warn);font-weight:700}
+  .note{font-size:10.5px;color:var(--muted);margin:8px 0 0;line-height:1.5}
+  .note b{color:var(--navy);font-variant-numeric:tabular-nums}
+  .note b.bad{color:var(--warn)}
+  .legend{display:flex;gap:11px;flex-wrap:wrap;font-size:10.5px;color:var(--muted);margin-top:5px}
+  .legend span{display:flex;align-items:center;gap:4px}
+  .sw{width:12px;height:3px;border-radius:2px;display:inline-block}
+
+  /* CVP 호버 */
+  .cvp .hot{fill:transparent;cursor:crosshair}
+  .cvp .hot:hover ~ .tip{display:block}
+  .cvp .tip rect{filter:drop-shadow(0 1px 3px rgba(21,75,140,.18))}
+
+
+  /* ── 근거 팝업 ── */
+  .card>h2.clk{cursor:pointer}
+  .card>h2.clk .tt{display:inline-flex;align-items:center;gap:5px}
+  .card>h2.clk .ic{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:13px;height:13px;border-radius:50%;border:1px solid var(--sky);
+    color:var(--sky);font-size:9px;font-weight:700;line-height:1;flex:none}
+  .card>h2.clk:hover .tt{text-decoration:underline;text-underline-offset:2px}
+  .card>h2.clk:hover .ic{background:var(--sky);color:#fff}
+  .card>h2.clk:focus-visible{outline:2px solid var(--sky);outline-offset:-2px}
+
+  .ov{position:fixed;inset:0;background:rgba(14,32,54,.5);z-index:50;
+      display:none;align-items:center;justify-content:center;padding:28px}
+  .ov[data-open="1"]{display:flex}
+  .modal{background:#fff;border-radius:5px;width:min(1000px,94vw);max-height:92vh;
+         display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(10,26,46,.32)}
+  .modal>header{background:var(--navy);color:#fff;padding:14px 20px;border-radius:5px 5px 0 0;
+    display:flex;justify-content:space-between;align-items:center;gap:16px;flex:none}
+  .modal>header h3{margin:0;font-size:15px;font-weight:700}
+  .modal>header p{margin:2px 0 0;font-size:11.5px;color:#C3D8EF}
+  .modal .x{background:transparent;border:1px solid rgba(255,255,255,.4);color:#fff;
+    width:26px;height:26px;border-radius:3px;cursor:pointer;font-size:14px;line-height:1;flex:none}
+  .modal .x:hover{background:rgba(255,255,255,.15)}
+  .mbody{padding:18px 20px 22px;overflow:auto;font-size:12.5px}
+  .mbody::-webkit-scrollbar{width:8px}
+  .mbody::-webkit-scrollbar-thumb{background:var(--rule);border-radius:4px}
+  .mbody h4{font-size:12.5px;font-weight:700;color:var(--navy);margin:22px 0 8px;
+    padding-bottom:5px;border-bottom:2px solid var(--navy)}
+  .mbody h4:first-child{margin-top:0}
+  .mbody table{font-size:12px}
+  .mbody th.r{text-align:right}
+  .mbody th,.mbody td{padding:5px 8px}
+  .mbody .note{font-size:11px;margin-top:7px}
+  .calc{background:var(--head);border:1px solid var(--rule);border-radius:3px;
+    padding:10px 13px;margin-top:9px;font-size:11.5px;line-height:1.85}
+  .calc div{display:flex;justify-content:space-between;gap:14px}
+  .calc div+div{border-top:1px dashed var(--rule)}
+  .calc b{color:var(--navy);font-variant-numeric:tabular-nums;font-weight:700}
+  .calc .eq{color:var(--muted);font-variant-numeric:tabular-nums}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+
+  @media print{
+    html,body{overflow:visible;background:#fff;height:auto}
+    #stage{transform:none!important}
+    @page{size:A4 landscape;margin:6mm}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- ───────── 제목 ───────── -->
+  <div id="head">
+    <div>
+      <h1>부산~대마도 항로 손익분기 시뮬레이터</h1>
+      <p>「대마도 항로 신규 진입 타당성 분석」(2026.08, 재무회계팀) Ⅲ장 경제성 분석 기준 · 부관훼리㈜</p>
+    </div>
+    <div class="heads">
+      <div class="hgrp">
+        <div class="gk">영업이익 손익분기 (항차당)</div>
+        <div class="pair">
+          <div class="hkpi"><span class="t">신조</span>
+            <div class="v" id="bepN">214<small>명</small></div>
+            <div class="s" id="bepNs">승선율 48.6%</div></div>
+          <div class="hkpi"><span class="t">중고</span>
+            <div class="v" id="bepU">219<small>명</small></div>
+            <div class="s" id="bepUs">승선율 49.7%</div></div>
+        </div>
+      </div>
+      <div class="hgrp">
+        <div class="gk">요구수익률 충족점 (항차당)</div>
+        <div class="pair">
+          <div class="hkpi"><span class="t">신조</span>
+            <div class="v" id="hurN">277<small>명</small></div>
+            <div class="s" id="hurNs">승선율 62.9%</div></div>
+          <div class="hkpi"><span class="t">중고</span>
+            <div class="v" id="hurU">251<small>명</small></div>
+            <div class="s" id="hurUs">승선율 57.0%</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="row">
+
+    <!-- ───────── 가정 ───────── -->
+    <section class="card">
+      <h2 class="clk" data-modal="ovA" role="button" tabindex="0" aria-haspopup="dialog"><span class="tt">가정<span class="ic">?</span></span><em>제목을 누르면 산출근거</em></h2>
+      <div class="body">
+        <div class="fields">
+
+          <div class="sec">신조선</div>
+          <div class="f">
+            <label for="iPriceN">선박 취득가</label>
+            <div class="ib"><input type="text" inputmode="decimal" id="iPriceN" value="16700" data-step="100" data-min="0"><span class="u">백만</span></div>
+          </div>
+          <div class="f">
+            <label for="iLifeN">잔여 내용연수</label>
+            <div class="ib"><input type="text" inputmode="decimal" id="iLifeN" value="25" data-step="1" data-min="1"><span class="u">년</span></div>
+          </div>
+          <div class="f wide">
+            <label for="iOpN">운송원가 (감가 제외)</label>
+            <div class="ib"><input type="text" inputmode="decimal" id="iOpN" value="3437" data-step="10" data-min="0"><span class="u">백만</span></div>
+            <div class="fh" id="hOpN"></div>
+          </div>
+
+          <div class="sec">중고선</div>
+          <div class="f">
+            <label for="iPriceU">선박 취득가</label>
+            <div class="ib"><input type="text" inputmode="decimal" id="iPriceU" value="8000" data-step="100" data-min="0"><span class="u">백만</span></div>
+          </div>
+          <div class="f">
+            <label for="iLifeU">잔여 내용연수</label>
+            <div class="ib"><input type="text" inputmode="decimal" id="iLifeU" value="15" data-step="1" data-min="1"><span class="u">년</span></div>
+          </div>
+          <div class="f wide">
+            <label for="iOpU">운송원가 (감가 제외)</label>
+            <div class="ib"><input type="text" inputmode="decimal" id="iOpU" value="3712" data-step="10" data-min="0"><span class="u">백만</span></div>
+            <div class="fh" id="hOpU"></div>
+          </div>
+
+          <div class="sec">공통 투자</div>
+          <div class="f wide">
+            <label for="iWc">운전자금 투입액</label>
+            <div class="ib"><input type="text" inputmode="decimal" id="iWc" value="1000" data-step="50" data-min="0"><span class="u">백만</span></div>
+            <div class="fh" id="hWc"></div>
+          </div>
+
+          <div class="sec">수요</div>
+          <div class="f">
+            <label for="iPax">항차당 탑승인원</label>
+            <div class="ib"><input type="text" inputmode="decimal" id="iPax" value="264" data-step="1" data-min="0"><span class="u">명</span></div>
+            <div class="fh" id="hPax"></div>
+          </div>
+          <div class="f">
+            <label for="iVoy">연간 항차</label>
+            <div class="ib"><input type="text" inputmode="decimal" id="iVoy" value="700" data-step="10" data-min="1"><span class="u">항차</span></div>
+            <div class="fh" id="hVoy"></div>
+          </div>
+
+          <div class="sec">1인당 단가 (원)</div>
+          <div class="f">
+            <label for="iR1">여객수입</label>
+            <div class="ib"><input type="text" inputmode="decimal" id="iR1" value="30791" data-step="100" data-min="0"><span class="u">원</span></div>
+          </div>
+          <div class="f">
+            <label for="iR2">유류할증수입</label>
+            <div class="ib"><input type="text" inputmode="decimal" id="iR2" value="8120" data-step="100" data-min="0"><span class="u">원</span></div>
+          </div>
+          <div class="f">
+            <label for="iR3">상품매출</label>
+            <div class="ib"><input type="text" inputmode="decimal" id="iR3" value="9972" data-step="100" data-min="0"><span class="u">원</span></div>
+          </div>
+          <div class="f">
+            <label for="iR4">기타수입</label>
+            <div class="ib"><input type="text" inputmode="decimal" id="iR4" value="294" data-step="10" data-min="0"><span class="u">원</span></div>
+          </div>
+          <div class="f wide">
+            <label for="iVc">상품매출원가 (변동비)</label>
+            <div class="ib"><input type="text" inputmode="decimal" id="iVc" value="8434" data-step="100" data-min="0"><span class="u">원</span></div>
+            <div class="fh" id="hVc"></div>
+          </div>
+
+          <div class="sec">연간 비용</div>
+          <div class="f wide">
+            <label for="iSga">판매비와관리비</label>
+            <div class="ib"><input type="text" inputmode="decimal" id="iSga" value="1990" data-step="10" data-min="0"><span class="u">백만</span></div>
+            <div class="fh" id="hSga"></div>
+          </div>
+
+          <div class="sec">자본</div>
+          <div class="f">
+            <label for="iHur">요구수익률 (세후)</label>
+            <div class="ib"><input type="text" inputmode="decimal" id="iHur" value="8" data-step="0.5" data-min="0"><span class="u">%</span></div>
+          </div>
+          <div class="f">
+            <label for="iTax">법인세율</label>
+            <div class="ib"><input type="text" inputmode="decimal" id="iTax" value="21" data-step="0.5" data-min="0" data-max="99"><span class="u">%</span></div>
+          </div>
+        </div>
+        <button type="button" class="reset" id="btnReset">보고서 기준안으로 되돌리기</button>
+      </div>
+    </section>
+
+    <div id="right">
+
+      <div id="rtop">
+        <!-- ── 신조 CVP ── -->
+        <section class="card">
+          <h2>신조선 원가-조업도-이익 (CVP)<em>단위: 백만원</em></h2>
+          <div class="body">
+            <div id="chartN"></div>
+            <div class="legend">
+              <span><i class="sw" style="background:#154B8C"></i>매출액</span>
+              <span><i class="sw" style="background:#A8392F"></i>총비용</span>
+              <span><i class="sw" style="background:#5BA3D9"></i>현재 설정</span>
+              <span><i class="sw" style="background:#9AA9BC"></i>시장 시나리오</span>
+            </div>
+            <p class="note" id="noteN"></p>
+          </div>
+        </section>
+
+        <!-- ── 중고 CVP ── -->
+        <section class="card">
+          <h2>중고선 원가-조업도-이익 (CVP)<em>단위: 백만원</em></h2>
+          <div class="body">
+            <div id="chartU"></div>
+            <div class="legend">
+              <span><i class="sw" style="background:#154B8C"></i>매출액</span>
+              <span><i class="sw" style="background:#A8392F"></i>총비용</span>
+              <span><i class="sw" style="background:#5BA3D9"></i>현재 설정</span>
+              <span><i class="sw" style="background:#9AA9BC"></i>시장 시나리오</span>
+            </div>
+            <p class="note" id="noteU"></p>
+          </div>
+        </section>
+      </div>
+
+      <div id="rbot">
+        <!-- ── 추정 손익 ── -->
+        <section class="card">
+          <h2>추정 손익<em>단위: 백만원 · 신조 대 중고</em></h2>
+          <div class="body">
+            <div class="minis">
+              <div class="mini">
+                <div class="k">신조 투자회수기간</div>
+                <div class="v" id="mPbN">9.8<small>년</small></div>
+                <div class="s" id="mPbNs"></div>
+              </div>
+              <div class="mini">
+                <div class="k">중고 투자회수기간</div>
+                <div class="v" id="mPbU">5.8<small>년</small></div>
+                <div class="s" id="mPbUs"></div>
+              </div>
+            </div>
+            <table>
+              <thead><tr><th>구분</th><th>신조</th><th>중고</th><th>차이</th></tr></thead>
+              <tbody id="tPl"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ── 시장 시나리오 ── -->
+        <section class="card">
+          <h2 class="clk" data-modal="ovB" role="button" tabindex="0" aria-haspopup="dialog"><span class="tt">시장 시나리오별 항차당 탑승인원<span class="ic">?</span></span><em>제목을 누르면 수요 근거</em></h2>
+          <div class="body">
+            <div class="fields">
+              <div class="f">
+                <label for="iDem">연간 시장 수요</label>
+                <div class="ib"><input type="text" inputmode="decimal" id="iDem" value="690000" data-step="10000" data-min="0"><span class="u">명</span></div>
+              </div>
+              <div class="f">
+                <label for="iV1">대아고속해운 항차</label>
+                <div class="ib"><input type="text" inputmode="decimal" id="iV1" value="610" data-step="10" data-min="0"><span class="u">항차</span></div>
+              </div>
+              <div class="f">
+                <label for="iV2">팬스타 항차</label>
+                <div class="ib"><input type="text" inputmode="decimal" id="iV2" value="794" data-step="10" data-min="0"><span class="u">항차</span></div>
+              </div>
+              <div class="f">
+                <label for="iV3">스타라인 항차</label>
+                <div class="ib"><input type="text" inputmode="decimal" id="iV3" value="904" data-step="10" data-min="0"><span class="u">항차</span></div>
+              </div>
+              <div class="f">
+                <label for="iV4">그레이스호 항차</label>
+                <div class="ib"><input type="text" inputmode="decimal" id="iV4" value="700" data-step="10" data-min="0"><span class="u">항차</span></div>
+              </div>
+              <div class="f">
+                <label>당사 항차</label>
+                <div class="ib"><input type="text" id="iVoyEcho" value="700" disabled tabindex="-1"><span class="u">항차</span></div>
+                <div class="fh">「연간 항차」에 연동</div>
+              </div>
+            </div>
+            <table style="margin-top:10px">
+              <thead><tr><th>구분</th><th>연간 항차</th><th>항차당</th><th>신조 대비</th><th>중고 대비</th></tr></thead>
+              <tbody id="tMarket"></tbody>
+            </table>
+            <p class="note" id="mktNote"></p>
+          </div>
+        </section>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═════════ 근거 팝업 A : 가정 산출근거 ═════════ -->
+<div class="ov" id="ovA" role="dialog" aria-modal="true" aria-label="가정 산출근거">
+  <div class="modal">
+    <header>
+      <div>
+        <h3>기준안 가정치의 산출근거</h3>
+        <p>「부산항 선사 수송실적(2017~2026.6)」 · 대아고속해운 제43기 감사보고서</p>
+      </div>
+      <button class="x" type="button" data-close aria-label="닫기">✕</button>
+    </header>
+    <div class="mbody">
+
+      <h4>1. 수요 — 연간 항차와 항차당 탑승인원</h4>
+      <table>
+        <thead>
+          <tr>
+            <th rowspan="2">선사</th>
+            <th colspan="3">2025년</th>
+            <th colspan="3">2026년 상반기</th>
+            <th colspan="3">2026년 연환산</th>
+          </tr>
+          <tr>
+            <th class="r">여객</th><th>항차</th><th>항차당</th>
+            <th>여객</th><th>항차</th><th>항차당</th>
+            <th>여객</th><th>항차</th><th>항차당</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>대아고속해운</td>
+            <td>211,101</td><td>652</td><td>324명</td>
+            <td>99,430</td><td>305</td><td>326명</td>
+            <td>198,860</td><td>610</td><td>326명</td></tr>
+          <tr><td>팬스타</td>
+            <td>174,908</td><td>746</td><td>234명</td>
+            <td>110,604</td><td>397</td><td>279명</td>
+            <td>221,208</td><td>794</td><td>279명</td></tr>
+          <tr><td>스타라인</td>
+            <td>155,102</td><td>582</td><td>266명</td>
+            <td>133,281</td><td>452</td><td>295명</td>
+            <td>266,562</td><td>904</td><td>295명</td></tr>
+          <tr class="sum"><td>합계 · 평균</td>
+            <td>541,111</td><td>1,980</td><td>273명</td>
+            <td>343,315</td><td>1,154</td><td>298명</td>
+            <td>686,630</td><td>2,308</td><td>298명</td></tr>
+        </tbody>
+      </table>
+      <p class="note">2026년 연환산은 상반기 실적의 단순 2배이다. 대아고속해운은 2025년 3월 재취항하여 2025년이 10개월 실적이므로, 연간 기준 비교에는 2026년 연환산치가 더 적합하다.</p>
+
+      <div class="two" style="margin-top:14px">
+        <div>
+          <div class="calc">
+            <div><span>연간 항차 <b>700항차</b></span><span class="eq">610 ~ 904 중위</span></div>
+            <div><span>경쟁 3사 2026년 연환산 항차</span><span class="eq">대아 610 · 팬스타 794 · 스타라인 904</span></div>
+          </div>
+          <p class="note">가장 적게 운항하는 대아(610)와 가장 많이 운항하는 스타라인(904)의 중간 수준으로, 신규 진입 첫해에 무리하지 않는 운항 계획을 전제한다.</p>
+        </div>
+        <div>
+          <div class="calc">
+            <div><span>항차당 탑승인원 <b>264명</b></span><span class="eq">440석 × 60.0%</span></div>
+            <div><span>보수안 / 낙관안</span><span class="eq">220명(50%) / 308명(70%)</span></div>
+            <div><span>2026년 상반기 시장 평균</span><span class="eq">298명 (70.3%)</span></div>
+          </div>
+          <p class="note">시장 평균(298명)과 대아 재취항 첫해 실적(324명)보다 낮게 잡은 값이다. 신규 진입자가 시장 평균에 미달할 가능성을 반영하였다.</p>
+        </div>
+      </div>
+
+      <h4>2. 원가 벤치마크 — 대아고속해운 2025년(제43기) 실적</h4>
+      <div class="two">
+        <div>
+          <table>
+            <thead><tr><th>항목</th><th>금액(백만원)</th><th>1인당(원)</th></tr></thead>
+            <tbody>
+              <tr><td>여객수입</td><td>6,500</td><td>30,791</td></tr>
+              <tr><td>유류할증수입</td><td>1,714</td><td>8,120</td></tr>
+              <tr><td>상품매출(선내 면세 등)</td><td>2,105</td><td>9,972</td></tr>
+              <tr><td>기타수입</td><td>62</td><td>294</td></tr>
+              <tr class="lead"><td>매출액 계</td><td>10,381</td><td>49,177</td></tr>
+              <tr><td>상품매출원가</td><td>1,780</td><td>8,434</td></tr>
+              <tr><td>운송원가(감가 제외)</td><td>3,202</td><td>15,166</td></tr>
+              <tr><td>감가상각비</td><td>540</td><td>2,560</td></tr>
+              <tr><td>판매비와관리비</td><td>1,809</td><td>8,569</td></tr>
+              <tr class="sum"><td>영업비용 계</td><td>7,331</td><td>34,729</td></tr>
+              <tr class="lead"><td>영업이익</td><td>3,050</td><td>14,448</td></tr>
+            </tbody>
+          </table>
+          <p class="note">감사보고서상 매출원가 5,522는 상품매출원가 1,780과 운송원가 3,742의 합이며, 운송원가에 포함된 감가상각비 540을 따로 뽑아 표시하였다. 판매비와관리비 1,809는 그 안의 감가상각비 7을 포함한 금액이다. 1인당 금액은 2025년 여객 211,101명으로 나눈 값이다. 영업이익률 29.4%.</p>
+        </div>
+        <div>
+          <div class="calc">
+            <div><span>1인당 여객수입</span><span class="eq">6,500백만 ÷ 211,101명 = <b>30,791원</b></span></div>
+            <div><span>1인당 유류할증수입</span><span class="eq">1,714백만 ÷ 211,101명 = <b>8,120원</b></span></div>
+            <div><span>1인당 상품매출</span><span class="eq">2,105백만 ÷ 211,101명 = <b>9,972원</b></span></div>
+            <div><span>1인당 기타수입</span><span class="eq">62백만 ÷ 211,101명 = <b>294원</b></span></div>
+            <div><span>1인당 총수입</span><span class="eq">합계 <b>49,177원</b></span></div>
+            <div><span>1인당 상품매출원가</span><span class="eq">1,780백만 ÷ 211,101명 = <b>8,434원</b></span></div>
+          </div>
+          <div class="calc">
+            <div><span>운송원가(감가 제외)</span><span class="eq">3,202 × 700 ÷ 652 = <b>3,437백만</b></span></div>
+            <div><span>판매비와관리비</span><span class="eq">1,809 × 1.10 = <b>1,990백만</b></span></div>
+          </div>
+          <p class="note">운송원가는 연료비·항비 등 항차에 비례하는 성격이므로 항차 비율(700 ÷ 652)로 환산하였다. 판관비는 인건비 중심의 기간비용이어서 항차 환산 없이 감가상각비를 포함한 실적 1,809에 신규 진입 마케팅 10%를 가산하였다.</p>
+          <p class="note">동사는 한정의견을 받았고 선박 압류가 진행 중이며 영업외수익 대부분이 특수관계자 대여금 이자수익이다. 따라서 세전이익이 아니라 영업이익을 본업의 성과로 본다.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═════════ 근거 팝업 B : 여객 수요 ═════════ -->
+<div class="ov" id="ovB" role="dialog" aria-modal="true" aria-label="여객 수요 근거">
+  <div class="modal">
+    <header>
+      <div>
+        <h3>대마도 항로 여객 수요</h3>
+        <p>「부산항 선사 수송실적(2017~2026.6)」 · 2026년 추정 수요 69만명의 근거</p>
+      </div>
+      <button class="x" type="button" data-close aria-label="닫기">✕</button>
+    </header>
+    <div class="mbody">
+
+      <h4>1. 선사별 여객 수요 (2023 ~ 2025년)</h4>
+      <div id="demChart"></div>
+      <div class="legend" style="margin-top:8px">
+        <span><i class="sw" style="background:#154B8C"></i>대아고속해운</span>
+        <span><i class="sw" style="background:#4A90C7"></i>팬스타</span>
+        <span><i class="sw" style="background:#8FBEE0"></i>스타라인</span>
+        <span><i class="sw" style="background:#C3D3E1"></i>코비(2023년 잔여 운항)</span>
+      </div>
+      <p class="note">2023년 코로나 이후 재개, 2024년 +60.7%, 2025년 +39.4%로 2년 연속 큰 폭으로 증가했다. 2025년 증가분 152,882명 중 대아고속해운의 재취항분이 211,101명이므로, 기존 2사의 여객은 오히려 58,219명 줄었다. 신규 진입자는 시장 성장분을 흡수하는 동시에 기존 사업자의 여객을 잠식한다.</p>
+
+      <h4>2. 2026년 상반기 실적과 연환산</h4>
+      <div class="two">
+        <div>
+          <table>
+            <thead><tr><th>선사</th><th>2025 상반기</th><th>2026 상반기</th><th>증감</th><th>연환산(×2)</th></tr></thead>
+            <tbody>
+              <tr><td>대아고속해운</td><td>75,867</td><td>99,430</td><td>+31.1%</td><td>198,860</td></tr>
+              <tr><td>팬스타</td><td>68,493</td><td>110,604</td><td>+61.5%</td><td>221,208</td></tr>
+              <tr><td>스타라인</td><td>105,539</td><td>133,281</td><td>+26.3%</td><td>266,562</td></tr>
+              <tr class="sum"><td>합계</td><td>249,899</td><td>343,315</td><td>+37.4%</td><td>686,630</td></tr>
+            </tbody>
+          </table>
+          <p class="note">같은 기간 방일 한국인 증가율은 18.3%로, 대마도 항로는 그 두 배 속도로 성장하고 있다. 대아고속해운의 2025년 상반기는 3월 재취항 이후 4개월 실적이므로 증감률 해석에 유의한다.</p>
+        </div>
+        <div>
+          <div class="calc">
+            <div><span>단순 연환산</span><span class="eq">343,315 × 2 = <b>686,630명</b></span></div>
+            <div><span>계절성 환산</span><span class="eq">343,315 ÷ 46.2% = <b>743,386명</b></span></div>
+            <div><span>2025년 상반기 비중</span><span class="eq">249,899 ÷ 541,111 = 46.2%</span></div>
+            <div><span>본 분석 적용치</span><span class="eq"><b>690,000명</b></span></div>
+          </div>
+          <p class="note">두 방법 중 낮은 쪽인 단순 연환산치를 반올림하여 적용하였다. 하반기 수요가 상반기보다 큰 이 항로의 계절성을 고려하면 보수적인 선택이다. 계절성 환산치(743천명)를 적용하면 5사 체제에서도 항차당 201명이 되어 손익분기 214명에는 여전히 미달한다.</p>
+          <div class="calc">
+            <div><span>2026년 연환산 항차</span><span class="eq">1,154 × 2 = <b>2,308항차</b></span></div>
+            <div><span>+ 그레이스호</span><span class="eq">700항차 가정</span></div>
+            <div><span>+ 당사</span><span class="eq">700항차 가정</span></div>
+          </div>
+          <p class="note">2018년 최고치는 824,668명이었으나 4개 선사가 4,261항차를 운영해 항차당 194명에 그쳤다. 이 항로의 채산성은 시장 규모가 아니라 수요와 공급의 상대적 증가 속도가 결정한다.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+const SEATS = 440;      // 선박 정원
+const SGA_BASE = 1809;  // 대아고속해운 2025년 판매비와관리비 실적
+
+const DEF = {
+  priceN:16700, lifeN:25, opN:3437,
+  priceU:8000,  lifeU:15, opU:3712,
+  wc:1000, pax:264, voy:700,
+  r1:30791, r2:8120, r3:9972, r4:294, vc:8434,
+  sga:1990, hur:8, tax:21,
+  dem:690000, v1:610, v2:794, v3:904, v4:700
+};
+let S = Object.assign({}, DEF);
+
+/* ── 계산 ── */
+function model(s, kind){
+  const price = kind === "new" ? s.priceN : s.priceU;
+  const life  = kind === "new" ? s.lifeN  : s.lifeU;
+  const op    = kind === "new" ? s.opN    : s.opU;
+  const dep = life > 0 ? price / life : 0;
+  const invest = price + s.wc;
+  const fixed = op + dep + s.sga;
+  const rev = s.r1 + s.r2 + s.r3 + s.r4;
+  const cm = rev - s.vc;
+  const paxYear = s.pax * s.voy;
+  const sales = rev * paxYear / 1e6;
+  const vcost = s.vc * paxYear / 1e6;
+  const opInc = sales - vcost - fixed;
+  const netOp = opInc * (1 - s.tax/100);
+  const roic = invest > 0 ? netOp / invest * 100 : 0;
+  const payback = (netOp + dep) > 0 && invest > 0 ? invest / (netOp + dep) : null;
+  const bepPaxYear = cm > 0 ? fixed * 1e6 / cm : null;
+  const bepPerVoy = (bepPaxYear !== null && s.voy > 0) ? bepPaxYear / s.voy : null;
+  const needOp = invest * s.hur/100 / (1 - s.tax/100);
+  const hurPerVoy = (cm > 0 && s.voy > 0) ? (fixed + needOp) * 1e6 / cm / s.voy : null;
+  return { price, life, op, dep, invest, fixed, rev, cm, paxYear,
+           sales, vcost, opInc, netOp, roic, payback, bepPaxYear, bepPerVoy, hurPerVoy };
+}
+
+const n0 = v => Math.round(v).toLocaleString("ko-KR");
+const n1 = v => v.toFixed(1);
+const pct = v => v.toFixed(1) + "%";
+const set = (id, html) => { document.getElementById(id).innerHTML = html; };
+const txt = (id, t) => { document.getElementById(id).textContent = t; };
+
+/* ── 렌더링 ── */
+function render(){
+  const s = S, N = model(s, "new"), U = model(s, "used");
+
+  /* 안내 문구 */
+  txt("hOpN", "대아고속해운 2025년 실적을 항차 비율로 환산한 값");
+  const upOp = s.opN > 0 ? (s.opU / s.opN - 1) * 100 : 0;
+  txt("hOpU", upOp >= 0
+    ? "연료 효율 저하와 수리비 증가로 신조 대비 " + n1(upOp) + "% 증가"
+    : "신조 대비 " + n1(Math.abs(upOp)) + "% 감소");
+  const upSga = SGA_BASE > 0 ? (s.sga / SGA_BASE - 1) * 100 : 0;
+  txt("hSga", upSga >= 0
+    ? "대아고속해운 2025년 실적 " + n0(SGA_BASE) + "백만 + 신규 진입 마케팅 비용 증가율 " + n1(upSga) + "%"
+    : "대아고속해운 2025년 실적 " + n0(SGA_BASE) + "백만 대비 " + n1(Math.abs(upSga)) + "% 감소");
+  set("hWc", "총 투자액 신조 <b>" + n0(N.invest) + "</b> · 중고 <b>" + n0(U.invest)
+    + "</b>백만 · 감가상각비 <b>" + n0(N.dep) + "</b> / <b>" + n0(U.dep) + "</b>백만");
+  txt("hPax", "좌석 승선율 " + (SEATS > 0 ? pct(s.pax / SEATS * 100) : "—") + " · 정원 440명");
+  txt("hVoy", "연간 여객 " + n0(N.paxYear) + "명");
+  set("hVc", "1인당 총수입 <b>" + n0(N.rev) + "</b>원 · 공헌이익 <b>" + n0(N.cm) + "</b>원");
+  document.getElementById("iVoyEcho").value = n0(s.voy);
+
+  /* 제목 카드 지표 */
+  const kpi = (m, idV, idS) => {
+    const bep = m.bepPerVoy, hur = m.hurPerVoy;
+    set(idV[0], bep !== null ? n0(bep) + '<small>명</small>' : "—");
+    txt(idS[0], bep !== null ? "승선율 " + pct(bep / SEATS * 100) : "공헌이익 0 이하");
+    set(idV[1], hur !== null ? n0(hur) + '<small>명</small>' : "—");
+    txt(idS[1], hur !== null ? "승선율 " + pct(hur / SEATS * 100) : "—");
+  };
+  kpi(N, ["bepN", "hurN"], ["bepNs", "hurNs"]);
+  kpi(U, ["bepU", "hurU"], ["bepUs", "hurUs"]);
+
+  /* 추정 손익 */
+  const mini = (m, idV, idS) => {
+    const e = document.getElementById(idV);
+    const over = m.payback !== null && m.payback > m.life;
+    e.innerHTML = m.payback !== null ? n1(m.payback) + '<small>년</small>' : "회수 불가";
+    e.className = "v" + (m.payback === null || over ? " neg" : "");
+    txt(idS, "이익률 " + (m.sales > 0 ? pct(m.opInc / m.sales * 100) : "—")
+      + " · ROIC " + n1(m.roic) + "%");
+  };
+  mini(N, "mPbN", "mPbNs");
+  mini(U, "mPbU", "mPbUs");
+
+  const paxY = N.paxYear;
+  const rows = [
+    ["여객수입", s.r1 * paxY / 1e6, s.r1 * paxY / 1e6, ""],
+    ["유류할증수입", s.r2 * paxY / 1e6, s.r2 * paxY / 1e6, ""],
+    ["상품매출", s.r3 * paxY / 1e6, s.r3 * paxY / 1e6, ""],
+    ["기타수입", s.r4 * paxY / 1e6, s.r4 * paxY / 1e6, ""],
+    ["매출액 계", N.sales, U.sales, "sum"],
+    ["상품매출원가", -N.vcost, -U.vcost, ""],
+    ["운송원가 (감가 제외)", -N.op, -U.op, ""],
+    ["감가상각비", -N.dep, -U.dep, ""],
+    ["판매비와관리비", -s.sga, -s.sga, ""],
+    ["영업비용 계", -(N.vcost + N.fixed), -(U.vcost + U.fixed), "sum"],
+    ["영업이익", N.opInc, U.opInc, "lead"],
+    ["세후 영업이익", N.netOp, U.netOp, ""]
+  ];
+  set("tPl", rows.map(([k, a, b, cls]) => {
+    const isYear = k.indexOf("년") > -1;
+    const f = v => v === null ? "—" : (isYear ? n1(v) : n0(v));
+    const d = (a === null || b === null) ? null : a - b;
+    const dTxt = d === null ? "—" : (isYear ? (d >= 0 ? "+" : "△") + n1(Math.abs(d))
+                                            : (Math.round(d) === 0 ? "—" : (d >= 0 ? "+" : "△") + n0(Math.abs(d))));
+    return '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td>' + k
+      + '</td><td' + (cls === "lead" && a < 0 ? ' class="fail"' : '') + '>' + f(a)
+      + '</td><td' + (cls === "lead" && b < 0 ? ' class="fail"' : '') + '>' + f(b)
+      + '</td><td>' + dTxt + '</td></tr>';
+  }).join(""));
+
+  /* 시장 시나리오 */
+  const base3 = s.v1 + s.v2 + s.v3;
+  const scen = [
+    ["현행 3사 체제", base3],
+    ["그레이스호 투입 (4사)", base3 + s.v4],
+    ["당사 진입 (5사)", base3 + s.v4 + s.voy]
+  ];
+  const gapCell = (per, bep) => {
+    if (per === null || bep === null) return '<td>—</td>';
+    const d = per - bep;
+    return '<td class="' + (d >= 0 ? "pass" : "fail") + '">'
+      + (d >= 0 ? "+" : "△") + n0(Math.abs(d)) + '명</td>';
+  };
+  set("tMarket", scen.map(([k, v], i) => {
+    const per = v > 0 ? s.dem / v : null;
+    return '<tr' + (i === 2 ? ' class="lead"' : '') + '><td>' + k + '</td><td>' + n0(v)
+      + '</td><td>' + (per !== null ? n0(per) + "명" : "—") + '</td>'
+      + gapCell(per, N.bepPerVoy) + gapCell(per, U.bepPerVoy) + '</tr>';
+  }).join(""));
+
+  const own = scen[2][1] > 0 ? s.dem / scen[2][1] : null;
+  set("mktNote", (own === null || N.bepPerVoy === null)
+    ? "항차 또는 공헌이익 조건이 성립하지 않는다."
+    : "당사 " + n0(s.voy) + "항차로 진입하면 시장 평균 항차당 <b"
+      + (own < N.bepPerVoy ? ' class="bad"' : "") + ">" + n0(own)
+      + "명</b>이 된다.<br>신조 손익분기 <b>" + n0(N.bepPerVoy) + "명</b> 대비 "
+      + (own >= N.bepPerVoy ? "여유가 있고" : n0(N.bepPerVoy - own) + "명 미달하고")
+      + ", 중고 <b>" + n0(U.bepPerVoy) + "명</b> 대비 "
+      + (own >= U.bepPerVoy ? "여유가 있다." : n0(U.bepPerVoy - own) + "명 미달한다."));
+
+  /* CVP 두 장 — 축 범위 공유 */
+  const cand = [s.pax, N.bepPerVoy, U.bepPerVoy, N.hurPerVoy, U.hurPerVoy]
+    .filter(v => v !== null && isFinite(v));
+  let x0 = Math.min(150, Math.min.apply(null, cand) - 30);
+  let x1 = Math.max(350, Math.max.apply(null, cand) + 30);
+  x0 = Math.max(0, Math.floor(x0 / 25) * 25);
+  x1 = Math.ceil(x1 / 25) * 25;
+  if (x1 - x0 < 50) x1 = x0 + 50;
+  const yMax = Math.max(
+    N.rev * x1 * s.voy / 1e6,
+    s.vc * x1 * s.voy / 1e6 + N.fixed,
+    s.vc * x1 * s.voy / 1e6 + U.fixed, 1) * 1.06;
+
+  drawChart("chartN", s, N, scen, x0, x1, yMax);
+  drawChart("chartU", s, U, scen, x0, x1, yMax);
+  writeNote("noteN", s, N, "신조");
+  writeNote("noteU", s, U, "중고");
+}
+
+function writeNote(id, s, m, name){
+  if (m.bepPerVoy === null) { set(id, "1인당 공헌이익이 0 이하여서 손익분기점이 존재하지 않는다."); return; }
+  const g = s.pax - m.bepPerVoy;
+  const h = m.hurPerVoy !== null ? s.pax - m.hurPerVoy : null;
+  set(id, "현재 설정 " + n0(s.pax) + "명은 " + name + " 손익분기 <b" + (g < 0 ? ' class="bad"' : "") + ">"
+    + n0(m.bepPerVoy) + "명</b>을 " + (g >= 0 ? "+" : "△") + n0(Math.abs(g)) + "명 "
+    + (g >= 0 ? "상회" : "미달") + "하고, 요구수익률 충족점 <b" + (h !== null && h < 0 ? ' class="bad"' : "") + ">"
+    + (m.hurPerVoy !== null ? n0(m.hurPerVoy) + "명" : "—") + "</b>에는 "
+    + (h === null ? "—" : (h >= 0 ? "+" : "△") + n0(Math.abs(h)) + "명") + "이다."
+    + "<br>고정비 <b>" + n0(m.fixed) + "</b>백만 · 1인당 공헌이익 <b>" + n0(m.cm) + "</b>원.");
+}
+
+/* ── CVP 차트 ── */
+function drawChart(id, s, m, scen, x0, x1, yMax){
+  const W = 512, H = 214, ml = 46, mr = 10, mt = 12, mb = 28;
+  const px = v => ml + (v - x0) / (x1 - x0) * (W - ml - mr);
+  const py = v => H - mb - (v / yMax) * (H - mt - mb);
+  const salesAt = p => m.rev * p * s.voy / 1e6;
+  const costAt  = p => s.vc * p * s.voy / 1e6 + m.fixed;
+
+  let g = "";
+  const stepBase = Math.pow(10, Math.floor(Math.log10(yMax / 4)));
+  const tick = Math.ceil(yMax / 4 / stepBase) * stepBase;
+  for (let v = 0; v <= yMax; v += tick) {
+    g += '<line x1="' + ml + '" y1="' + py(v) + '" x2="' + (W - mr) + '" y2="' + py(v) + '" stroke="#E9EEF4"/>'
+      + '<text x="' + (ml - 6) + '" y="' + (py(v) + 3.2) + '" text-anchor="end" font-size="9.5" fill="#5C6B7F">' + n0(v) + '</text>';
+  }
+  const xStep = (x1 - x0) > 250 ? 100 : 50;
+  for (let v = Math.ceil(x0 / xStep) * xStep; v <= x1; v += xStep) {
+    g += '<text x="' + px(v) + '" y="' + (H - mb + 14) + '" text-anchor="middle" font-size="9.5" fill="#5C6B7F">' + v + '</text>';
+  }
+  g += '<text x="' + ml + '" y="' + (H - 3) + '" font-size="9.5" fill="#5C6B7F">항차당 탑승인원(명)</text>';
+
+  scen.forEach(([k, v]) => {
+    if (v <= 0) return;
+    const per = s.dem / v;
+    if (per < x0 || per > x1) return;
+    const label = k.replace(/ \(.*\)/, "").replace("현행 ", "");
+    g += '<line x1="' + px(per) + '" y1="' + mt + '" x2="' + px(per) + '" y2="' + (H - mb)
+      + '" stroke="#9AA9BC" stroke-width="1" stroke-dasharray="2 3"/>'
+      + '<text x="' + (px(per) + 3) + '" y="' + (mt + 9) + '" font-size="9" fill="#7A8899">'
+      + label + ' ' + n0(per) + '</text>';
+  });
+
+  if (m.bepPerVoy !== null && m.bepPerVoy < x1) {
+    const st = Math.max(m.bepPerVoy, x0);
+    g += '<path d="M' + px(st) + ' ' + py(costAt(st)) + ' L' + px(x1) + ' ' + py(salesAt(x1))
+      + ' L' + px(x1) + ' ' + py(costAt(x1)) + ' Z" fill="#154B8C" opacity="0.07"/>';
+  }
+  g += '<line x1="' + px(x0) + '" y1="' + py(costAt(x0)) + '" x2="' + px(x1) + '" y2="' + py(costAt(x1)) + '" stroke="#A8392F" stroke-width="1.7"/>'
+    + '<line x1="' + px(x0) + '" y1="' + py(salesAt(x0)) + '" x2="' + px(x1) + '" y2="' + py(salesAt(x1)) + '" stroke="#154B8C" stroke-width="2.1"/>';
+
+  if (m.bepPerVoy !== null && m.bepPerVoy >= x0 && m.bepPerVoy <= x1) {
+    const bx = px(m.bepPerVoy), by = py(salesAt(m.bepPerVoy));
+    g += '<circle cx="' + bx + '" cy="' + by + '" r="4.5" fill="#fff" stroke="#154B8C" stroke-width="2"/>'
+      + '<text x="' + bx + '" y="' + (by - 9) + '" text-anchor="middle" font-size="10.5" font-weight="700" fill="#154B8C">'
+      + n0(m.bepPerVoy) + '명</text>';
+  }
+  let hot = "";
+  if (s.pax >= x0 && s.pax <= x1) {
+    const cx = px(s.pax);
+    g += '<line x1="' + cx + '" y1="' + mt + '" x2="' + cx + '" y2="' + (H - mb) + '" stroke="#5BA3D9" stroke-width="1.3"/>'
+      + '<circle cx="' + cx + '" cy="' + py(salesAt(s.pax)) + '" r="3.2" fill="#5BA3D9"/>'
+      + '<circle cx="' + cx + '" cy="' + py(costAt(s.pax)) + '" r="3.2" fill="#5BA3D9"/>';
+    hot = tipFor(cx, s, m, salesAt(s.pax), costAt(s.pax), ml, mr, mt, W, H, mb);
+  }
+  g += '<line x1="' + ml + '" y1="' + (H - mb) + '" x2="' + (W - mr) + '" y2="' + (H - mb) + '" stroke="#C3CDDA"/>'
+    + '<line x1="' + ml + '" y1="' + mt + '" x2="' + ml + '" y2="' + (H - mb) + '" stroke="#C3CDDA"/>';
+
+  set(id, '<svg class="cvp" viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img" aria-label="원가-조업도-이익 도표. 손익분기 항차당 '
+    + (m.bepPerVoy !== null ? n0(m.bepPerVoy) : "산출 불가") + '명. 현재 설정 '
+    + n0(s.pax) + '명 기준 매출액 ' + n0(salesAt(s.pax)) + '백만, 총비용 ' + n0(costAt(s.pax))
+    + '백만, 영업이익 ' + n0(salesAt(s.pax) - costAt(s.pax)) + '백만.">' + g + hot + '</svg>');
+}
+
+/* 현재 설정 선 위에 마우스를 올리면 뜨는 값 상자 */
+function tipFor(cx, s, m, sales, cost, ml, mr, mt, W, H, mb){
+  const bw = 138, bh = 62, pad = 8;
+  const right = cx + 10 + bw <= W - mr;
+  const bx = right ? cx + 10 : cx - 10 - bw;
+  const by = mt + 4;
+  const profit = sales - cost;
+  const line = (i, k, v, color) =>
+    '<text x="' + (bx + pad) + '" y="' + (by + 27 + i * 14) + '" font-size="9.5" fill="#5C6B7F">' + k + '</text>'
+    + '<text x="' + (bx + bw - pad) + '" y="' + (by + 27 + i * 14) + '" font-size="10" font-weight="700" '
+    + 'text-anchor="end" fill="' + color + '">' + n0(v) + '</text>';
+
+  return '<rect class="hot" x="' + (cx - 7) + '" y="' + mt + '" width="14" height="' + (H - mb - mt) + '"/>'
+    + '<g class="tip" display="none" pointer-events="none">'
+    + '<rect x="' + bx + '" y="' + by + '" width="' + bw + '" height="' + bh + '" rx="3" '
+    + 'fill="#FFFFFF" stroke="#154B8C" stroke-width="1"/>'
+    + '<text x="' + (bx + pad) + '" y="' + (by + 13) + '" font-size="9.5" font-weight="700" fill="#154B8C">'
+    + '항차당 ' + n0(s.pax) + '명 · 단위 백만원</text>'
+    + '<line x1="' + (bx + pad) + '" y1="' + (by + 18) + '" x2="' + (bx + bw - pad) + '" y2="' + (by + 18) + '" stroke="#E9EEF4"/>'
+    + line(0, "매출액", sales, "#154B8C")
+    + line(1, "총비용", cost, "#A8392F")
+    + line(2, "영업이익", profit, profit < 0 ? "#A8392F" : "#154B8C")
+    + '</g>';
+}
+
+/* ── 입력 연결 ── */
+const KEYS = ["priceN","lifeN","opN","priceU","lifeU","opU","wc","pax","voy",
+              "r1","r2","r3","r4","vc","sga","hur","tax","dem","v1","v2","v3","v4"];
+const idOf = k => "i" + k.charAt(0).toUpperCase() + k.slice(1);
+
+/* 표시용: 천단위 구분 기호. 편집 중에는 원본 숫자를 그대로 둔다 */
+const fmtIn = v => v.toLocaleString("ko-KR", { maximumFractionDigits: 3 });
+const parseIn = t => {
+  const c = String(t).replace(/,/g, "").trim();
+  return (c === "" || isNaN(Number(c))) ? null : Number(c);
+};
+const bound = (el, v) => {
+  const mn = el.dataset.min !== undefined ? Number(el.dataset.min) : -Infinity;
+  const mx = el.dataset.max !== undefined ? Number(el.dataset.max) :  Infinity;
+  return Math.min(mx, Math.max(mn, v));
+};
+function syncInputs(){
+  KEYS.forEach(k => {
+    const el = document.getElementById(idOf(k));
+    if (document.activeElement !== el) el.value = fmtIn(S[k]);
+  });
+}
+
+KEYS.forEach(k => {
+  const el = document.getElementById(idOf(k));
+
+  el.addEventListener("focus", () => { el.value = String(S[k]); el.select(); });
+
+  el.addEventListener("input", () => {
+    const v = parseIn(el.value);
+    if (v === null) return;              // 입력 중에는 반영 보류
+    S[k] = v; render();
+  });
+
+  el.addEventListener("blur", () => {
+    const v = parseIn(el.value);
+    S[k] = v === null ? S[k] : bound(el, v);
+    el.value = fmtIn(S[k]);              // 확정 시점에 천단위 구분 표기
+    render();
+  });
+
+  el.addEventListener("keydown", e => {
+    if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+    e.preventDefault();
+    const step = Number(el.dataset.step || 1);
+    const cur = parseIn(el.value);
+    let v = (cur === null ? S[k] : cur) + (e.key === "ArrowUp" ? step : -step);
+    v = Math.round(bound(el, v) * 1000) / 1000;
+    S[k] = v; el.value = String(v); render();
+  });
+});
+
+document.getElementById("btnReset").addEventListener("click", () => {
+  S = Object.assign({}, DEF);
+  syncInputs();
+  render();
+});
+
+/* ── 16:9 맞춤 ── */
+function fit(){
+  const sc = Math.min(window.innerWidth / 1600, window.innerHeight / 900);
+  document.getElementById("stage").style.transform = "scale(" + sc + ")";
+}
+
+/* ── 근거 팝업 ── */
+const DEMAND = [
+  { year:"2023", total:241544, parts:[["코비",2365,"#C3D3E1"],["팬스타",115214,"#4A90C7"],["스타라인",123965,"#8FBEE0"]] },
+  { year:"2024", total:388229, parts:[["팬스타",196843,"#4A90C7"],["스타라인",191386,"#8FBEE0"]] },
+  { year:"2025", total:541111, parts:[["대아고속해운",211101,"#154B8C"],["팬스타",174908,"#4A90C7"],["스타라인",155102,"#8FBEE0"]] }
+];
+
+function drawDemand(){
+  const W = 940, H = 260, ml = 60, mr = 14, mt = 26, mb = 34;
+  const yMax = 600000;
+  const py = v => H - mb - v / yMax * (H - mt - mb);
+  const plot = W - ml - mr, band = plot / DEMAND.length, bw = 108;
+  let g = "";
+
+  for (let v = 0; v <= yMax; v += 200000) {
+    g += '<line x1="' + ml + '" y1="' + py(v) + '" x2="' + (W - mr) + '" y2="' + py(v) + '" stroke="#EAEFF5"/>'
+      + '<text x="' + (ml - 8) + '" y="' + (py(v) + 4) + '" text-anchor="end" font-size="10.5" fill="#5C6B7F">'
+      + (v / 1000).toLocaleString("ko-KR") + '천</text>';
+  }
+
+  DEMAND.forEach((d, i) => {
+    const cx = ml + band * (i + 0.5), bx = cx - bw / 2;
+    let acc = 0;
+    d.parts.forEach(([nm, v, col]) => {
+      const y0 = py(acc + v), y1 = py(acc);
+      g += '<rect x="' + bx + '" y="' + y0 + '" width="' + bw + '" height="' + (y1 - y0) + '" fill="' + col + '"/>';
+      if (y1 - y0 > 15)
+        g += '<text x="' + cx + '" y="' + ((y0 + y1) / 2 + 4) + '" text-anchor="middle" font-size="10.5" '
+          + 'font-weight="700" fill="' + (col === "#154B8C" || col === "#4A90C7" ? "#fff" : "#17202B") + '">'
+          + n0(v) + '</text>';
+      acc += v;
+    });
+    g += '<text x="' + cx + '" y="' + (py(d.total) - 8) + '" text-anchor="middle" font-size="12" '
+      + 'font-weight="700" fill="#154B8C">' + n0(d.total) + '명</text>'
+      + '<text x="' + cx + '" y="' + (H - mb + 17) + '" text-anchor="middle" font-size="11.5" fill="#17202B">'
+      + d.year + '년</text>';
+    if (i > 0) {
+      const prev = DEMAND[i - 1].total, rate = (d.total / prev - 1) * 100;
+      g += '<text x="' + cx + '" y="' + (H - mb + 30) + '" text-anchor="middle" font-size="10.5" fill="#5C6B7F">'
+        + (rate >= 0 ? "+" : "△") + Math.abs(rate).toFixed(1) + '%</text>';
+    }
+  });
+
+  g += '<line x1="' + ml + '" y1="' + (H - mb) + '" x2="' + (W - mr) + '" y2="' + (H - mb) + '" stroke="#C3CDDA"/>';
+  set("demChart", '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img" '
+    + 'aria-label="2023년 241,544명, 2024년 388,229명, 2025년 541,111명의 선사별 여객 수요 누적 막대그래프">' + g + '</svg>');
+}
+
+let lastFocus = null;
+function openOv(id){
+  lastFocus = document.activeElement;
+  const ov = document.getElementById(id);
+  ov.setAttribute("data-open", "1");
+  ov.querySelector(".x").focus();
+}
+function closeOv(ov){
+  ov.removeAttribute("data-open");
+  if (lastFocus && lastFocus.focus) lastFocus.focus();
+}
+document.querySelectorAll("h2.clk").forEach(t => {
+  const open = () => openOv(t.dataset.modal);
+  t.addEventListener("click", open);
+  t.addEventListener("keydown", e => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); }
+  });
+});
+document.querySelectorAll(".ov").forEach(ov => {
+  ov.addEventListener("click", e => { if (e.target === ov) closeOv(ov); });
+  ov.querySelector("[data-close]").addEventListener("click", () => closeOv(ov));
+});
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  document.querySelectorAll('.ov[data-open="1"]').forEach(closeOv);
+});
+
+drawDemand();
+
+window.addEventListener("resize", fit);
+fit();
+syncInputs();
+render();
+</script>
+</body>
+</html>
