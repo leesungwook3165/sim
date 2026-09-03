@@ -2833,27 +2833,41 @@ function _updateNowTag() {
 // "토·일·월·화·수·목·금"을 반복해서 매긴다 — 오늘이 며칠이든 항상 이 순서로만 보인다.
 let _simTimelapseRelabeling = false;
 // vis-saturday → 토, vis-sunday → 일 … (SIM_EPOCH=2000-01-01=토요일이므로 클래스↔요일이 일치)
+// minor 라벨(개별 날짜 눈금)에는 vis-timeline이 이 클래스를 붙여주지만, major 라벨(예: 시간 단위
+// 확대 시 나오는 "Sat 1 January" 같은 큰 구간 헤더)에는 요일 클래스 없이 통짜 텍스트로만 나오는
+// 경우가 있어 _relabelWeekdayEl에서 텍스트 맨 앞 영문 요일 약어로도 판정한다.
 const _VIS_DAY_LABEL = {
   'vis-sunday':'일','vis-monday':'월','vis-tuesday':'화',
   'vis-wednesday':'수','vis-thursday':'목','vis-friday':'금','vis-saturday':'토'
 };
+const _EN_DAY_ABBR_LABEL = { Sun:'일', Mon:'월', Tue:'화', Wed:'수', Thu:'목', Fri:'금', Sat:'토' };
+const _isTimeLikeLabel = txt => /^\d{1,2}:\d{2}$/.test(txt);
+// vis-timeline이 그려낸 날짜 라벨(.vis-text) 하나를 보고 필요하면 요일 한글로 바꿔친다.
+// 1) vis-saturday 등 요일 클래스가 있으면 그걸로 판정(주로 minor 라벨)
+// 2) 클래스가 없어도 "Sat 1 January"처럼 텍스트 맨 앞이 영문 요일 약어면 그걸로 판정(주로 major 라벨)
+// 그 외(순수 시:분 눈금 등)는 건드리지 않는다. (타임랩스·선석 스케줄 두 패널이 공용으로 쓴다)
+function _relabelWeekdayEl(el) {
+  const txt = el.textContent.trim();
+  if (!txt || _isTimeLikeLabel(txt)) return;
+  for (const [cls, label] of Object.entries(_VIS_DAY_LABEL)) {
+    if (el.classList.contains(cls)) {
+      if (el.textContent !== label) el.textContent = label;
+      return;
+    }
+  }
+  const m = txt.match(/^(Sun|Mon|Tue|Wed|Thu|Fri|Sat)\b/);
+  if (m) {
+    const label = _EN_DAY_ABBR_LABEL[m[1]];
+    if (el.textContent !== label) el.textContent = label;
+  }
+}
 function _simTimelapseRelabelDays() {
   if (_simTimelapseRelabeling || !_simTimelapse) return;
   const container = document.getElementById('simTimelapseEl');
   if (!container) return;
   _simTimelapseRelabeling = true;
   try {
-    const isTimeLike = txt => /^\d{1,2}:\d{2}$/.test(txt);
-    container.querySelectorAll('.vis-text').forEach(el => {
-      const txt = el.textContent.trim();
-      if (!txt || isTimeLike(txt)) return;
-      for (const [cls, label] of Object.entries(_VIS_DAY_LABEL)) {
-        if (el.classList.contains(cls)) {
-          if (el.textContent !== label) el.textContent = label;
-          return;
-        }
-      }
-    });
+    container.querySelectorAll('.vis-text').forEach(_relabelWeekdayEl);
   } finally {
     _simTimelapseRelabeling = false;
   }
@@ -4562,17 +4576,7 @@ function _berthRelabelDays() {
   if (!container) return;
   _berthRelabeling = true; // 아래에서 textContent를 바꾸면 MutationObserver가 다시 이 함수를 부르므로 재진입 방지
   try {
-    const isTimeLike = txt => /^\d{1,2}:\d{2}$/.test(txt);
-    container.querySelectorAll('.vis-text').forEach(el => {
-      const txt = el.textContent.trim();
-      if (!txt || isTimeLike(txt)) return;
-      for (const [cls, label] of Object.entries(_VIS_DAY_LABEL)) {
-        if (el.classList.contains(cls)) {
-          if (el.textContent !== label) el.textContent = label;
-          return;
-        }
-      }
-    });
+    container.querySelectorAll('.vis-text').forEach(_relabelWeekdayEl);
   } finally {
     _berthRelabeling = false;
   }
