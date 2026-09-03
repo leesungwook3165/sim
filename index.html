@@ -2827,39 +2827,28 @@ function _updateNowTag() {
 }
 
 // 타임랩스는 SIM_EPOCH(2000-01-01)를 임의 기준일로 쓰기 때문에, vis-timeline이 자체적으로
-// "Sat 1 January" 같은 의미 없는 실제 날짜를 보여줄 수 있다 — 선석 스케줄과 같은 방식으로
-// "08:00"류 시:분 눈금은 그대로 두고, 그 외 날짜 텍스트만 요일 이름으로 바꿔친다.
-// 실제 달력 날짜(getWindow() 등)는 전혀 안 보고, 화면에 보이는 순서대로 무조건
-// "토·일·월·화·수·목·금"을 반복해서 매긴다 — 오늘이 며칠이든 항상 이 순서로만 보인다.
+// "Sat 1 January" 같은 의미 없는 실제 날짜를 보여줄 수 있다 — "08:00"류 시:분 눈금은 그대로
+// 두고, 그 외 날짜 텍스트만 요일 이름으로 바꿔친다. vis-timeline이 붙여주는 vis-saturday 등
+// 요일 클래스는 확대 정도·리렌더 시점에 따라 major 라벨엔 아예 없거나(→ 영문 텍스트 그대로 노출),
+// DOM 노드 재사용 과정에서 이전 값이 그대로 남아있는(stale) 경우가 있어(→ "토일일일"처럼 같은
+// 요일이 반복되는 오류) 신뢰할 수 없다. 그래서 vis-timeline이 매긴 날짜는 아예 보지 않고,
+// 화면에 보이는 라벨 순서(왼쪽→오른쪽)대로 무조건 "토·일·월·화·수·목·금"을 반복해서 매긴다 —
+// 실제로 몇 월 며칠이든 상관없이 항상 이 순서로만 보이고, major/minor 라벨은 각자 독립적으로
+// 왼쪽부터 순서를 센다. (타임랩스·선석 스케줄 두 패널이 이 함수를 공용으로 쓴다)
 let _simTimelapseRelabeling = false;
-// vis-saturday → 토, vis-sunday → 일 … (SIM_EPOCH=2000-01-01=토요일이므로 클래스↔요일이 일치)
-// minor 라벨(개별 날짜 눈금)에는 vis-timeline이 이 클래스를 붙여주지만, major 라벨(예: 시간 단위
-// 확대 시 나오는 "Sat 1 January" 같은 큰 구간 헤더)에는 요일 클래스 없이 통짜 텍스트로만 나오는
-// 경우가 있어 _relabelWeekdayEl에서 텍스트 맨 앞 영문 요일 약어로도 판정한다.
-const _VIS_DAY_LABEL = {
-  'vis-sunday':'일','vis-monday':'월','vis-tuesday':'화',
-  'vis-wednesday':'수','vis-thursday':'목','vis-friday':'금','vis-saturday':'토'
-};
-const _EN_DAY_ABBR_LABEL = { Sun:'일', Mon:'월', Tue:'화', Wed:'수', Thu:'목', Fri:'금', Sat:'토' };
 const _isTimeLikeLabel = txt => /^\d{1,2}:\d{2}$/.test(txt);
-// vis-timeline이 그려낸 날짜 라벨(.vis-text) 하나를 보고 필요하면 요일 한글로 바꿔친다.
-// 1) vis-saturday 등 요일 클래스가 있으면 그걸로 판정(주로 minor 라벨)
-// 2) 클래스가 없어도 "Sat 1 January"처럼 텍스트 맨 앞이 영문 요일 약어면 그걸로 판정(주로 major 라벨)
-// 그 외(순수 시:분 눈금 등)는 건드리지 않는다. (타임랩스·선석 스케줄 두 패널이 공용으로 쓴다)
-function _relabelWeekdayEl(el) {
-  const txt = el.textContent.trim();
-  if (!txt || _isTimeLikeLabel(txt)) return;
-  for (const [cls, label] of Object.entries(_VIS_DAY_LABEL)) {
-    if (el.classList.contains(cls)) {
+function _relabelWeekdaysPositional(container) {
+  const week = _allWeekDays();
+  ['vis-major', 'vis-minor'].forEach(cls => {
+    let idx = 0;
+    container.querySelectorAll('.vis-text.' + cls).forEach(el => {
+      const txt = el.textContent.trim();
+      if (!txt || _isTimeLikeLabel(txt)) return;
+      const label = week[idx % 7];
       if (el.textContent !== label) el.textContent = label;
-      return;
-    }
-  }
-  const m = txt.match(/^(Sun|Mon|Tue|Wed|Thu|Fri|Sat)\b/);
-  if (m) {
-    const label = _EN_DAY_ABBR_LABEL[m[1]];
-    if (el.textContent !== label) el.textContent = label;
-  }
+      idx++;
+    });
+  });
 }
 function _simTimelapseRelabelDays() {
   if (_simTimelapseRelabeling || !_simTimelapse) return;
@@ -2867,7 +2856,7 @@ function _simTimelapseRelabelDays() {
   if (!container) return;
   _simTimelapseRelabeling = true;
   try {
-    container.querySelectorAll('.vis-text').forEach(_relabelWeekdayEl);
+    _relabelWeekdaysPositional(container);
   } finally {
     _simTimelapseRelabeling = false;
   }
@@ -4565,10 +4554,9 @@ function _berthWeekStart() {
 // vis-timeline의 "format" 콜백에 함수를 넣으면 내부에서 문자열 전용 처리를 하다 에러가 나므로,
 // 대신 렌더가 끝난 뒤 DOM에 이미 그려진 날짜 라벨(major/minor 둘 다)을 직접 요일로 바꿔친다.
 // "08:00"처럼 시:분 형식인 라벨(=시간 눈금)은 건드리지 않는다.
-// SIM_EPOCH(2000-01-01)이 토요일이라 vis-timeline이 자동으로 붙이는 vis-saturday/vis-sunday/…
-// 클래스가 곧 "토·일·월·화·수·목·금" 순서와 정확히 일치한다 — 실제 달력 날짜는 전혀 안 보고
-// 이 클래스만으로 라벨을 정하므로, 화면에 보이는 순서가 항상 토일월화수목금으로 고정 반복된다
-// (_simTimelapseRelabelDays와 완전히 동일한 방식 — _VIS_DAY_LABEL 공용).
+// vis-timeline이 자동으로 붙이는 vis-saturday 등 요일 클래스는 major 라벨엔 없거나 DOM 재사용
+// 시 stale하게 남는 경우가 있어 신뢰할 수 없다 — _relabelWeekdaysPositional과 완전히 동일하게,
+// 화면에 보이는 라벨 순서대로 그냥 토일월화수목금을 반복해서 매긴다.
 let _berthRelabeling = false;
 function _berthRelabelDays() {
   if (_berthRelabeling || !_berthTimeline) return;
@@ -4576,7 +4564,7 @@ function _berthRelabelDays() {
   if (!container) return;
   _berthRelabeling = true; // 아래에서 textContent를 바꾸면 MutationObserver가 다시 이 함수를 부르므로 재진입 방지
   try {
-    container.querySelectorAll('.vis-text').forEach(_relabelWeekdayEl);
+    _relabelWeekdaysPositional(container);
   } finally {
     _berthRelabeling = false;
   }
