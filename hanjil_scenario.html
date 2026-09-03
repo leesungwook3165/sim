@@ -2449,8 +2449,8 @@ function _lineVisibleForScope(key, skipPortFilter) {
     case 'smLeg1': case 'smLeg2':
       show = _simCoreVisible(); break; // 산타모니카호 자체 구상 항로
     case 'qbDirect':
-      // 퀸비틀(투입고려) + 카멜리아(타선사선박) + 그레이스호 하카타직항(진입예정) 모두가 쓰는 구간
-      show = _simCoreVisible() || _simCustomVisible() || _simPendingVisible(); break;
+      // 퀸비틀 직항 항로 — 투입고려(core)·전체(all) 탭에서만 표시
+      show = _simCoreVisible(); break;
     case 'hitakatsuRef': case 'izuharaViaRef':
       // 쓰시마링크호 등 기존 취항선(타선사선박) + 그레이스호 히타카츠 관련편(진입예정)이 함께 쓴다
       show = _simCustomVisible() || _simPendingVisible(); break;
