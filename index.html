@@ -2584,6 +2584,9 @@ function _legPath(fromPt, toPt) {
   // 광양↔시모노세키(광양훼리) — 직선 구간 연결(간몬해협 구간은 부관훼리와 동일 이유로 곡선 보간 없음)
   if (_isNearPort(fromPt, 'gwangyang') && _isNearPort(toPt, 'shimonoseki')) return _gwangyangWP;
   if (_isNearPort(fromPt, 'shimonoseki') && _isNearPort(toPt, 'gwangyang')) return _gwangyangWP.slice().reverse();
+  // 포항↔울릉도(엘도라도 익스프레스호) — 사용자 제공 실측 경유점을 직선으로 연결
+  if (_isNearPort(fromPt, 'pohang') && _isNearPort(toPt, 'ulleungdo')) return _eldoradoWP;
+  if (_isNearPort(fromPt, 'ulleungdo') && _isNearPort(toPt, 'pohang')) return _eldoradoWP.slice().reverse();
   return [fromPt, toPt];
 }
 
@@ -2646,6 +2649,18 @@ const _gwangyangWP = [
   [34.016242,  129.413452],
   [33.971837,  130.711899],
   ..._shimonosekiWP.slice(1) // 히비키나다→시모노세키 구간은 부관훼리 항로와 동일
+];
+
+// 엘도라도 익스프레스호 항로 (포항여객선터미널 ↔ 울릉도 도동항) — 사용자 제공 실측 경유점
+// (구글맵 기준) 그대로 사용. 동해상 직선 구간이라 곡선 보간 없이 직선으로만 연결한다.
+const _eldoradoWP = [
+  [36.050227, 129.378122],
+  [36.044441, 129.385053],
+  [36.044614, 129.386265],
+  [36.574577, 130.150545],
+  [37.415368, 130.887508],
+  [37.475131, 130.913343],
+  [37.480950, 130.910031]
 ];
 
 // ── 속도 변수 ──
@@ -4207,6 +4222,30 @@ function _seedDefaultCompetitorShips() {
     try { localStorage.setItem('hanjil_gwangyang_pending_v1', '1'); } catch(e) {}
   }
 
+  // 엘도라도 익스프레스호: 포항↔울릉도(도동항) 기존 취항 중인 국내 항로.
+  // 사용자 제공 실측 경유점 기준 항로 거리 약 213km(115nm) ÷ 편도 2시간50분(170분) = 40.6노트 역산.
+  // (참고: 공식 안내 평균순항 45노트·최고 51노트 — 우리 경로 길이 기준으로는 소요시간에 맞춰 역산한
+  // 40.6노트를 쓴다) 출항시각·정박시간은 미확인 추정치.
+  let seededEldorado = null;
+  try { seededEldorado = localStorage.getItem('hanjil_seeded_eldorado'); } catch(e) {}
+  if (!seededEldorado) {
+    const pohangPort = ports.find(p => p.id === 'pohang');
+    const ulleungPort = ports.find(p => p.id === 'ulleungdo');
+    customShips.push({
+      id: 'cs' + (_shipIdSeq++), name: '엘도라도 익스프레스호', color: '#ff7744',
+      kts: 40.6, departHM: '07:50', turnMin: 60, roundTrip: true,
+      from: { mode:'known', name: pohangPort.name, lat: pohangPort.lat, lng: pohangPort.lng },
+      via: null, viaStopMin: null,
+      to:   { mode:'known', name: ulleungPort.name, lat: ulleungPort.lat, lng: ulleungPort.lng },
+      berthMin: BERTH_DEFAULT_MIN, days: _allWeekDays(),
+      sourceUrl: null,
+      sourceLabel: '⚠ 출항시각·정박시간 미확인 추정치 — 항로 213km(115nm) ÷ 편도 2h50m = 40.6노트 역산(실측 소요시간 기준)',
+      shipType: '고속선', tonnage: null,
+      group: '엘도라도익스프레스', nation: '한국라인'
+    });
+    try { localStorage.setItem('hanjil_seeded_eldorado', '1'); } catch(e) {}
+  }
+
   // v4: 히타카츠/이즈하라행 경쟁사 항로를 직선에서 실제 곡선 경로로 바꾸면서 이동거리가 늘었다.
   // 도착시각(=원래 공지된 소요시간)은 그대로 유지하고 kts만 새 경로 길이에 맞게 다시 역산한다.
   // (이미 저장된 브라우저의 배 데이터도 이름으로 찾아 kts만 1회 보정 — 위 mkShip 호출값과 동일)
@@ -4480,7 +4519,8 @@ function _portIdByName(name) {
 }
 const _PORT_SHORT = {
   busan:'부산', hitakatsu:'히타카츠', izuhara:'이즈하라',
-  hakata:'하카타', shimonoseki:'시모노세키', osaka:'오사카', gwangyang:'광양'
+  hakata:'하카타', shimonoseki:'시모노세키', osaka:'오사카', gwangyang:'광양',
+  pohang:'포항', ulleungdo:'울릉도'
 };
 function _portShortName(fullName) {
   if (!fullName) return '';
