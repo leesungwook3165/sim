@@ -1012,9 +1012,16 @@
         </label>
         <div style="display:flex;flex-direction:column;justify-content:flex-end;font-size:10px;color:#aac8e8">환산 단가<br><b id="fuelKrwPerKg" style="color:#ffcc44;font-size:12px">—</b></div>
       </div>
-      <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#ffdd88;cursor:pointer">
+      <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#ffdd88;cursor:pointer;margin-bottom:6px">
         <input type="checkbox" onchange="setFuelEngSetting(this.checked)"> 산타모니카호 공학적 세팅 보정 적용 (엘도라도호 대비 저출력·저속 -15~20%)
       </label>
+      <div style="display:flex;align-items:center;gap:8px;font-size:10px;color:#aac8e8;margin-bottom:2px">
+        기타운항비용(인건비·정비·항비 등, 연료비의 %)
+        <input type="number" step="1" min="0" max="100" value="23" onchange="setFuelInput('otherPctMin', this.value)" style="width:52px">
+        ~
+        <input type="number" step="1" min="0" max="100" value="25" onchange="setFuelInput('otherPctMax', this.value)" style="width:52px">
+        %
+      </div>
       <div style="font-size:9px;color:#667788;margin-top:4px">
         ※ 기준: 엘도라도 익스프레스호 왕복 연료소모 25톤 ÷ 왕복거리 약 434km(포항여객선터미널↔울릉도 도동항, 편도 약 217km) = km당 약 57.6kg<br>
         (2025년 7월 NABUCO LSMGO 고시 단가 기준 — 값은 위 입력란에서 바로 수정 가능)<br>
@@ -1029,7 +1036,11 @@
         <div class="sim-info-box"><div class="label">적용율</div><div class="val" id="fcEldoRate" style="font-size:9.5px">—</div></div>
         <div class="sim-info-box"><div class="label">소모량</div><div class="val" id="fcEldoTon" style="font-size:10px">—</div></div>
       </div>
-      <div style="text-align:center;margin-top:5px;font-size:13px;font-weight:800;color:#ff9966" id="fcEldoCost">—</div>
+      <div style="text-align:center;margin-top:5px;font-size:9px;color:#99b8d4">연료비</div>
+      <div style="text-align:center;font-size:13px;font-weight:800;color:#ff9966" id="fcEldoCost">—</div>
+      <div style="text-align:center;margin-top:4px;padding-top:4px;border-top:1px dashed rgba(255,255,255,0.15);font-size:9px;color:#99b8d4">+ 기타운항비용 <span id="fcEldoOther" style="color:#ffaa88">—</span></div>
+      <div style="text-align:center;margin-top:2px;font-size:8.5px;color:#667788">합계(연료비+기타비용)</div>
+      <div style="text-align:center;font-size:14px;font-weight:800;color:#fff" id="fcEldoTotal">—</div>
     </div>
 
     <div style="border:1px solid rgba(255,200,0,0.3);border-radius:7px;padding:7px 10px;margin-bottom:7px">
@@ -1039,7 +1050,11 @@
         <div class="sim-info-box"><div class="label">적용율</div><div class="val" id="fcSmViaRate" style="font-size:9.5px">—</div></div>
         <div class="sim-info-box"><div class="label">소모량</div><div class="val" id="fcSmViaTon" style="font-size:10px">—</div></div>
       </div>
-      <div style="text-align:center;margin-top:5px;font-size:13px;font-weight:800;color:#ffcc44" id="fcSmViaCost">—</div>
+      <div style="text-align:center;margin-top:5px;font-size:9px;color:#99b8d4">연료비</div>
+      <div style="text-align:center;font-size:13px;font-weight:800;color:#ffcc44" id="fcSmViaCost">—</div>
+      <div style="text-align:center;margin-top:4px;padding-top:4px;border-top:1px dashed rgba(255,255,255,0.15);font-size:9px;color:#99b8d4">+ 기타운항비용 <span id="fcSmViaOther" style="color:#ffdd88">—</span></div>
+      <div style="text-align:center;margin-top:2px;font-size:8.5px;color:#667788">합계(연료비+기타비용)</div>
+      <div style="text-align:center;font-size:14px;font-weight:800;color:#fff" id="fcSmViaTotal">—</div>
     </div>
 
     <div style="border:1px solid rgba(68,255,221,0.3);border-radius:7px;padding:7px 10px;margin-bottom:3px">
@@ -1049,7 +1064,11 @@
         <div class="sim-info-box"><div class="label">적용율</div><div class="val" id="fcSmDirectRate" style="font-size:9.5px">—</div></div>
         <div class="sim-info-box"><div class="label">소모량</div><div class="val" id="fcSmDirectTon" style="font-size:10px">—</div></div>
       </div>
-      <div style="text-align:center;margin-top:5px;font-size:13px;font-weight:800;color:#44ffdd" id="fcSmDirectCost">—</div>
+      <div style="text-align:center;margin-top:5px;font-size:9px;color:#99b8d4">연료비</div>
+      <div style="text-align:center;font-size:13px;font-weight:800;color:#44ffdd" id="fcSmDirectCost">—</div>
+      <div style="text-align:center;margin-top:4px;padding-top:4px;border-top:1px dashed rgba(255,255,255,0.15);font-size:9px;color:#99b8d4">+ 기타운항비용 <span id="fcSmDirectOther" style="color:#88ffe0">—</span></div>
+      <div style="text-align:center;margin-top:2px;font-size:8.5px;color:#667788">합계(연료비+기타비용)</div>
+      <div style="text-align:center;font-size:14px;font-weight:800;color:#fff" id="fcSmDirectTotal">—</div>
     </div>
 
     <div style="font-size:9px;color:#667788;margin-top:2px">※ 엘도라도 익스프레스호는 실측 기준선이라 공학적 세팅 보정과 무관하게 항상 그대로 적용됩니다.</div>
@@ -4151,39 +4170,43 @@ let fuelEldoradoKgPerKm = 57.6;
 let fuelLsmgoUsdPerMt = 1113.25;
 let fuelUsdKrwRate = 1427;
 let fuelUseEngSetting = false;
+// 기타운항비용(인건비·정비·항비 등) — 연료비 대비 %. 엘도라도호·산타모니카(경유·직항) 셋 다 공용.
+let fuelOtherPctMin = 23;
+let fuelOtherPctMax = 25;
 function setFuelInput(field, value) {
   const v = parseFloat(value);
-  if (isNaN(v) || v <= 0) return;
+  if (isNaN(v) || v < 0) return;
   if (field === 'kgPerKm') fuelEldoradoKgPerKm = v;
   else if (field === 'lsmgoUsd') fuelLsmgoUsdPerMt = v;
   else if (field === 'krwRate') fuelUsdKrwRate = v;
+  else if (field === 'otherPctMin') fuelOtherPctMin = v;
+  else if (field === 'otherPctMax') fuelOtherPctMax = v;
   _updateFuelCostTab();
 }
 function setFuelEngSetting(checked) {
   fuelUseEngSetting = checked;
   _updateFuelCostTab();
 }
-// 왕복거리(km) 기준 예상 연료소모량·비용을 계산한다. isSM이면서 공학적 세팅 체크가 켜져 있으면
-// 엘도라도호 기준 대비 15~20% 낮춘 범위로, 그 외에는 엘도라도호 실측 기준 그대로 단일값을 낸다.
+// 왕복거리(km) 기준 연료소모량(톤)·비용(원)을 min~max로 계산해 숫자 그대로 돌려준다(단일값이면
+// min===max) — 여기서 문자열로 포맷하지 않는 건, 기타운항비용을 더한 합계까지 마저 계산한 뒤
+// 한꺼번에 표시 문자열을 만들기 위함이다.
 function _fuelEstimate(roundTripKm, isSM) {
   const krwPerKg = (fuelLsmgoUsdPerMt / 1000) * fuelUsdKrwRate;
+  let rateLo, rateHi, rateLabel;
   if (isSM && fuelUseEngSetting) {
-    const lo = fuelEldoradoKgPerKm * 0.80, hi = fuelEldoradoKgPerKm * 0.85;
-    const tonLo = roundTripKm * lo / 1000, tonHi = roundTripKm * hi / 1000;
-    const costLo = tonLo * 1000 * krwPerKg, costHi = tonHi * 1000 * krwPerKg;
-    return {
-      rateText: `${lo.toFixed(1)}~${hi.toFixed(1)} kg/km (공학적 세팅)`,
-      tonText: `${tonLo.toFixed(2)}~${tonHi.toFixed(2)} 톤`,
-      costText: `₩${Math.round(costLo).toLocaleString()} ~ ₩${Math.round(costHi).toLocaleString()}`
-    };
+    rateLo = fuelEldoradoKgPerKm * 0.80; rateHi = fuelEldoradoKgPerKm * 0.85;
+    rateLabel = `${rateLo.toFixed(1)}~${rateHi.toFixed(1)} kg/km (공학적 세팅)`;
+  } else {
+    rateLo = rateHi = fuelEldoradoKgPerKm;
+    rateLabel = `${fuelEldoradoKgPerKm.toFixed(1)} kg/km (엘도라도호 기준)`;
   }
-  const ton = roundTripKm * fuelEldoradoKgPerKm / 1000;
-  const cost = ton * 1000 * krwPerKg;
-  return {
-    rateText: `${fuelEldoradoKgPerKm.toFixed(1)} kg/km (엘도라도호 기준)`,
-    tonText: `${ton.toFixed(2)} 톤`,
-    costText: `₩${Math.round(cost).toLocaleString()}`
-  };
+  const tonLo = roundTripKm * rateLo / 1000, tonHi = roundTripKm * rateHi / 1000;
+  const costLo = tonLo * 1000 * krwPerKg, costHi = tonHi * 1000 * krwPerKg;
+  return { rateLabel, tonLo, tonHi, costLo, costHi };
+}
+function _fmtWon(n) { return '₩' + Math.round(n).toLocaleString(); }
+function _fmtRange(lo, hi, fmt) {
+  return Math.abs(hi - lo) < 1e-9 ? fmt(lo) : `${fmt(lo)} ~ ${fmt(hi)}`;
 }
 function _updateFuelCostTab() {
   const el = id => document.getElementById(id);
@@ -4194,11 +4217,19 @@ function _updateFuelCostTab() {
   const smViaRT = (SM_DIST_LEG1 + SM_DIST_LEG2) * 2;   // 산타모니카(경유) 왕복 — 74+132km 편도×2
   const smDirectRT = QB_DIST_KM * 2;                     // 산타모니카(직항) 왕복 — 213km 편도×2
 
+  // 연료비(costLo~costHi)에 기타운항비용(%, 최소~최대)을 더해 합계 범위를 낸다.
+  // 공학적 세팅으로 연료비 자체가 이미 범위인 경우, min은 costLo×기타%최소, max는
+  // costHi×기타%최대로 잡아 두 불확실성 범위를 합친 가장 넓은 범위를 보여준다.
   const fill = (prefix, est, rt) => {
-    if (el(prefix + 'Dist')) el(prefix + 'Dist').textContent = rt.toFixed(0) + 'km';
-    if (el(prefix + 'Rate')) el(prefix + 'Rate').textContent = est.rateText;
-    if (el(prefix + 'Ton'))  el(prefix + 'Ton').textContent = est.tonText;
-    if (el(prefix + 'Cost')) el(prefix + 'Cost').textContent = est.costText;
+    const otherLo = est.costLo * fuelOtherPctMin / 100;
+    const otherHi = est.costHi * fuelOtherPctMax / 100;
+    const totalLo = est.costLo + otherLo, totalHi = est.costHi + otherHi;
+    if (el(prefix + 'Dist'))  el(prefix + 'Dist').textContent = rt.toFixed(0) + 'km';
+    if (el(prefix + 'Rate'))  el(prefix + 'Rate').textContent = est.rateLabel;
+    if (el(prefix + 'Ton'))   el(prefix + 'Ton').textContent = _fmtRange(est.tonLo, est.tonHi, v => v.toFixed(2) + '톤');
+    if (el(prefix + 'Cost'))  el(prefix + 'Cost').textContent = _fmtRange(est.costLo, est.costHi, _fmtWon);
+    if (el(prefix + 'Other')) el(prefix + 'Other').textContent = _fmtRange(otherLo, otherHi, _fmtWon) + ` (${fuelOtherPctMin}~${fuelOtherPctMax}%)`;
+    if (el(prefix + 'Total')) el(prefix + 'Total').textContent = _fmtRange(totalLo, totalHi, _fmtWon);
   };
   fill('fcEldo', _fuelEstimate(eldoRT, false), eldoRT);
   fill('fcSmVia', _fuelEstimate(smViaRT, true), smViaRT);
