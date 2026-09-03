@@ -780,7 +780,8 @@
           <div>왕복 <span id="smEstTime" style="color:#ffcc44;font-weight:700">—</span></div>
         </div>
       </div>
-      <div class="sim-specs" style="margin-bottom:3px">Incat 76m · 최고속력 45노트(78km/h) · 승객 621명 · 히타카츠 25분 경유</div>
+      <div class="sim-specs" style="margin-bottom:3px">Incat 76m · 최고속력 45노트(83km/h) · 승객 621명 · 히타카츠 30분 경유</div>
+      <div class="sim-specs" style="margin-bottom:3px;font-size:10px;color:#667788">※ 경유 30분은 팬스타 <a href="https://www.panstar.co.kr/business/cruise/tsushima_link" target="_blank" rel="noopener" style="color:#7ecfff">쓰시마링크호</a> 히타카츠 정박 실측 기준</div>
       <div class="sim-specs" style="margin-bottom:3px;color:#ffaa66">※ 참고 — 엘도라도호(포항↔울릉도): 평균 45노트(83km/h) · 최고 51노트(95km/h)</div>
       <div class="sim-specs">부산→히타카츠 74km + 히타카츠→하카타 132km = 편도 206km</div>
       <div class="sim-info" style="margin-bottom:5px">
@@ -906,7 +907,7 @@
       <div style="font-size:10px;color:#88aabb;margin:0 0 8px">항구별로 요일·시간대별 어떤 선박이 정박(수속) 중인지 보여줍니다. 드래그로 이동, 휠로 확대/축소할 수 있습니다. 겹치는 구간은 빨간 테두리로 표시됩니다.</div>
       <div class="berth-settings">
         <label>기본 수속시간(분) <input type="number" min="0" step="5" id="berthDefaultInput" value="30" onchange="updateBerthSetting('default',this.value)"></label>
-        <label>부산→히타카츠→하카타 노선 경유(분) <input type="number" min="0" step="5" id="berthHitaViaInput" value="25" onchange="updateBerthSetting('hitaVia',this.value)"></label>
+        <label>부산→히타카츠→하카타 노선 경유(분) <input type="number" min="0" step="5" id="berthHitaViaInput" value="30" onchange="updateBerthSetting('hitaVia',this.value)"></label>
       </div>
       <div class="berth-port-filter" id="berthPortFilter"></div>
       <div id="berthTimelineEl"></div>
@@ -1255,10 +1256,12 @@ _routeLabel(34.10, 129.85,
     fillColor: '#ffaa00', fillOpacity: 0.5
   }).addTo(map).bindPopup(
     '<div class="popup-title">⛴ 산타모니카호 (정박 구상)</div>' +
-    '<div class="popup-body">시월드고속훼리 · Incat 76m wavepiercer<br>' +
-    '전장 72.67m · 폭 21m · 최고속력 42노트 · 승객 621명<br>' +
-    '드래그(이동) · ↻핸들(회전) · 놓으면 콘솔 출력</div>',
-    { className: 'custom-popup' }
+    _shipSvgHtml('sm') +
+    '<div class="popup-body"><b style="color:#ffcc44">시월드고속훼리 · Incat 76m wavepiercer</b><br>' +
+    '전장 72.67m · 폭 21m · GT 390톤<br>' +
+    '최고속력 45노트(83km/h) · 여객 621명<br>' +
+    '히타카츠항 정박 구상 모형 — 드래그(이동) · ↻핸들(회전)</div>',
+    { className: 'custom-popup', maxWidth: 310 }
   );
 
   const smLabel = L.marker(smCenter, {
@@ -1807,7 +1810,7 @@ function copyCoord(fmt) {
 // ════════════════════════════════════════════════════
 const SIM_SPEED_KTS = 37;                        // 순항 속도 (최고 42kts의 약 88%)
 const SIM_SPEED_KMH = SIM_SPEED_KTS * 1.852;
-let SIM_STOP_MIN   = 25;  // 히타카츠 경유 시간(분) — 산타모니카호(경유) 전용, 수동 조정 가능
+let SIM_STOP_MIN   = 30;  // 히타카츠 경유 시간(분) — 팬스타 쓰시마링크호 실측 기준(30분)
 
 // ── 선석 스케줄(수속시간) 관련 기본값 ──
 // 기본 수속시간(분) — 등록 선박(경쟁사 등)이 각 항구에 도착했을 때 선석을 점유하는
@@ -2185,15 +2188,14 @@ function _simTimelapseRelabelDays() {
   try {
     const week = _allWeekDays();
     const isTimeLike = txt => /^\d{1,2}:\d{2}$/.test(txt);
-    ['vis-major', 'vis-minor'].forEach(cls => {
-      let idx = 0;
-      container.querySelectorAll('.vis-text.' + cls).forEach(el => {
-        const txt = el.textContent.trim();
-        if (isTimeLike(txt)) return;
-        const label = week[idx % 7];
-        if (el.textContent !== label) el.textContent = label;
-        idx++;
-      });
+    // vis-timeline은 절대 위치 요소라 DOM 순서가 시각 순서와 다를 수 있다.
+    // vis-major(날짜 축)만 처리하고, getBoundingClientRect().left 기준 좌→우 정렬 후 할당.
+    const elems = Array.from(container.querySelectorAll('.vis-text.vis-major'))
+      .filter(el => { const t = el.textContent.trim(); return t && !isTimeLike(t); })
+      .sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+    elems.forEach((el, i) => {
+      const label = week[i % 7];
+      if (el.textContent !== label) el.textContent = label;
     });
   } finally {
     _simTimelapseRelabeling = false;
@@ -2754,6 +2756,64 @@ function _interpTL(tl, simMin) {
   return { pos: tl[tl.length-1].pt, hdg: 0 };
 }
 
+// ── 선박 SVG 일러스트 (인라인 · GitHub Pages 완전 독립) ──
+function _shipSvgHtml(type) {
+  const W = 290, H = 112;
+  if (type === 'sm') return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="width:100%;display:block;border-radius:4px;margin:5px 0">
+<rect width="${W}" height="${H}" fill="#080f1e"/>
+<path d="M0 76 Q36 72 72 76 Q108 80 144 76 Q180 72 216 76 Q252 80 ${W} 76 L${W} ${H} L0 ${H}Z" fill="#0a1f3a"/>
+<path d="M14 76 L258 73 L278 81 L270 87 L10 87Q4 83 5 77Z" fill="#b87200"/>
+<rect x="14" y="72" width="244" height="4" rx="1" fill="#ff8800" opacity=".8"/>
+<rect x="16" y="55" width="242" height="18" rx="2" fill="#ffcc44"/>
+<rect x="26" y="37" width="200" height="20" rx="3" fill="#ffd700"/>
+<rect x="34" y="42" width="182" height="9" rx="2" fill="#162850" opacity=".8"/>
+<rect x="38" y="44" width="13" height="5" rx="1" fill="#55aadd" opacity=".7"/>
+<rect x="56" y="44" width="13" height="5" rx="1" fill="#55aadd" opacity=".7"/>
+<rect x="74" y="44" width="13" height="5" rx="1" fill="#55aadd" opacity=".7"/>
+<rect x="92" y="44" width="13" height="5" rx="1" fill="#55aadd" opacity=".7"/>
+<rect x="110" y="44" width="13" height="5" rx="1" fill="#55aadd" opacity=".7"/>
+<rect x="128" y="44" width="13" height="5" rx="1" fill="#55aadd" opacity=".7"/>
+<rect x="146" y="44" width="13" height="5" rx="1" fill="#55aadd" opacity=".7"/>
+<rect x="164" y="44" width="13" height="5" rx="1" fill="#55aadd" opacity=".7"/>
+<rect x="182" y="44" width="13" height="5" rx="1" fill="#55aadd" opacity=".7"/>
+<rect x="200" y="44" width="13" height="5" rx="1" fill="#55aadd" opacity=".7"/>
+<rect x="202" y="25" width="44" height="14" rx="2" fill="#ffc000"/>
+<rect x="206" y="28" width="36" height="7" rx="1" fill="#162850" opacity=".7"/>
+<line x1="226" y1="25" x2="226" y2="13" stroke="#888" stroke-width="1.5"/>
+<line x1="215" y1="18" x2="237" y2="18" stroke="#888" stroke-width="1"/>
+<path d="M258 73 L278 81 L268 73Z" fill="#8a5200"/>
+<text x="10" y="106" fill="#ffcc44" font-family="'Malgun Gothic',sans-serif" font-size="9.5" font-weight="bold">⛴ Santa Monica · 시월드고속훼리 · Incat 76m wavepiercer</text>
+</svg>`;
+  if (type === 'qb') return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="width:100%;display:block;border-radius:4px;margin:5px 0">
+<rect width="${W}" height="${H}" fill="#04101a"/>
+<path d="M0 78 Q36 74 72 78 Q108 82 144 78 Q180 74 216 78 Q252 82 ${W} 78 L${W} ${H} L0 ${H}Z" fill="#091f3a"/>
+<path d="M14 78 L258 75 L278 83 L270 89 L10 89Q3 85 5 79Z" fill="#1155aa"/>
+<path d="M14 75 L258 72 L272 77 L258 78 L14 81Z" fill="white" opacity=".9"/>
+<rect x="14" y="79" width="244" height="4" rx="1" fill="#cc2200" opacity=".9"/>
+<rect x="16" y="61" width="242" height="17" rx="2" fill="#2277cc"/>
+<rect x="26" y="41" width="200" height="22" rx="3" fill="#3388dd"/>
+<rect x="34" y="47" width="182" height="9" rx="2" fill="#051220" opacity=".8"/>
+<rect x="38" y="49" width="13" height="5" rx="1" fill="#66aaee" opacity=".5"/>
+<rect x="56" y="49" width="13" height="5" rx="1" fill="#66aaee" opacity=".5"/>
+<rect x="74" y="49" width="13" height="5" rx="1" fill="#66aaee" opacity=".5"/>
+<rect x="92" y="49" width="13" height="5" rx="1" fill="#66aaee" opacity=".5"/>
+<rect x="110" y="49" width="13" height="5" rx="1" fill="#66aaee" opacity=".5"/>
+<rect x="128" y="49" width="13" height="5" rx="1" fill="#66aaee" opacity=".5"/>
+<rect x="146" y="49" width="13" height="5" rx="1" fill="#66aaee" opacity=".5"/>
+<rect x="164" y="49" width="13" height="5" rx="1" fill="#66aaee" opacity=".5"/>
+<rect x="182" y="49" width="13" height="5" rx="1" fill="#66aaee" opacity=".5"/>
+<rect x="200" y="49" width="13" height="5" rx="1" fill="#66aaee" opacity=".5"/>
+<rect x="202" y="31" width="44" height="14" rx="2" fill="#1166bb"/>
+<rect x="206" y="34" width="36" height="7" rx="1" fill="#051220" opacity=".7"/>
+<path d="M218 31 L230 31 L233 17 L215 17Z" fill="#cc2200"/>
+<line x1="224" y1="17" x2="224" y2="6" stroke="#999" stroke-width="1.5"/>
+<line x1="213" y1="11" x2="235" y2="11" stroke="#999" stroke-width="1"/>
+<path d="M258 75 L278 83 L268 75Z" fill="#0a3070"/>
+<text x="10" y="106" fill="#66ccff" font-family="'Malgun Gothic',sans-serif" font-size="9.5" font-weight="bold">🚢 Queen Beetle · JR큐슈고속선 · Austal 83m wavepiercer</text>
+</svg>`;
+  return '';
+}
+
 function _makeShipIcon(hdg, fill, stroke, label) {
   const labelHtml = label
     ? `<div class="ship-label" style="color:${fill};border:1px solid ${fill}80">${label}</div>`
@@ -2853,7 +2913,7 @@ function _simRenderFrame() {
   const smLabel = `⛴ 산타모니카호<br>${smElapsedStr} / ${_fmtMin(_totalMinSMret)}`;
   if (!simMarker) {
     simMarker = L.marker(pos,{icon:_makeShipIcon(hdg,'#ffcc00','#cc8800',smLabel),zIndexOffset:910}).addTo(map)
-      .bindPopup(`<div class="popup-title">⛴ 산타모니카호</div><div class="popup-body">시월드고속훼리 · ${simSMkts}노트 순항 · 히타카츠 ${SIM_STOP_MIN}분 경유</div>`,{className:'custom-popup'});
+      .bindPopup(`<div class="popup-title">⛴ 산타모니카호</div>${_shipSvgHtml('sm')}<div class="popup-body"><b style="color:#ffcc44">시월드고속훼리 · Incat 76m wavepiercer</b><br>전장 72.67m · 폭 21m · GT 390톤<br>최고속력 45노트(83km/h) · 순항 ${simSMkts}노트<br>여객 621명 · 차량 미탑재<br>히타카츠 ${SIM_STOP_MIN}분 경유 <a href="https://www.panstar.co.kr/business/cruise/tsushima_link" target="_blank" rel="noopener" style="color:#7ecfff;font-size:10px">※쓰시마링크호 실측</a></div>`,{className:'custom-popup',maxWidth:310});
   } else { simMarker.setLatLng(pos); simMarker.setIcon(_makeShipIcon(hdg,'#ffcc00','#cc8800',smLabel)); }
 
   document.getElementById('smElapsed').textContent = smElapsedStr;
@@ -2886,7 +2946,7 @@ function _simRenderFrame() {
   const qbLabel = `🚢 퀸비틀<br>${qbElapsedStr} / ${_fmtMin(_totalMinQBret)}`;
   if (!qbMarker) {
     qbMarker = L.marker(qbPos,{icon:_makeShipIcon(qbHdg,'#66ccff','#1155aa',qbLabel),zIndexOffset:900}).addTo(map)
-      .bindPopup(`<div class="popup-title" style="color:#66ccff">🚢 퀸비틀</div><div class="popup-body">JR큐슈고속선 · ${simQBkts.toFixed(1)}노트 역산 · 부산↔하카타 213km(115해리) / 3h40m</div>`,{className:'custom-popup'});
+      .bindPopup(`<div class="popup-title" style="color:#66ccff">🚢 퀸비틀</div>${_shipSvgHtml('qb')}<div class="popup-body"><b style="color:#66ccff">JR큐슈고속선 · Austal 83m wavepiercer</b><br>전장 83.5m · GT 894톤<br>최고속력 36노트 · 역산속력 ${simQBkts.toFixed(1)}노트(${(simQBkts*1.852).toFixed(0)}km/h)<br>여객 502명 · 차량 미탑재<br>부산↔하카타 213km(115해리) · 스케줄 3시간 40분</div>`,{className:'custom-popup',maxWidth:310});
   } else { qbMarker.setLatLng(qbPos); qbMarker.setIcon(_makeShipIcon(qbHdg,'#66ccff','#1155aa',qbLabel)); }
 
   document.getElementById('qbElapsed').textContent = qbElapsedStr;
@@ -2939,7 +2999,7 @@ function _simRenderFrame() {
   const sm2Label = `⛴ 산타모니카 직항<br>${sm2ElapsedStr} / ${_fmtMin(_totalMinSM2ret)}`;
   if (!sim2Marker) {
     sim2Marker = L.marker(sm2Pos,{icon:_makeShipIcon(sm2Hdg,'#44ffdd','#008866',sm2Label),zIndexOffset:905}).addTo(map)
-      .bindPopup(`<div class="popup-title" style="color:#44ffdd">⛴ 산타모니카호 (직항)</div><div class="popup-body">시나리오 2 · 하카타 직항 · ${simSMkts}노트 · 213km(115해리)</div>`,{className:'custom-popup'});
+      .bindPopup(`<div class="popup-title" style="color:#44ffdd">⛴ 산타모니카호 (시나리오 2 · 직항)</div>${_shipSvgHtml('sm')}<div class="popup-body"><b style="color:#44ffdd">시월드고속훼리 · Incat 76m wavepiercer</b><br>전장 72.67m · 폭 21m · GT 390톤<br>최고속력 45노트 · 순항 ${simSMkts}노트<br>여객 621명 · 히타카츠 미경유<br>부산↔하카타 직항 213km(115해리)</div>`,{className:'custom-popup',maxWidth:310});
   } else { sim2Marker.setLatLng(sm2Pos); sim2Marker.setIcon(_makeShipIcon(sm2Hdg,'#44ffdd','#008866',sm2Label)); }
   sim2Marker.setOpacity((_activeSimTab === 2 && _simCoreVisible()) ? 1 : 0);
 
@@ -3094,8 +3154,8 @@ function _seedDefaultCompetitorShips() {
   try { seededV2 = localStorage.getItem('hanjil_seeded_v2'); } catch(e) {}
   if (!seededV2) {
     customShips.push(
-      // 히타카츠 경유 시간은 부산→히타카츠→하카타 노선(SIM_STOP_MIN, 25분)과 달리 기본값인
-      // 30분을 그대로 쓴다 — 히타카츠에 들르는 다른 항로라고 해서 25분을 적용하지 않는다.
+      // 히타카츠 경유 시간은 팬스타 쓰시마링크호 실측 기준 30분(SIM_STOP_MIN)과 동일하게
+      // BERTH_DEFAULT_MIN(30분)을 쓴다 — 산타모니카호 경유 30분과 같은 기준.
       mkShip('팬스타 쓰시마링크호 (히타카츠 경유·이즈하라행, 화·목)', '#ffaa88', 28.8, '08:40', 410, izu,
         'https://www.panstar.co.kr/business/cruise/tsushima_link',
         '팬스타크루즈 쓰시마링크 공식페이지 (히타카츠 경유 이즈하라행 · 시각표 확인 필요)', hita, 30, ['화','목']),
