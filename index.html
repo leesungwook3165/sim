@@ -4389,9 +4389,9 @@ function _seedDefaultCompetitorShips() {
   }
 
   // 엘도라도 익스프레스호: 포항↔울릉도(도동항) 기존 취항 중인 국내 항로.
-  // 사용자 제공 실측 경유점 기준 항로 거리 약 213km(115nm) ÷ 편도 2시간50분(170분) = 40.6노트 역산.
-  // (참고: 공식 안내 평균순항 45노트·최고 51노트 — 우리 경로 길이 기준으로는 소요시간에 맞춰 역산한
-  // 40.6노트를 쓴다) 출항시각·정박시간은 미확인 추정치.
+  // 실제 순항속력 43.9노트 · 편도 운항거리 217km(왕복 434km) — 실측 기준값 그대로 사용.
+  // (우리 지도 경로(_eldoradoWP)는 실측 경유점 기준 약 213km로 공식거리 217km와 근소한 차이가
+  // 있으나, 속력·거리 모두 사용자가 제공한 실측값을 그대로 반영한다) 출항시각·정박시간은 미확인 추정치.
   let seededEldorado = null;
   try { seededEldorado = localStorage.getItem('hanjil_seeded_eldorado'); } catch(e) {}
   if (!seededEldorado) {
@@ -4399,17 +4399,24 @@ function _seedDefaultCompetitorShips() {
     const ulleungPort = ports.find(p => p.id === 'ulleungdo');
     customShips.push({
       id: 'cs' + (_shipIdSeq++), name: '엘도라도 익스프레스호', color: '#ff7744',
-      kts: 40.6, departHM: '07:50', turnMin: 60, roundTrip: true,
+      kts: 43.9, departHM: '07:50', turnMin: 60, roundTrip: true,
       from: { mode:'known', name: pohangPort.name, lat: pohangPort.lat, lng: pohangPort.lng },
       via: null, viaStopMin: null,
       to:   { mode:'known', name: ulleungPort.name, lat: ulleungPort.lat, lng: ulleungPort.lng },
       berthMin: BERTH_DEFAULT_MIN, days: _allWeekDays(),
       sourceUrl: null,
-      sourceLabel: '⚠ 출항시각·정박시간 미확인 추정치 — 항로 213km(115nm) ÷ 편도 2h50m = 40.6노트 역산(실측 소요시간 기준)',
+      sourceLabel: '⚠ 출항시각·정박시간 미확인 추정치 — 순항속력 43.9노트 · 편도 운항거리 217km(왕복 434km) 실측 기준',
       shipType: '고속선', tonnage: null,
       group: '엘도라도익스프레스', nation: '한국라인'
     });
     try { localStorage.setItem('hanjil_seeded_eldorado', '1'); } catch(e) {}
+  }
+  // 엘도라도 익스프레스호 kts 보정(40.6→43.9, 실측 순항속력) — 기존 저장 데이터도 1회 반영.
+  let eldoradoKtsFixed = null;
+  try { eldoradoKtsFixed = localStorage.getItem('hanjil_eldorado_kts43_9_v1'); } catch(e) {}
+  if (!eldoradoKtsFixed) {
+    customShips.forEach(s => { if (s.name === '엘도라도 익스프레스호') s.kts = 43.9; });
+    try { localStorage.setItem('hanjil_eldorado_kts43_9_v1', '1'); } catch(e) {}
   }
 
   // v4: 히타카츠/이즈하라행 경쟁사 항로를 직선에서 실제 곡선 경로로 바꾸면서 이동거리가 늘었다.
