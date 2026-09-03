@@ -26,6 +26,61 @@
       display: flex;
       align-items: center;
       gap: 16px;
+      justify-content: space-between;
+    }
+    .header-tabs {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .header-tab {
+      display: inline-block;
+      padding: 5px 13px;
+      font-size: 11.5px;
+      font-weight: 700;
+      border-radius: 5px;
+      border: 1px solid rgba(80,160,255,0.4);
+      background: rgba(30,70,130,0.55);
+      color: #7ecfff;
+      text-decoration: none;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: background .15s, border-color .15s;
+    }
+    .header-tab:hover {
+      background: rgba(50,110,200,0.75);
+      border-color: rgba(120,200,255,0.7);
+      color: #c4e8ff;
+    }
+    .header-tab.disabled {
+      color: #556677;
+      border-color: rgba(80,120,160,0.25);
+      background: rgba(20,40,70,0.4);
+      cursor: default;
+      pointer-events: none;
+      position: relative;
+    }
+    .header-tab-wrap {
+      position: relative;
+    }
+    .header-tab-wrap .htab-tip {
+      display: none;
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      background: rgba(10,20,40,0.96);
+      border: 1px solid rgba(80,160,255,0.3);
+      color: #aac8e8;
+      font-size: 10.5px;
+      white-space: nowrap;
+      padding: 5px 10px;
+      border-radius: 5px;
+      z-index: 9999;
+      pointer-events: none;
+    }
+    .header-tab-wrap:hover .htab-tip {
+      display: block;
     }
     #header h1 {
       font-size: 17px;
@@ -86,9 +141,14 @@
       backdrop-filter: blur(8px);
       box-shadow: 0 -6px 24px rgba(0,0,0,0.55);
       padding: 7px 16px 0;
+      overflow-y: auto;
     }
-    #simTimelapseHead { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 5px; }
-    #simTimelapseHead .sim-btns { flex-wrap: wrap; }
+    #simTimelapseHead { display: flex; flex-direction: column; gap: 5px; margin-bottom: 5px; padding-top: 2px; }
+    #tlHead-controls { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; }
+    #tlHead-controls .sim-btns { grid-column: 2; justify-self: center; }
+    #tlHead-controls .sim-speed { grid-column: 3; justify-self: end; }
+    #tlHead-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; }
+    #simTimelapseHead .sim-btns { flex-wrap: wrap; justify-content: center; }
     #simTimelapseTitle { font-size: 10px; font-weight: 700; color: #7ecfff; letter-spacing: 0.3px; }
     .sim-scope-tabs { display: flex; gap: 3px; }
     .sim-scope-btn {
@@ -99,6 +159,7 @@
     .sim-scope-btn.active { background: linear-gradient(135deg, rgba(80,160,255,0.45), rgba(120,200,255,0.25)); color: #fff; border-color: rgba(140,200,255,0.8); }
     .sim-scope-btn:hover:not(.active) { background: rgba(255,255,255,0.1); }
     #simTimelapseEl { border-radius: 8px 8px 0 0; overflow: hidden; box-shadow: inset 0 1px 0 rgba(255,255,255,0.05); }
+    #simTimelapseBar.tl-minimized { overflow: hidden; }
     /* 접기/펼치기 버튼 대신, 푸터 맨 위쪽에 눈에 띄게 붙는 롤러 손잡이 — 잡아끌면 높이가 바뀐다. */
     #simTimelapseResizeHandle {
       height: 14px; margin: 0 -16px 5px; cursor: ns-resize;
@@ -114,6 +175,27 @@
     #simTimelapseResizeHandle:hover .handle-grip, #simTimelapseResizeHandle.dragging .handle-grip { background: rgba(126,207,255,0.95); }
     /* 항구·선종 드랍다운 + 재생범위 탭을 하나로 묶어 헤더 오른쪽 끝에 붙인다(드랍다운이 '투입고려' 바로 왼쪽에 오도록). */
     .sim-timelapse-filters { display: flex; align-items: center; gap: 6px; margin-left: auto; flex-wrap: wrap; }
+    /* 선사 다중선택 드랍다운 */
+    .company-filter-wrap { position: relative; }
+    .company-filter-btn {
+      background: rgba(40,80,140,0.7); border: 1px solid rgba(80,160,255,0.3);
+      color: #c8e4ff; border-radius: 4px; padding: 2px 7px; font-size: 11px;
+      cursor: pointer; font-family: inherit; white-space: nowrap; user-select: none;
+    }
+    .company-filter-btn:hover { background: rgba(60,110,180,0.8); }
+    .company-filter-panel {
+      position: fixed; z-index: 9999;
+      background: rgba(8,20,44,0.97); border: 1px solid rgba(80,160,255,0.4);
+      border-radius: 6px; padding: 7px 10px; min-width: 170px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.7); display: none;
+    }
+    .company-filter-panel.open { display: block; }
+    .company-filter-panel label {
+      display: flex; align-items: center; gap: 6px;
+      padding: 3px 0; color: #c8e4ff; font-size: 11px; cursor: pointer; white-space: nowrap;
+    }
+    .company-filter-panel label:hover { color: #fff; }
+    .company-filter-panel input[type=checkbox] { accent-color: #7ecfff; cursor: pointer; }
     /* vis-timeline 폴리시 — 타임랩스 전용 (아이템에 은은한 그라데이션·그림자, 재생 헤드는 굵고 눈에 띄게) */
     #simTimelapseEl .vis-item { border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.4); border-width: 1px; }
     #simTimelapseEl .vis-item .vis-item-content { padding: 3px 6px; font-size: 10px; }
@@ -180,7 +262,7 @@
     /* 범례 — 여닫기·드래그 가능한 패널 */
     #legendPanel {
       position: fixed;
-      right: 30px; bottom: 20px; left: auto; top: auto;
+      inset: 150.181px auto auto 1568.71px;
       z-index: 1007;
       background: rgba(10, 25, 50, 0.88);
       color: #e8f4ff;
@@ -224,6 +306,12 @@
     .custom-popup .leaflet-popup-tip { background: rgba(10, 25, 50, 0.95); }
     .popup-title { font-size: 13px; font-weight: 700; color: #7ecfff; margin-bottom: 5px; }
     .popup-body { font-size: 12px; line-height: 1.7; color: #cce0f0; }
+    .c-btn { position:absolute; top:50%; transform:translateY(-50%); width:26px; height:26px;
+      background:rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.25); border-radius:50%;
+      color:#fff; font-size:12px; line-height:24px; text-align:center; cursor:pointer; z-index:10; padding:0; }
+    .c-dot { display:inline-block; width:7px; height:7px; border-radius:50%;
+      background:#fff; margin:0 3px; opacity:.35; transition:opacity .2s; }
+    .c-dot.active { opacity:1; }
     .popup-body .tag {
       display: inline-block;
       background: rgba(80,160,255,0.2);
@@ -400,7 +488,7 @@
     /* ── 시뮬레이션 패널 ── */
     #simPanel {
       position: fixed;
-      top: 60px; right: 50px; left: auto; bottom: auto;
+      top: 65px; left: 1115px; right: auto; bottom: auto;
       z-index: 1010;
       background: rgba(8,20,45,0.94);
       border: 1px solid rgba(80,160,255,0.4);
@@ -410,7 +498,8 @@
       font-size: 12px;
       min-width: 360px;
       max-width: 480px;
-      max-height: 85vh;
+      height: 660px;
+      max-height: 660px;
       overflow: auto;
       resize: both;
       backdrop-filter: blur(6px);
@@ -421,6 +510,7 @@
     }
     #simPanel.visible { display: block; }
     #simPanel.minimized .sim-body { display: none; }
+    #simPanel.minimized { height: auto; max-height: none; }
     .sim-title {
       font-size: 13px; font-weight: 700; color: #7ecfff;
       margin-bottom: 6px; display: flex; align-items: center; gap: 6px;
@@ -697,9 +787,11 @@
       box-shadow: 0 2px 6px rgba(0,0,0,0.55);
     }
     .miracle-label::before { border: none !important; }
-    .miracle-label.miracle-bus   { border: 1px solid rgba(80,220,120,0.6) !important; color: #66ffaa !important; }
-    .miracle-label.miracle-car   { border: 1px solid rgba(100,180,255,0.6) !important; color: #88ccff !important; }
-    .miracle-label.miracle-hotel { border: 1px solid rgba(255,210,80,0.6) !important;  color: #ffdd66 !important; }
+    .miracle-label.miracle-bus     { border: 1px solid rgba(80,220,120,0.6) !important; color: #66ffaa !important; }
+    .miracle-label.miracle-car     { border: 1px solid rgba(100,180,255,0.6) !important; color: #88ccff !important; }
+    .miracle-label.miracle-hotel   { border: 1px solid rgba(255,210,80,0.6) !important;  color: #ffdd66 !important; }
+    .miracle-label.miracle-airport { border: 1px solid rgba(136,221,255,0.6) !important; color: #aaeeff !important; }
+    .miracle-label.miracle-tunnel  { border: 1px solid rgba(180,180,180,0.55) !important; color: #cccccc !important; background: rgba(8,16,28,0.94) !important; }
 
     /* 선박 마커 */
     .ship-icon-wrap {
@@ -737,6 +829,13 @@
       <h1>한일고속선 진입 시나리오</h1>
       <div class="subtitle">시월드고속훼리 산타모니카호 · 부산 ↔ 히타카츠(쓰시마) ↔ 하카타 경유 구상</div>
     </div>
+    <div class="header-tabs">
+      <a class="header-tab" href="대마도 항로 손익분기 시뮬레이터.html" target="_blank">대마도 손익분석</a>
+      <div class="header-tab-wrap">
+        <span class="header-tab disabled">하카타 손익분석</span>
+        <div class="htab-tip">🔍 현재 표본수집 및 분석 진행 중</div>
+      </div>
+    </div>
   </div>
 </div>
 <input type="file" id="fileInput" accept=".geojson,.json,.kml" style="display:none" onchange="loadFile(event)">
@@ -768,7 +867,7 @@
         <span id="smKmh" style="color:#ffcc44">(77.8km/h)</span>
       </label>
       <label>🚢 퀸비틀
-        <input id="qbKtsInput" type="number" value="29" min="10" max="80" step="0.1"
+        <input id="qbKtsInput" type="number" value="31.4" min="10" max="80" step="0.1"
           style="width:52px;margin-left:4px;background:rgba(40,80,140,0.8);border:1px solid rgba(80,160,255,0.4);color:#fff;border-radius:4px;padding:2px 4px;font-size:11px"
           oninput="document.getElementById('qbKmh').textContent='('+(+this.value*1.852).toFixed(1)+'km/h)'"> kts
         <span id="qbKmh" style="color:#66ccff"></span>
@@ -955,6 +1054,7 @@
     <div class="legend-item"><div class="legend-dot" style="background:#aaaaaa"></div> 이즈하라항 (참고)</div>
     <div class="legend-item"><div class="legend-dot" style="background:#ff4466"></div> 하카타항 (목적지)</div>
     <div class="legend-item"><div class="legend-dot" style="background:#0ea5e9"></div> 시모노세키항 (참고)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#44eebb"></div> 광양항 (광양훼리)</div>
     <div style="margin-top:7px;border-top:1px solid rgba(80,160,255,0.3);padding-top:7px">
       <div class="legend-item"><div style="width:24px;border-top:2px dashed #3399ff;opacity:0.6"></div> 기존 직항</div>
       <div class="legend-item"><div style="width:24px;border-top:2px dashed #ffaa00"></div> 구상 경유 항로</div>
@@ -964,6 +1064,7 @@
       <div class="legend-item"><div style="width:24px;border-top:2px dashed #00cc66;opacity:0.6"></div> 카멜리아 라인 · 부산↔하카타</div>
       <div class="legend-item"><div style="width:24px;border-top:2px dashed #0ea5e9;opacity:0.8"></div> 부관훼리 · 부산↔시모노세키</div>
       <div class="legend-item"><div style="width:24px;border-top:2px dashed #ff9933;opacity:0.8"></div> 팬스타 미라클호 · 부산↔오사카</div>
+      <div class="legend-item"><div style="width:24px;border-top:2px dashed #44eebb;opacity:0.8"></div> 광양훼리 · 광양↔시모노세키</div>
       <div class="legend-item"><div style="width:24px;border-top:2px solid #ff9900"></div> 사용자 그리기</div>
     </div>
   </div>
@@ -971,48 +1072,53 @@
 
 <!-- 화면 하단(푸터) 타임랩스 — 시간대별로 각 배가 어느 구간에 있는지 보여주는 재생 헤드 -->
 <div id="simTimelapseBar">
+  <button id="tlMinBtn" onclick="toggleTimelapse()" title="타임랩스 최소화 / 복원" style="position:absolute;top:6px;right:10px;z-index:2;background:transparent;border:none;color:#aac8e8;font-size:14px;line-height:1;padding:2px 6px;cursor:pointer;border-radius:4px;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#aac8e8'">─</button>
   <div id="simTimelapseResizeHandle" title="드래그해서 높이 조절">
     <div class="handle-grip"></div>
   </div>
   <div id="simTimelapseHead">
-    <div style="display:flex;align-items:center;gap:5px">
-      <div id="simTimelapseTitle">⏱ 타임랩스 — 막대를 드래그해 특정 시점으로 이동</div>
-    </div>
-    <div>
-      <div class="sim-btns" style="justify-content:center">
+    <!-- 행 1: 재생버튼 + 배속 (중앙) -->
+    <div id="tlHead-controls">
+      <div class="sim-btns">
         <button class="sim-btn primary btn-sim-play" onclick="simPlay()">▶ 동시 출항</button>
         <button class="sim-btn" onclick="simPause()">⏸ 정지</button>
         <button class="sim-btn" onclick="simReset()">⏮ 초기화</button>
       </div>
-      <div class="sim-speed" style="justify-content:center;margin-top:4px">배속:
+      <div class="sim-speed">배속:
         <input type="range" class="sim-speed-mount sim-speed-range" min="10" max="1000" step="10" value="300" oninput="setSimSpeed(this.value)">
         <input type="number" class="sim-speed-mount sim-speed-num" min="1" max="5000" step="10" value="300" onchange="setSimSpeed(this.value)">×
       </div>
     </div>
-    <div class="sim-timelapse-filters">
-      <select id="simTimelapsePortFilter" class="sim-speed-num" style="width:auto" onchange="setSimTimelapsePortFilter(this.value)">
-        <option value="all">항구: 전체</option>
-        <option value="busan">부산항</option>
-        <option value="hitakatsu">히타카츠항</option>
-        <option value="izuhara">이즈하라항</option>
-        <option value="hakata">하카타항</option>
-        <option value="shimonoseki">시모노세키항</option>
-        <option value="osaka">오사카항</option>
-      </select>
-      <select id="simTimelapseShipTypeFilter" class="sim-speed-num" style="width:auto" onchange="setSimTimelapseShipTypeFilter(this.value)">
-        <option value="all">선종: 전체</option>
-        <option value="고속선">고속선</option>
-        <option value="로로선(화물여객선)">로로선(화물여객선)</option>
-        <option value="기타">기타</option>
-      </select>
-      <!-- 옵션 목록은 매번 _rebuildSimTimelapse()가 "지금 재생범위에서 보이는 배들"로 다시 채운다 -->
-      <select id="simTimelapseShipFilter" class="sim-speed-num" style="width:auto" onchange="setSimTimelapseShipFilter(this.value)">
-        <option value="all">배: 전체</option>
-      </select>
-      <div class="sim-scope-tabs sim-scope-mount"></div>
+    <!-- 행 2: 타이틀 + 필터 -->
+    <div id="tlHead-meta">
+      <div id="simTimelapseTitle">⏱ 타임랩스 — 막대를 드래그해 특정 시점으로 이동</div>
+      <div class="sim-timelapse-filters" style="margin-left:auto">
+        <select id="simTimelapsePortFilter" class="sim-speed-num" style="width:auto" onchange="setSimTimelapsePortFilter(this.value)">
+          <option value="all">항구: 전체</option>
+          <option value="busan">부산항</option>
+          <option value="hitakatsu">히타카츠항</option>
+          <option value="izuhara">이즈하라항</option>
+          <option value="hakata">하카타항</option>
+          <option value="shimonoseki">시모노세키항</option>
+          <option value="osaka">오사카항</option>
+        </select>
+        <select id="simTimelapseShipTypeFilter" class="sim-speed-num" style="width:auto" onchange="setSimTimelapseShipTypeFilter(this.value)">
+          <option value="all">선종: 전체</option>
+          <option value="고속선">고속선</option>
+          <option value="로로선(화물여객선)">로로선(화물여객선)</option>
+          <option value="기타">기타</option>
+        </select>
+        <select id="simTimelapseShipFilter" class="sim-speed-num" style="width:auto" onchange="setSimTimelapseShipFilter(this.value)">
+          <option value="all">배: 전체</option>
+        </select>
+        <div class="company-filter-wrap" id="companyFilterWrap">
+          <button class="company-filter-btn" id="companyFilterBtn" onclick="toggleCompanyDropdown(event)">선사: 전체 ▾</button>
+          <div class="company-filter-panel" id="companyFilterPanel"></div>
+        </div>
+        <div class="sim-scope-tabs sim-scope-mount"></div>
+      </div>
     </div>
   </div>
-  <div id="simTimelapseResizeHandle" title="드래그해서 높이 조절"></div>
   <div id="simTimelapseEl"></div>
 </div>
 
@@ -1061,6 +1167,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 <script src="https://unpkg.com/intro.js/minified/intro.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-timeline/8.5.4/vis-timeline-graph2d.min.js"></script>
+<script src="bus_route_embed.js"></script>
 <script>
 // ════════════════════════════════════════════════════
 //  레이어 정의
@@ -1087,12 +1194,33 @@ const map = L.map('map', {
   layers: [satellite, labels]
 });
 
+// 미라클 통합 레이어 — POI 마커 + 관광버스 노선을 하나의 토글로 관리
+const _busRouteLayerGroup = L.layerGroup();
+let _busRouteLoaded = false;
+// ※ _miracleLayer(POI)는 아래에서 선언된 뒤 addLayer로 합친다
+
 // 레이어 컨트롤
 L.control.layers(
   { '🛰 위성영상 (ESRI)': satellite, '🗺 일반지도 (OSM)': osm },
-  { '지명 레이블': labels },
+  { '지명 레이블': labels, '🚌 미라클투어리조트 + 대아호텔 POI 표시/숨기기': _busRouteLayerGroup },
   { position: 'topright', collapsed: false }
 ).addTo(map);
+
+// 체크박스를 켤 때 노선 GeoJSON 로드 + 버스 시뮬레이션 초기화
+map.on('overlayadd', function(e) {
+  if (e.layer === _busRouteLayerGroup) {
+    _busLayerOn = true;
+    if (!_busRouteLoaded) { _busRouteLoaded = true; _buildBusRoute(); }
+    _initBusSchedule();
+  }
+});
+map.on('overlayremove', function(e) {
+  if (e.layer === _busRouteLayerGroup) {
+    _busLayerOn = false;
+    _busMarkers.forEach(mk => { if (mk) { try { _busRouteLayerGroup.removeLayer(mk); } catch(_){} } });
+    _busInitDone = false;
+  }
+});
 
 // ════════════════════════════════════════════════════
 //  항구 POI
@@ -1103,7 +1231,8 @@ const ports = [
   { id:'izuhara',   name:'이즈하라항',             lat:34.197831, lng:129.291133, color:'#aaaaaa', role:'참고 (기존 경유지)', desc:'쓰시마 남부 이즈하라항. 기존 일부 국제여객선이 이용. 히타카츠 대비 접근성 차이 있음.', tags:['참고','쓰시마 이즈하라'] },
   { id:'hakata',    name:'하카타항 국제터미널',     lat:33.607400, lng:130.400591, color:'#ff4466', role:'목적지',         desc:'후쿠오카 하카타항. 퀸비틀·카멜리아 부산 직항 운항 중. 산타모니카호 도입 시 공석률·유류비가 핵심 변수.', tags:['목적지','후쿠오카 하카타'] },
   { id:'shimonoseki', name:'시모노세키항', lat:33.946998, lng:130.925274, color:'#0ea5e9', role:'참고 (타 항로)', desc:'부관훼리 취항지(간몬해협 카라토 터미널). 성희호(한국적)·하마유호(일본적)가 매일 야간 교대 운항.', tags:['참고','시모노세키','부관훼리'] },
-  { id:'osaka',       name:'오사카항 국제페리터미널', lat:34.643200, lng:135.422051, color:'#ff9933', role:'참고 (타 항로)', desc:'오사카시 스미노에구 소재, 오사카메트로 뉴트램 "페리터미널역"과 연결(코스모스퀘어역에서 팬스타 무료 셔틀버스 운행). 세토내해를 지나는 크루즈형 훼리 취항지 — 팬스타 미라클호(22,000톤급)가 부산-오사카를 왕복 운항.', tags:['참고','오사카','미라클호'] }
+  { id:'osaka',       name:'오사카항 국제페리터미널', lat:34.643200, lng:135.422051, color:'#ff9933', role:'참고 (타 항로)', desc:'오사카시 스미노에구 소재, 오사카메트로 뉴트램 "페리터미널역"과 연결(코스모스퀘어역에서 팬스타 무료 셔틀버스 운행). 세토내해를 지나는 크루즈형 훼리 취항지 — 팬스타 미라클호(22,000톤급)가 부산-오사카를 왕복 운항.', tags:['참고','오사카','미라클호'] },
+  { id:'gwangyang',  name:'광양항 국제여객터미널',   lat:34.9217916, lng:127.6979195, color:'#44eebb', role:'참고 (광양훼리)', lineName:'광양훼리', desc:'전남 광양시 소재 국제여객터미널. 광양비츠호(3만톤급 투입 예정) 출항지. 광양 ↔ 시모노세키 (대한해협 → 히비키나다 → 간몬해협 경유) 항로.', tags:['참고','광양','광양훼리','광양비츠호'] }
 ];
 
 function makeIcon(color, highlight) {
@@ -1133,7 +1262,9 @@ ports.forEach(p => {
            </div>` : '';
       return `<div class="popup-title">${p.name}</div><div class="popup-body"><b style="color:${p.color}">${p.role}</b><br/>${p.desc}<br/><br/>${tags}${timingHtml}<div class="popup-coords">📍 ${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}</div></div>`;
     }, { className: 'custom-popup', maxWidth: 300 })
-    .bindTooltip(p.name, {
+    .bindTooltip(p.lineName
+      ? `${p.name}<br><span style="font-size:9.5px;opacity:.75">${p.lineName}</span>`
+      : p.name, {
       permanent: true, direction: 'top', offset: [0, p.highlight ? -12 : -9],
       className: 'port-label'
     });
@@ -1145,6 +1276,7 @@ ports.forEach(p => {
 // ══════════════════════════════════════════════════════════════
 const _miraclePois = [
   // 순환버스 정류장 (운행 순서)
+  { id:'hita_terminal', name:'히타카츠 국제터미널', lat:34.655985,          lng:129.469543,         type:'bus'   },
   { id:'miuda',         name:'미우다 해변',        lat:34.667303,          lng:129.484391,         type:'bus'   },
   { id:'korea_obs',     name:'한국 전망대',          lat:34.694405619993354, lng:129.44194746555985, type:'bus'   },
   { id:'valuemart_ou',  name:'밸류마트 오오우라',    lat:34.67182178510698,  lng:129.43416011396272, type:'bus'   },
@@ -1156,42 +1288,304 @@ const _miraclePois = [
   // 렌터카
   { id:'yuyu',          name:'유유렌터카',           lat:34.655843630163815, lng:129.4682612962743,  type:'car'   },
   // 호텔
-  { id:'kamiso',        name:'카미소 호텔',          lat:34.65542896756546,  lng:129.4825500469492,  type:'hotel' },
+  { id:'kamiso',     name:'카미소 호텔', lat:34.65542896756546,  lng:129.4825500469492,  type:'hotel',
+    img:'kamiso_hotel.jpg', url:'https://www.kamisohotel.com/',
+    desc:'히타카츠 항구 인근 소재. 미라클투어 제휴 예정 호텔.', pending:true },
+  { id:'daea_hotel', name:'대아호텔',   lat:34.20510015599196,  lng:129.29714401112628, type:'hotel',
+    img:'daea_hotel.jpg',  url:'https://www.ryokanclub.com/hotel/hotel_view.html?hseq=1370',
+    desc:'이즈하라 소재 료칸식 호텔. 대아고속해운 제휴.' },
+  // 공항
+  { id:'tsushima_ap',   name:'대마도 공항 ✈',        lat:34.286581,          lng:129.328566,         type:'airport' },
 ];
 
 const _miracleStyle = {
-  bus:   { color:'#44dd88', fill:'#1a7040', r:5 },
-  car:   { color:'#66aaff', fill:'#1a4488', r:5 },
-  hotel: { color:'#ffcc44', fill:'#886600', r:7 },
+  bus:     { color:'#44dd88', fill:'#1a7040', r:5 },
+  car:     { color:'#66aaff', fill:'#1a4488', r:5 },
+  hotel:   { color:'#ffcc44', fill:'#886600', r:7 },
+  airport: { color:'#88ddff', fill:'#1a5577', r:7 },
 };
 
-let _miracleVisible = false;
 const _miracleLayer = L.layerGroup();
 
-// 순환버스 노선 점선
-_miracleLayer.addLayer(L.polyline(
-  _miraclePois.filter(p => p.type === 'bus').map(p => [p.lat, p.lng]),
-  { color:'#44dd88', weight:2, opacity:0.65, dashArray:'6,6', interactive:false }
-));
+function _hotelPopup(p) {
+  const pending = p.pending
+    ? `<span style="font-size:9px;color:#ff9933;font-weight:700;margin-left:4px">(오픈 예정)</span>` : '';
+  const imgHtml = p.img
+    ? `<div style="height:160px;overflow:hidden;border-radius:5px;background:#06101e;margin:5px 0">` +
+      `<img src="${p.img}" style="width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in"` +
+      ` onmouseover="_openImgZoom(this)" onmouseout="_closeImgZoom()"` +
+      ` onerror="this.parentNode.style.display='none'">` +
+      `</div>` : '';
+  const descHtml = p.desc
+    ? `<div style="font-size:11px;line-height:1.65;color:#cce0f0;margin:4px 0 6px">${p.desc}</div>` : '';
+  const linkHtml = p.url
+    ? `<a href="${p.url}" target="_blank" rel="noopener"` +
+      ` style="display:block;font-size:11px;color:#7ecfff;text-decoration:underline;margin-bottom:5px">` +
+      `🌐 호텔 공식 사이트 →</a>` : '';
+  return `<div class="popup-title">${p.name}${pending}</div>` +
+    `<div class="popup-body">${imgHtml}${descHtml}${linkHtml}` +
+    `<div class="popup-coords">📍 ${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}</div></div>`;
+}
 
 _miraclePois.forEach(p => {
   const s = _miracleStyle[p.type];
-  _miracleLayer.addLayer(
-    L.circleMarker([p.lat, p.lng], {
-      radius:s.r, color:s.color, fillColor:s.fill, fillOpacity:0.9, weight:2, interactive:false
-    }).bindTooltip(`미라클 · ${p.name}`, {
-      permanent:true, direction:'top', offset:[0, -(s.r+4)],
-      className:`miracle-label miracle-${p.type}`
-    })
-  );
+  const hasPopup = p.type === 'hotel' && p.url;
+  const mk = L.circleMarker([p.lat, p.lng], {
+    radius:s.r, color:s.color, fillColor:s.fill, fillOpacity:0.9, weight:2,
+    interactive: hasPopup
+  }).bindTooltip(p.name, {
+    permanent:true, direction:'top', offset:[0, -(s.r+4)],
+    className:`miracle-label miracle-${p.type}`
+  });
+  if (hasPopup) {
+    mk.bindPopup(() => _hotelPopup(p), { className:'custom-popup', maxWidth:300 });
+    mk.on('mouseover', function() { this.setStyle({ fillOpacity:1, weight:3 }); });
+    mk.on('mouseout',  function() { this.setStyle({ fillOpacity:0.9, weight:2 }); });
+  }
+  _miracleLayer.addLayer(mk);
 });
+// 쓰시마 공항 터널 POI (SVG 터널 아치 아이콘)
+(function() {
+  const tunnelSVG =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="22" viewBox="0 0 28 22">` +
+    `<rect x="1" y="7" width="26" height="14" rx="1" fill="#6a7a8a" stroke="#aaa" stroke-width="1"/>` +
+    `<path d="M5,21 L5,11 A9,10 0 0,1 23,11 L23,21 Z" fill="#0a0f18" stroke="#888" stroke-width="0.8"/>` +
+    `<path d="M5,11 A9,10 0 0,1 23,11" fill="none" stroke="#ccc" stroke-width="1.2"/>` +
+    `<line x1="14" y1="14" x2="14" y2="21" stroke="#444" stroke-width="1.5" stroke-dasharray="2,2"/>` +
+    `</svg>`;
+  const icon = L.divIcon({
+    html: tunnelSVG,
+    className: '',
+    iconSize: [28, 22],
+    iconAnchor: [14, 11],
+    tooltipAnchor: [0, -12]
+  });
+  L.marker([34.280907, 129.335089], { icon, interactive: false })
+    .bindTooltip('쓰시마 공항 터널', {
+      permanent: true, direction: 'top', className: 'miracle-label miracle-tunnel', offset: [0, -12]
+    })
+    .addTo(_miracleLayer);
+})();
 
-function _toggleMiracleLayer() {
-  _miracleVisible = !_miracleVisible;
-  if (_miracleVisible) _miracleLayer.addTo(map);
-  else map.removeLayer(_miracleLayer);
-  const btn = document.getElementById('miracleLayerBtn');
-  if (btn) btn.style.opacity = _miracleVisible ? '1' : '0.5';
+// POI 마커(_miracleLayer)를 통합 레이어에 포함 — 체크박스 하나로 같이 켜고 끔
+_busRouteLayerGroup.addLayer(_miracleLayer);
+
+// ── 미리 계산된 버스 노선 GeoJSON 로드 (miracle_bus_route.geojson)
+class _MinHeap {
+  constructor() { this._d = []; }
+  push(item) { this._d.push(item); this._up(this._d.length - 1); }
+  pop() {
+    const top = this._d[0], last = this._d.pop();
+    if (this._d.length) { this._d[0] = last; this._dn(0); }
+    return top;
+  }
+  get size() { return this._d.length; }
+  _up(i) {
+    while (i > 0) {
+      const p = (i - 1) >> 1;
+      if (this._d[p][0] <= this._d[i][0]) break;
+      [this._d[p], this._d[i]] = [this._d[i], this._d[p]]; i = p;
+    }
+  }
+  _dn(i) {
+    const n = this._d.length;
+    for (;;) {
+      let m = i, l = 2*i+1, r = l+1;
+      if (l < n && this._d[l][0] < this._d[m][0]) m = l;
+      if (r < n && this._d[r][0] < this._d[m][0]) m = r;
+      if (m === i) break;
+      [this._d[m], this._d[i]] = [this._d[i], this._d[m]]; i = m;
+    }
+  }
+}
+
+function _buildBusRoute() {
+  if (typeof _BUS_ROUTE_COORDS === 'undefined' || !_BUS_ROUTE_COORDS.length) {
+    console.error('[버스노선] 좌표 데이터 없음 (bus_route_embed.js 확인)');
+    return;
+  }
+  const gj = { type:'FeatureCollection', features:[{ type:'Feature', properties:{},
+    geometry:{ type:'LineString', coordinates: _BUS_ROUTE_COORDS }}]};
+
+  const _td0 = 'style="color:#aac8e8;padding:2px 8px 2px 0;min-width:110px"';
+  const _td1 = 'style="color:#e8f4ff"';
+  const busPopupHtml = `
+<div style="color:#e8f4ff;min-width:290px;font-size:11.5px;line-height:1.6">
+  <div style="font-size:13px;font-weight:700;color:#44dd88;margin-bottom:10px;border-bottom:1px solid rgba(68,221,136,0.3);padding-bottom:6px">🚌 팬스타 대마도 셔틀버스 시간표</div>
+
+  <div style="font-weight:700;color:#ffcc44;margin-bottom:4px">🔁 히타카츠 순환 · 1회차</div>
+  <table style="width:100%;border-collapse:collapse;margin-bottom:11px;font-size:11px">
+    <thead><tr>
+      <th ${_td0} style="color:#667788;font-weight:400;padding-bottom:3px">정류장</th>
+      <th style="color:#667788;font-weight:400;padding-right:10px">도착</th>
+      <th style="color:#667788;font-weight:400">출발</th>
+    </tr></thead>
+    <tr><td ${_td0}>히타카츠</td><td style="padding-right:10px">10:10</td><td>10:30</td></tr>
+    <tr><td ${_td0}>미우다해변</td><td style="padding-right:10px">10:40</td><td>10:55</td></tr>
+    <tr><td ${_td0}>한국전망대</td><td style="padding-right:10px">11:10</td><td>11:25</td></tr>
+    <tr><td ${_td0}>밸류마트(오오우라)</td><td style="padding-right:10px">11:40</td><td>13:00</td></tr>
+    <tr><td ${_td0}>히타카츠 귀환</td><td style="padding-right:10px">13:15</td><td style="color:#556677">—</td></tr>
+  </table>
+
+  <div style="font-weight:700;color:#44ccff;margin-bottom:4px">🔁 히타카츠 순환 · 2회차</div>
+  <table style="width:100%;border-collapse:collapse;margin-bottom:11px;font-size:11px">
+    <thead><tr>
+      <th ${_td0} style="color:#667788;font-weight:400;padding-bottom:3px">정류장</th>
+      <th style="color:#667788;font-weight:400;padding-right:10px">도착</th>
+      <th style="color:#667788;font-weight:400">출발</th>
+    </tr></thead>
+    <tr><td ${_td0}>히타카츠</td><td style="padding-right:10px">12:20</td><td>12:30</td></tr>
+    <tr><td ${_td0}>밸류마트(오오우라)</td><td style="padding-right:10px">12:45</td><td>13:45</td></tr>
+    <tr><td ${_td0}>한국전망대</td><td style="padding-right:10px">14:00</td><td>14:10</td></tr>
+    <tr><td ${_td0}>미우다해변</td><td style="padding-right:10px">14:20</td><td>14:30</td></tr>
+    <tr><td ${_td0}>히타카츠 귀환</td><td style="padding-right:10px">14:45</td><td style="color:#556677">—</td></tr>
+  </table>
+
+  <div style="font-size:10.5px;color:#778899;border-top:1px solid rgba(255,255,255,0.1);padding-top:6px;margin-top:2px;line-height:1.6">
+    ※ 히타카츠↔이즈하라 직행 노선도 운행 (별도 시간표)<br>
+    ※ 정차 시간은 기상·도로 상황에 따라 변동될 수 있습니다.<br>
+    출처: <a href="https://www.panstarcruise.com/product/daemado/shuttle-bus" target="_blank" style="color:#44dd88;text-decoration:none">팬스타 크루즈 공식 홈페이지 ↗</a>
+  </div>
+</div>`;
+
+  L.geoJSON(gj, {
+    style: { color: '#44dd88', weight: 3.5, opacity: 0.88,
+             dashArray: '10,5', lineJoin: 'round', lineCap: 'round' },
+    onEachFeature: (feature, layer) => {
+      layer.bindPopup(busPopupHtml, { className: 'custom-popup', maxWidth: 320 });
+      layer.on('mouseover', function() { this.setStyle({ weight: 5.5, opacity: 1 }); });
+      layer.on('mouseout',  function() { this.setStyle({ weight: 3.5, opacity: 0.88 }); });
+    }
+  }).addTo(_busRouteLayerGroup);
+}
+
+// ── 대마도 셔틀버스 시뮬레이션 (팬스타 시간표 기준) ─────────────────────────
+// 1회차: 10:10 히타카츠 출발 ~ 13:00 귀환
+// 2회차: 12:20 히타카츠 출발 ~ 14:30 귀환
+// t 단위: simSimMin (DAY_START_MIN=420=07:00 기준 상대 분)
+const _BS_LL = [
+  [34.655985, 129.469543], // 0: 히타카츠
+  [34.667303, 129.484391], // 1: 미우다해변
+  [34.694405, 129.441947], // 2: 한국전망대
+  [34.671821, 129.434160], // 3: 밸류마트(오오우라)
+  [34.297960, 129.355831], // 4: 만제키다리
+  [34.203587, 129.285973], // 5: 조선통신사역사관
+  [34.268874, 129.314963], // 6: 스미요시신사
+  [34.371918, 129.314377], // 7: 에보시다케전망대
+  [34.273100, 129.319204], // 8: 밸류마트(사이키)
+];
+const _BS_NAMES = [
+  '히타카츠','미우다해변','한국전망대','밸류마트(오오우라)',
+  '만제키다리','조선통신사역사관','스미요시신사','에보시다케전망대','밸류마트(사이키)'
+];
+let _busCumD = null;
+let _busKF = [[], []];
+let _busMarkers = [];
+let _busLayerOn = false;
+let _busInitDone = false;
+
+function _initBusSchedule() {
+  if (_busInitDone) return;
+  if (typeof _BUS_ROUTE_COORDS === 'undefined' || !_BUS_ROUTE_COORDS.length) return;
+  const coords = _BUS_ROUTE_COORDS;
+
+  // 누적 거리 계산
+  _busCumD = [0];
+  for (let i = 1; i < coords.length; i++) {
+    const [lng0,lat0]=coords[i-1],[lng1,lat1]=coords[i];
+    const dx=(lng1-lng0)*Math.cos(Math.PI*(lat0+lat1)/360)*111194;
+    const dy=(lat1-lat0)*111194;
+    _busCumD.push(_busCumD[_busCumD.length-1]+Math.sqrt(dx*dx+dy*dy));
+  }
+  const totalD = _busCumD[_busCumD.length-1];
+
+  // 정류장별 route fraction (0~1)
+  const f = _BS_LL.map(([lat,lng]) => {
+    let best=0, bestD=Infinity;
+    coords.forEach(([rLng,rLat],i) => {
+      const d=(lat-rLat)**2+(lng-rLng)**2;
+      if(d<bestD){bestD=d;best=i;}
+    });
+    return _busCumD[best]/totalD;
+  });
+
+  // ── 1회차 (히타카츠 순환, 실제 팬스타 시간표 기준) ──
+  // 히타카츠 도착10:10→출발10:30 / 미우다 도착10:40→출발10:55
+  // 전망대 도착11:10→출발11:25 / 오오우라 도착11:40→출발13:00 / 히타카츠 귀환13:15
+  const kf1 = [
+    {t:190,frac:f[0],name:'히타카츠 도착'},
+    {t:210,frac:f[0],name:'히타카츠 출발'},
+    {t:220,frac:f[1],name:'미우다해변 도착'},
+    {t:235,frac:f[1],name:'미우다해변 출발'},
+    {t:250,frac:f[2],name:'한국전망대 도착'},
+    {t:265,frac:f[2],name:'한국전망대 출발'},
+    {t:280,frac:f[3],name:'밸류마트(오오우라) 도착'},
+    {t:360,frac:f[3],name:'밸류마트(오오우라) 출발'},
+    {t:375,frac:f[0],name:'히타카츠 귀환'},
+  ];
+
+  // ── 2회차 (히타카츠 순환, 역순 경유) ──
+  // 히타카츠 도착12:20→출발12:30 / 오오우라 도착12:45→출발13:45
+  // 전망대 도착14:00→출발14:10 / 미우다 도착14:20→출발14:30 / 히타카츠 귀환14:45
+  const kf2 = [
+    {t:320,frac:f[0],name:'히타카츠 도착'},
+    {t:330,frac:f[0],name:'히타카츠 출발'},
+    {t:345,frac:f[3],name:'밸류마트(오오우라) 도착'},
+    {t:405,frac:f[3],name:'밸류마트(오오우라) 출발'},
+    {t:420,frac:f[2],name:'한국전망대 도착'},
+    {t:430,frac:f[2],name:'한국전망대 출발'},
+    {t:440,frac:f[1],name:'미우다해변 도착'},
+    {t:450,frac:f[1],name:'미우다해변 출발'},
+    {t:465,frac:f[0],name:'히타카츠 귀환'},
+  ];
+
+  _busKF = [kf1, kf2];
+
+  // 마커 생성 (1회차=노란, 2회차=하늘)
+  const cols = ['#ffcc44','#44ccff'];
+  _busMarkers = [0,1].map(ci => {
+    const icon = L.divIcon({
+      html:`<div style="background:${cols[ci]};border:2px solid rgba(0,0,0,0.55);border-radius:3px;padding:1px 4px;font-size:9px;font-weight:bold;color:#000;white-space:nowrap;box-shadow:0 1px 5px #000a">🚌 ${ci+1}회차</div>`,
+      className:'', iconSize:[52,16], iconAnchor:[26,8]
+    });
+    return L.marker(_BS_LL[0], {icon, zIndexOffset:600})
+      .bindTooltip('', {direction:'top', offset:[0,-12], className:'miracle-label'});
+  });
+
+  _busInitDone = true;
+}
+
+function _busPosByFrac(frac) {
+  if (!_busCumD||!_BUS_ROUTE_COORDS||!_BUS_ROUTE_COORDS.length) return null;
+  const total = _busCumD[_busCumD.length-1];
+  const target = Math.max(0,Math.min(1,frac))*total;
+  let lo=0, hi=_busCumD.length-1;
+  while (lo<hi) { const mid=(lo+hi)>>1; if(_busCumD[mid]<target) lo=mid+1; else hi=mid; }
+  if (lo===0) { const[lng,lat]=_BUS_ROUTE_COORDS[0]; return[lat,lng]; }
+  const d0=_busCumD[lo-1], d1=_busCumD[lo];
+  const a = d1>d0 ? (target-d0)/(d1-d0) : 0;
+  const [lng0,lat0]=_BUS_ROUTE_COORDS[lo-1],[lng1,lat1]=_BUS_ROUTE_COORDS[lo];
+  return [lat0+a*(lat1-lat0), lng0+a*(lng1-lng0)];
+}
+
+function _tickBus(simMin) {
+  if (!_busInitDone||!_busLayerOn) return;
+  [0,1].forEach(ci => {
+    const kf=_busKF[ci], mk=_busMarkers[ci];
+    if (!kf||!kf.length||!mk) return;
+    const tS=kf[0].t, tE=kf[kf.length-1].t;
+    if (simMin<tS||simMin>tE) { if(map.hasLayer(mk)) map.removeLayer(mk); return; }
+    let lo=0;
+    for (let i=0;i<kf.length-1;i++) { if(kf[i].t<=simMin&&simMin<=kf[i+1].t){lo=i;break;} }
+    const k0=kf[lo], k1=kf[lo+1]||k0;
+    const a = k0.t===k1.t ? 0 : (simMin-k0.t)/(k1.t-k0.t);
+    const pos = _busPosByFrac(k0.frac+a*(k1.frac-k0.frac));
+    if (!pos) return;
+    mk.setLatLng(pos);
+    const near = kf.reduce((p,c)=>Math.abs(c.t-simMin)<Math.abs(p.t-simMin)?c:p);
+    mk.setTooltipContent(`🚌 셔틀버스 ${ci+1}회차<br><span style="font-size:9px;opacity:.85">${_minToHM(_baseMin+simMin)} · ${near.name}</span>`);
+    if (!map.hasLayer(mk)) mk.addTo(_busRouteLayerGroup);
+  });
 }
 
 // Centripetal Catmull-Rom — 구간 길이 비례 파라미터화로 오버슈트 방지
@@ -1276,14 +1670,20 @@ function _routeLabel(lat, lng, html, color) {
   }).addTo(map);
 }
 // 퀸비틀 직항 — 부산↔하카타 중간지점
-_routeLabel(34.36, 129.73,
+const _rlQbDirect = _routeLabel(34.36, 129.73,
   '🚢 퀸비틀 직항<br>213km · 115해리', '#66ccff');
 // 산타모니카 ① 부산→히타카츠 — 중간지점
-_routeLabel(34.95, 129.22,
+const _rlSmLeg1 = _routeLabel(34.95, 129.22,
   '⛴ 부산→히타카츠<br>74km · 40해리', '#ffaa00');
 // 산타모니카 ② 히타카츠→하카타 — 중간지점
-_routeLabel(34.10, 129.85,
+const _rlSmLeg2 = _routeLabel(34.10, 129.85,
   '⛴ 히타카츠→하카타<br>132km · 71해리', '#ffaa00');
+// 항로 라인 가시성에 연동할 거리 라벨 목록
+const _routeLabelScopes = [
+  { marker: _rlQbDirect, key: 'qbDirect' },
+  { marker: _rlSmLeg1,   key: 'smLeg1'   },
+  { marker: _rlSmLeg2,   key: 'smLeg2'   },
+];
 
 // ════════════════════════════════════════════════════
 //  산타모니카호 선형 모형 — 드래그·회전 가능
@@ -1334,12 +1734,22 @@ _routeLabel(34.10, 129.85,
     fillColor: '#ffaa00', fillOpacity: 0.5
   }).addTo(map).bindPopup(
     '<div class="popup-title">⛴ 산타모니카호 (정박 구상)</div>' +
+    _carousel('c-sm', [
+      { img:'santamonica.jpg',
+        cap:'시월드고속훼리 산타모니카호' },
+      { img:'oceanflower2_ship.jpg', fit:'contain',
+        cap:'대아고속해운 오션플라워호 (동급 자매선)',
+        body:'<b style="color:#ffcc88">오션플라워 1·2호</b>는 대아고속해운이 운항하던 4,000톤급 Incat 쌍동선으로, 산타모니카·엘도라도호와 같은 선대입니다. ' +
+             '부산↔이즈하라 항로를 운항하다 경영난으로 선대를 정리하게 됩니다. ' +
+             '<b style="color:#ffee99">1호</b>는 팬스타에 매각돼 현재의 <b style="color:#ff9933">쓰시마링크호</b>로 운항 중이며, ' +
+             '<b style="color:#ffee99">2호</b>는 그리스에 매각되었습니다.' }
+    ]) +
     _shipSvgHtml('sm') +
     '<div class="popup-body"><b style="color:#ffcc44">시월드고속훼리 · Incat 76m wavepiercer</b><br>' +
     '전장 72.67m · 폭 21m · GT 390톤<br>' +
     '최고속력 45노트(83km/h) · 여객 621명<br>' +
     '히타카츠항 정박 구상 모형 — 드래그(이동) · ↻핸들(회전)</div>',
-    { className: 'custom-popup', maxWidth: 310 }
+    { className: 'custom-popup', maxWidth: 320 }
   );
 
   const smLabel = L.marker(smCenter, {
@@ -1419,6 +1829,143 @@ _routeLabel(34.10, 129.85,
   // hover 커서
   smHull.on('mouseover', () => {
     const el = smHull.getElement(); if (el) el.style.cursor = 'grab';
+  });
+})();
+
+// ════════════════════════════════════════════════════
+//  그레이스호 선형 모형 — 드래그·회전 가능
+//  Austal 83m wavepiercer · 83.5m × 26m
+//  산타모니카(72.67m × 21m) 대비 길이 1.149배·폭 1.238배 스케일
+//  기준 center [34.655274, 129.469623] — 산타모니카에서 ~50m 남쪽
+// ════════════════════════════════════════════════════
+(function() {
+  // 83.5m × 20.2m — SM(72.67m×21m) 대비 길이 1.149배, 폭 0.962배
+  const initHull = [
+    [34.655315, 129.469196],  // 선미 북쪽
+    [34.655137, 129.469240],  // 선미 남쪽
+    [34.655209, 129.469852],  // 중앙 남쪽
+    [34.655306, 129.470003],  // 선수 남쪽
+    [34.655333, 129.470117],  // 선수 끝(bow)
+    [34.655333, 129.469997],  // 선수 북쪽
+    [34.655388, 129.469807],  // 중앙 북쪽
+  ];
+  const initRotHandle = [34.655333, 129.470227];
+  let grCenter = [34.655274, 129.469623];
+
+  const _R = 111194;
+  function _Lm(lat) { return _R * Math.cos(lat * Math.PI / 180); }
+
+  function rotatePt(ll, center, deg) {
+    const Lm = _Lm(center[0]);
+    const dx = (ll[1] - center[1]) * Lm;
+    const dy = (ll[0] - center[0]) * _R;
+    const θ = deg * Math.PI / 180;
+    const nx = dx * Math.cos(θ) - dy * Math.sin(θ);
+    const ny = dx * Math.sin(θ) + dy * Math.cos(θ);
+    return [center[0] + ny / _R, center[1] + nx / Lm];
+  }
+
+  function logCoords() {
+    const pts = grHull.getLatLngs()[0];
+    console.log('── 그레이스호 현재 좌표 ──');
+    pts.forEach((p, i) => console.log(`  ${i+1}: [${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}]`));
+    const c = grLabel.getLatLng();
+    console.log(`  중심: [${c.lat.toFixed(6)}, ${c.lng.toFixed(6)}]`);
+    const rh = grRotHandle.getLatLng();
+    console.log(`  회전핸들: [${rh.lat.toFixed(6)}, ${rh.lng.toFixed(6)}]`);
+  }
+
+  const grHull = L.polygon(initHull, {
+    color: '#ff8800', weight: 2,
+    fillColor: '#e05500', fillOpacity: 0.5
+  }).addTo(map).bindPopup(
+    '<div class="popup-title" style="color:#ffe066">🕓 그레이스호 (정박 구상)</div>' +
+    '<div style="height:160px;overflow:hidden;border-radius:5px;background:#06101e;margin:5px 0">' +
+    '<img src="grace_ship.jpg" style="width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in;transition:transform .38s ease;transform-origin:center" ' +
+    'onmouseover="this.style.transform=\'scale(1.13)\'" onmouseout="this.style.transform=\'scale(1)\'" onerror="this.parentNode.style.display=\'none\'">' +
+    '</div>' +
+    '<div style="font-size:9px;text-align:center;color:#99b8d4;margin-bottom:3px">그레이스호 (전신: JR큐슈 퀸비틀) · Austal HSC 083</div>' +
+    _shipSvgHtml('grace') +
+    '<div class="popup-body"><b style="color:#ffe066">팬스타 · Austal 83m wavepiercer</b><br>' +
+    '전장 83.5m · 폭 20.2m · GT 894톤<br>' +
+    '최고속력 36노트 · 순항 31.4노트<br>' +
+    '여객 502명 · 차량 미탑재<br>' +
+    '히타카츠항 정박 구상 모형 — 드래그(이동) · ↻핸들(회전)</div>',
+    { className: 'custom-popup', maxWidth: 320 }
+  );
+
+  const grLabel = L.marker(grCenter, {
+    icon: L.divIcon({
+      html: '<div style="color:#ffe066;font-size:10px;font-weight:700;white-space:nowrap;' +
+            'text-shadow:0 1px 3px #000,0 0 6px #000;text-align:center;cursor:grab">' +
+            '🕓 그레이스호<br><span style="font-size:9px;color:#ffcc88">83.5m × 20.2m</span></div>',
+      className: '', iconAnchor: [42, 12]
+    }),
+    zIndexOffset: 50
+  }).addTo(map);
+
+  const grRotHandle = L.marker(initRotHandle, {
+    icon: L.divIcon({
+      html: '<div style="width:22px;height:22px;background:rgba(8,20,45,0.88);border:2px solid #ff8800;' +
+            'border-radius:50%;color:#ff8800;font-size:14px;line-height:20px;text-align:center;' +
+            'cursor:crosshair;box-shadow:0 2px 6px rgba(0,0,0,0.6)">↻</div>',
+      className: '', iconAnchor: [11, 11]
+    }),
+    zIndexOffset: 60
+  }).addTo(map);
+
+  let _mode = null;
+  let _lastLL = null, _lastAngle = null;
+
+  function _angle(ll) {
+    const Lm = _Lm(grCenter[0]);
+    return Math.atan2(
+      (ll.lng - grCenter[1]) * Lm,
+      (ll.lat - grCenter[0]) * _R
+    ) * 180 / Math.PI;
+  }
+
+  function onHullDown(e) {
+    _mode = 'drag'; _lastLL = e.latlng;
+    map.dragging.disable(); map.closePopup(); L.DomEvent.stop(e);
+  }
+  function onRotDown(e) {
+    _mode = 'rotate'; _lastAngle = _angle(e.latlng);
+    map.dragging.disable(); L.DomEvent.stop(e);
+  }
+
+  grHull.on('mousedown', onHullDown);
+  grLabel.on('mousedown', onHullDown);
+  grRotHandle.on('mousedown', onRotDown);
+
+  map.on('mousemove', function(e) {
+    if (_mode === 'drag') {
+      const dlat = e.latlng.lat - _lastLL.lat;
+      const dlng = e.latlng.lng - _lastLL.lng;
+      _lastLL = e.latlng;
+      grHull.setLatLngs(grHull.getLatLngs()[0].map(ll =>
+        L.latLng(ll.lat + dlat, ll.lng + dlng)));
+      grCenter = [grCenter[0] + dlat, grCenter[1] + dlng];
+      grLabel.setLatLng(grCenter);
+      const rh = grRotHandle.getLatLng();
+      grRotHandle.setLatLng([rh.lat + dlat, rh.lng + dlng]);
+    } else if (_mode === 'rotate') {
+      const cur = _angle(e.latlng);
+      const delta = cur - _lastAngle;
+      _lastAngle = cur;
+      grHull.setLatLngs(grHull.getLatLngs()[0].map(ll =>
+        rotatePt([ll.lat, ll.lng], grCenter, delta)));
+      const rh = grRotHandle.getLatLng();
+      grRotHandle.setLatLng(rotatePt([rh.lat, rh.lng], grCenter, delta));
+    }
+  });
+
+  map.on('mouseup', function() {
+    if (_mode) { _mode = null; map.dragging.enable(); logCoords(); }
+  });
+
+  grHull.on('mouseover', () => {
+    const el = grHull.getElement(); if (el) el.style.cursor = 'grab';
   });
 })();
 
@@ -1576,6 +2123,10 @@ function clearMeasure() {
 
 // ESC 키
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && measuring) finishMeasure(); });
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('companyFilterWrap');
+  if (wrap && !wrap.contains(e.target)) _closeCompanyDropdown();
+});
 
 // ════════════════════════════════════════════════════
 //  Leaflet.Draw — 도형 그리기
@@ -1918,7 +2469,9 @@ function _inferShipGroup(name) {
   if (name.startsWith('스타라인')) return '스타라인';
   if (name.startsWith('대아고속해운')) return '대아고속해운';
   if (name.startsWith('카멜리아')) return '카멜리아';
-  if (name.includes('부관훼리') || name.startsWith('성희호') || name.startsWith('하마유호')) return '부관훼리';
+  if (name.startsWith('하마유호')) return '관부훼리';
+  if (name.includes('부관훼리') || name.startsWith('성희호')) return '부관훼리';
+  if (name.includes('광양비츠호') || name.includes('광양훼리')) return '광양훼리';
   return '기타';
 }
 // 대범주 — 선사가 아니라 "한국 선적/한국 선사 라인"인지 "일본 선적/일본 선사 라인"인지로 나눈다.
@@ -2026,6 +2579,9 @@ function _legPath(fromPt, toPt) {
   // 세토내해는 섬 사이 좁은 수로가 많아 곡선 보간 없이 실측 경유점을 직선으로만 연결한다.
   if (_isNearPt(fromPt, _BUSAN_PT, 5) && _isNearPort(toPt, 'osaka')) return _miracleWP;
   if (_isNearPt(toPt, _BUSAN_PT, 5) && _isNearPort(fromPt, 'osaka')) return _miracleWP.slice().reverse();
+  // 광양↔시모노세키(광양훼리) — 직선 구간 연결(간몬해협 구간은 부관훼리와 동일 이유로 곡선 보간 없음)
+  if (_isNearPort(fromPt, 'gwangyang') && _isNearPort(toPt, 'shimonoseki')) return _gwangyangWP;
+  if (_isNearPort(fromPt, 'shimonoseki') && _isNearPort(toPt, 'gwangyang')) return _gwangyangWP.slice().reverse();
   return [fromPt, toPt];
 }
 
@@ -2072,6 +2628,24 @@ const _miracleWP = [
   [34.598172, 135.323410],[34.647119, 135.413189],
   [34.644789, 135.422802],[34.643200, 135.422051]
 ];
+// 광양훼리 항로 (광양항 국제여객터미널 ↔ 시모노세키항)
+// 광양항 → 남해안 → 대한해협 횡단 → 히비키나다에서 부관훼리 항로에 합류 → 간몬해협 → 시모노세키.
+// 간몬해협 구간은 좁아 곡선 보간 시 육지를 가로지르므로 부관훼리와 동일하게 직선 연결.
+const _gwangyangWP = [
+  [34.9217916, 127.6979195], // 광양항 국제여객터미널
+  [34.903108,  127.702332],
+  [34.903390,  127.718983],
+  [34.895083,  127.751598],
+  [34.868327,  127.788162],
+  [34.845226,  127.794170],
+  [34.762205,  127.801208],
+  [34.625298,  127.887726],
+  [34.045832,  128.935547],
+  [34.016242,  129.413452],
+  [33.971837,  130.711899],
+  ..._shimonosekiWP.slice(1) // 히비키나다→시모노세키 구간은 부관훼리 항로와 동일
+];
+
 // ── 속도 변수 ──
 // 산타모니카: 42노트 순항 (부산-제주 92마일/1.5h 스케줄 기준)
 let simSMkts = 42;
@@ -2081,7 +2655,7 @@ let simSMkts = 42;
 const SM_DIST_LEG1 = 74;   // 부산→히타카츠 공식 거리 (km)
 const SM_DIST_LEG2 = 132;  // 히타카츠→하카타 공식 거리 (km)
 const QB_DIST_KM   = 213;  // 부산→하카타 공식 거리 (km)
-let simQBkts = 37; // 실측 순항속력 기준 37노트로 수정(舊: 공식거리÷소요시간 역산값 31.4노트)
+let simQBkts = 31.4; // 공식거리÷공식소요시간 역산값 31.4노트
 
 // 회항(정박) 대기시간 — 목적항(하카타) 도착 후 승하선·급유·정비 등을 마치고
 // 다시 부산으로 출항하기까지 걸리는 시간(분). 왕복 소요시간 계산에 반영된다.
@@ -2144,7 +2718,7 @@ function setSimPlayScope(scope) {
   // 당겨서(대기시간 없이) 바로 시뮬레이션이 가동되도록 한다.
   simSimMin = _earliestVisibleDepartMin();
   _simRenderFrame();
-  simPlay();
+  if (simRunning) simPlay();
   _rebuildSimTimelapse();
   _applyMapScopeVisibility();
 }
@@ -2258,22 +2832,27 @@ function _updateNowTag() {
 // 실제 달력 날짜(getWindow() 등)는 전혀 안 보고, 화면에 보이는 순서대로 무조건
 // "토·일·월·화·수·목·금"을 반복해서 매긴다 — 오늘이 며칠이든 항상 이 순서로만 보인다.
 let _simTimelapseRelabeling = false;
+// vis-saturday → 토, vis-sunday → 일 … (SIM_EPOCH=2000-01-01=토요일이므로 클래스↔요일이 일치)
+const _VIS_DAY_LABEL = {
+  'vis-sunday':'일','vis-monday':'월','vis-tuesday':'화',
+  'vis-wednesday':'수','vis-thursday':'목','vis-friday':'금','vis-saturday':'토'
+};
 function _simTimelapseRelabelDays() {
   if (_simTimelapseRelabeling || !_simTimelapse) return;
   const container = document.getElementById('simTimelapseEl');
   if (!container) return;
   _simTimelapseRelabeling = true;
   try {
-    const week = _allWeekDays();
     const isTimeLike = txt => /^\d{1,2}:\d{2}$/.test(txt);
-    // vis-timeline은 절대 위치 요소라 DOM 순서가 시각 순서와 다를 수 있다.
-    // vis-major(날짜 축)만 처리하고, getBoundingClientRect().left 기준 좌→우 정렬 후 할당.
-    const elems = Array.from(container.querySelectorAll('.vis-text.vis-major'))
-      .filter(el => { const t = el.textContent.trim(); return t && !isTimeLike(t); })
-      .sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
-    elems.forEach((el, i) => {
-      const label = week[i % 7];
-      if (el.textContent !== label) el.textContent = label;
+    container.querySelectorAll('.vis-text').forEach(el => {
+      const txt = el.textContent.trim();
+      if (!txt || isTimeLike(txt)) return;
+      for (const [cls, label] of Object.entries(_VIS_DAY_LABEL)) {
+        if (el.classList.contains(cls)) {
+          if (el.textContent !== label) el.textContent = label;
+          return;
+        }
+      }
     });
   } finally {
     _simTimelapseRelabeling = false;
@@ -2393,6 +2972,96 @@ function setSimTimelapsePortFilter(v) {
   _rebuildSimTimelapse();
   _applyMapScopeVisibility(); // 항구를 특정하면 지도에서도 그 항구를 지나는 POI·항로선만 남긴다
 }
+// 선사 필터(다중선택 Set) — 빈 Set = 전체, 하나 이상이면 그 선사만
+let simTimelapseCompanyFilter = new Set();
+let _lastCompanyList = [];
+function _getShipCompany(groupId) {
+  if (groupId === 'sm') return '시월드고속훼리';
+  if (groupId === 'qb') return 'JR 규슈고속선';
+  const s = customShips.find(x => 'c_' + x.id === groupId);
+  return s ? (s.group || '기타') : null;
+}
+function _lineOwnCompany(key) {
+  if (key === 'smLeg1' || key === 'smLeg2') return '시월드고속훼리';
+  if (key === 'qbDirect') return 'JR 규슈고속선';
+  if (key === 'camelliaRef') return '카멜리아';
+  if (key === 'shimonosekiRef') return '부관훼리';
+  if (key === 'miracleRef') return '팬스타';
+  if (key === 'gwangyangRef') return '광양훼리';
+  if (key.startsWith('cs_')) {
+    const id = key.slice(3);
+    const s = customShips.find(x => x.id === id);
+    return s ? (s.group || '기타') : null;
+  }
+  return null; // 공유 참고선
+}
+function _companyFilterAllows(company) {
+  return simTimelapseCompanyFilter.size === 0 || simTimelapseCompanyFilter.has(company);
+}
+function toggleCompanyDropdown(e) {
+  if (e) e.stopPropagation();
+  const panel = document.getElementById('companyFilterPanel');
+  const btn   = document.getElementById('companyFilterBtn');
+  const isOpen = panel.classList.contains('open');
+  if (!isOpen && btn) {
+    const r = btn.getBoundingClientRect();
+    panel.style.top  = (r.bottom + 4) + 'px';
+    panel.style.left = r.left + 'px';
+  }
+  panel.classList.toggle('open');
+}
+function _closeCompanyDropdown() {
+  const panel = document.getElementById('companyFilterPanel');
+  if (panel) panel.classList.remove('open');
+}
+function _updateCompanyDropdown(companies) {
+  _lastCompanyList = companies;
+  const panel = document.getElementById('companyFilterPanel');
+  const btn = document.getElementById('companyFilterBtn');
+  if (!panel) return;
+  const allSel = simTimelapseCompanyFilter.size === 0;
+  panel.innerHTML =
+    `<label style="color:#7ecfff;font-weight:700"><input type="checkbox" ${allSel ? 'checked' : ''}
+       onchange="setCompanyAll(this.checked)"> 전체</label>` +
+    `<div style="border-top:1px solid rgba(80,160,255,0.2);margin:4px 0 2px"></div>` +
+    companies.map(c => {
+      const esc = c.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return `<label><input type="checkbox" ${allSel || simTimelapseCompanyFilter.has(c) ? 'checked' : ''}
+        onchange="toggleCompanyItem('${esc}',this.checked)"> ${c}</label>`;
+    }).join('');
+  if (btn) {
+    if (allSel || companies.length === 0) {
+      btn.textContent = '선사: 전체 ▾';
+    } else {
+      const arr = [...simTimelapseCompanyFilter];
+      btn.textContent = arr.length === 1 ? `선사: ${arr[0]} ▾` : `선사: ${arr[0]} +${arr.length-1} ▾`;
+    }
+  }
+}
+function setCompanyAll(checked) {
+  if (checked) {
+    simTimelapseCompanyFilter = new Set();
+    _rebuildSimTimelapse();
+    _applyMapScopeVisibility();
+    _updateCompanyDropdown(_lastCompanyList);
+  }
+}
+function toggleCompanyItem(name, checked) {
+  if (simTimelapseCompanyFilter.size === 0) {
+    if (!checked) simTimelapseCompanyFilter = new Set(_lastCompanyList.filter(c => c !== name));
+  } else {
+    if (checked) {
+      simTimelapseCompanyFilter.add(name);
+      if (simTimelapseCompanyFilter.size >= _lastCompanyList.length) simTimelapseCompanyFilter = new Set();
+    } else {
+      simTimelapseCompanyFilter.delete(name);
+    }
+  }
+  _rebuildSimTimelapse();
+  _applyMapScopeVisibility();
+  _updateCompanyDropdown(_lastCompanyList);
+}
+
 // 선종 필터(전체/고속선/로로선(화물여객선)/기타) — 항구 필터와 마찬가지로 배 목록 행만 좁힌다.
 let simTimelapseShipTypeFilter = 'all';
 function setSimTimelapseShipTypeFilter(v) {
@@ -2489,13 +3158,14 @@ const _LINE_PORTS = {
   izuharaDirectRef: ['busan', 'izuhara'],
   camelliaRef: ['busan', 'hakata'],
   shimonosekiRef: ['busan', 'shimonoseki'],
-  miracleRef: ['busan', 'osaka']
+  miracleRef: ['busan', 'osaka'],
+  gwangyangRef: ['gwangyang', 'shimonoseki']
 };
 // 정적 참고 항로선의 선종 — simTimelapseShipTypeFilter 적용에 사용
 const _LINE_SHIP_TYPE = {
   smLeg1:'고속선', smLeg2:'고속선', qbDirect:'고속선',
   hitakatsuRef:'고속선', izuharaViaRef:'고속선', izuharaDirectRef:'고속선',
-  camelliaRef:'로로선(화물여객선)', shimonosekiRef:'로로선(화물여객선)', miracleRef:'로로선(화물여객선)',
+  camelliaRef:'로로선(화물여객선)', shimonosekiRef:'로로선(화물여객선)', miracleRef:'로로선(화물여객선)', gwangyangRef:'로로선(화물여객선)',
 };
 // 정적 항로선의 전담 타임랩스 그룹 ID — shipFilter가 특정 배로 좁혀졌을 때 그 배의 선만 남긴다.
 // undefined이면 "여러 배 공유" 공통선: sm/qb 선택 시엔 유지, 커스텀 배 선택 시엔 숨긴다.
@@ -2515,9 +3185,14 @@ function _portVisibleForScope(portId) {
     show = _simCustomVisible() || _simPendingVisible();
   } else if (portId === 'hakata') {
     show = _simCoreVisible() || _simCustomVisible() || _simPendingVisible();
-  } else if (portId === 'shimonoseki' || portId === 'osaka') {
-    // 시모노세키(부관훼리)·오사카(미라클호)는 현재 둘 다 취항예정 없는 "타선사선박"만 오간다.
+  } else if (portId === 'shimonoseki') {
+    // 시모노세키: 부관훼리(타선사선박)·광양훼리(진입예정) 양쪽 모두 기항
+    show = _simCustomVisible() || _simPendingVisible();
+  } else if (portId === 'osaka') {
     show = _simCustomVisible();
+  } else if (portId === 'gwangyang') {
+    // 광양항: 광양훼리(진입예정)만 취항 예정 — pending 탭에서만 표시
+    show = _simPendingVisible();
   } else {
     show = true;
   }
@@ -2542,6 +3217,7 @@ function _lineVisibleForScope(key, skipPortFilter) {
     if (!s || !_shouldShowCustomShip(s)) return false;
     if (simTimelapseShipTypeFilter !== 'all' && (s.shipType || '고속선') !== simTimelapseShipTypeFilter) return false;
     if (simTimelapseShipFilter !== 'all' && simTimelapseShipFilter !== 'c_' + id) return false;
+    if (simTimelapseCompanyFilter.size > 0 && !simTimelapseCompanyFilter.has(s.group || '기타')) return false;
     if (skipPortFilter) return true;
     const filter = simTimelapsePortFilter;
     if (filter === 'all') return true;
@@ -2560,6 +3236,8 @@ function _lineVisibleForScope(key, skipPortFilter) {
       show = _simCustomVisible() || _simPendingVisible(); break;
     case 'izuharaDirectRef': case 'camelliaRef': case 'shimonosekiRef': case 'miracleRef':
       show = _simCustomVisible(); break;
+    case 'gwangyangRef':
+      show = _simPendingVisible(); break;
     default:
       show = true;
   }
@@ -2580,6 +3258,12 @@ function _lineVisibleForScope(key, skipPortFilter) {
       // 공유 참고선 — 커스텀 배를 콕 집어서 보면 숨긴다
       if (simTimelapseShipFilter.startsWith('c_')) return false;
     }
+  }
+
+  // 선사 필터 — 선사가 명확한 항로선만 적용(공유 참고선은 통과)
+  if (simTimelapseCompanyFilter.size > 0) {
+    const co = _lineOwnCompany(key);
+    if (co && !simTimelapseCompanyFilter.has(co)) return false;
   }
 
   if (skipPortFilter) return show;
@@ -2603,6 +3287,22 @@ function _applyMapScopeVisibility() {
     if (show && !map.hasLayer(line)) line.addTo(map);
     else if (!show && map.hasLayer(line)) map.removeLayer(line);
   });
+  // 거리 라벨은 대응하는 항로선이 보일 때만 표시
+  if (typeof _routeLabelScopes !== 'undefined') {
+    _routeLabelScopes.forEach(({ marker, key }) => {
+      const show = _lineVisibleForScope(key);
+      if (show && !map.hasLayer(marker)) marker.addTo(map);
+      else if (!show && map.hasLayer(marker)) map.removeLayer(marker);
+    });
+  }
+  // 커스텀 선박 POI도 필터 변경 즉시 opacity 갱신 (다음 tick 기다리지 않음)
+  if (typeof _customMarkers !== 'undefined') {
+    Object.keys(_customMarkers).forEach(id => {
+      const mk = _customMarkers[id];
+      if (!mk) return;
+      mk.setOpacity(_lineVisibleForScope('cs_' + id) ? 1 : 0);
+    });
+  }
 }
 
 // 항구 하나에 대해, 재생 범위와 무관하게 등록된 모든 배(기본+등록)의 점유 구간을 시뮬레이션
@@ -2696,7 +3396,18 @@ function _rebuildSimTimelapse() {
   if (simTimelapseShipTypeFilter !== 'all') {
     groups = groups.filter(g => _groupShipType(g.id) === simTimelapseShipTypeFilter);
   }
-  if (simTimelapseShipFilter !== 'all' || simTimelapsePortFilter !== 'all' || simTimelapseShipTypeFilter !== 'all') {
+  // 선사 필터 — 현재 보이는 배들의 선사 목록을 수집해 드랍다운을 갱신한 뒤, 선택된 선사만 남긴다.
+  {
+    const allCos = [...new Set(groups.map(g => _getShipCompany(g.id)).filter(Boolean))];
+    _updateCompanyDropdown(allCos);
+    if (simTimelapseCompanyFilter.size > 0) {
+      groups = groups.filter(g => {
+        const co = _getShipCompany(g.id);
+        return co ? simTimelapseCompanyFilter.has(co) : true;
+      });
+    }
+  }
+  if (simTimelapseShipFilter !== 'all' || simTimelapsePortFilter !== 'all' || simTimelapseShipTypeFilter !== 'all' || simTimelapseCompanyFilter.size > 0) {
     const keepIds = new Set(groups.map(g => g.id));
     items = items.filter(it => keepIds.has(it.group));
   }
@@ -2712,7 +3423,7 @@ function _rebuildSimTimelapse() {
       start: _simTimeAt(g.start), end: _simTimeAt(g.end),
       className: 'sim-seg-avail',
       style: 'background-color:#22dd66;border-color:rgba(0,0,0,0.4);color:#06301a;',
-      title: `<b>${availLabel} 투입가능 선석</b><br>${_minToHM(g.start)} ~ ${_minToHM(g.end)} (${_fmtMin(g.end - g.start)} 비어있음)`
+      title: `<b>${availLabel} 투입가능 선석</b><br>${_minToHM(_baseMin + g.start)} ~ ${_minToHM(_baseMin + g.end)} (${_fmtMin(g.end - g.start)} 비어있음)`
     });
   });
   // 사용자가 마우스로 끌어서 바꾼 행 순서(_simTimelapseGroupOrder)가 있으면 그 순서를 그대로
@@ -2746,10 +3457,10 @@ function _rebuildSimTimelapse() {
         orientation: 'top',
         height: timelapseHeight + 'px',
         tooltip: { followMouse: true },
-        editable: false, selectable: false,
+        editable: { updateTime: false, updateGroup: false, remove: false }, selectable: false,
         // 왼쪽 배 목록 행을 마우스로 끌어서 순서를 바꿀 수 있게 한다. 순서는 onMoveGroup에서
         // _simTimelapseGroupOrder에 저장해두고, 위에서 매 rebuild마다 다시 적용해 유지시킨다.
-        groupEditable: { order: true, add: false, remove: false, updateGroup: false },
+        groupEditable: { order: true, add: false, remove: false },
         onMoveGroup: (group, callback) => {
           _simTimelapseGroupOrder[group.id] = group.order;
           callback(group);
@@ -2878,6 +3589,76 @@ function _interpTL(tl, simMin) {
   return { pos: tl[tl.length-1].pt, hdg: 0 };
 }
 
+// ── 팝업 사진 캐로셀 ──
+function carouselGo(id, dir) {
+  const w = document.getElementById(id); if (!w) return;
+  const slides = w.querySelectorAll('.c-slide');
+  const n = slides.length; if (!n) return;
+  let i = ((+w.dataset.idx || 0) + dir + n) % n;
+  w.dataset.idx = i;
+  const sw = (slides[0] && slides[0].offsetWidth) || w.offsetWidth || 290;
+  w.querySelector('.c-track').style.transform = `translateX(-${i * sw}px)`;
+  w.querySelectorAll('.c-dot').forEach((d,j) => d.classList.toggle('active', j===i));
+}
+
+// 캐로셀 이미지 hover 시 6× 외부 확대 오버레이
+(function() {
+  const ovl = document.createElement('div');
+  ovl.id = '_imgZoomOvl';
+  ovl.style.cssText = 'position:fixed;z-index:99999;display:none;pointer-events:none;' +
+    'border-radius:7px;box-shadow:0 10px 48px rgba(0,0,0,0.88);overflow:hidden;' +
+    'background:#06101e;transition:opacity .12s';
+  const zi = document.createElement('img');
+  zi.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block';
+  ovl.appendChild(zi);
+  document.body.appendChild(ovl);
+  window._openImgZoom = function(el) {
+    const r = el.getBoundingClientRect();
+    const SCALE = 6;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    let w = r.width * SCALE, h = r.height * SCALE;
+    const asp = r.width / (r.height || 1);
+    if (w > vw * 0.88) { w = vw * 0.88; h = w / asp; }
+    if (h > vh * 0.88) { h = vh * 0.88; w = h * asp; }
+    let left = r.left + r.width/2 - w/2;
+    let top  = r.top  + r.height/2 - h/2;
+    left = Math.max(8, Math.min(left, vw - w - 8));
+    top  = Math.max(8, Math.min(top,  vh - h - 8));
+    zi.src = el.src;
+    ovl.style.width = w+'px'; ovl.style.height = h+'px';
+    ovl.style.left  = left+'px'; ovl.style.top = top+'px';
+    ovl.style.display = 'block';
+  };
+  window._closeImgZoom = function() { ovl.style.display = 'none'; };
+})();
+
+function _carousel(id, slides) {
+  const IMG_H = 160;
+  const sh = slides.map(s =>
+    `<div class="c-slide" style="min-width:100%;flex-shrink:0">` +
+    `<div style="height:${IMG_H}px;overflow:hidden;border-radius:5px;background:#06101e">` +
+    `<img src="${s.img}" style="width:100%;height:100%;object-fit:${s.fit||'cover'};display:block;` +
+         `cursor:zoom-in" ` +
+         `onmouseover="_openImgZoom(this)" ` +
+         `onmouseout="_closeImgZoom()" ` +
+         `onerror="this.parentNode.style.display='none'">` +
+    `</div>` +
+    (s.cap  ? `<div style="font-size:9px;text-align:center;color:#99b8d4;padding:2px 6px 1px">${s.cap}</div>` : '') +
+    (s.body ? `<div style="font-size:10.5px;line-height:1.65;color:#cce0f0;padding:4px 2px 3px">${s.body}</div>` : '') +
+    `</div>`
+  ).join('');
+  const dots = slides.map((_, i) =>
+    `<span class="c-dot${i===0?' active':''}" style="opacity:${i===0?'1':'.35'}"></span>`
+  ).join('');
+  const nav = slides.length > 1
+    ? `<button class="c-btn" style="left:4px;top:${IMG_H/2}px;transform:translateY(-50%)" onclick="carouselGo('${id}',-1)">◀</button>` +
+      `<button class="c-btn" style="right:4px;top:${IMG_H/2}px;transform:translateY(-50%)" onclick="carouselGo('${id}',1)">▶</button>` +
+      `<div style="text-align:center;padding:3px 0">${dots}</div>`
+    : '';
+  return `<div id="${id}" data-idx="0" style="position:relative;overflow:hidden;border-radius:5px;margin:5px 0">` +
+    `<div class="c-track" style="display:flex;transition:transform .3s ease">${sh}</div>${nav}</div>`;
+}
+
 // ── 선박 SVG 일러스트 (인라인 · GitHub Pages 완전 독립) ──
 function _shipSvgHtml(type) {
   const W = 290, H = 112;
@@ -2932,6 +3713,46 @@ function _shipSvgHtml(type) {
 <line x1="213" y1="11" x2="235" y2="11" stroke="#999" stroke-width="1"/>
 <path d="M258 75 L278 83 L268 75Z" fill="#0a3070"/>
 <text x="10" y="106" fill="#66ccff" font-family="'Malgun Gothic',sans-serif" font-size="9.5" font-weight="bold">🚢 Queen Beetle · JR큐슈고속선 · Austal 83m wavepiercer</text>
+</svg>`;
+  if (type === 'grace') return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="width:100%;display:block;border-radius:4px;margin:5px 0">
+<rect width="${W}" height="${H}" fill="#0e0a02"/>
+<path d="M0 78 Q36 74 72 78 Q108 82 144 78 Q180 74 216 78 Q252 82 ${W} 78 L${W} ${H} L0 ${H}Z" fill="#0d1a08"/>
+<!-- 선체(hull) — 팬스타 오렌지 -->
+<path d="M14 78 L258 75 L278 83 L270 89 L10 89Q3 85 5 79Z" fill="#c84800"/>
+<!-- 흘수선 백색 띠 -->
+<path d="M14 75 L258 72 L272 77 L258 78 L14 81Z" fill="#fff5e0" opacity=".92"/>
+<!-- 선체 오렌지 스트라이프 -->
+<rect x="14" y="79" width="244" height="4" rx="1" fill="#ff6600" opacity=".9"/>
+<!-- 갑판 하부 -->
+<rect x="16" y="61" width="242" height="17" rx="2" fill="#e05500"/>
+<!-- 상부구조물 -->
+<rect x="26" y="41" width="200" height="22" rx="3" fill="#ff8822"/>
+<!-- 창문 띠 -->
+<rect x="34" y="47" width="182" height="9" rx="2" fill="#1a0800" opacity=".8"/>
+<!-- 창문 -->
+<rect x="38" y="49" width="13" height="5" rx="1" fill="#ffcc88" opacity=".55"/>
+<rect x="56" y="49" width="13" height="5" rx="1" fill="#ffcc88" opacity=".55"/>
+<rect x="74" y="49" width="13" height="5" rx="1" fill="#ffcc88" opacity=".55"/>
+<rect x="92" y="49" width="13" height="5" rx="1" fill="#ffcc88" opacity=".55"/>
+<rect x="110" y="49" width="13" height="5" rx="1" fill="#ffcc88" opacity=".55"/>
+<rect x="128" y="49" width="13" height="5" rx="1" fill="#ffcc88" opacity=".55"/>
+<rect x="146" y="49" width="13" height="5" rx="1" fill="#ffcc88" opacity=".55"/>
+<rect x="164" y="49" width="13" height="5" rx="1" fill="#ffcc88" opacity=".55"/>
+<rect x="182" y="49" width="13" height="5" rx="1" fill="#ffcc88" opacity=".55"/>
+<rect x="200" y="49" width="13" height="5" rx="1" fill="#ffcc88" opacity=".55"/>
+<!-- 조타실·굴뚝 블록 -->
+<rect x="202" y="31" width="44" height="14" rx="2" fill="#dd5500"/>
+<rect x="206" y="34" width="36" height="7" rx="1" fill="#1a0800" opacity=".7"/>
+<!-- 팬스타 특유 사선 스트라이프(굴뚝 위) -->
+<path d="M210 31 L226 31 L220 17 L204 17Z" fill="#ff8800"/>
+<path d="M226 31 L242 31 L236 17 L220 17Z" fill="#cc4400"/>
+<!-- 마스트 -->
+<line x1="222" y1="17" x2="222" y2="6" stroke="#aaa" stroke-width="1.5"/>
+<line x1="211" y1="11" x2="233" y2="11" stroke="#aaa" stroke-width="1"/>
+<!-- 선미 -->
+<path d="M258 75 L278 83 L268 75Z" fill="#7a2800"/>
+<!-- 설명 -->
+<text x="10" y="106" fill="#ffe066" font-family="'Malgun Gothic',sans-serif" font-size="9.5" font-weight="bold">🕓 Grace · 팬스타 · Austal 83m wavepiercer</text>
 </svg>`;
   return '';
 }
@@ -3032,7 +3853,12 @@ function _simRenderFrame() {
   }
 
   const smElapsedStr = _fmtMin(Math.max(0, Math.min(smLocal, _totalMinSMret)));
-  const smLabel = `⛴ 산타모니카호<br>${smElapsedStr} / ${_fmtMin(_totalMinSMret)}`;
+  const _smETD  = _minToHM(_baseMin + _smDelay);
+  const _smETA1 = _minToHM(_baseMin + _smDelay + _hitaArrMin);
+  const _smETA2 = _minToHM(_baseMin + _smDelay + _totalMinSM);
+  const smLabel = `⛴ 산타모니카호<br><span style="font-size:9px;opacity:.88">` +
+    `ETD ${_smETD} 부산 · ETA ${_smETA1} 히타카츠 (경유 ${SIM_STOP_MIN}분)<br>` +
+    `ETA ${_smETA2} 하카타 · 총 왕복 ${_fmtMin(_totalMinSMret)}</span>`;
   if (!simMarker) {
     simMarker = L.marker(pos,{icon:_makeShipIcon(hdg,'#ffcc00','#cc8800',smLabel),zIndexOffset:910}).addTo(map)
       .bindPopup(`<div class="popup-title">⛴ 산타모니카호</div>${_shipSvgHtml('sm')}<div class="popup-body"><b style="color:#ffcc44">시월드고속훼리 · Incat 76m wavepiercer</b><br>전장 72.67m · 폭 21m · GT 390톤<br>최고속력 45노트(83km/h) · 순항 ${simSMkts}노트<br>여객 621명 · 차량 미탑재<br>히타카츠 ${SIM_STOP_MIN}분 경유 <a href="https://www.panstar.co.kr/business/cruise/tsushima_link" target="_blank" rel="noopener" style="color:#7ecfff;font-size:10px">※쓰시마링크호 실측</a></div>`,{className:'custom-popup',maxWidth:310});
@@ -3065,7 +3891,11 @@ function _simRenderFrame() {
   }
 
   const qbElapsedStr = _fmtMin(Math.max(0, Math.min(qbLocal, _totalMinQBret)));
-  const qbLabel = `🚢 퀸비틀<br>${qbElapsedStr} / ${_fmtMin(_totalMinQBret)}`;
+  const _qbETD  = _minToHM(_baseMin + _qbDelay);
+  const _qbETA  = _minToHM(_baseMin + _qbDelay + _totalMinQB);
+  const qbLabel = `🚢 퀸비틀<br><span style="font-size:9px;opacity:.88">` +
+    `ETD ${_qbETD} 부산 · ETA ${_qbETA} 하카타<br>` +
+    `총 왕복 ${_fmtMin(_totalMinQBret)}</span>`;
   if (!qbMarker) {
     qbMarker = L.marker(qbPos,{icon:_makeShipIcon(qbHdg,'#66ccff','#1155aa',qbLabel),zIndexOffset:900}).addTo(map)
       .bindPopup(`<div class="popup-title" style="color:#66ccff">🚢 퀸비틀</div>${_shipSvgHtml('qb')}<div class="popup-body"><b style="color:#66ccff">JR큐슈고속선 · Austal 83m wavepiercer</b><br>전장 83.5m · GT 894톤<br>최고속력 36노트 · 역산속력 ${simQBkts.toFixed(1)}노트(${(simQBkts*1.852).toFixed(0)}km/h)<br>여객 502명 · 차량 미탑재<br>부산↔하카타 213km(115해리) · 스케줄 3시간 40분</div>`,{className:'custom-popup',maxWidth:310});
@@ -3118,7 +3948,11 @@ function _simRenderFrame() {
   }
 
   const sm2ElapsedStr = _fmtMin(Math.max(0, Math.min(smLocal, _totalMinSM2ret)));
-  const sm2Label = `⛴ 산타모니카 직항<br>${sm2ElapsedStr} / ${_fmtMin(_totalMinSM2ret)}`;
+  const _sm2ETD = _minToHM(_baseMin + _smDelay);
+  const _sm2ETA = _minToHM(_baseMin + _smDelay + _totalMinSM2);
+  const sm2Label = `⛴ 산타모니카 직항<br><span style="font-size:9px;opacity:.88">` +
+    `ETD ${_sm2ETD} 부산 · ETA ${_sm2ETA} 하카타<br>` +
+    `총 왕복 ${_fmtMin(_totalMinSM2ret)}</span>`;
   if (!sim2Marker) {
     sim2Marker = L.marker(sm2Pos,{icon:_makeShipIcon(sm2Hdg,'#44ffdd','#008866',sm2Label),zIndexOffset:905}).addTo(map)
       .bindPopup(`<div class="popup-title" style="color:#44ffdd">⛴ 산타모니카호 (시나리오 2 · 직항)</div>${_shipSvgHtml('sm')}<div class="popup-body"><b style="color:#44ffdd">시월드고속훼리 · Incat 76m wavepiercer</b><br>전장 72.67m · 폭 21m · GT 390톤<br>최고속력 45노트 · 순항 ${simSMkts}노트<br>여객 621명 · 히타카츠 미경유<br>부산↔하카타 직항 213km(115해리)</div>`,{className:'custom-popup',maxWidth:310});
@@ -3139,6 +3973,8 @@ function _simRenderFrame() {
 
   // ── 등록된 임의 선박들 ──
   _tickCustomShips(simSimMin);
+  // ── 대마도 셔틀버스 ──
+  _tickBus(simSimMin);
 }
 
 function simPlay() {
@@ -3153,7 +3989,8 @@ function simPause() {
   if (simRAF) cancelAnimationFrame(simRAF);
 }
 function simReset() {
-  simPause(); simSimMin=0;
+  simPause();
+  simSimMin = typeof _earliestVisibleDepartMin === 'function' ? _earliestVisibleDepartMin() : 0;
   if (simMarker){map.removeLayer(simMarker);simMarker=null;}
   if (qbMarker){map.removeLayer(qbMarker);qbMarker=null;}
   if (sim2Marker){map.removeLayer(sim2Marker);sim2Marker=null;}
@@ -3197,6 +4034,7 @@ function simReset() {
 }
 
 function switchSimTab(n) {
+  simReset();
   _activeSimTab = n;
   document.getElementById('tabBtn1').classList.toggle('active', n === 1);
   document.getElementById('tabBtn2').classList.toggle('active', n === 2);
@@ -3321,6 +4159,46 @@ function _seedDefaultCompetitorShips() {
     try { localStorage.setItem('hanjil_seeded_v3', '1'); } catch(e) {}
   }
 
+  // gwangyang: 광양비츠호(임시) 광양↔시모노세키 구상 시뮬레이션.
+  // 항로 거리 약 341km(≈184nm) ÷ 12h30m = 14.7노트 역산.
+  let seededGwangyang = null;
+  try { seededGwangyang = localStorage.getItem('hanjil_seeded_gwangyang'); } catch(e) {}
+  if (!seededGwangyang) {
+    const gwangPort = ports.find(p => p.id === 'gwangyang');
+    const smskPort  = ports.find(p => p.id === 'shimonoseki');
+    customShips.push({
+      id: 'cs' + (_shipIdSeq++), name: '광양비츠호(임시)', color: '#44eebb',
+      kts: 14.7, departHM: '18:00', turnMin: 0, roundTrip: false,
+      from: { mode:'known', name: gwangPort.name, lat: gwangPort.lat, lng: gwangPort.lng },
+      via: null, viaStopMin: null,
+      to:   { mode:'known', name: smskPort.name,  lat: smskPort.lat,  lng: smskPort.lng },
+      berthMin: BERTH_DEFAULT_MIN, days: _allWeekDays(),
+      sourceUrl: null,
+      sourceLabel: '⚠ 구상 시뮬레이션 — 운항 미정. 항로 341km(184nm) ÷ 12h30m 역산 = 14.7노트',
+      shipType: '로로선(화물여객선)', tonnage: 30000,
+      group: '광양훼리', nation: '한국라인', pending: true
+    }, {
+      id: 'cs' + (_shipIdSeq++), name: '광양비츠호(임시) (복항)', color: '#2bc4a0',
+      kts: 18.4, departHM: '20:30', turnMin: 0, roundTrip: false,
+      from: { mode:'known', name: smskPort.name,  lat: smskPort.lat,  lng: smskPort.lng },
+      via: null, viaStopMin: null,
+      to:   { mode:'known', name: gwangPort.name, lat: gwangPort.lat, lng: gwangPort.lng },
+      berthMin: BERTH_DEFAULT_MIN, days: _allWeekDays(),
+      sourceUrl: null,
+      sourceLabel: '⚠ 구상 시뮬레이션 — 시모노세키 20:30 출항 → 광양 익일 08:30 도착 (10h). 항로 341km(184nm) ÷ 10h = 18.4노트',
+      shipType: '로로선(화물여객선)', tonnage: 30000,
+      group: '광양훼리', nation: '한국라인', pending: true
+    });
+    try { localStorage.setItem('hanjil_seeded_gwangyang', '1'); } catch(e) {}
+  }
+  // 광양비츠호(임시) pending 마이그레이션 — 기존 저장 데이터에 pending:true 소급 적용
+  let gwangyangPendingFixed = null;
+  try { gwangyangPendingFixed = localStorage.getItem('hanjil_gwangyang_pending_v1'); } catch(e) {}
+  if (!gwangyangPendingFixed) {
+    customShips.forEach(s => { if (s.name && s.name.includes('광양비츠호')) s.pending = true; });
+    try { localStorage.setItem('hanjil_gwangyang_pending_v1', '1'); } catch(e) {}
+  }
+
   // v4: 히타카츠/이즈하라행 경쟁사 항로를 직선에서 실제 곡선 경로로 바꾸면서 이동거리가 늘었다.
   // 도착시각(=원래 공지된 소요시간)은 그대로 유지하고 kts만 새 경로 길이에 맞게 다시 역산한다.
   // (이미 저장된 브라우저의 배 데이터도 이름으로 찾아 kts만 1회 보정 — 위 mkShip 호출값과 동일)
@@ -3392,6 +4270,19 @@ function _seedDefaultCompetitorShips() {
     try { localStorage.setItem('hanjil_seeded_v4', '1'); } catch(e) {}
   }
 
+  // grace_izu_direct: 그레이스호 이즈하라 직항(히타카츠 미경유) 추가.
+  // 팬스타 쓰시마링크 직항 라인(_izuharaDirectWP)과 동일한 경로 사용.
+  let graceIzuDirect = null;
+  try { graceIzuDirect = localStorage.getItem('hanjil_grace_izu_direct_v1'); } catch(e) {}
+  if (!graceIzuDirect) {
+    const s = mkShip('팬스타 그레이스호 (이즈하라 직항, 운항예정)', '#ffb84d', 37, '10:20', 330, izu,
+      'https://www.panstar.co.kr/business/cruise/tsushima_link',
+      '⚠ 운항예정 · 히타카츠 미경유 이즈하라 직항 — 출항시각·요일 미확정(추정치)');
+    s.shipType = '고속선'; s.tonnage = 2582; s.group = '팬스타'; s.nation = '한국라인'; s.pending = true;
+    customShips.push(s);
+    try { localStorage.setItem('hanjil_grace_izu_direct_v1', '1'); } catch(e) {}
+  }
+
   // 그레이스호 하카타 직항은 잘못 등록된 항목 — 이미 저장된 데이터에서 제거한다.
   let graceHakataRemoved = null;
   try { graceHakataRemoved = localStorage.getItem('hanjil_grace_hakata_rm_v1'); } catch(e) {}
@@ -3447,12 +4338,12 @@ function _seedDefaultCompetitorShips() {
     try { localStorage.setItem('hanjil_seeded_v5', '1'); } catch(e) {}
   }
 
-  // v9: 그레이스호(舊 퀸비틀) 실측 순항속력 37노트로 보정 — 이미 저장된 브라우저 데이터도 1회 반영.
+  // v9b: 그레이스호 순항속력 31.4노트로 변경 — 이미 저장된 브라우저 데이터도 1회 반영.
   let graceKtsFixed = null;
-  try { graceKtsFixed = localStorage.getItem('hanjil_grace_kts37_v1'); } catch(e) {}
+  try { graceKtsFixed = localStorage.getItem('hanjil_grace_kts314_v2'); } catch(e) {}
   if (!graceKtsFixed) {
-    customShips.forEach(s => { if (s.name && s.name.startsWith('팬스타 그레이스호')) s.kts = 37; });
-    try { localStorage.setItem('hanjil_grace_kts37_v1', '1'); } catch(e) {}
+    customShips.forEach(s => { if (s.name && s.name.startsWith('팬스타 그레이스호')) s.kts = 31.4; });
+    try { localStorage.setItem('hanjil_grace_kts314_v2', '1'); } catch(e) {}
   }
 
   // v10: 미라클호는 실제로 1척(동일 선체)이 편도 2건으로 등록된 것 — 이미 저장된 브라우저 데이터도
@@ -3543,6 +4434,21 @@ function _drawCompetitorRoutes() {
          ⚠ 계절·기상·현지 사정에 따라 변동 가능 — 공식 시각표 확인 필요<br><br>
          <a href="https://www.panstarcruise.com/" target="_blank" rel="noopener" style="color:#7ecfff">🔗 팬스타크루즈 공식 홈페이지</a>
        </div>`, { className:'custom-popup', maxWidth:280 });
+  // 광양훼리 항로 (광양항 ↔ 시모노세키) — 남해안을 따라 대한해협을 건넌 뒤 히비키나다에서
+  // 부관훼리 항로에 합류, 간몬해협을 통과해 시모노세키 카라토 터미널로 진입.
+  // 간몬해협 구간은 부관훼리와 동일하게 직선 연결(곡선 보간 시 육지를 가로지르는 문제 동일).
+  _scopeLines.gwangyangRef = L.polyline(_gwangyangWP, { color:'#44eebb', weight:2.5, opacity:0.8, dashArray:'6 8' })
+    .addTo(map)
+    .bindTooltip('🚢 광양훼리 (광양 ↔ 시모노세키, 간몬해협 경유)', { sticky:true, className:'custom-popup' })
+    .bindPopup(
+      `<div class="popup-title" style="color:#44eebb">광양 ↔ 시모노세키 (광양훼리)</div>
+       <div class="popup-body">
+         광양항 국제여객터미널 출항 → 남해안 → 대한해협 횡단 →<br>
+         히비키나다(響灘)에서 부관훼리 항로 합류 → 간몬해협(関門海峡) →<br>
+         시모노세키 카라토(唐戸) 터미널 입항<br><br>
+         ※ 투입 예정 선박: 광양비츠호 (3만톤급)<br>
+         ⚠ 구상 항로 — 스케줄·운항 시각 미확정
+       </div>`, { className:'custom-popup', maxWidth:280 });
 }
 
 // ════════════════════════════════════════════════════
@@ -3563,6 +4469,15 @@ const BERTH_PORT_ROWS = [
 function _portIdByName(name) {
   const p = ports.find(pp => pp.name === name);
   return p ? p.id : null;
+}
+const _PORT_SHORT = {
+  busan:'부산', hitakatsu:'히타카츠', izuhara:'이즈하라',
+  hakata:'하카타', shimonoseki:'시모노세키', osaka:'오사카', gwangyang:'광양'
+};
+function _portShortName(fullName) {
+  if (!fullName) return '';
+  const id = _portIdByName(fullName);
+  return (id && _PORT_SHORT[id]) || fullName;
 }
 function _shiftDays(days, offset) {
   if (!offset) return days.slice();
@@ -3644,17 +4559,16 @@ function _berthRelabelDays() {
   if (!container) return;
   _berthRelabeling = true; // 아래에서 textContent를 바꾸면 MutationObserver가 다시 이 함수를 부르므로 재진입 방지
   try {
-    const week = _allWeekDays();
     const isTimeLike = txt => /^\d{1,2}:\d{2}$/.test(txt);
-    ['vis-major', 'vis-minor'].forEach(cls => {
-      let idx = 0;
-      container.querySelectorAll('.vis-text.' + cls).forEach(el => {
-        const txt = el.textContent.trim();
-        if (isTimeLike(txt)) return; // 진짜 시:분 눈금은 그대로 둔다
-        const label = week[idx % 7];
-        if (el.textContent !== label) el.textContent = label;
-        idx++;
-      });
+    container.querySelectorAll('.vis-text').forEach(el => {
+      const txt = el.textContent.trim();
+      if (!txt || isTimeLike(txt)) return;
+      for (const [cls, label] of Object.entries(_VIS_DAY_LABEL)) {
+        if (el.classList.contains(cls)) {
+          if (el.textContent !== label) el.textContent = label;
+          return;
+        }
+      }
     });
   } finally {
     _berthRelabeling = false;
@@ -4140,8 +5054,30 @@ function _tickCustomShips(simMin) {
     } else {
       pos = tl.outTL[tl.outTL.length-1].pt; hdg = 0; cls = 'arrived'; txt = '도착 완료';
     }
-    const elapsedStr = _fmtMin(Math.max(0, Math.min(local, tl.totalRet)));
-    const label = `⛴ ${s.name}<br>${elapsedStr} / ${_fmtMin(tl.totalRet)}`;
+    // ETD / ETA / 소요시간 / 정박시간 라벨
+    const _etd     = _minToHM(_baseMin + tl.delay);
+    const _etaTo   = _minToHM(_baseMin + tl.delay + tl.totalOut);
+    const _owStr   = _fmtMin(tl.totalOut);
+    const _bertStr = _fmtMin(s.berthMin != null ? s.berthMin : BERTH_DEFAULT_MIN);
+    const _fNm     = _portShortName(s.from.name);
+    const _tNm     = _portShortName(s.to.name);
+    let _infoLines;
+    if (s.via && tl.viaArrive != null) {
+      const _etaVia  = _minToHM(_baseMin + tl.delay + tl.viaArrive);
+      const _vStop   = _fmtMin(s.viaStopMin != null ? s.viaStopMin : BERTH_DEFAULT_MIN);
+      const _vNm     = _portShortName(s.via.name);
+      _infoLines =
+        `ETD ${_etd} ${_fNm}<br>` +
+        `ETA ${_etaVia} ${_vNm} <span style="opacity:.7">(경유 ${_vStop})</span><br>` +
+        `ETA ${_etaTo} ${_tNm}<br>` +
+        `편도 ${_owStr} · 정박 ${_bertStr}`;
+    } else {
+      _infoLines =
+        `ETD ${_etd} ${_fNm}<br>` +
+        `ETA ${_etaTo} ${_tNm}<br>` +
+        `편도 ${_owStr} · 정박 ${_bertStr}`;
+    }
+    const label = `⛴ ${s.name}<br><span style="font-size:9px;opacity:.88">${_infoLines}</span>`;
     const sourceHtml = s.sourceUrl
       ? `<br><a href="${s.sourceUrl}" target="_blank" rel="noopener" style="color:#7ecfff">🔗 ${s.sourceLabel || '출처 보기'}</a>`
       : '';
@@ -4154,8 +5090,8 @@ function _tickCustomShips(simMin) {
       mk.setLatLng(pos);
       mk.setIcon(_makeShipIcon(hdg, s.color, s.color, label));
     }
-    // 재생 범위(simPlayScope)에 맞는 배만 지도에 보인다 (예: "타선사 진입예정"이면 운항예정 배만).
-    mk.setOpacity(_shouldShowCustomShip(s) ? 1 : 0);
+    // 항로선과 동일한 조건(재생범위·선종·선사·특정배·항구 필터)으로 POI 가시성 결정.
+    mk.setOpacity(_lineVisibleForScope('cs_' + s.id) ? 1 : 0);
   });
 }
 
@@ -4444,10 +5380,6 @@ const SimControl = L.Control.extend({
       document.getElementById('simPanel').classList.add('visible');
       _startOnboardingIntro();
     });
-    const ml = L.DomUtil.create('a', 'map-ctrl-btn', wrap);
-    ml.id='miracleLayerBtn'; ml.href='#'; ml.title='미라클투어앤리조트 POI 표시/숨기기'; ml.innerHTML='🗺';
-    ml.style.opacity = '0.5';
-    L.DomEvent.on(ml,'click', e => { L.DomEvent.preventDefault(e); _toggleMiracleLayer(); });
     return wrap;
   }
 });
@@ -4470,14 +5402,33 @@ new SimControl().addTo(map);
 })();
 
 // ── 상단 시계·하단 타임랩스는 시뮬레이션 팝업(simPanel)이 열려 있을 때만 보인다 ──
+let _tlPrevHeight = null;
+function toggleTimelapse() {
+  const bar = document.getElementById('simTimelapseBar');
+  const btn = document.getElementById('tlMinBtn');
+  if (!bar) return;
+  if (bar.classList.contains('tl-minimized')) {
+    bar.classList.remove('tl-minimized');
+    const h = _tlPrevHeight || simTimelapseManualHeight || 250;
+    bar.style.height = h + 'px';
+    simTimelapseManualHeight = h;
+    if (btn) { btn.textContent = '─'; btn.title = '타임랩스 최소화'; }
+    if (_simTimelapse) setTimeout(() => _simTimelapse.redraw(), 30);
+  } else {
+    _tlPrevHeight = bar.offsetHeight;
+    bar.classList.add('tl-minimized');
+    bar.style.height = '28px';
+    if (btn) { btn.textContent = '□'; btn.title = '타임랩스 복원'; }
+  }
+}
+
 (function() {
   const panel = document.getElementById('simPanel');
   const clock = document.getElementById('topDayClock');
-  const timelapse = document.getElementById('simTimelapseBar');
   function syncVisibility() {
     const on = panel.classList.contains('visible');
     if (clock) clock.style.display = on ? '' : 'none';
-    if (timelapse) timelapse.style.display = on ? '' : 'none';
+    // 타임랩스는 시뮬레이션 패널과 독립 — 자체 닫기버튼으로만 숨김
     const nowTag = document.getElementById('simNowTag');
     if (nowTag) nowTag.style.display = on ? '' : 'none';
     if (on) { setTimeout(() => { if (_simTimelapse) { _simTimelapse.redraw(); _updateNowTag(); } }, 0); }
@@ -4548,34 +5499,52 @@ function simPanelToggleMin() {
   document.getElementById('btnSimMin').textContent = p.classList.contains('minimized') ? '□' : '─';
 }
 
-// 타임랩스 리사이즈 손잡이 드래그 — 실제 높이 변수(simTimelapseManualHeight) 선언은 위쪽
-// (_rebuildSimTimelapse보다 앞)에 있다. 여기서는 DOM 이벤트만 연결한다.
+// 타임랩스 리사이즈 손잡이 드래그 — 핸들이 바(bar) 전체 높이를 조절.
+// 바가 너무 작아지면 overflow-y:auto로 스크롤바가 생긴다.
 (function() {
   const handle = document.getElementById('simTimelapseResizeHandle');
   if (!handle) return;
-  const MIN_H = 40;
-  const maxH = () => Math.round(window.innerHeight * 0.75);
-  let dragging = false, startY = 0, startH = 0;
-  const curH = () => {
-    const el = document.getElementById('simTimelapseEl');
-    return el ? el.offsetHeight : 200;
+  const MIN_BAR_H = 28;   // 핸들 그립만 보이는 최소 높이
+  const HANDLE_H  = 14;
+  const PAD_H     = 7;
+  const MIN_EL_H  = 40;
+  const maxH = () => Math.round(window.innerHeight * 0.82);
+
+  const curBarH = () => {
+    const bar = document.getElementById('simTimelapseBar');
+    return bar ? bar.offsetHeight : 260;
   };
-  const applyHeight = h => {
-    simTimelapseManualHeight = h;
-    const el = document.getElementById('simTimelapseEl');
-    if (el) el.style.height = h + 'px';
-    if (_simTimelapse) { try { _simTimelapse.setOptions({ height: h + 'px' }); } catch (e) {} }
+
+  const applyHeight = h_bar => {
+    const bar  = document.getElementById('simTimelapseBar');
+    const head = document.getElementById('simTimelapseHead');
+    const el   = document.getElementById('simTimelapseEl');
+    if (bar) bar.style.height = h_bar + 'px';
+
+    const headH = head ? head.offsetHeight : 72;
+    const elH   = Math.max(MIN_EL_H, h_bar - headH - HANDLE_H - PAD_H);
+    simTimelapseManualHeight = elH;
+    if (el) el.style.height = elH + 'px';
+    if (_simTimelapse) { try { _simTimelapse.setOptions({ height: elH + 'px' }); } catch (e) {} }
     _updateNowTag();
   };
+
+  // 초기 bar 높이를 현재 콘텐츠 높이로 고정 (스크롤 기준점 설정)
+  setTimeout(() => {
+    const bar = document.getElementById('simTimelapseBar');
+    if (bar && !bar.style.height) bar.style.height = bar.scrollHeight + 'px';
+  }, 300);
+
+  let dragging = false, startY = 0, startH = 0;
   handle.addEventListener('mousedown', e => {
-    dragging = true; startY = e.clientY; startH = curH();
+    dragging = true; startY = e.clientY; startH = curBarH();
     handle.classList.add('dragging');
     document.body.style.userSelect = 'none';
     e.preventDefault();
   });
   window.addEventListener('mousemove', e => {
     if (!dragging) return;
-    const h = Math.max(MIN_H, Math.min(maxH(), startH + (startY - e.clientY)));
+    const h = Math.max(MIN_BAR_H, Math.min(maxH(), startH + (startY - e.clientY)));
     applyHeight(h);
   });
   window.addEventListener('mouseup', () => {
