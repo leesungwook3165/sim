@@ -2398,6 +2398,7 @@ let simTimelapseShipTypeFilter = 'all';
 function setSimTimelapseShipTypeFilter(v) {
   simTimelapseShipTypeFilter = v;
   _rebuildSimTimelapse();
+  _applyMapScopeVisibility();
 }
 // 특정 선박 필터 — 옵션 목록 자체를 "지금 재생범위에서 보이는 배들"로 매번 다시 채운다
 // (_rebuildSimTimelapse에서 호출). 그 배가 범위 밖으로 사라지면 자동으로 "전체"로 되돌린다.
@@ -2405,6 +2406,7 @@ let simTimelapseShipFilter = 'all';
 function setSimTimelapseShipFilter(v) {
   simTimelapseShipFilter = v;
   _rebuildSimTimelapse();
+  _applyMapScopeVisibility();
 }
 function _groupShipType(groupId) {
   if (groupId === 'sm') return simSMShipType;
@@ -2489,6 +2491,17 @@ const _LINE_PORTS = {
   shimonosekiRef: ['busan', 'shimonoseki'],
   miracleRef: ['busan', 'osaka']
 };
+// 정적 참고 항로선의 선종 — simTimelapseShipTypeFilter 적용에 사용
+const _LINE_SHIP_TYPE = {
+  smLeg1:'고속선', smLeg2:'고속선', qbDirect:'고속선',
+  hitakatsuRef:'고속선', izuharaViaRef:'고속선', izuharaDirectRef:'고속선',
+  camelliaRef:'로로선(화물여객선)', shimonosekiRef:'로로선(화물여객선)', miracleRef:'로로선(화물여객선)',
+};
+// 정적 항로선의 전담 타임랩스 그룹 ID — shipFilter가 특정 배로 좁혀졌을 때 그 배의 선만 남긴다.
+// undefined이면 "여러 배 공유" 공통선: sm/qb 선택 시엔 유지, 커스텀 배 선택 시엔 숨긴다.
+const _LINE_SHIP_ID = {
+  smLeg1: 'sm', smLeg2: 'sm', qbDirect: 'qb',
+};
 // ── 재생 범위(simPlayScope) 탭 + 항구 필터(simTimelapsePortFilter)에 맞춰 POI 마커·참고
 // 항로선도 함께 걸러 보여준다. 부산은 모든 배가 공유하는 허브라 항상 보인다. 나머지 항구·
 // 항로선은 "지금 이 탭에서 실제로 보이는 배가 그 항구/구간을 지나는가"를 기준으로 판단하고,
@@ -2522,23 +2535,54 @@ function _portVisibleForScope(portId) {
 // 각 선별로 직접 명시한다. skipPortFilter=true면 항구 필터는 무시하고 범위(탭) 조건만 본다
 // (위 _portVisibleForScope에서 "같은 항로 공유 여부"를 판단할 때 재귀적으로 걸리지 않게 하기 위함).
 function _lineVisibleForScope(key, skipPortFilter) {
+  // ── 커스텀 선박 항로선 (cs_<id>) ──
+  if (key.startsWith('cs_')) {
+    const id = key.slice(3);
+    const s = customShips.find(x => x.id === id);
+    if (!s || !_shouldShowCustomShip(s)) return false;
+    if (simTimelapseShipTypeFilter !== 'all' && (s.shipType || '고속선') !== simTimelapseShipTypeFilter) return false;
+    if (simTimelapseShipFilter !== 'all' && simTimelapseShipFilter !== 'c_' + id) return false;
+    if (skipPortFilter) return true;
+    const filter = simTimelapsePortFilter;
+    if (filter === 'all') return true;
+    const p = _LINE_PORTS[key];
+    return !p || p.includes(filter);
+  }
+
   let show;
   switch (key) {
     case 'smLeg1': case 'smLeg2':
-      show = _simCoreVisible(); break; // 산타모니카호 자체 구상 항로
+      show = _simCoreVisible(); break;
     case 'qbDirect':
       // 퀸비틀 직항 항로 — 투입고려(core)·전체(all) 탭에서만 표시
       show = _simCoreVisible(); break;
     case 'hitakatsuRef': case 'izuharaViaRef':
-      // 쓰시마링크호 등 기존 취항선(타선사선박) + 그레이스호 히타카츠 관련편(진입예정)이 함께 쓴다
       show = _simCustomVisible() || _simPendingVisible(); break;
     case 'izuharaDirectRef': case 'camelliaRef': case 'shimonosekiRef': case 'miracleRef':
-      // 대아·스타라인 이즈하라 직항 / 카멜리아 / 부관훼리 / 미라클호 — 전부 기존 취항 중인 타선사선박
       show = _simCustomVisible(); break;
     default:
       show = true;
   }
-  if (!show || skipPortFilter) return show;
+  if (!show) return false;
+
+  // 선종 필터
+  if (simTimelapseShipTypeFilter !== 'all') {
+    const lineType = _LINE_SHIP_TYPE[key];
+    if (lineType && lineType !== simTimelapseShipTypeFilter) return false;
+  }
+
+  // 특정 배 필터
+  if (simTimelapseShipFilter !== 'all') {
+    const ownerId = _LINE_SHIP_ID[key]; // undefined = 공유 참고선, string = 전담 배
+    if (ownerId !== undefined) {
+      if (ownerId !== simTimelapseShipFilter) return false;
+    } else {
+      // 공유 참고선 — 커스텀 배를 콕 집어서 보면 숨긴다
+      if (simTimelapseShipFilter.startsWith('c_')) return false;
+    }
+  }
+
+  if (skipPortFilter) return show;
   const filter = simTimelapsePortFilter;
   if (filter === 'all') return true;
   const p = _LINE_PORTS[key];
@@ -4029,6 +4073,38 @@ function rebuildCustomShips() {
   Object.keys(_customTL).forEach(id => {
     if (!customShips.some(s => s.id === id)) delete _customTL[id];
   });
+
+  // ── 커스텀 선박 항로 폴리라인 갱신 ──
+  // 삭제된 배의 선 제거
+  Object.keys(_scopeLines).forEach(k => {
+    if (k.startsWith('cs_') && !customShips.some(s => s.id === k.slice(3))) {
+      if (map.hasLayer(_scopeLines[k])) map.removeLayer(_scopeLines[k]);
+      delete _scopeLines[k];
+      delete _LINE_PORTS[k];
+    }
+  });
+  // 각 커스텀 선박 항로선 생성·갱신
+  customShips.forEach(s => {
+    const key = 'cs_' + s.id;
+    const fromPt = [s.from.lat, s.from.lng], toPt = [s.to.lat, s.to.lng];
+    const viaPt = s.via ? [s.via.lat, s.via.lng] : null;
+    const pts = viaPt ? _legPath(fromPt, viaPt).concat(_legPath(viaPt, toPt))
+                      : _legPath(fromPt, toPt);
+    // 항구 ID 목록 동적 등록
+    _LINE_PORTS[key] = [
+      _portIdByName(s.from.name),
+      viaPt ? _portIdByName(s.via.name) : null,
+      _portIdByName(s.to.name)
+    ].filter(Boolean);
+    if (_scopeLines[key]) {
+      _scopeLines[key].setLatLngs(pts);
+      _scopeLines[key].setStyle({ color: s.color });
+    } else {
+      _scopeLines[key] = L.polyline(pts, { color: s.color, weight: 2, opacity: 0.55, dashArray: '5 7', interactive: false });
+    }
+  });
+  // 지도 표시 상태 동기화
+  _applyMapScopeVisibility();
 }
 
 function _tickCustomShips(simMin) {
