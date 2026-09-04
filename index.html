@@ -928,12 +928,15 @@
     .ais-tb-tl {
       display: flex; height: 100%;
       overflow-x: auto; overflow-y: hidden;
-      scrollbar-width: none;
+      scrollbar-width: thin; scrollbar-color: rgba(80,160,255,0.45) transparent;
       position: relative; z-index: 2;
     }
-    .ais-tb-tl::-webkit-scrollbar { display: none; }
+    .ais-tb-tl::-webkit-scrollbar { height: 6px; }
+    .ais-tb-tl::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); }
+    .ais-tb-tl::-webkit-scrollbar-thumb { background: rgba(80,160,255,0.45); border-radius: 3px; }
+    .ais-tb-tl::-webkit-scrollbar-thumb:hover { background: rgba(120,190,255,0.7); }
     .ais-tb-unit {
-      flex-shrink: 0; min-width: 60px;
+      flex-shrink: 0; min-width: 66px;
       background: none; border: none; border-right: 1px solid rgba(80,160,255,0.08);
       color: #6688aa; font-size: 10px; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
@@ -947,6 +950,7 @@
     }
     .ais-tb-unit.abnormal { opacity: 0.4; }
     .ais-tb-unit.abnormal.sel { opacity: 0.7; }
+    .ais-tb-unit.yearsep { border-left: 2px solid rgba(120,190,255,0.55); } /* 연도 바뀌는 지점 */
     /* 선택한 날짜의 시간대 세부 행 */
     .ais-tb-subtl-row {
       position: relative; height: 28px; overflow: hidden;
@@ -955,10 +959,12 @@
     }
     .ais-tb-subtl {
       display: flex; height: 100%; align-items: center;
-      overflow-x: auto; overflow-y: hidden; scrollbar-width: none;
+      overflow-x: auto; overflow-y: hidden;
+      scrollbar-width: thin; scrollbar-color: rgba(255,80,220,0.4) transparent;
       padding: 0 8px;
     }
-    .ais-tb-subtl::-webkit-scrollbar { display: none; }
+    .ais-tb-subtl::-webkit-scrollbar { height: 5px; }
+    .ais-tb-subtl::-webkit-scrollbar-thumb { background: rgba(255,80,220,0.4); border-radius: 3px; }
     .ais-tb-subunit {
       flex-shrink: 0; background: none; border: none;
       border-right: 1px solid rgba(80,160,255,0.08);
@@ -6342,23 +6348,48 @@ function _nearestPortName(lat, lon, maxKm) {
 // ════════════════════════════════════════════════════
 const AIS_MAX_PLAUSIBLE_KTS = 70;  // 이보다 빠른 "순간 이동"은 GPS 공백을 직선 보간한 것 — 비정상으로 간주
 const AIS_MIN_POINTS_NORMAL = 20;  // 이보다 포인트가 적으면 항로 형태를 신뢰할 수 없음
-const AIS_DIST_TOLERANCE_LO = 0.6; // 예상 편도거리 대비 이 비율 미만이면 "너무 짧음"
-const AIS_DIST_TOLERANCE_HI = 1.6; // 예상 편도거리 대비 이 비율 초과면 "너무 김"
-const AIS_PORT_BUFFER_KM    = 15;  // 출발/도착 지점이 등록 항구에서 이 거리(km) 버퍼 이내여야 정상 항로로 인정
-// 선박별 예상 편도 거리(km) — 공식/실측 거리가 있으면 사용, 없으면 데이터 중앙값으로 자동 추정
-const AIS_EXPECTED_DIST_KM = {
-  beetle:      QB_DIST_KM,    // 부산↔하카타 직항
-  queenbeetle: QB_DIST_KM,    // 부산↔하카타 직항
-  santamonica: SM_DIST_LEG1,  // 부산↔히타카츠 (현재 실운항 구간 — 하카타 경유는 구상안)
-};
+const AIS_DIST_TOLERANCE_LO = 0.6; // 기대 편도거리 대비 이 비율 미만이면 "너무 짧음"
+const AIS_DIST_TOLERANCE_HI = 1.6; // 기대 편도거리 대비 이 비율 초과면 "너무 김"
+const AIS_PORT_BUFFER_KM    = 15;  // 출발/도착 지점이 터미널에서 이 거리(km) 버퍼 이내여야 정상 항로로 인정
+const AIS_MIN_MOVING_KM     = 20;  // 이보다 적게 움직인 날은 "운항하지 않은 날"로 보고 기대거리 산정에서 제외
+const AIS_TERMINAL_CLUSTER_KM = 12; // 시작·끝 지점을 이 거리 이내면 같은 터미널로 묶음
+const AIS_TERMINAL_MIN_HITS   = 3;  // 최소 이 횟수 이상 반복 등장해야 터미널로 인정
 
-// 출발/도착 지점이 등록 항구(ports 배열 — 어느 선박·항로가 추가되든 동일하게 적용되는
-// 공용 판정) 인근(버퍼 이내)인지 확인한다. 부분적으로 잘린 하루치 데이터나 항구가 아닌
-// 곳에서 시작/끝나는 비정상 트랙을 걸러내기 위함.
-function _aisStartEndNearPort(pts) {
-  const startPort = _nearestPortName(pts[0].lat, pts[0].lon, AIS_PORT_BUFFER_KM);
-  const endPort   = _nearestPortName(pts[pts.length - 1].lat, pts[pts.length - 1].lon, AIS_PORT_BUFFER_KM);
-  return { startPort, endPort, ok: !!(startPort && endPort) };
+// ── 선박별 터미널(항구) 지점 자동 도출 ──
+// 등록된 ports 배열에 없는 항구를 오가는 선박도 있으므로(예: 산타모니카호는 부산·대마도가
+// 아닌 다른 해역에서 운항 중), 하루치 트랙의 시작·끝 지점을 모아 반복적으로 나타나는
+// 지점을 그 선박의 실제 터미널로 간주한다. 새 선박·항로를 추가해도 자동 적용된다.
+function _aisFindTerminals(data) {
+  const clusters = [];
+  data.dates.forEach(d => {
+    const pts = data.index[d];
+    if (!pts || pts.length < 2) return;
+    [pts[0], pts[pts.length - 1]].forEach(p => {
+      const hit = clusters.find(c => _simDist([c.lat, c.lon], [p.lat, p.lon]) <= AIS_TERMINAL_CLUSTER_KM);
+      if (hit) {
+        hit.n++;
+        hit.lat += (p.lat - hit.lat) / hit.n; // 이동 평균으로 중심 갱신
+        hit.lon += (p.lon - hit.lon) / hit.n;
+      } else {
+        clusters.push({ lat: p.lat, lon: p.lon, n: 1 });
+      }
+    });
+  });
+  return clusters
+    .filter(c => c.n >= AIS_TERMINAL_MIN_HITS)
+    .sort((a, b) => b.n - a.n)
+    .map(c => ({ lat: c.lat, lon: c.lon, n: c.n, name: _nearestPortName(c.lat, c.lon, 25) }));
+}
+
+// 좌표가 이 선박의 터미널 중 하나(버퍼 이내)인지 — 어느 항로든 동일하게 적용되는 공용 판정
+function _aisTerminalAt(terminals, lat, lon) {
+  return terminals.find(t => _simDist([t.lat, t.lon], [lat, lon]) <= AIS_PORT_BUFFER_KM) || null;
+}
+
+function _aisTerminalLabel(t) {
+  if (!t) return null;
+  if (t.name) return t.name.replace(/(국제여객터미널|국제터미널|여객선터미널|도동항|항)$/, '').trim();
+  return `터미널(${t.lat.toFixed(2)},${t.lon.toFixed(2)})`;
 }
 
 // 하루치 포인트의 총 이동거리 · 최대 순간이동속도(구간별 implied speed) 계산
@@ -6374,45 +6405,51 @@ function _aisDayStats(pts) {
   return { totalDist, maxJumpKts, n: pts.length };
 }
 
-// 첫 포인트가 어느 항구에 가까운지로 "OO발" 판정 (매칭 실패 시 대략 동/서로 판정)
-// startPortName을 미리 계산해뒀으면 그대로 받아 중복 계산을 피한다.
-function _aisOrigin(pts, startPortName) {
-  if (!pts || !pts.length) return '—';
-  const name = startPortName !== undefined ? startPortName : _nearestPortName(pts[0].lat, pts[0].lon, AIS_PORT_BUFFER_KM);
-  if (name) return name.replace(/(국제여객터미널|국제터미널|여객선터미널|도동항|항)$/, '').trim() + '발';
-  return pts[0].lon < 129.3 ? '부산 인근발' : '일본 인근발';
-}
-
-// 선박 로드 직후 1회 호출 — 날짜별 통계·정상여부·출발항을 계산해 캐시에 저장.
-// ports 배열을 통째로 참조하는 공용 판정(_aisStartEndNearPort 등)이라 새 선박·항로가
-// 추가돼도 이 함수 수정 없이 그대로 적용된다.
+// 선박 로드 직후 1회 호출 — 날짜별 통계·왕복여부·편도환산거리·정상여부를 계산해 캐시에 저장.
+// 기대 편도거리는 그 선박 데이터에서 자동 산출하므로(하드코딩 없음) 새 항로도 그대로 적용된다.
 function _aisAnalyzeVessel(key, data) {
-  const rawDists = data.dates.map(d => _aisDayStats(data.index[d]).totalDist).filter(x => x > 5);
-  let expected = AIS_EXPECTED_DIST_KM[key];
-  if (expected == null && rawDists.length) {
-    const sorted = [...rawDists].sort((a, b) => a - b);
-    expected = sorted[Math.floor(sorted.length / 2)]; // 기준 데이터 없으면 중앙값으로 자동 추정
-  }
-  const dayQuality = {};
+  const terminals = _aisFindTerminals(data);
+
+  // 1차: 하루치 통계 + 왕복 여부 → "편도 환산 거리"
+  // (시작·끝이 같은 터미널이면 왕복으로 보고 총거리를 절반으로 환산해 편도 기준으로 비교)
+  const pre = {};
   data.dates.forEach(d => {
     const pts = data.index[d];
     const stats = _aisDayStats(pts);
-    const portCheck = _aisStartEndNearPort(pts);
+    const startT = _aisTerminalAt(terminals, pts[0].lat, pts[0].lon);
+    const endT   = _aisTerminalAt(terminals, pts[pts.length - 1].lat, pts[pts.length - 1].lon);
+    const isRound = !!(startT && endT && _simDist([startT.lat, startT.lon], [endT.lat, endT.lon]) <= AIS_PORT_BUFFER_KM);
+    pre[d] = { stats, startT, endT, isRound, onewayDist: isRound ? stats.totalDist / 2 : stats.totalDist };
+  });
+
+  // 2차: 실제로 움직인 날들의 편도 환산 거리 중앙값을 "기대 편도거리"로 삼는다
+  const moving = Object.values(pre).map(x => x.onewayDist).filter(x => x > AIS_MIN_MOVING_KM).sort((a, b) => a - b);
+  const expected = moving.length ? moving[Math.floor(moving.length / 2)] : null;
+
+  const dayQuality = {};
+  data.dates.forEach(d => {
+    const { stats, startT, endT, isRound, onewayDist } = pre[d];
     const reasons = [];
     if (stats.n < AIS_MIN_POINTS_NORMAL) reasons.push('포인트 부족');
     if (stats.maxJumpKts > AIS_MAX_PLAUSIBLE_KTS) reasons.push('비정상 순간이동(GPS 공백 의심)');
+    if (!startT) reasons.push('출발지점이 터미널 인근 아님');
+    if (!endT)   reasons.push('도착지점이 터미널 인근 아님');
     if (expected != null) {
-      if (stats.totalDist < expected * AIS_DIST_TOLERANCE_LO) reasons.push('이동거리 과소');
-      else if (stats.totalDist > expected * AIS_DIST_TOLERANCE_HI) reasons.push('이동거리 과다');
+      if (onewayDist < expected * AIS_DIST_TOLERANCE_LO) reasons.push('편도거리 과소');
+      else if (onewayDist > expected * AIS_DIST_TOLERANCE_HI) reasons.push('편도거리 과다');
     }
-    if (!portCheck.startPort) reasons.push('출발지점이 항구 인근 아님');
-    if (!portCheck.endPort)   reasons.push('도착지점이 항구 인근 아님');
+    const startLabel = _aisTerminalLabel(startT);
+    const endLabel   = _aisTerminalLabel(endT);
+    const origin = startLabel
+      ? `${startLabel}발${isRound ? ' 왕복' : (endLabel ? ' → ' + endLabel : '')}`
+      : (data.index[d][0].lon < 129.3 ? '부산 인근발' : '일본 인근발');
     dayQuality[d] = Object.assign(
-      { isNormal: reasons.length === 0, reasons, origin: _aisOrigin(pts, portCheck.startPort),
-        startPort: portCheck.startPort, endPort: portCheck.endPort },
+      { isNormal: reasons.length === 0, reasons, isRound, onewayDist, origin,
+        startPort: startLabel, endPort: endLabel },
       stats
     );
   });
+  data.terminals = terminals;
   data.expectedDist = expected;
   data.dayQuality = dayQuality;
 }
@@ -6647,16 +6684,20 @@ function _aisTbRenderTl(key) {
 
   const d = _aisCache[key];
   tl.innerHTML = items.map((item, i) => {
-    let label = item, abnormal = false, reasonTitle = '';
+    let label = item, abnormal = false, reasonTitle = '', yearSep = false;
     if (_aisCurrIv === 'month') label = item.slice(0, 4) + '.' + item.slice(5, 7);
     else if (_aisCurrIv === 'day') {
-      label = item.slice(5); // MM-DD
+      label = item.slice(2).replace(/-/g, '.'); // YY.MM.DD — 연도까지 보이도록
+      yearSep = i > 0 && items[i - 1].slice(0, 4) !== item.slice(0, 4); // 연도가 바뀌는 지점 구분선
       // 필터를 꺼서 비정상 날짜도 함께 보일 때는 흐리게 구분 표시
       const q = d && d.dayQuality && d.dayQuality[item];
       abnormal = !_aisNormalOnly && q && !q.isNormal;
-      if (abnormal) reasonTitle = '항로 이탈 의심: ' + q.reasons.join(', ');
+      reasonTitle = q
+        ? (item + ' · ' + q.origin + ' · ' + q.totalDist.toFixed(0) + 'km'
+           + (q.isNormal ? '' : ' · 제외: ' + q.reasons.join(', ')))
+        : item;
     }
-    return `<button class="ais-tb-unit${i === _aisTlIdx ? ' sel' : ''}${abnormal ? ' abnormal' : ''}" data-idx="${i}" onclick="_aisTbUnitClick(${i})" title="${reasonTitle}">${label}</button>`;
+    return `<button class="ais-tb-unit${i === _aisTlIdx ? ' sel' : ''}${abnormal ? ' abnormal' : ''}${yearSep ? ' yearsep' : ''}" data-idx="${i}" onclick="_aisTbUnitClick(${i})" title="${reasonTitle}">${label}</button>`;
   }).join('');
 
   // 선택된 유닛으로 스크롤
@@ -6909,6 +6950,34 @@ function _aisSetStatus(msg) {
   document.addEventListener('mouseup', () => { dragging = false; });
   window.addEventListener('resize', () => {
     if (_aisLastChartPts) _aisDrawSpeedChart(_aisLastChartPts, _aisLastChartIdx);
+  });
+})();
+
+// ── 타임라인 가로 스크롤 (마우스 휠 → 좌우 이동, 드래그로도 이동) ──
+// 세로 휠은 기본적으로 가로 스크롤에 먹히지 않아 특정 날짜로 이동할 방법이 없었다.
+(function() {
+  ['aisTbTl', 'aisTbSubTl'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('wheel', e => {
+      if (!el.scrollWidth || el.scrollWidth <= el.clientWidth) return;
+      const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+      if (!delta) return;
+      el.scrollLeft += delta * 1.2;
+      e.preventDefault();
+    }, { passive: false });
+    // 빈 공간을 잡고 좌우로 끌어서 이동 (버튼 클릭은 그대로 동작)
+    let dragging = false, startX = 0, startScroll = 0;
+    el.addEventListener('mousedown', e => {
+      if (e.target !== el) return; // 버튼 위에서 시작한 드래그는 무시
+      dragging = true; startX = e.clientX; startScroll = el.scrollLeft;
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      el.scrollLeft = startScroll - (e.clientX - startX);
+    });
+    document.addEventListener('mouseup', () => { dragging = false; });
   });
 })();
 
