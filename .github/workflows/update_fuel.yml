@@ -1,0 +1,37 @@
+name: Update Fuel Price
+
+on:
+  schedule:
+    - cron: "0 0 * * *"   # 매일 09:00 KST (UTC 00:00)
+  workflow_dispatch:        # 수동 실행 가능
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4 lxml
+
+      - name: Scrape Bunker Index (Busan)
+        run: python scrape_fuel.py
+
+      - name: Commit & push if changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add fuel_price.json
+          if git diff --cached --quiet; then
+            echo "No price change — skipping commit"
+          else
+            git commit -m "chore: 부산항 연료 단가 자동 갱신 $(date -u +%Y-%m-%d)"
+            git push
+          fi
