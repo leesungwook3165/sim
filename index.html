@@ -4334,7 +4334,7 @@ function _updateFuelCostTab() {
       if (el(prefix + key + 'One')) el(prefix + key + 'One').textContent = _fmtRange(lo / 2, hi / 2, fmt);
       if (el(prefix + key))         el(prefix + key).textContent = _fmtRange(lo, hi, fmt);
     };
-    setPair('Ton', est.tonLo, est.tonHi, v => v.toFixed(2) + '톤');
+    setPair('Ton', est.tonLo, est.tonHi, v => v.toFixed(1) + '톤');
     setPair('Cost', est.costLo, est.costHi, _fmtWon);
     setPair('Other', otherLo, otherHi, _fmtWon);
     setPair('Total', totalLo, totalHi, _fmtWon);
