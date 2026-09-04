@@ -2220,8 +2220,11 @@ function clearMeasure() {
 // ESC 키
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && measuring) finishMeasure(); });
 document.addEventListener('click', e => {
-  const wrap = document.getElementById('companyFilterWrap');
-  if (wrap && !wrap.contains(e.target)) _closeCompanyDropdown();
+  const wrap  = document.getElementById('companyFilterWrap');
+  const panel = document.getElementById('companyFilterPanel');
+  if (wrap && !wrap.contains(e.target) && panel && !panel.contains(e.target)) {
+    _closeCompanyDropdown();
+  }
 });
 
 // ════════════════════════════════════════════════════
@@ -3116,6 +3119,9 @@ function toggleCompanyDropdown(e) {
   if (e) e.stopPropagation();
   const panel = document.getElementById('companyFilterPanel');
   const btn   = document.getElementById('companyFilterBtn');
+  // #simPanel에 transform: scale(0.8)이 있어 position:fixed 좌표가 틀어지므로
+  // 패널을 body 직계로 이동해 transform 컨텍스트를 탈출한다
+  if (panel.parentElement !== document.body) document.body.appendChild(panel);
   const isOpen = panel.classList.contains('open');
   if (!isOpen && btn) {
     const r = btn.getBoundingClientRect();
