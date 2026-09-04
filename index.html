@@ -973,6 +973,9 @@
     }
     .ais-tb-subunit:hover { background: rgba(80,160,255,0.12); color: #aaccee; }
     .ais-tb-subunit.sel { background: rgba(255,80,220,0.25); color: #ffaaee; }
+    .ais-tb-subunit.ais-tb-leg { color: #ffcc66; font-weight: 700; }
+    .ais-tb-subunit.ais-tb-leg.sel { background: rgba(255,190,60,0.25); color: #ffdd99; }
+    .ais-tb-subsep { flex-shrink: 0; width: 1px; height: 60%; background: rgba(80,160,255,0.25); margin: 0 6px; }
     /* 속도 변화 그래프 (재생 위치 동기화) */
     .ais-tb-chart-row {
       height: 54px; flex-shrink: 0; position: relative;
@@ -1414,6 +1417,7 @@
       <select id="aisVesselSel" onchange="onAisVesselChange()">
         <option value="beetle">비틀호 (JR규슈)</option>
         <option value="queenbeetle">퀸비틀 (JR규슈)</option>
+        <option value="camellia">카멜리아호 (카멜리아라인)</option>
         <option value="santamonica">산타모니카호</option>
         <option value="eldorado">엘도라도 익스프레스호</option>
       </select>
@@ -6165,6 +6169,7 @@ function _startOnboardingIntro() {
 const _AIS_VESSELS = {
   beetle:      { label:'비틀호',               file:'beetle_track-data-2012-01-01,2027-01-01.csv',      color:'#ff9955' },
   queenbeetle: { label:'퀸비틀',               file:'queenbeetle_track-data-2012-01-01,2027-01-01.csv', color:'#44aaff' },
+  camellia:    { label:'카멜리아호',            file:'camellia_track-data-2013-01-01,2027-01-01.csv',    color:'#ff66aa' },
   santamonica: { label:'산타모니카호',          file:'santamonica_track-data-2026-06-17,2026-08-06.csv', color:'#ffcc44' },
   eldorado:    { label:'엘도라도 익스프레스호', file:'eldorado_track-data-2026-06-17,2026-08-06.csv',    color:'#88ff55' },
 };
@@ -6174,6 +6179,7 @@ const _aisLayerGroup = { g: null };
 let _aisPlay = { timer: null, marker: null, idx: 0, pts: null, loop: false };
 let _aisCurrIv = 'day';
 let _aisSubHourSel = null; // '일' 탭에서 날짜를 고르면 그 날의 시간대(HH)가 자동으로 나열됨 — 선택된 시간(null=하루 전체)
+let _aisSubLegSel = null;  // 왕복일 때 선택된 구간 (null=왕복 전체, 'out'=출항편, 'back'=복항편)
 let _aisRangeFrom = null, _aisRangeTo = null; // 캘린더로 지정한 조회 기간 필터 ('YYYY-MM-DD', null=제한 없음)
 let _aisNormalOnly = true; // '일' 탭에서만 적용되는 정상 항로 필터 (기본 on)
 let _aisLastChartPts = null, _aisLastChartIdx = null; // 창 크기·타임바 높이 변경 시 그래프 재그리기용
@@ -6386,6 +6392,24 @@ function _aisTerminalAt(terminals, lat, lon) {
   return terminals.find(t => _simDist([t.lat, t.lon], [lat, lon]) <= AIS_PORT_BUFFER_KM) || null;
 }
 
+// ── 왕복 항적을 출항편 / 복항편으로 분리 ──
+// 왕복은 같은 항로를 되돌아오므로 지도에서 두 구간이 겹쳐 편도처럼 보인다.
+// 시작점에서 가장 멀어진 지점을 회항(turnaround) 지점으로 보고 두 구간으로 나눈다.
+// 왕복이 아니면(시작·끝이 멀면) null.
+function _aisSplitLegs(pts) {
+  if (!pts || pts.length < 6) return null;
+  const s = pts[0], e = pts[pts.length - 1];
+  if (_simDist([s.lat, s.lon], [e.lat, e.lon]) > AIS_PORT_BUFFER_KM) return null;
+  let farDist = 0, turnIdx = 0;
+  pts.forEach((p, i) => {
+    const d = _simDist([s.lat, s.lon], [p.lat, p.lon]);
+    if (d > farDist) { farDist = d; turnIdx = i; }
+  });
+  // 회항점이 양 끝에 붙어 있거나 거의 움직이지 않은 날은 왕복으로 보지 않음
+  if (turnIdx < 2 || turnIdx > pts.length - 3 || farDist < AIS_MIN_MOVING_KM) return null;
+  return { turnIdx, farDist, out: pts.slice(0, turnIdx + 1), back: pts.slice(turnIdx) };
+}
+
 function _aisTerminalLabel(t) {
   if (!t) return null;
   if (t.name) return t.name.replace(/(국제여객터미널|국제터미널|여객선터미널|도동항|항)$/, '').trim();
@@ -6531,11 +6555,30 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
   if (!pts || !pts.length) { _aisSetStatus(labelStr + ': 데이터 없음'); return; }
 
   const g = L.layerGroup();
+  // 왕복이면 복항편을 점선으로 구분해서 그린다 (같은 항로를 겹쳐 지나가므로).
+  const legs = _aisSplitLegs(pts);
   for (let i = 1; i < pts.length; i++) {
     const a = pts[i - 1], b = pts[i];
+    const isBack = legs && i > legs.turnIdx;
     L.polyline([[a.lat, a.lon], [b.lat, b.lon]], {
-      color: _aisSpeedColor((a.speed + b.speed) / 2), weight: 3, opacity: 0.85
+      color: _aisSpeedColor((a.speed + b.speed) / 2), weight: isBack ? 4 : 3,
+      opacity: isBack ? 0.75 : 0.9, dashArray: isBack ? '5 7' : null
     }).addTo(g);
+  }
+
+  // 회항 지점 표시
+  if (legs) {
+    const t = pts[legs.turnIdx];
+    L.circleMarker([t.lat, t.lon], {
+      radius: 7, color: '#ffdd44', fillColor: '#ffdd44', fillOpacity: 0.25, weight: 2
+    }).bindTooltip(
+      `🔄 회항 ${_aisFmtClock(t.ts)} UTC`,
+      { permanent: true, direction: 'bottom', className: 'ais-poi-label' }
+    ).bindPopup(
+      `<b>${_AIS_VESSELS[key].label} — 회항 지점</b><br>` +
+      `${_aisFmtDateClock(t.ts)} UTC<br>출발지에서 ${legs.farDist.toFixed(0)}km<br>` +
+      `출항편 ${legs.out.length}포인트 / 복항편(점선) ${legs.back.length}포인트`
+    ).addTo(g);
   }
 
   // 중간 지점은 진행방향(course)을 알 수 있는 화살표 아이콘으로, 출항/도착은 큰 원으로 표시.
@@ -6599,12 +6642,22 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
 
 // ── 하루 항적 렌더링 ──
 // (부산발/일본발 + 정상·비정상 항로 뱃지는 '일자별' 뷰에서만 상태줄에 표시한다)
+// _aisSubLegSel이 지정돼 있으면 왕복 중 그 구간(출항편/복항편)만 그린다.
 function _renderAisDay(key, dateStr) {
   const data = _aisCache[key];
   if (!data) return;
   const q = data.dayQuality && data.dayQuality[dateStr];
   const extra = q ? `${q.origin}${q.isNormal ? '' : ' · ⚠비정상(' + q.reasons.join(', ') + ')'}` : '';
-  _renderAisPointSet(key, data.index[dateStr], dateStr, extra);
+  const all = data.index[dateStr];
+  let shown = all, suffix = '';
+  if (_aisSubLegSel) {
+    const legs = _aisSplitLegs(all);
+    if (legs) {
+      shown = _aisSubLegSel === 'out' ? legs.out : legs.back;
+      suffix = _aisSubLegSel === 'out' ? ' · 출항편' : ' · 복항편';
+    }
+  }
+  _renderAisPointSet(key, shown, dateStr + suffix, extra);
 }
 
 // ── 한 시간 항적 렌더링 (hourKey: "YYYY-MM-DDTHH") ──
@@ -6707,7 +6760,8 @@ function _aisTbRenderTl(key) {
   });
 }
 
-// ── 선택한 날짜의 시간대 세부 행 ('일' 탭에서 날짜를 고르면 자동으로 나타남) ──
+// ── 선택한 날짜의 구간·시간대 세부 행 ('일' 탭에서 날짜를 고르면 자동으로 나타남) ──
+// 왕복일이면 출항편/복항편 버튼을 앞에 붙여, 겹쳐 보이는 두 구간을 따로 볼 수 있게 한다.
 function _aisRenderSubHours(key, dateStr) {
   const wrap = document.getElementById('aisTbSubTlRow');
   const sub  = document.getElementById('aisTbSubTl');
@@ -6717,8 +6771,20 @@ function _aisRenderSubHours(key, dateStr) {
   const hours = pts ? [...new Set(pts.map(p => p.ts.slice(11, 13)))].sort() : [];
   if (!hours.length) { wrap.style.display = 'none'; return; }
   wrap.style.display = 'flex';
-  sub.innerHTML =
-    `<button class="ais-tb-subunit${_aisSubHourSel == null ? ' sel' : ''}" onclick="_aisSubHourClick(null)">🕐 하루 전체</button>` +
+
+  const legs = pts ? _aisSplitLegs(pts) : null;
+  let legHtml = '';
+  if (legs) {
+    const turn = _aisFmtClock(pts[legs.turnIdx].ts);
+    legHtml =
+      `<button class="ais-tb-subunit ais-tb-leg${_aisSubLegSel == null && _aisSubHourSel == null ? ' sel' : ''}" onclick="_aisSubLegClick(null)">🔄 왕복 전체</button>` +
+      `<button class="ais-tb-subunit ais-tb-leg${_aisSubLegSel === 'out' ? ' sel' : ''}" onclick="_aisSubLegClick('out')" title="출발 → 회항(${turn})">① 출항편</button>` +
+      `<button class="ais-tb-subunit ais-tb-leg${_aisSubLegSel === 'back' ? ' sel' : ''}" onclick="_aisSubLegClick('back')" title="회항(${turn}) → 복귀">② 복항편</button>` +
+      `<span class="ais-tb-subsep"></span>`;
+  }
+
+  sub.innerHTML = legHtml +
+    `<button class="ais-tb-subunit${_aisSubHourSel == null && (!legs || _aisSubLegSel == null) ? ' sel' : ''}" onclick="_aisSubHourClick(null)">🕐 ${legs ? '전체' : '하루 전체'}</button>` +
     hours.map(hh => {
       const h = parseInt(hh, 10);
       let h12 = h % 12; if (h12 === 0) h12 = 12;
@@ -6727,9 +6793,21 @@ function _aisRenderSubHours(key, dateStr) {
     }).join('');
 }
 
-// 시간대 세부 행에서 특정 시간(또는 "하루 전체")을 클릭
+// 왕복 구간(출항편/복항편/전체) 선택
+function _aisSubLegClick(which) {
+  _aisSubLegSel = which;
+  _aisSubHourSel = null; // 구간 선택과 시간 선택은 배타적
+  const key = document.getElementById('aisVesselSel').value;
+  const dateStr = _aisTlItems[_aisTlIdx];
+  if (!dateStr) return;
+  _aisRenderSubHours(key, dateStr);
+  _renderAisDay(key, dateStr);
+}
+
+// 시간대 세부 행에서 특정 시간(또는 "전체")을 클릭
 function _aisSubHourClick(hh) {
   _aisSubHourSel = hh;
+  if (hh != null) _aisSubLegSel = null; // 시간 선택 시 구간 선택 해제
   const key = document.getElementById('aisVesselSel').value;
   const dateStr = _aisTlItems[_aisTlIdx];
   if (!dateStr) return;
@@ -6758,9 +6836,9 @@ function _aisTlApply() {
     return;
   }
   if (_aisCurrIv === 'day') {
-    _aisSubHourSel = null; // 날짜가 바뀌면 시간 선택은 "하루 전체"로 리셋
+    _aisSubHourSel = null; _aisSubLegSel = null; // 날짜가 바뀌면 시간·구간 선택 리셋
     _renderAisDay(key, item);
-    _aisRenderSubHours(key, item); // 그 날의 시간대를 바로 아래에 나눠서 표시
+    _aisRenderSubHours(key, item); // 그 날의 구간·시간대를 바로 아래에 나눠서 표시
   } else {
     _renderAisPeriod(key, item);
     if (subWrap) subWrap.style.display = 'none';
@@ -6856,7 +6934,14 @@ function onAisPlay() {
       return (_aisCache[key].index[dateStr] || []).filter(p => p.ts.slice(11, 13) === hh);
     });
   } else if (_aisCurrIv === 'day') {
-    _playAisPoints(key, item, _renderAisDay, dat => _aisCache[key].index[dat]);
+    // 출항편/복항편을 골라둔 상태면 그 구간만 재생
+    _playAisPoints(key, item, _renderAisDay, dat => {
+      const all = _aisCache[key].index[dat];
+      if (!_aisSubLegSel) return all;
+      const legs = _aisSplitLegs(all);
+      if (!legs) return all;
+      return _aisSubLegSel === 'out' ? legs.out : legs.back;
+    });
   } else {
     _playAisDateStepper(key);
   }
