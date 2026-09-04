@@ -903,6 +903,14 @@
     .ais-tb-ivbtn:hover { background: rgba(80,160,255,0.1); color: #aaccee; }
     .ais-tb-ivbtn.on { background: rgba(40,100,200,0.35); color: #88ccff; }
     .ais-tb-ivbtn:disabled { opacity: 0.35; cursor: not-allowed; }
+    /* 정상 항로만 필터 ('일' 탭 전용) */
+    .ais-tb-normal {
+      display: flex; align-items: center; gap: 4px;
+      padding-right: 10px; margin-right: 10px;
+      border-right: 1px solid rgba(80,160,255,0.2);
+      font-size: 10px; color: #88aabb; cursor: pointer; white-space: nowrap;
+    }
+    .ais-tb-normal input { cursor: pointer; }
     /* 우측 상태 */
     .ais-tb-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
     #aisTbStatus { font-size: 10px; color: #ffcc88; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -932,6 +940,8 @@
       background: rgba(40,120,220,0.35); color: #88ddff;
       border-bottom: 2px solid #44aaff;
     }
+    .ais-tb-unit.abnormal { opacity: 0.4; }
+    .ais-tb-unit.abnormal.sel { opacity: 0.7; }
     /* 속도 범례 */
     .ais-tb-legend {
       display: flex; align-items: center; gap: 10px; font-size: 10px; color: #7799bb;
@@ -1381,6 +1391,10 @@
       <li><button class="ais-tb-ivbtn on" data-iv="day" onclick="onAisIvTab(this)">일</button></li>
       <li><button class="ais-tb-ivbtn" data-iv="hour" onclick="onAisIvTab(this)">시간</button></li>
     </ul>
+    <!-- 정상 항로만 보기 ('일' 탭에서만 표시) -->
+    <label id="aisNormalOnlyWrap" class="ais-tb-normal">
+      <input type="checkbox" id="aisNormalOnly" checked onchange="onAisNormalOnlyChange()"> 정상 항로만
+    </label>
     <!-- 우측: 상태 + 재생정보 + 범례 -->
     <div class="ais-tb-right">
       <span id="aisPlayInfo">—</span>
@@ -6116,6 +6130,7 @@ let _aisPlay = { timer: null, marker: null, idx: 0, pts: null, loop: false };
 let _aisCurrIv = 'day';
 let _aisHourBaseDate = null; // '시간' 탭이 어느 날짜를 기준으로 시간대를 나열할지 (최근 선택한 '일' 기준)
 let _aisRangeFrom = null, _aisRangeTo = null; // 캘린더로 지정한 조회 기간 필터 ('YYYY-MM-DD', null=제한 없음)
+let _aisNormalOnly = true; // '일' 탭에서만 적용되는 정상 항로 필터 (기본 on)
 let _aisTlItems = [];
 let _aisTlIdx = 0;
 let _aisTbSpeeds = [10, 60, 300, 1000];
@@ -6173,6 +6188,7 @@ async function _loadAisVessel(key) {
     const pts = _parseAisCsv(await r.text());
     if (!pts.length) throw new Error('데이터 없음');
     _aisCache[key] = _buildAisIndex(pts);
+    _aisAnalyzeVessel(key, _aisCache[key]);
     _aisSetStatus('');
     return _aisCache[key];
   } catch (e) {
@@ -6256,8 +6272,68 @@ function _nearestPortName(lat, lon, maxKm) {
   return (best && bestD <= maxKm) ? best.name : null;
 }
 
+// ════════════════════════════════════════════════════
+//  실측 항로 품질 판정 — 부산발/일본발 + 정상/비정상 항로 자동 감지
+//  (뚝뚝 끊긴 GPS 공백이 직선으로 이어지며 육지를 관통하거나,
+//   예정 항로보다 훨씬 길거나 짧은 "튀는 날"을 걸러내기 위함)
+// ════════════════════════════════════════════════════
+const AIS_MAX_PLAUSIBLE_KTS = 70;  // 이보다 빠른 "순간 이동"은 GPS 공백을 직선 보간한 것 — 비정상으로 간주
+const AIS_MIN_POINTS_NORMAL = 20;  // 이보다 포인트가 적으면 항로 형태를 신뢰할 수 없음
+const AIS_DIST_TOLERANCE_LO = 0.6; // 예상 편도거리 대비 이 비율 미만이면 "너무 짧음"
+const AIS_DIST_TOLERANCE_HI = 1.6; // 예상 편도거리 대비 이 비율 초과면 "너무 김"
+// 선박별 예상 편도 거리(km) — 공식/실측 거리가 있으면 사용, 없으면 데이터 중앙값으로 자동 추정
+const AIS_EXPECTED_DIST_KM = {
+  beetle:      QB_DIST_KM,    // 부산↔하카타 직항
+  queenbeetle: QB_DIST_KM,    // 부산↔하카타 직항
+  santamonica: SM_DIST_LEG1,  // 부산↔히타카츠 (현재 실운항 구간 — 하카타 경유는 구상안)
+};
+
+// 하루치 포인트의 총 이동거리 · 최대 순간이동속도(구간별 implied speed) 계산
+function _aisDayStats(pts) {
+  let totalDist = 0, maxJumpKts = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const d = _simDist([pts[i - 1].lat, pts[i - 1].lon], [pts[i].lat, pts[i].lon]);
+    totalDist += d;
+    const dtH = Math.max((new Date(pts[i].ts) - new Date(pts[i - 1].ts)) / 3600000, 1 / 3600);
+    const impliedKts = (d / 1.852) / dtH;
+    if (impliedKts > maxJumpKts) maxJumpKts = impliedKts;
+  }
+  return { totalDist, maxJumpKts, n: pts.length };
+}
+
+// 첫 포인트가 어느 항구에 가까운지로 "OO발" 판정 (매칭 실패 시 대략 동/서로 판정)
+function _aisOrigin(pts) {
+  if (!pts || !pts.length) return '—';
+  const first = pts[0];
+  const name = _nearestPortName(first.lat, first.lon, 15);
+  if (name) return name.replace(/(국제여객터미널|국제터미널|여객선터미널|도동항|항)$/, '').trim() + '발';
+  return first.lon < 129.3 ? '부산 인근발' : '일본 인근발';
+}
+
+// 선박 로드 직후 1회 호출 — 날짜별 통계·정상여부·출발항을 계산해 캐시에 저장
+function _aisAnalyzeVessel(key, data) {
+  const rawDists = data.dates.map(d => _aisDayStats(data.index[d]).totalDist).filter(x => x > 5);
+  let expected = AIS_EXPECTED_DIST_KM[key];
+  if (expected == null && rawDists.length) {
+    const sorted = [...rawDists].sort((a, b) => a - b);
+    expected = sorted[Math.floor(sorted.length / 2)]; // 기준 데이터 없으면 중앙값으로 자동 추정
+  }
+  const dayQuality = {};
+  data.dates.forEach(d => {
+    const pts = data.index[d];
+    const stats = _aisDayStats(pts);
+    let isNormal = stats.n >= AIS_MIN_POINTS_NORMAL && stats.maxJumpKts <= AIS_MAX_PLAUSIBLE_KTS;
+    if (isNormal && expected != null) {
+      isNormal = stats.totalDist >= expected * AIS_DIST_TOLERANCE_LO && stats.totalDist <= expected * AIS_DIST_TOLERANCE_HI;
+    }
+    dayQuality[d] = Object.assign({ isNormal, origin: _aisOrigin(pts) }, stats);
+  });
+  data.expectedDist = expected;
+  data.dayQuality = dayQuality;
+}
+
 // ── 포인트 목록 렌더링 (하루/한 시간 공용) ──
-function _renderAisPointSet(key, pts, labelStr) {
+function _renderAisPointSet(key, pts, labelStr, extraNote) {
   _clearAisLayer();
   if (!pts || !pts.length) { _aisSetStatus(labelStr + ': 데이터 없음'); return; }
 
@@ -6270,7 +6346,8 @@ function _renderAisPointSet(key, pts, labelStr) {
   }
 
   // 중간 지점은 진행방향(course)을 알 수 있는 화살표 아이콘으로, 출항/도착은 큰 원으로 표시.
-  const step = Math.max(1, Math.floor(pts.length / 120));
+  // (너무 촘촘하면 지저분해지므로 "이따금" 보이도록 성기게 샘플링)
+  const step = Math.max(1, Math.floor(pts.length / 40));
   pts.forEach((p, i) => {
     const isEnd = i === 0 || i === pts.length - 1;
     if (!isEnd && i % step !== 0) return;
@@ -6323,14 +6400,17 @@ function _renderAisPointSet(key, pts, labelStr) {
 
   const maxSpd = Math.max(...pts.map(p => p.speed));
   const stopNote = stops.length ? ` · 정박 ${stops.length}건(${stops.map(s => Math.round(s.durMin)).join(',')}분)` : '';
-  _aisSetStatus(`${_AIS_VESSELS[key].label} · ${labelStr} · ${pts.length}포인트 · 최고 ${maxSpd.toFixed(1)} knot${stopNote}`);
+  _aisSetStatus(`${_AIS_VESSELS[key].label} · ${labelStr} · ${pts.length}포인트 · 최고 ${maxSpd.toFixed(1)} knot${stopNote}${extraNote ? ' · ' + extraNote : ''}`);
 }
 
 // ── 하루 항적 렌더링 ──
+// (부산발/일본발 + 정상·비정상 항로 뱃지는 '일자별' 뷰에서만 상태줄에 표시한다)
 function _renderAisDay(key, dateStr) {
   const data = _aisCache[key];
   if (!data) return;
-  _renderAisPointSet(key, data.index[dateStr], dateStr);
+  const q = data.dayQuality && data.dayQuality[dateStr];
+  const extra = q ? `${q.origin}${q.isNormal ? '' : ' · ⚠비정상(항로이탈 의심)'}` : '';
+  _renderAisPointSet(key, data.index[dateStr], dateStr, extra);
 }
 
 // ── 한 시간 항적 렌더링 (hourKey: "YYYY-MM-DDTHH") ──
@@ -6386,7 +6466,11 @@ function onAisRangeChange() {
 function _aisTlItemsFor(key, iv) {
   const d = _aisCache[key]; if (!d) return [];
   const dates = _aisFilterDates(d.dates);
-  if (iv === 'day')   return dates;
+  if (iv === 'day') {
+    // '정상 항로만' 필터는 '일' 탭 목록에만 적용한다 (월/년/시간 탭은 항상 전체 날짜 기준).
+    if (_aisNormalOnly && d.dayQuality) return dates.filter(x => d.dayQuality[x] && d.dayQuality[x].isNormal);
+    return dates;
+  }
   if (iv === 'month') return [...new Set(dates.map(x => x.slice(0, 7)))].sort();
   if (iv === 'year')  return [...new Set(dates.map(x => x.slice(0, 4)))].sort();
   if (iv === 'hour') {
@@ -6408,16 +6492,21 @@ function _aisTbRenderTl(key) {
   const tl = document.getElementById('aisTbTl');
   if (!tl) return;
 
+  const d = _aisCache[key];
   tl.innerHTML = items.map((item, i) => {
-    let label = item;
+    let label = item, abnormal = false;
     if (_aisCurrIv === 'month') label = item.slice(0, 4) + '.' + item.slice(5, 7);
-    else if (_aisCurrIv === 'day')   label = item.slice(5); // MM-DD
+    else if (_aisCurrIv === 'day') {
+      label = item.slice(5); // MM-DD
+      // 필터를 꺼서 비정상 날짜도 함께 보일 때는 흐리게 구분 표시
+      abnormal = !_aisNormalOnly && d && d.dayQuality && d.dayQuality[item] && !d.dayQuality[item].isNormal;
+    }
     else if (_aisCurrIv === 'hour') { // "YYYY-MM-DDTHH" → "오전/오후 H시" (GFW 스타일)
       const hh = parseInt(item.slice(11, 13), 10);
       let h12 = hh % 12; if (h12 === 0) h12 = 12;
       label = `${hh < 12 ? '오전' : '오후'} ${h12}시`;
     }
-    return `<button class="ais-tb-unit${i === _aisTlIdx ? ' sel' : ''}" data-idx="${i}" onclick="_aisTbUnitClick(${i})">${label}</button>`;
+    return `<button class="ais-tb-unit${i === _aisTlIdx ? ' sel' : ''}${abnormal ? ' abnormal' : ''}" data-idx="${i}" onclick="_aisTbUnitClick(${i})" title="${abnormal ? '항로 이탈 의심(비정상)' : ''}">${label}</button>`;
   }).join('');
 
   // 선택된 유닛으로 스크롤
@@ -6481,11 +6570,23 @@ async function onAisVesselChange() {
   }
 }
 
+// '정상 항로만' 체크박스 — '일' 탭 날짜 목록에만 적용
+function onAisNormalOnlyChange() {
+  _aisNormalOnly = document.getElementById('aisNormalOnly').checked;
+  const key = document.getElementById('aisVesselSel').value;
+  if (!_aisCache[key]) return;
+  _aisTbRenderTl(key);
+  _aisTlApply();
+}
+
 // ── 인터벌 탭 ──
 function onAisIvTab(btn) {
   document.querySelectorAll('.ais-tb-ivbtn').forEach(b => b.classList.remove('on'));
   btn.classList.add('on');
   _aisCurrIv = btn.dataset.iv;
+  // '정상 항로만' 필터는 '일' 탭에서만 의미가 있으므로 그때만 노출한다.
+  const wrap = document.getElementById('aisNormalOnlyWrap');
+  if (wrap) wrap.style.display = (_aisCurrIv === 'day') ? 'flex' : 'none';
   const key = document.getElementById('aisVesselSel').value;
   if (_aisCache[key]) { _aisTbRenderTl(key); _aisTlApply(); }
 }
