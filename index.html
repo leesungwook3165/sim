@@ -948,6 +948,9 @@
       background: rgba(40,120,220,0.35); color: #88ddff;
       border-bottom: 2px solid #44aaff;
     }
+    .ais-tb-unit.refday { color: #ffd75e; font-weight: 700; }
+    .ais-tb-unit.refday.sel { background: rgba(255,190,60,0.3); color: #fff0c0; border-bottom-color: #ffd75e; }
+    .ais-tb-refchk { display: inline-flex; align-items: center; gap: 3px; margin-left: 8px; color: #ffd75e; }
     .ais-tb-unit.abnormal { opacity: 0.4; }
     .ais-tb-unit.abnormal.sel { opacity: 0.7; }
     .ais-tb-unit.yearsep { border-left: 2px solid rgba(120,190,255,0.55); } /* 연도 바뀌는 지점 */
@@ -1432,9 +1435,12 @@
       <li><button class="ais-tb-ivbtn" data-iv="month" onclick="onAisIvTab(this)">월</button></li>
       <li><button class="ais-tb-ivbtn on" data-iv="day" onclick="onAisIvTab(this)">일</button></li>
     </ul>
-    <!-- 정상 항로만 보기 ('일' 탭에서만 표시) -->
+    <!-- 정상 항로만 / 기준일만 보기 ('일' 탭에서만 표시) -->
     <label id="aisNormalOnlyWrap" class="ais-tb-normal">
       <input type="checkbox" id="aisNormalOnly" checked onchange="onAisNormalOnlyChange()"> 정상 항로만
+      <span class="ais-tb-refchk" title="항구 출입 가속·감속(정박→저속→중속→순항)이 왕복 양쪽 모두 온전히 기록된 날">
+        <input type="checkbox" id="aisRefOnly" onchange="onAisRefOnlyChange()"> ★기준일만
+      </span>
     </label>
     <!-- 우측: 상태 + 재생정보 + 범례 -->
     <div class="ais-tb-right">
@@ -6189,6 +6195,7 @@ let _aisSubHourSel = null; // '일' 탭에서 날짜를 고르면 그 날의 시
 let _aisSubLegSel = null;  // 왕복일 때 선택된 구간 (null=왕복 전체, 'out'=출항편, 'back'=복항편)
 let _aisRangeFrom = null, _aisRangeTo = null; // 캘린더로 지정한 조회 기간 필터 ('YYYY-MM-DD', null=제한 없음)
 let _aisNormalOnly = true; // '일' 탭에서만 적용되는 정상 항로 필터 (기본 on)
+let _aisRefOnly = false;   // ★기준일(항구 출입 가속·감속이 온전히 기록된 날)만 보기
 let _aisLastChartPts = null, _aisLastChartIdx = null; // 창 크기·타임바 높이 변경 시 그래프 재그리기용
 let _aisTlItems = [];
 let _aisTlIdx = 0;
@@ -6423,6 +6430,45 @@ function _aisTerminalLabel(t) {
   return `터미널(${t.lat.toFixed(2)},${t.lon.toFixed(2)})`;
 }
 
+// ── 선박별 순항속도와 속도 밴드 ──
+// "정박 → 저속 → 중속 → 순항"으로 단계적으로 올라갔다 내려오는 날이 항구 출입 구간까지
+// 온전히 기록된 이상적인 데이터다. 다만 순항속도는 선종마다 달라(퀸비틀 37kt 고속선,
+// 카멜리아 21.6kt 카페리) 고정 임계로는 판정할 수 없으므로, 그 선박 자신의 속도분포
+// 90퍼센타일을 순항속도로 잡고 밴드를 상대적으로 나눈다. 새 선박도 자동 적용된다.
+function _aisCruiseSpeed(data) {
+  const sp = [];
+  data.dates.forEach(d => (data.index[d] || []).forEach(p => { if (p.speed > 0) sp.push(p.speed); }));
+  if (!sp.length) return 0;
+  sp.sort((a, b) => a - b);
+  return sp[Math.floor(sp.length * 0.90)]; // 이상치(AIS 오류값)에 흔들리지 않도록 백분위 사용
+}
+// 0=정박, 1=저속, 2=중속, 3=순항
+function _aisSpeedBand(v, cruise) {
+  if (v < AIS_STOP_SPEED_KTS) return 0;
+  if (v < cruise * 0.35) return 1;
+  if (v < cruise * 0.75) return 2;
+  return 3;
+}
+// 하루치에서 "정박 ↔ 순항"을 중간 속도를 거쳐 오르내린 횟수(가속·감속 램프)를 센다.
+// 실제 감속은 밴드 경계에서 출렁이므로(예: 순항→저속→중속→저속→정박) 단조 증감을
+// 요구하면 정상적인 출입항도 놓친다. 그래서 정박(0)·순항(3) 지점만 기준점으로 잡고,
+// 그 사이에 중간 속도 단계가 실제로 기록돼 있는지만 본다 — 기록이 성겨 정박에서
+// 순항으로 곧장 튀는(중간 단계가 통째로 빠진) 날은 걸러진다.
+function _aisCountRamps(pts, cruise) {
+  const seq = [];
+  pts.forEach(p => { const b = _aisSpeedBand(p.speed, cruise); if (!seq.length || seq[seq.length - 1] !== b) seq.push(b); });
+  const anchors = [];
+  seq.forEach((b, i) => { if (b === 0 || b === 3) anchors.push({ b, i }); });
+  let up = 0, down = 0;
+  for (let k = 0; k < anchors.length - 1; k++) {
+    const a = anchors[k], c = anchors[k + 1];
+    if (a.b === c.b) continue;          // 정박→정박 / 순항→순항은 출입항이 아님
+    if (c.i - a.i < 2) continue;        // 중간 단계 없이 곧장 튄 경우 (기록 누락)
+    if (a.b === 0) up++; else down++;
+  }
+  return { up, down };
+}
+
 // 하루치 포인트의 총 이동거리 · 최대 순간이동속도(구간별 implied speed) 계산
 function _aisDayStats(pts) {
   let totalDist = 0, maxJumpKts = 0;
@@ -6440,6 +6486,7 @@ function _aisDayStats(pts) {
 // 기대 편도거리는 그 선박 데이터에서 자동 산출하므로(하드코딩 없음) 새 항로도 그대로 적용된다.
 function _aisAnalyzeVessel(key, data) {
   const terminals = _aisFindTerminals(data);
+  const cruise = _aisCruiseSpeed(data);
 
   // 1차: 하루치 통계 + 왕복 여부 → "편도 환산 거리"
   // (시작·끝이 같은 터미널이면 왕복으로 보고 총거리를 절반으로 환산해 편도 기준으로 비교)
@@ -6450,16 +6497,24 @@ function _aisAnalyzeVessel(key, data) {
     const startT = _aisTerminalAt(terminals, pts[0].lat, pts[0].lon);
     const endT   = _aisTerminalAt(terminals, pts[pts.length - 1].lat, pts[pts.length - 1].lon);
     const isRound = !!(startT && endT && _simDist([startT.lat, startT.lon], [endT.lat, endT.lon]) <= AIS_PORT_BUFFER_KM);
-    pre[d] = { stats, startT, endT, isRound, onewayDist: isRound ? stats.totalDist / 2 : stats.totalDist };
+    const ramps = _aisCountRamps(pts, cruise);
+    // ★기준일 — 항구 출입 가속·감속이 왕복 양쪽 모두 온전히 기록된 날.
+    // 거리 조건을 넣지 않는다(기대거리를 이 날들로부터 산출하므로 순환 참조 방지).
+    const isRef = !!(isRound && startT && endT && ramps.up >= 2 && ramps.down >= 2
+      && stats.n >= AIS_MIN_POINTS_NORMAL && stats.maxJumpKts <= AIS_MAX_PLAUSIBLE_KTS);
+    pre[d] = { stats, startT, endT, isRound, ramps, isRef,
+               onewayDist: isRound ? stats.totalDist / 2 : stats.totalDist };
   });
 
-  // 2차: 실제로 움직인 날들의 편도 환산 거리 중앙값을 "기대 편도거리"로 삼는다
+  // 2차: 기대 편도거리는 ★기준일들의 중앙값으로 잡는다 (기준일이 없으면 운항일 전체 중앙값)
+  const refDists = Object.values(pre).filter(x => x.isRef).map(x => x.onewayDist).sort((a, b) => a - b);
   const moving = Object.values(pre).map(x => x.onewayDist).filter(x => x > AIS_MIN_MOVING_KM).sort((a, b) => a - b);
-  const expected = moving.length ? moving[Math.floor(moving.length / 2)] : null;
+  const expected = refDists.length ? refDists[Math.floor(refDists.length / 2)]
+                 : (moving.length ? moving[Math.floor(moving.length / 2)] : null);
 
   const dayQuality = {};
   data.dates.forEach(d => {
-    const { stats, startT, endT, isRound, onewayDist } = pre[d];
+    const { stats, startT, endT, isRound, onewayDist, ramps, isRef } = pre[d];
     const reasons = [];
     if (stats.n < AIS_MIN_POINTS_NORMAL) reasons.push('포인트 부족');
     if (stats.maxJumpKts > AIS_MAX_PLAUSIBLE_KTS) reasons.push('비정상 순간이동(GPS 공백 의심)');
@@ -6475,13 +6530,19 @@ function _aisAnalyzeVessel(key, data) {
       ? `${startLabel}발${isRound ? ' 왕복' : (endLabel ? ' → ' + endLabel : '')}`
       : (data.index[d][0].lon < 129.3 ? '부산 인근발' : '일본 인근발');
     dayQuality[d] = Object.assign(
-      { isNormal: reasons.length === 0, reasons, isRound, onewayDist, origin,
+      { isNormal: reasons.length === 0, reasons, isRound, onewayDist, origin, ramps, isRef,
         startPort: startLabel, endPort: endLabel },
       stats
     );
   });
   data.terminals = terminals;
+  data.cruiseKts = cruise;
   data.expectedDist = expected;
+  data.refDays = data.dates.filter(d => dayQuality[d].isRef);
+  // 기준일들에서 뽑은 편도·왕복 기준값 (거리 판정과 화면 표시에 함께 쓴다)
+  const refRound = data.refDays.map(d => dayQuality[d].totalDist).sort((a, b) => a - b);
+  data.refOneWayKm = refDists.length ? refDists[Math.floor(refDists.length / 2)] : null;
+  data.refRoundKm  = refRound.length ? refRound[Math.floor(refRound.length / 2)] : null;
   data.dayQuality = dayQuality;
 }
 
@@ -6750,8 +6811,10 @@ function _aisTlItemsFor(key, iv) {
   const d = _aisCache[key]; if (!d) return [];
   const dates = _aisFilterDates(d.dates);
   if (iv === 'day') {
-    // '정상 항로만' 필터는 '일' 탭 목록에만 적용한다 (월/년 탭은 항상 전체 날짜 기준).
-    if (_aisNormalOnly && d.dayQuality) return dates.filter(x => d.dayQuality[x] && d.dayQuality[x].isNormal);
+    // '정상 항로만'·'기준일만' 필터는 '일' 탭 목록에만 적용한다 (월/년 탭은 전체 날짜 기준).
+    if (!d.dayQuality) return dates;
+    if (_aisRefOnly)    return dates.filter(x => d.dayQuality[x] && d.dayQuality[x].isRef);
+    if (_aisNormalOnly) return dates.filter(x => d.dayQuality[x] && d.dayQuality[x].isNormal);
     return dates;
   }
   if (iv === 'month') return [...new Set(dates.map(x => x.slice(0, 7)))].sort();
@@ -6769,20 +6832,22 @@ function _aisTbRenderTl(key) {
 
   const d = _aisCache[key];
   tl.innerHTML = items.map((item, i) => {
-    let label = item, abnormal = false, reasonTitle = '', yearSep = false;
+    let label = item, abnormal = false, reasonTitle = '', yearSep = false, isRef = false;
     if (_aisCurrIv === 'month') label = item.slice(0, 4) + '.' + item.slice(5, 7);
     else if (_aisCurrIv === 'day') {
       label = item.slice(2).replace(/-/g, '.'); // YY.MM.DD — 연도까지 보이도록
       yearSep = i > 0 && items[i - 1].slice(0, 4) !== item.slice(0, 4); // 연도가 바뀌는 지점 구분선
       // 필터를 꺼서 비정상 날짜도 함께 보일 때는 흐리게 구분 표시
       const q = d && d.dayQuality && d.dayQuality[item];
-      abnormal = !_aisNormalOnly && q && !q.isNormal;
+      abnormal = !_aisNormalOnly && !_aisRefOnly && q && !q.isNormal;
+      if (q && q.isRef) { label = '★' + label; isRef = true; }
       reasonTitle = q
         ? (item + ' · ' + q.origin + ' · ' + q.totalDist.toFixed(0) + 'km'
+           + (q.isRef ? ' · ★기준일(가속 ' + q.ramps.up + '회/감속 ' + q.ramps.down + '회)' : '')
            + (q.isNormal ? '' : ' · 제외: ' + q.reasons.join(', ')))
         : item;
     }
-    return `<button class="ais-tb-unit${i === _aisTlIdx ? ' sel' : ''}${abnormal ? ' abnormal' : ''}${yearSep ? ' yearsep' : ''}" data-idx="${i}" onclick="_aisTbUnitClick(${i})" title="${reasonTitle}">${label}</button>`;
+    return `<button class="ais-tb-unit${i === _aisTlIdx ? ' sel' : ''}${abnormal ? ' abnormal' : ''}${yearSep ? ' yearsep' : ''}${isRef ? ' refday' : ''}" data-idx="${i}" onclick="_aisTbUnitClick(${i})" title="${reasonTitle}">${label}</button>`;
   }).join('');
 
   // 선택된 유닛으로 스크롤
@@ -6897,7 +6962,9 @@ async function onAisVesselChange() {
   const data = await _loadAisVessel(key);
   if (data) {
     // 전체기간은 이제 옆의 캘린더 두 개(아래)가 그대로 보여주므로, 여기엔 데이터 일수만 짧게 표시
-    document.getElementById('aisTbTimespan').textContent = `(${data.dates.length}일 데이터)`;
+    document.getElementById('aisTbTimespan').textContent =
+      `(${data.dates.length}일 · ★기준일 ${data.refDays.length}일` +
+      (data.refOneWayKm ? ` · 편도 ${data.refOneWayKm.toFixed(0)}km / 왕복 ${(data.refRoundKm || 0).toFixed(0)}km` : '') + ')';
     // 캘린더 입력란을 이 선박의 전체 기간으로 초기화 (필터는 전체 기간 = 필터 없음 상태로 리셋)
     const fromEl = document.getElementById('aisRangeFrom');
     const toEl   = document.getElementById('aisRangeTo');
@@ -6917,6 +6984,15 @@ async function onAisVesselChange() {
 // '정상 항로만' 체크박스 — '일' 탭 날짜 목록에만 적용
 function onAisNormalOnlyChange() {
   _aisNormalOnly = document.getElementById('aisNormalOnly').checked;
+  const key = document.getElementById('aisVesselSel').value;
+  if (!_aisCache[key]) return;
+  _aisTbRenderTl(key);
+  _aisTlApply();
+}
+
+// '★기준일만' 체크박스 — 기준일은 그 자체로 정상 항로이므로 켜면 정상 필터보다 우선한다
+function onAisRefOnlyChange() {
+  _aisRefOnly = document.getElementById('aisRefOnly').checked;
   const key = document.getElementById('aisVesselSel').value;
   if (!_aisCache[key]) return;
   _aisTbRenderTl(key);
