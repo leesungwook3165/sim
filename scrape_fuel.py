@@ -1,5 +1,5 @@
 """
-Bunker Index 부산항 VLSFO·LSMGO 단가 스크레이퍼
+Bunker Index 부산항 VLSFO·LSMGO 단가 + USD/KRW 환율 스크레이퍼
 실행 결과: fuel_price.json 생성/갱신
 """
 import json, re, sys
@@ -61,13 +61,28 @@ def scrape() -> dict:
     if not prices:
         raise RuntimeError("가격 파싱 실패 — 페이지 구조가 변경되었을 수 있습니다.")
 
+    # USD/KRW 환율 — Frankfurter API (ECB 기준, 무료·키 없음)
+    usd_krw = None
+    fx_date = None
+    try:
+        fx = requests.get("https://api.frankfurter.app/latest?from=USD&to=KRW", timeout=10)
+        fx.raise_for_status()
+        fx_data = fx.json()
+        usd_krw = fx_data["rates"]["KRW"]
+        fx_date = fx_data.get("date")
+    except Exception as e:
+        print(f"환율 조회 실패(무시): {e}", file=sys.stderr)
+
     kst = timezone(timedelta(hours=9))
     return {
         "fetched_at": datetime.now(kst).isoformat(timespec="seconds"),
         "price_date": price_date,
         "vlsfo_usd_per_mt": prices.get("vlsfo"),
         "lsmgo_usd_per_mt": prices.get("lsmgo"),
+        "usd_krw_rate": usd_krw,
+        "fx_date": fx_date,
         "source_url": URL,
+        "fx_source_url": "https://api.frankfurter.app",
     }
 
 

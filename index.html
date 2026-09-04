@@ -1014,7 +1014,7 @@
           <input id="inputLsmgoUsd" type="number" step="0.01" min="1" value="1113.25" onchange="setFuelInput('lsmgoUsd', this.value)">
         </label>
         <label style="display:flex;flex-direction:column;gap:2px;font-size:10px;color:#aac8e8">환율(원/$)
-          <input type="number" step="1" min="1" value="1427" onchange="setFuelInput('krwRate', this.value)">
+          <input id="inputKrwRate" type="number" step="1" min="1" value="1427" onchange="setFuelInput('krwRate', this.value)">
         </label>
         <div style="display:flex;flex-direction:column;justify-content:flex-end;font-size:10px;color:#aac8e8">환산 단가<br><b id="fuelKrwPerKg" style="color:#ffcc44;font-size:12px">—</b></div>
       </div>
@@ -1037,7 +1037,8 @@
         📡 <a href="https://www.bunkerindex.com/prices/port.php?p=109&n=busan-republic-of-korea" target="_blank" rel="noopener" style="color:#5588aa">Bunker Index 부산항</a>
         기준 <span id="fuelPriceDate"></span> —
         LSMGO <b id="fuelPriceLsmgo" style="color:#aad4ff"></b> $/MT ·
-        VLSFO <b id="fuelPriceVlsfo" style="color:#aad4ff"></b> $/MT
+        VLSFO <b id="fuelPriceVlsfo" style="color:#aad4ff"></b> $/MT ·
+        환율 <b id="fuelPriceKrw" style="color:#aad4ff"></b> 원/$
         <span id="fuelPriceNote" style="color:#445566"></span>
       </div>
     </div>
@@ -4258,13 +4259,20 @@ async function fetchLiveFuelPrice() {
       fuelLsmgoUsdPerMt = lsmgo;
       const el = document.getElementById('inputLsmgoUsd');
       if (el) el.value = lsmgo;
-      _updateFuelCostTab();
     }
+    const krw = d.usd_krw_rate;
+    if (krw) {
+      fuelUsdKrwRate = Math.round(krw);
+      const el = document.getElementById('inputKrwRate');
+      if (el) el.value = Math.round(krw);
+    }
+    if (lsmgo || krw) _updateFuelCostTab();
     if (status) {
       document.getElementById('fuelPriceDate').textContent = d.price_date || '';
       document.getElementById('fuelPriceLsmgo').textContent = lsmgo != null ? lsmgo.toLocaleString() : '—';
       document.getElementById('fuelPriceVlsfo').textContent = vlsfo != null ? vlsfo.toLocaleString() : '—';
-      document.getElementById('fuelPriceNote').textContent = '(Bunker Index 부산항 · GitHub Actions 자동 갱신)';
+      document.getElementById('fuelPriceKrw').textContent = krw != null ? Math.round(krw).toLocaleString() : '—';
+      document.getElementById('fuelPriceNote').textContent = '(Bunker Index 부산항 · ECB 환율 · GitHub Actions 자동 갱신)';
       status.style.display = 'block';
     }
     if (btn) { btn.textContent = '✅ 시세'; btn.disabled = false; }

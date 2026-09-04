@@ -1,7 +1,10 @@
 {
-  "fetched_at": "2026-09-04T10:44:08+09:00",
+  "fetched_at": "2026-09-04T12:54:28+09:00",
   "price_date": "2026-09-03",
   "vlsfo_usd_per_mt": 970.0,
   "lsmgo_usd_per_mt": 1350.0,
-  "source_url": "https://www.bunkerindex.com/prices/port.php?p=109&n=busan-republic-of-korea"
+  "usd_krw_rate": 1357.29,
+  "fx_date": "2026-09-03",
+  "source_url": "https://www.bunkerindex.com/prices/port.php?p=109&n=busan-republic-of-korea",
+  "fx_source_url": "https://api.frankfurter.app"
 }
