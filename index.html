@@ -6260,17 +6260,40 @@ function _aisFmtDateClock(ts) {
 // ── 진행방향 화살표 아이콘 (course 각도로 회전) ──
 function _aisArrowIcon(hdg, color) {
   return L.divIcon({
-    html: `<div style="width:14px;height:14px;transform:rotate(${hdg}deg)">
-      <svg width="14" height="14" viewBox="0 0 14 14">
-        <polygon points="7,1 12,12 7,9 2,12" fill="${color}" stroke="#0a1832" stroke-width="0.75"/>
+    html: `<div style="width:22px;height:22px;transform:rotate(${hdg}deg)">
+      <svg width="22" height="22" viewBox="0 0 14 14">
+        <polygon points="7,1 12,12 7,9 2,12" fill="${color}" stroke="#0a1832" stroke-width="0.6"/>
       </svg>
     </div>`,
-    className: '', iconSize: [14, 14], iconAnchor: [7, 7]
+    className: '', iconSize: [22, 22], iconAnchor: [11, 11]
   });
 }
 
 function _clearAisLayer() {
   if (_aisLayerGroup.g) { map.removeLayer(_aisLayerGroup.g); _aisLayerGroup.g = null; }
+}
+
+// 실제 "이동거리" 기준으로 인덱스를 고르게 골라준다 — 포인트 개수 기준으로 고르면
+// 정박 중처럼 한 자리에 포인트가 몰린 구간에 화살표가 쏠리고, 정작 이동 중인 구간엔
+// 화살표가 안 보이는 문제가 생긴다. 처음/끝은 항상 포함.
+function _aisPickEvenIndices(pts, count) {
+  const idxSet = new Set([0, pts.length - 1]);
+  if (pts.length <= 2 || count <= 0) return idxSet;
+  const dists = [0];
+  let cum = 0;
+  for (let i = 1; i < pts.length; i++) {
+    cum += _simDist([pts[i - 1].lat, pts[i - 1].lon], [pts[i].lat, pts[i].lon]);
+    dists.push(cum);
+  }
+  if (cum <= 0) return idxSet;
+  const step = cum / count;
+  let next = step, j = 1;
+  while (next < cum && j < pts.length) {
+    while (j < pts.length && dists[j] < next) j++;
+    if (j < pts.length) idxSet.add(j);
+    next += step;
+  }
+  return idxSet;
 }
 
 // ── 실측 정박/경유 POI 자동 감지 ──
@@ -6457,11 +6480,12 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
   }
 
   // 중간 지점은 진행방향(course)을 알 수 있는 화살표 아이콘으로, 출항/도착은 큰 원으로 표시.
-  // (너무 촘촘하면 지저분해지므로 "이따금" 보이도록 성기게 샘플링)
-  const step = Math.max(1, Math.floor(pts.length / 40));
+  // 포인트 개수가 아니라 실제 이동거리 기준으로 골라서, 정박 구간에 화살표가 몰리지
+  // 않고 항로를 따라 고르게(중간중간) 배치되도록 한다.
+  const arrowIdx = _aisPickEvenIndices(pts, 25);
   pts.forEach((p, i) => {
     const isEnd = i === 0 || i === pts.length - 1;
-    if (!isEnd && i % step !== 0) return;
+    if (!isEnd && !arrowIdx.has(i)) return;
     const col = _aisSpeedColor(p.speed);
     const mk = isEnd
       ? L.circleMarker([p.lat, p.lon], {
