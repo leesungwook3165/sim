@@ -1,6 +1,6 @@
 """
 Bunker Index 부산항 VLSFO·LSMGO 단가 + USD/KRW 환율 스크레이퍼
-실행 결과: fuel_price.json 생성/갱신
+실행 결과: fuel_price.json 생성/갱신 + index.html 기본값 패치
 """
 import json, re, sys
 from datetime import datetime, timezone, timedelta
@@ -14,7 +14,9 @@ except ImportError:
     sys.exit(1)
 
 URL = "https://www.bunkerindex.com/prices/port.php?p=109&n=busan-republic-of-korea"
-OUT = Path(__file__).with_name("fuel_price.json")
+HERE = Path(__file__).parent
+OUT  = HERE / "fuel_price.json"
+HTML = HERE / "index.html"
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -31,26 +33,20 @@ def scrape() -> dict:
     prices = {}
     price_date = None
 
-    # 페이지 내 <script> 태그에 let data=[...]; let productName='VLSFO'; 형태로 데이터가 삽입됨
     for script in soup.find_all("script"):
         text = script.string or ""
-        # productName 추출
         name_m = re.search(r"let\s+productName\s*=\s*'([^']+)'", text)
         if not name_m:
             continue
         product = name_m.group(1).upper()
         if product not in ("VLSFO", "LSMGO"):
             continue
-
-        # data 배열 추출
         data_m = re.search(r"let\s+data\s*=\s*(\[.*?\]);", text, re.S)
         if not data_m:
             continue
         records = json.loads(data_m.group(1))
         if not records:
             continue
-
-        # 마지막 항목 = 최신 날짜
         latest = records[-1]
         val = float(latest["price"])
         if val > 0:
@@ -61,7 +57,6 @@ def scrape() -> dict:
     if not prices:
         raise RuntimeError("가격 파싱 실패 — 페이지 구조가 변경되었을 수 있습니다.")
 
-    # USD/KRW 환율 — Frankfurter API (ECB 기준, 무료·키 없음)
     usd_krw = None
     fx_date = None
     try:
@@ -86,7 +81,56 @@ def scrape() -> dict:
     }
 
 
+def patch_html(data: dict) -> bool:
+    """index.html의 기본값을 최신 단가·환율로 패치 — 로컬 file:// 환경 대응"""
+    if not HTML.exists():
+        return False
+    lsmgo = data.get("lsmgo_usd_per_mt")
+    krw   = data.get("usd_krw_rate")
+    if not lsmgo and not krw:
+        return False
+
+    html = HTML.read_text(encoding="utf-8")
+    original = html
+
+    if lsmgo:
+        # inputLsmgoUsd 입력란 value 패치
+        html = re.sub(
+            r'(id="inputLsmgoUsd"[^>]*value=")[^"]*(")',
+            lambda m: m.group(1) + str(lsmgo) + m.group(2),
+            html,
+        )
+        # JS 변수 기본값 패치
+        html = re.sub(
+            r'(let fuelLsmgoUsdPerMt\s*=\s*)[\d.]+',
+            lambda m: m.group(1) + str(lsmgo),
+            html,
+        )
+
+    if krw:
+        krw_rounded = round(krw)
+        # inputKrwRate 입력란 value 패치
+        html = re.sub(
+            r'(id="inputKrwRate"[^>]*value=")[^"]*(")',
+            lambda m: m.group(1) + str(krw_rounded) + m.group(2),
+            html,
+        )
+        # JS 변수 기본값 패치
+        html = re.sub(
+            r'(let fuelUsdKrwRate\s*=\s*)[\d]+',
+            lambda m: m.group(1) + str(krw_rounded),
+            html,
+        )
+
+    if html != original:
+        HTML.write_text(html, encoding="utf-8")
+        print(f"index.html patch OK: LSMGO={lsmgo}, KRW={round(krw) if krw else 'unchanged'}")
+        return True
+    return False
+
+
 if __name__ == "__main__":
     data = scrape()
     OUT.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(data, ensure_ascii=False, indent=2))
+    patch_html(data)

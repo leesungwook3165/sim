@@ -1011,10 +1011,10 @@
               🔄 시세
             </button>
           </span>
-          <input id="inputLsmgoUsd" type="number" step="0.01" min="1" value="1113.25" onchange="setFuelInput('lsmgoUsd', this.value)">
+          <input id="inputLsmgoUsd" type="number" step="0.01" min="1" value="1350.0" onchange="setFuelInput('lsmgoUsd', this.value)">
         </label>
         <label style="display:flex;flex-direction:column;gap:2px;font-size:10px;color:#aac8e8">환율(원/$)
-          <input id="inputKrwRate" type="number" step="1" min="1" value="1427" onchange="setFuelInput('krwRate', this.value)">
+          <input id="inputKrwRate" type="number" step="1" min="1" value="1357" onchange="setFuelInput('krwRate', this.value)">
         </label>
         <div style="display:flex;flex-direction:column;justify-content:flex-end;font-size:10px;color:#aac8e8">환산 단가<br><b id="fuelKrwPerKg" style="color:#ffcc44;font-size:12px">—</b></div>
       </div>
@@ -4198,8 +4198,8 @@ function switchSimTab(n) {
 // 산타모니카호는 출력·속도 세팅이 더 낮아 이 값에서 15~20% 낮춘 범위(공학적 세팅 보정)로
 // 계산하는 쪽이 더 정확하다 — 체크박스로 두 기준을 오가며 비교할 수 있게 한다.
 let fuelEldoradoKgPerKm = 49.5;
-let fuelLsmgoUsdPerMt = 1113.25;
-let fuelUsdKrwRate = 1427;
+let fuelLsmgoUsdPerMt = 1350.0;
+let fuelUsdKrwRate = 1357;
 let fuelUseEngSetting = false;
 // 기타운항비용(인건비·정비·항비 등) — 연료비 대비 %. 엘도라도호·산타모니카(경유·직항) 셋 다 공용.
 let fuelOtherPctMin = 23;
