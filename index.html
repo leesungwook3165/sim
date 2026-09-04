@@ -817,58 +817,114 @@
     .leaflet-control-layers-toggle {
       background-color: #fff !important;
     }
-    /* ── AIS 실적 항로 패널 ── */
-    #aisPanel {
+    /* ── AIS 타임바 (GFW 스타일, 하단 고정) ── */
+    #aisTimebar {
       position: fixed;
-      top: 65px; left: 10px;
+      bottom: 0; left: 0; right: 0;
       z-index: 1010;
-      background: rgba(8,20,45,0.95);
-      border: 1px solid rgba(80,200,120,0.4);
-      border-radius: 10px;
-      padding: 10px 14px 12px;
-      color: #e8f4ff;
+      background: rgba(12,24,52,0.97);
+      border-top: 1px solid rgba(80,160,255,0.25);
+      backdrop-filter: blur(8px);
+      color: #c8dcf0;
       font-size: 12px;
-      width: 300px;
-      max-height: 82vh;
-      overflow: auto;
-      backdrop-filter: blur(6px);
-      box-shadow: 0 4px 20px rgba(0,0,0,0.55);
       display: none;
-      cursor: default;
+      flex-direction: column;
+      user-select: none;
     }
-    #aisPanel.visible { display: block; }
-    #aisPanel.minimized .ais-body { display: none; }
-    #aisPanel select { background:#0a1a35; color:#e8f4ff; border:1px solid rgba(80,160,255,0.3); border-radius:4px; padding:2px 4px; font-size:11px; }
-    #aisPanel input[type=range] { width:80px; }
-    .ais-btn { background:rgba(20,50,110,0.8); color:#7ecfff; border:1px solid rgba(80,160,255,0.35); border-radius:4px; padding:3px 9px; font-size:11px; cursor:pointer; }
-    .ais-btn:hover { background:rgba(40,90,170,0.8); }
-    .ais-btn.active { background:rgba(80,160,80,0.5); color:#88ffaa; border-color:rgba(80,200,80,0.5); }
-    .ais-title { font-size:13px; font-weight:700; color:#88ffaa; margin-bottom:6px; display:flex; align-items:center; gap:6px; cursor:move; user-select:none; }
-    .ais-title-btns { margin-left:auto; display:flex; gap:3px; }
-    .ais-title-btn { background:none; border:none; color:#88aacc; cursor:pointer; font-size:13px; padding:0 2px; line-height:1; }
-    .ais-sec { border-top:1px solid rgba(80,160,255,0.18); margin-top:8px; padding-top:7px; }
-    .ais-sec-lbl { font-size:10px; color:#556688; margin-bottom:5px; font-weight:600; letter-spacing:.5px; }
-    .ais-range { font-size:10px; color:#88aacc; margin-top:3px; }
-    #aisStatus { font-size:10px; color:#ffcc88; min-height:14px; margin-top:4px; }
-    #aisPlayInfo { font-size:11px; color:#aaddff; margin-top:5px; font-variant-numeric:tabular-nums; }
-    .ais-legend { display:flex; gap:6px; flex-wrap:wrap; margin-top:5px; font-size:10px; }
-    .ais-legend span { display:flex; align-items:center; gap:3px; }
-    .ais-swatch { width:10px; height:10px; border-radius:2px; display:inline-block; }
-    /* GFW 타임바 */
-    .ais-itab-row { display:flex; gap:3px; margin-bottom:8px; }
-    .ais-itab { background:rgba(20,50,100,0.5); color:#7a9fcc; border:1px solid rgba(80,160,255,0.2); border-radius:4px; padding:2px 10px; font-size:11px; cursor:pointer; }
-    .ais-itab-on { background:rgba(40,100,200,0.6); color:#aaddff; border-color:rgba(80,160,255,0.5); }
-    .ais-tl-wrap { margin-bottom:8px; }
-    .ais-tl-label { text-align:center; font-size:13px; font-weight:700; color:#88ddff; margin-bottom:4px; font-variant-numeric:tabular-nums; }
-    .ais-tl-slider { width:100%; accent-color:#44aaff; cursor:pointer; }
-    .ais-tl-bounds { display:flex; justify-content:space-between; font-size:10px; color:#445566; margin-top:2px; }
-    .ais-play-bar { display:flex; align-items:center; gap:4px; margin-bottom:6px; }
-    .ais-pb { background:rgba(20,50,110,0.7); color:#99ccff; border:1px solid rgba(80,160,255,0.3); border-radius:4px; padding:4px 8px; font-size:12px; cursor:pointer; }
-    .ais-pb:hover { background:rgba(40,90,180,0.8); }
-    .ais-pb-main { padding:4px 14px; color:#44ddff; border-color:rgba(60,180,255,0.5); font-size:14px; }
-    .ais-pb-main.playing { color:#88ff88; border-color:rgba(80,200,80,0.5); background:rgba(20,80,30,0.6); }
-    .ais-spd-sel { margin-left:auto; background:#0a1a35; color:#7a9fcc; border:1px solid rgba(80,160,255,0.3); border-radius:4px; padding:2px 4px; font-size:11px; }
-    #simPanel, #legendPanel, #aisPanel, .ops-col, #shipMgrList {
+    #aisTimebar.visible { display: flex; }
+    .ais-tb-resizer {
+      height: 5px; cursor: ns-resize;
+      background: transparent;
+    }
+    .ais-tb-resizer:hover { background: rgba(80,160,255,0.2); }
+    /* 상단 컨트롤 행 */
+    .ais-tb-top {
+      display: flex; align-items: center; gap: 0;
+      height: 38px; padding: 0 8px;
+      border-bottom: 1px solid rgba(80,160,255,0.12);
+      flex-shrink: 0;
+    }
+    /* 재생 컨트롤 그룹 */
+    .ais-tb-playback {
+      display: flex; align-items: center; gap: 2px;
+      padding-right: 10px; margin-right: 10px;
+      border-right: 1px solid rgba(80,160,255,0.2);
+    }
+    .ais-tb-btn {
+      background: none; border: none; color: #99bbdd;
+      cursor: pointer; padding: 4px 6px; border-radius: 4px;
+      font-size: 13px; line-height: 1; display: flex; align-items: center; justify-content: center;
+    }
+    .ais-tb-btn:hover { background: rgba(80,160,255,0.15); color: #ddeeff; }
+    .ais-tb-btn.on { color: #66ddff; }
+    .ais-tb-btn-play {
+      font-size: 15px; color: #aaddff; padding: 4px 8px;
+      border: 1px solid rgba(80,160,255,0.3); border-radius: 4px;
+    }
+    .ais-tb-btn-play.playing { color: #66ff88; border-color: rgba(80,200,100,0.4); }
+    .ais-tb-spd-label { font-size: 11px; color: #7799bb; cursor: pointer; padding: 3px 7px; border: 1px solid rgba(80,160,255,0.2); border-radius: 4px; }
+    .ais-tb-spd-label:hover { background: rgba(80,160,255,0.1); }
+    /* 선박 + 시간범위 */
+    .ais-tb-vessel {
+      display: flex; align-items: center; gap: 8px;
+      padding-right: 10px; margin-right: 10px;
+      border-right: 1px solid rgba(80,160,255,0.2);
+    }
+    .ais-tb-vessel select {
+      background: rgba(10,20,50,0.8); color: #c8dcf0;
+      border: 1px solid rgba(80,160,255,0.25); border-radius: 4px;
+      padding: 3px 6px; font-size: 11px; cursor: pointer;
+    }
+    .ais-tb-timespan { font-size: 11px; color: #6688aa; white-space: nowrap; }
+    /* 인터벌 탭 */
+    .ais-tb-ivtabs {
+      display: flex; list-style: none; margin: 0; padding: 0; gap: 2px;
+      padding-right: 10px; margin-right: 10px;
+      border-right: 1px solid rgba(80,160,255,0.2);
+    }
+    .ais-tb-ivbtn {
+      background: none; border: none; color: #6688aa;
+      cursor: pointer; padding: 4px 9px; border-radius: 3px; font-size: 11px;
+    }
+    .ais-tb-ivbtn:hover { background: rgba(80,160,255,0.1); color: #aaccee; }
+    .ais-tb-ivbtn.on { background: rgba(40,100,200,0.35); color: #88ccff; }
+    .ais-tb-ivbtn:disabled { opacity: 0.35; cursor: not-allowed; }
+    /* 우측 상태 */
+    .ais-tb-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+    #aisTbStatus { font-size: 10px; color: #ffcc88; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #aisPlayInfo { font-size: 11px; color: #88ccee; font-variant-numeric: tabular-nums; }
+    /* 타임라인 행 */
+    .ais-tb-tl-row {
+      position: relative; height: 38px; overflow: hidden;
+      flex-shrink: 0;
+    }
+    .ais-tb-tl {
+      display: flex; height: 100%;
+      overflow-x: auto; overflow-y: hidden;
+      scrollbar-width: none;
+      position: relative; z-index: 2;
+    }
+    .ais-tb-tl::-webkit-scrollbar { display: none; }
+    .ais-tb-unit {
+      flex-shrink: 0; min-width: 60px;
+      background: none; border: none; border-right: 1px solid rgba(80,160,255,0.08);
+      color: #6688aa; font-size: 10px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      height: 100%; padding: 0 4px; white-space: nowrap;
+      transition: background 0.1s;
+    }
+    .ais-tb-unit:hover { background: rgba(80,160,255,0.12); color: #aaccee; }
+    .ais-tb-unit.sel {
+      background: rgba(40,120,220,0.35); color: #88ddff;
+      border-bottom: 2px solid #44aaff;
+    }
+    /* 속도 범례 */
+    .ais-tb-legend {
+      display: flex; align-items: center; gap: 10px; font-size: 10px; color: #7799bb;
+      padding: 0 12px; border-left: 1px solid rgba(80,160,255,0.2); margin-left: 8px;
+    }
+    .ais-lsw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 3px; }
+    #simPanel, #legendPanel, .ops-col, #shipMgrList {
       scrollbar-width: thin;
       scrollbar-color: rgba(80,160,255,0.3) transparent;
     }
@@ -1279,82 +1335,51 @@
   <div id="simTimelapseEl"></div>
 </div>
 
-<!-- AIS 실적 항로 패널 -->
-<div id="aisPanel">
-  <div class="ais-title" id="aisPanelTitle">
-    📡 AIS 실적 항로
-    <div class="ais-title-btns">
-      <button class="ais-title-btn" onclick="_aisPanelMin()" title="최소화">─</button>
-      <button class="ais-title-btn" onclick="document.getElementById('aisPanel').classList.remove('visible')" title="닫기">✕</button>
+<!-- AIS 타임바 (GFW 스타일, 하단 고정) -->
+<div id="aisTimebar">
+  <div class="ais-tb-resizer" id="aisTbResizer" title="드래그하여 높이 조절"></div>
+  <div class="ais-tb-top">
+    <!-- 재생 컨트롤 -->
+    <div class="ais-tb-playback">
+      <button class="ais-tb-btn" id="aisTbBtnLoop" onclick="_aisTbToggleLoop()" title="반복재생">⟳</button>
+      <button class="ais-tb-btn" onclick="_aisTlStep('first')" title="처음으로">⏮</button>
+      <button class="ais-tb-btn ais-tb-btn-play" id="aisBtnPlay" onclick="onAisPlay()" title="재생">▶</button>
+      <button class="ais-tb-btn" onclick="_aisTlStep('last')" title="마지막으로">⏭</button>
+      <span class="ais-tb-spd-label" id="aisTbSpdLabel" onclick="_aisTbCycleSpd()" title="배속 전환">60×</span>
+    </div>
+    <!-- 선박 선택 + 기간 -->
+    <div class="ais-tb-vessel">
+      <select id="aisVesselSel" onchange="onAisVesselChange()">
+        <option value="beetle">비틀호 (JR규슈)</option>
+        <option value="queenbeetle">퀸비틀 (JR규슈)</option>
+        <option value="santamonica">산타모니카호</option>
+        <option value="eldorado">엘도라도 익스프레스호</option>
+      </select>
+      <span class="ais-tb-timespan" id="aisTbTimespan">선박 선택 후 로드</span>
+    </div>
+    <!-- 인터벌 탭 -->
+    <ul class="ais-tb-ivtabs">
+      <li><button class="ais-tb-ivbtn" data-iv="year"  onclick="onAisIvTab(this)">년도</button></li>
+      <li><button class="ais-tb-ivbtn" data-iv="month" onclick="onAisIvTab(this)">월</button></li>
+      <li><button class="ais-tb-ivbtn on" data-iv="day" onclick="onAisIvTab(this)">일</button></li>
+    </ul>
+    <!-- 우측: 상태 + 재생정보 + 범례 -->
+    <div class="ais-tb-right">
+      <span id="aisPlayInfo">—</span>
+      <span id="aisTbStatus"></span>
+      <div class="ais-tb-legend">
+        <span><span class="ais-lsw" style="background:#888"></span>정박 0~2</span>
+        <span><span class="ais-lsw" style="background:#44ccff"></span>저속 2~10</span>
+        <span><span class="ais-lsw" style="background:#ffaa00"></span>중속 10~25</span>
+        <span><span class="ais-lsw" style="background:#ff3333"></span>고속 25+ kts</span>
+      </div>
     </div>
   </div>
-  <div class="ais-body">
-
-    <!-- 선박 선택 -->
-    <div class="ais-sec-lbl" style="margin-top:0">선박 선택</div>
-    <select id="aisVesselSel" style="width:100%;margin-bottom:4px" onchange="onAisVesselChange()">
-      <option value="beetle">비틀호 (JR 규슈)</option>
-      <option value="queenbeetle">퀸비틀 (JR 규슈)</option>
-      <option value="santamonica">산타모니카호 (시월드고속훼리)</option>
-      <option value="eldorado">엘도라도 익스프레스호 (대저페리)</option>
-    </select>
-    <div class="ais-range" id="aisRange">선박 선택 후 로드됩니다</div>
-    <div id="aisStatus"></div>
-
-    <!-- GFW 스타일 타임바 -->
-    <div class="ais-sec" style="padding-bottom:4px">
-      <!-- 인터벌 탭 -->
-      <div class="ais-itab-row">
-        <button class="ais-itab" data-iv="year"  onclick="onAisIvTab(this)">년도</button>
-        <button class="ais-itab" data-iv="month" onclick="onAisIvTab(this)">월</button>
-        <button class="ais-itab ais-itab-on" data-iv="day" onclick="onAisIvTab(this)">일</button>
-      </div>
-      <!-- 타임라인 슬라이더 -->
-      <div class="ais-tl-wrap">
-        <div class="ais-tl-label" id="aisTlLabel">—</div>
-        <input type="range" id="aisTlSlider" class="ais-tl-slider" min="0" max="0" value="0"
-          oninput="_aisTlSlide(this.value)" onchange="_aisTlCommit(this.value)">
-        <div class="ais-tl-bounds">
-          <span id="aisTlMin">—</span>
-          <span id="aisTlMax">—</span>
-        </div>
-      </div>
-      <!-- 재생 컨트롤 바 (GFW 스타일) -->
-      <div class="ais-play-bar">
-        <button class="ais-pb" title="처음" onclick="_aisTlStep('first')">⏮</button>
-        <button class="ais-pb" title="이전" onclick="_aisTlStep('prev')">◀</button>
-        <button class="ais-pb ais-pb-main" id="aisBtnPlay" onclick="onAisPlay()" title="재생">▶</button>
-        <button class="ais-pb" title="다음"  onclick="_aisTlStep('next')">▶▶</button>
-        <button class="ais-pb" title="마지막" onclick="_aisTlStep('last')">⏭</button>
-        <select id="aisMul" class="ais-spd-sel" title="배속">
-          <option value="10">10×</option>
-          <option value="60" selected>60×</option>
-          <option value="300">300×</option>
-          <option value="1000">1000×</option>
-        </select>
-      </div>
-      <div id="aisPlayInfo">—</div>
+  <!-- 타임라인 그래프 행 -->
+  <div class="ais-tb-tl-row">
+    <div class="ais-tb-tl" id="aisTbTl">
+      <!-- 유닛 버튼들이 JS로 동적 렌더링됨 -->
     </div>
-
-    <!-- 레이어 표시 옵션 -->
-    <div class="ais-sec">
-      <div class="ais-sec-lbl">표시 설정</div>
-      <label style="font-size:11px;cursor:pointer">
-        <input type="checkbox" id="aisShowPoints" checked onchange="onAisQuery()"> 포인트 마커 표시
-      </label>
-    </div>
-
-    <!-- 속도 범례 -->
-    <div class="ais-sec">
-      <div class="ais-sec-lbl">속도 범례 (kts)</div>
-      <div class="ais-legend">
-        <span><span class="ais-swatch" style="background:#888"></span> 정박 0~2</span>
-        <span><span class="ais-swatch" style="background:#44ccff"></span> 저속 2~10</span>
-        <span><span class="ais-swatch" style="background:#ffaa00"></span> 중속 10~25</span>
-        <span><span class="ais-swatch" style="background:#ff3333"></span> 고속 25+</span>
-      </div>
-    </div>
-
   </div>
 </div>
 
@@ -6055,23 +6080,29 @@ function _startOnboardingIntro() {
 })();
 
 // ════════════════════════════════════════════════════
-//  AIS 실적 항로 뷰어
+//  AIS 실적 항로 뷰어 (GFW 타임바 스타일)
 // ════════════════════════════════════════════════════
 const _AIS_VESSELS = {
   beetle:      { label:'비틀호',               file:'beetle_track-data-2012-01-01,2027-01-01.csv',      color:'#ff9955' },
   queenbeetle: { label:'퀸비틀',               file:'queenbeetle_track-data-2012-01-01,2027-01-01.csv', color:'#44aaff' },
-  santamonica: { label:'산타모니카호',          file:'santamonica_track-data-2026-06-17,2026-08-06.csv',color:'#ffcc44' },
-  eldorado:    { label:'엘도라도 익스프레스호', file:'eldorado_track-data-2026-06-17,2026-08-06.csv',   color:'#88ff55' },
+  santamonica: { label:'산타모니카호',          file:'santamonica_track-data-2026-06-17,2026-08-06.csv', color:'#ffcc44' },
+  eldorado:    { label:'엘도라도 익스프레스호', file:'eldorado_track-data-2026-06-17,2026-08-06.csv',    color:'#88ff55' },
 };
 
-const _aisCache = {};        // key → { index:{date→[pts]}, dates[], minDate, maxDate }
-const _aisLayerGroup = { g: null }; // current rendered Leaflet layer
-let _aisPlay = { timer:null, marker:null, idx:0, pts:null };
+const _aisCache = {};
+const _aisLayerGroup = { g: null };
+let _aisPlay = { timer: null, marker: null, idx: 0, pts: null, loop: false };
+let _aisCurrIv = 'day';
+let _aisTlItems = [];
+let _aisTlIdx = 0;
+let _aisTbSpeeds = [10, 60, 300, 1000];
+let _aisTbSpdIdx = 1; // default 60×
+let _aisTlCommitTimer = null;
 
-// ── CSV 파서 (quoted field 지원) ──
+// ── CSV 파서 ──
 function _parseAisCsv(text) {
   const lines = text.split('\n');
-  const hdrs = lines[0].split(',').map(h => h.replace(/"/g,'').trim());
+  const hdrs = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
   const pts = [];
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
@@ -6086,29 +6117,33 @@ function _parseAisCsv(text) {
     parts.push(buf.join(''));
     if (parts.length < 4) continue;
     const r = {};
-    hdrs.forEach((h,j) => r[h] = (parts[j]||'').trim());
+    hdrs.forEach((h, j) => r[h] = (parts[j] || '').trim());
     if (!r.timestamp) continue;
-    pts.push({ lat:+r.lat, lon:+r.lon, speed:+r.speed, course:+r.course, ts:r.timestamp });
+    pts.push({ lat: +r.lat, lon: +r.lon, speed: +r.speed, course: +r.course, ts: r.timestamp });
   }
   return pts;
 }
 
-// ── 날짜 인덱스 생성 ──
+// ── 날짜 인덱스 ──
 function _buildAisIndex(pts) {
   const index = {};
   pts.forEach(p => {
-    const d = p.ts.slice(0,10);
+    const d = p.ts.slice(0, 10);
     (index[d] = index[d] || []).push(p);
   });
   const dates = Object.keys(index).sort();
-  return { index, dates, minDate: dates[0], maxDate: dates[dates.length-1] };
+  return { index, dates, minDate: dates[0], maxDate: dates[dates.length - 1] };
 }
 
 // ── CSV 로드 (lazy, 캐시) ──
 async function _loadAisVessel(key) {
   if (_aisCache[key]) return _aisCache[key];
   const v = _AIS_VESSELS[key];
-  _aisSetStatus(`${v.label} 데이터 로딩 중… (최초 1회)`);
+  _aisSetStatus(`${v.label} 로딩 중…`);
+  if (location.protocol === 'file:') {
+    _aisSetStatus('⚠ file:// 환경 — python -m http.server 8000 실행 후 localhost:8000 접속 필요');
+    return null;
+  }
   try {
     const r = await fetch(v.file + '?_=' + Date.now());
     if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -6117,8 +6152,8 @@ async function _loadAisVessel(key) {
     _aisCache[key] = _buildAisIndex(pts);
     _aisSetStatus('');
     return _aisCache[key];
-  } catch(e) {
-    _aisSetStatus('⚠ 로드 실패: ' + v.file);
+  } catch (e) {
+    _aisSetStatus('⚠ 로드 실패: ' + e.message);
     return null;
   }
 }
@@ -6131,7 +6166,6 @@ function _aisSpeedColor(kts) {
   return '#ff3333';
 }
 
-// ── 레이어 제거 ──
 function _clearAisLayer() {
   if (_aisLayerGroup.g) { map.removeLayer(_aisLayerGroup.g); _aisLayerGroup.g = null; }
 }
@@ -6145,124 +6179,56 @@ function _renderAisDay(key, dateStr) {
   if (!pts || !pts.length) { _aisSetStatus(dateStr + ': 데이터 없음'); return; }
 
   const g = L.layerGroup();
-  const showPts = document.getElementById('aisShowPoints') && document.getElementById('aisShowPoints').checked;
-
-  // 속도별 색상 폴리라인 (구간별)
   for (let i = 1; i < pts.length; i++) {
-    const a = pts[i-1], b = pts[i];
-    L.polyline([[a.lat, a.lon],[b.lat, b.lon]], {
-      color: _aisSpeedColor((a.speed + b.speed) / 2),
-      weight: 3, opacity: 0.85
+    const a = pts[i - 1], b = pts[i];
+    L.polyline([[a.lat, a.lon], [b.lat, b.lon]], {
+      color: _aisSpeedColor((a.speed + b.speed) / 2), weight: 3, opacity: 0.85
     }).addTo(g);
   }
 
-  // 포인트 마커 (데이터가 많으면 간격 조절)
-  if (showPts) {
-    const step = Math.max(1, Math.floor(pts.length / 120));
-    pts.forEach((p, i) => {
-      const isEnd = i === 0 || i === pts.length - 1;
-      if (!isEnd && i % step !== 0) return;
-      const col = _aisSpeedColor(p.speed);
-      const timeStr = p.ts.replace('T',' ').slice(0,19) + ' UTC';
-      L.circleMarker([p.lat, p.lon], {
-        radius: isEnd ? 6 : 3,
-        color: isEnd ? (i===0?'#00ff88':'#ff4466') : col,
-        fillColor: isEnd ? (i===0?'#00ff88':'#ff4466') : col,
-        fillOpacity: 0.9, weight: 1
-      }).bindPopup(
-        `<b>${_AIS_VESSELS[key].label}</b><br>` +
-        `${timeStr}<br>` +
-        `속도: <b>${p.speed.toFixed(1)} kts</b>  방향: ${p.course.toFixed(0)}°` +
-        (i===0 ? '<br><span style="color:#00ff88">▲ 출발</span>' : i===pts.length-1 ? '<br><span style="color:#ff4466">▼ 도착</span>' : '')
-      ).addTo(g);
-    });
-  }
+  const step = Math.max(1, Math.floor(pts.length / 120));
+  pts.forEach((p, i) => {
+    const isEnd = i === 0 || i === pts.length - 1;
+    if (!isEnd && i % step !== 0) return;
+    const col = _aisSpeedColor(p.speed);
+    L.circleMarker([p.lat, p.lon], {
+      radius: isEnd ? 6 : 3,
+      color: isEnd ? (i === 0 ? '#00ff88' : '#ff4466') : col,
+      fillColor: isEnd ? (i === 0 ? '#00ff88' : '#ff4466') : col,
+      fillOpacity: 0.9, weight: 1
+    }).bindPopup(
+      `<b>${_AIS_VESSELS[key].label}</b><br>` +
+      `${p.ts.replace('T', ' ').slice(0, 19)} UTC<br>` +
+      `속도: <b>${p.speed.toFixed(1)} kts</b>  방향: ${p.course.toFixed(0)}°` +
+      (i === 0 ? '<br><span style="color:#00ff88">▲ 출발</span>' : i === pts.length - 1 ? '<br><span style="color:#ff4466">▼ 도착</span>' : '')
+    ).addTo(g);
+  });
 
   g.addTo(map);
   _aisLayerGroup.g = g;
 
-  // 지도 중심 이동
-  const lats = pts.map(p=>p.lat), lons = pts.map(p=>p.lon);
-  map.fitBounds([[Math.min(...lats),Math.min(...lons)],[Math.max(...lats),Math.max(...lons)]], { padding:[30,30] });
+  const lats = pts.map(p => p.lat), lons = pts.map(p => p.lon);
+  map.fitBounds([[Math.min(...lats), Math.min(...lons)], [Math.max(...lats), Math.max(...lons)]], { padding: [30, 80] });
 
-  const maxSpd = Math.max(...pts.map(p=>p.speed));
+  const maxSpd = Math.max(...pts.map(p => p.speed));
   _aisSetStatus(`${_AIS_VESSELS[key].label} · ${dateStr} · ${pts.length}포인트 · 최고 ${maxSpd.toFixed(1)} kts`);
 }
 
-// ── 타임라인 슬라이더 상태 ──
-let _aisCurrIv = 'day';   // 'year' | 'month' | 'day'
-let _aisTlItems = [];      // 슬라이더 인덱스 → 날짜/월/연도 문자열
-let _aisTlIdx = 0;
-let _aisTlCommitTimer = null;
-
-function _aisTlItemsFor(key, iv) {
-  const d = _aisCache[key]; if (!d) return [];
-  if (iv === 'day')   return d.dates;
-  if (iv === 'month') return [...new Set(d.dates.map(x=>x.slice(0,7)))].sort();
-  if (iv === 'year')  return [...new Set(d.dates.map(x=>x.slice(0,4)))].sort();
-  return d.dates;
-}
-
-function _aisTlInit(key) {
-  const items = _aisTlItemsFor(key, _aisCurrIv);
-  _aisTlItems = items;
-  _aisTlIdx = items.length - 1;
-  const sl = document.getElementById('aisTlSlider');
-  if (!sl) return;
-  sl.min = 0; sl.max = Math.max(0, items.length - 1); sl.value = _aisTlIdx;
-  document.getElementById('aisTlMin').textContent = items[0] || '—';
-  document.getElementById('aisTlMax').textContent = items[items.length-1] || '—';
-  _aisTlUpdateLabel();
-}
-
-function _aisTlUpdateLabel() {
-  const el = document.getElementById('aisTlLabel');
-  if (el) el.textContent = _aisTlItems[_aisTlIdx] || '—';
-}
-
-function _aisTlSlide(val) {
-  _aisTlIdx = +val;
-  _aisTlUpdateLabel();
-  // 슬라이딩 중에는 레이어 렌더링 지연
-  clearTimeout(_aisTlCommitTimer);
-  _aisTlCommitTimer = setTimeout(() => _aisTlApply(), 350);
-}
-
-function _aisTlCommit(val) {
-  _aisTlIdx = +val;
-  _aisTlUpdateLabel();
-  clearTimeout(_aisTlCommitTimer);
-  _aisTlApply();
-}
-
-function _aisTlApply() {
-  const key = document.getElementById('aisVesselSel').value;
-  const item = _aisTlItems[_aisTlIdx];
-  if (!item) return;
-  if (_aisCurrIv === 'day') {
-    _renderAisDay(key, item);
-  } else {
-    // 월/연도 선택 → 해당 기간 전체 포인트 렌더링
-    _renderAisPeriod(key, item);
-  }
-}
-
-// 월·연도 기간 전체 렌더링 (포인트 수가 많아 간격 더 크게)
+// ── 기간(월·연도) 전체 렌더링 ──
 function _renderAisPeriod(key, prefix) {
   _clearAisLayer();
   const data = _aisCache[key]; if (!data) return;
   const days = data.dates.filter(d => d.startsWith(prefix));
   if (!days.length) { _aisSetStatus(prefix + ': 데이터 없음'); return; }
-
   const g = L.layerGroup();
   let totalPts = 0;
   days.forEach(day => {
     const pts = data.index[day]; if (!pts) return;
     totalPts += pts.length;
     for (let i = 1; i < pts.length; i++) {
-      const a = pts[i-1], b = pts[i];
-      L.polyline([[a.lat,a.lon],[b.lat,b.lon]], {
-        color: _aisSpeedColor((a.speed+b.speed)/2), weight: 2, opacity: 0.6
+      const a = pts[i - 1], b = pts[i];
+      L.polyline([[a.lat, a.lon], [b.lat, b.lon]], {
+        color: _aisSpeedColor((a.speed + b.speed) / 2), weight: 2, opacity: 0.55
       }).addTo(g);
     }
   });
@@ -6271,25 +6237,63 @@ function _renderAisPeriod(key, prefix) {
   _aisSetStatus(`${_AIS_VESSELS[key].label} · ${prefix} · ${days.length}일 · ${totalPts}포인트`);
 }
 
-// ── 인터벌 탭 전환 ──
-function onAisIvTab(btn) {
-  document.querySelectorAll('.ais-itab').forEach(b => b.classList.remove('ais-itab-on'));
-  btn.classList.add('ais-itab-on');
-  _aisCurrIv = btn.dataset.iv;
+// ── 타임라인 아이템 생성 ──
+function _aisTlItemsFor(key, iv) {
+  const d = _aisCache[key]; if (!d) return [];
+  if (iv === 'day')   return d.dates;
+  if (iv === 'month') return [...new Set(d.dates.map(x => x.slice(0, 7)))].sort();
+  if (iv === 'year')  return [...new Set(d.dates.map(x => x.slice(0, 4)))].sort();
+  return d.dates;
+}
+
+// ── 타임라인 유닛 렌더링 ──
+function _aisTbRenderTl(key) {
+  const items = _aisTlItemsFor(key, _aisCurrIv);
+  _aisTlItems = items;
+  _aisTlIdx = Math.max(0, items.length - 1);
+  const tl = document.getElementById('aisTbTl');
+  if (!tl) return;
+
+  tl.innerHTML = items.map((item, i) => {
+    let label = item;
+    if (_aisCurrIv === 'month') label = item.slice(0, 4) + '.' + item.slice(5, 7);
+    else if (_aisCurrIv === 'day')   label = item.slice(5); // MM-DD
+    return `<button class="ais-tb-unit${i === _aisTlIdx ? ' sel' : ''}" data-idx="${i}" onclick="_aisTbUnitClick(${i})">${label}</button>`;
+  }).join('');
+
+  // 선택된 유닛으로 스크롤
+  requestAnimationFrame(() => {
+    const sel = tl.querySelector('.ais-tb-unit.sel');
+    if (sel) sel.scrollIntoView({ inline: 'center', block: 'nearest' });
+  });
+}
+
+function _aisTbUnitClick(idx) {
+  _aisTlIdx = idx;
+  // 이전 sel 제거, 새로 sel 적용
+  document.querySelectorAll('.ais-tb-unit').forEach((b, i) => b.classList.toggle('sel', i === idx));
+  clearTimeout(_aisTlCommitTimer);
+  _aisTlCommitTimer = setTimeout(() => _aisTlApply(), 150);
+}
+
+function _aisTlApply() {
   const key = document.getElementById('aisVesselSel').value;
-  if (_aisCache[key]) { _aisTlInit(key); _aisTlApply(); }
+  const item = _aisTlItems[_aisTlIdx];
+  if (!item) return;
+  if (_aisCurrIv === 'day') _renderAisDay(key, item);
+  else _renderAisPeriod(key, item);
 }
 
 // ── 스텝 이동 ──
 function _aisTlStep(dir) {
-  const sl = document.getElementById('aisTlSlider');
-  const max = +sl.max;
+  const max = _aisTlItems.length - 1;
   if (dir === 'first') _aisTlIdx = 0;
-  else if (dir === 'last') _aisTlIdx = max;
-  else if (dir === 'prev') _aisTlIdx = Math.max(0, _aisTlIdx - 1);
-  else if (dir === 'next') _aisTlIdx = Math.min(max, _aisTlIdx + 1);
-  sl.value = _aisTlIdx;
-  _aisTlUpdateLabel();
+  else if (dir === 'last')  _aisTlIdx = max;
+  else if (dir === 'prev')  _aisTlIdx = Math.max(0, _aisTlIdx - 1);
+  else if (dir === 'next')  _aisTlIdx = Math.min(max, _aisTlIdx + 1);
+  document.querySelectorAll('.ais-tb-unit').forEach((b, i) => b.classList.toggle('sel', i === _aisTlIdx));
+  const sel = document.querySelector('.ais-tb-unit.sel');
+  if (sel) sel.scrollIntoView({ inline: 'center', block: 'nearest' });
   _aisTlApply();
 }
 
@@ -6299,27 +6303,45 @@ async function onAisVesselChange() {
   onAisStop();
   const data = await _loadAisVessel(key);
   if (data) {
-    document.getElementById('aisRange').textContent =
-      `가용: ${data.minDate} ~ ${data.maxDate}  (${data.dates.length}일)`;
-    _aisTlInit(key);
+    document.getElementById('aisTbTimespan').textContent =
+      `${data.minDate} ~ ${data.maxDate}  (${data.dates.length}일)`;
+    _aisTbRenderTl(key);
     _aisTlApply();
   }
+}
+
+// ── 인터벌 탭 ──
+function onAisIvTab(btn) {
+  document.querySelectorAll('.ais-tb-ivbtn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  _aisCurrIv = btn.dataset.iv;
+  const key = document.getElementById('aisVesselSel').value;
+  if (_aisCache[key]) { _aisTbRenderTl(key); _aisTlApply(); }
+}
+
+// ── 배속 순환 ──
+function _aisTbCycleSpd() {
+  _aisTbSpdIdx = (_aisTbSpdIdx + 1) % _aisTbSpeeds.length;
+  document.getElementById('aisTbSpdLabel').textContent = _aisTbSpeeds[_aisTbSpdIdx] + '×';
+}
+
+// ── 반복재생 토글 ──
+function _aisTbToggleLoop() {
+  _aisPlay.loop = !_aisPlay.loop;
+  document.getElementById('aisTbBtnLoop').classList.toggle('on', _aisPlay.loop);
 }
 
 // ── 재생 ──
 function onAisPlay() {
   const btn = document.getElementById('aisBtnPlay');
-  // 재생 중이면 일시정지
   if (_aisPlay.timer) {
-    clearTimeout(_aisPlay.timer);
-    _aisPlay.timer = null;
+    clearTimeout(_aisPlay.timer); _aisPlay.timer = null;
     btn.textContent = '▶'; btn.classList.remove('playing');
     return;
   }
   const key = document.getElementById('aisVesselSel').value;
   const item = _aisTlItems[_aisTlIdx];
-  if (!item) { _aisSetStatus('먼저 날짜를 선택하세요'); return; }
-  // 일(day) 단위에서만 포인트 재생, 월·연도는 날짜 단위 순환
+  if (!item) { _aisSetStatus('날짜를 선택하세요'); return; }
   if (_aisCurrIv === 'day') {
     _playAisPoints(key, item);
   } else {
@@ -6331,37 +6353,43 @@ function _playAisPoints(key, dateStr) {
   const data = _aisCache[key]; if (!data) return;
   const pts = data.index[dateStr];
   if (!pts || pts.length < 2) { _aisSetStatus(dateStr + ': 재생할 데이터 없음'); return; }
-  onAisStop(true); // clear marker only
+  onAisStop(true);
   _renderAisDay(key, dateStr);
-  const mul = parseInt(document.getElementById('aisMul').value) || 60;
-  const icon = L.divIcon({ html:'<div style="font-size:20px;line-height:1;filter:drop-shadow(0 0 4px #0af)">🚢</div>', className:'', iconSize:[22,22], iconAnchor:[11,11] });
-  const marker = L.marker([pts[0].lat, pts[0].lon], { icon, zIndexOffset:1200 }).addTo(map);
+  const mul = _aisTbSpeeds[_aisTbSpdIdx];
+  const icon = L.divIcon({ html: '<div style="font-size:20px;line-height:1;filter:drop-shadow(0 0 4px #0af)">🚢</div>', className: '', iconSize: [22, 22], iconAnchor: [11, 11] });
+  const marker = L.marker([pts[0].lat, pts[0].lon], { icon, zIndexOffset: 1200 }).addTo(map);
   _aisPlay.marker = marker; _aisPlay.pts = pts; _aisPlay.idx = 0;
   const btn = document.getElementById('aisBtnPlay');
   btn.textContent = '⏸'; btn.classList.add('playing');
   function step() {
     const i = ++_aisPlay.idx;
-    if (i >= pts.length) { onAisStop(); return; }
+    if (i >= pts.length) {
+      if (_aisPlay.loop) { _aisPlay.idx = 0; _aisPlay.timer = setTimeout(step, 500); }
+      else onAisStop();
+      return;
+    }
     const p = pts[i];
     marker.setLatLng([p.lat, p.lon]);
-    const dt = i+1<pts.length ? Math.max(0, new Date(pts[i+1].ts)-new Date(p.ts)) : 2000;
+    const dt = i + 1 < pts.length ? Math.max(0, new Date(pts[i + 1].ts) - new Date(p.ts)) : 2000;
     document.getElementById('aisPlayInfo').textContent =
-      `🕐 ${p.ts.slice(11,19)} UTC  |  ${p.speed.toFixed(1)} kts  |  ${p.course.toFixed(0)}°`;
-    _aisPlay.timer = setTimeout(step, Math.max(30, dt/mul));
+      `🕐 ${p.ts.slice(11, 19)} UTC  |  ${p.speed.toFixed(1)} kts  |  ${p.course.toFixed(0)}°`;
+    _aisPlay.timer = setTimeout(step, Math.max(30, dt / mul));
   }
   step();
 }
 
-// 월/연도 모드 재생: 날짜 하나씩 앞으로 이동
 function _playAisDateStepper(key) {
   const btn = document.getElementById('aisBtnPlay');
   btn.textContent = '⏸'; btn.classList.add('playing');
   function tick() {
-    const sl = document.getElementById('aisTlSlider');
-    if (_aisTlIdx >= +sl.max) { onAisStop(); return; }
-    _aisTlIdx++;
-    sl.value = _aisTlIdx;
-    _aisTlUpdateLabel();
+    const max = _aisTlItems.length - 1;
+    if (_aisTlIdx >= max) {
+      if (_aisPlay.loop) _aisTlIdx = 0;
+      else { onAisStop(); return; }
+    } else {
+      _aisTlIdx++;
+    }
+    document.querySelectorAll('.ais-tb-unit').forEach((b, i) => b.classList.toggle('sel', i === _aisTlIdx));
     _aisTlApply();
     _aisPlay.timer = setTimeout(tick, 600);
   }
@@ -6378,51 +6406,47 @@ function onAisStop(markerOnly) {
   }
 }
 
-function onAisQuery() { _aisTlApply(); }
-
 function _aisSetStatus(msg) {
-  const el = document.getElementById('aisStatus');
+  const el = document.getElementById('aisTbStatus');
   if (el) el.textContent = msg;
 }
-function _aisPanelMin() {
-  document.getElementById('aisPanel').classList.toggle('minimized');
-}
 
-// ── 패널 드래그 ──
+// ── 타임바 리사이즈 (상단 드래그) ──
 (function() {
-  const panel = document.getElementById('aisPanel');
-  const title = document.getElementById('aisPanelTitle');
-  let ox=0, oy=0, dragging=false;
-  title.addEventListener('mousedown', e => {
-    dragging=true; ox=e.clientX-panel.offsetLeft; oy=e.clientY-panel.offsetTop;
+  const bar = document.getElementById('aisTimebar');
+  const handle = document.getElementById('aisTbResizer');
+  if (!bar || !handle) return;
+  let startY = 0, startH = 0, dragging = false;
+  handle.addEventListener('mousedown', e => {
+    dragging = true; startY = e.clientY; startH = bar.offsetHeight;
     e.preventDefault();
   });
   document.addEventListener('mousemove', e => {
     if (!dragging) return;
-    panel.style.left = (e.clientX-ox)+'px';
-    panel.style.top  = (e.clientY-oy)+'px';
+    const newH = Math.max(76, Math.min(300, startH - (e.clientY - startY)));
+    bar.style.height = newH + 'px';
   });
-  document.addEventListener('mouseup', () => { dragging=false; });
+  document.addEventListener('mouseup', () => { dragging = false; });
 })();
 
-// ── 지도에 AIS 토글 버튼 추가 ──
+// ── 지도에 AIS 토글 버튼 ──
 (function() {
   const AisCtrl = L.Control.extend({
     options: { position: 'topleft' },
     onAdd() {
       const c = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
       const btn = L.DomUtil.create('a', '', c);
-      btn.href = '#'; btn.title = 'AIS 실적 항로 뷰어';
+      btn.href = '#'; btn.title = 'AIS 실적 항로 타임바';
       btn.innerHTML = '📡';
       btn.style.cssText = 'font-size:16px;line-height:30px;width:30px;height:30px;display:block;text-align:center;text-decoration:none';
       L.DomEvent.on(btn, 'click', e => {
-        L.DomEvent.stopPropagation(e);
-        L.DomEvent.preventDefault(e);
-        const p = document.getElementById('aisPanel');
-        if (p.classList.contains('visible')) {
-          p.classList.remove('visible');
+        L.DomEvent.stopPropagation(e); L.DomEvent.preventDefault(e);
+        const tb = document.getElementById('aisTimebar');
+        if (tb.classList.contains('visible')) {
+          tb.classList.remove('visible');
+          onAisStop();
         } else {
-          p.classList.add('visible');
+          tb.classList.add('visible');
           if (!_aisCache[document.getElementById('aisVesselSel').value]) {
             onAisVesselChange();
           }
