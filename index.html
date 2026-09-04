@@ -6552,9 +6552,6 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
   g.addTo(map);
   _aisLayerGroup.g = g;
 
-  const lats = pts.map(p => p.lat), lons = pts.map(p => p.lon);
-  map.fitBounds([[Math.min(...lats), Math.min(...lons)], [Math.max(...lats), Math.max(...lons)]], { padding: [30, 80] });
-
   const maxSpd = Math.max(...pts.map(p => p.speed));
   const stopNote = stops.length ? ` · 정박 ${stops.length}건(${stops.map(s => Math.round(s.durMin)).join(',')}분)` : '';
   _aisSetStatus(`${_AIS_VESSELS[key].label} · ${labelStr} · ${pts.length}포인트 · 최고 ${maxSpd.toFixed(1)} knot${stopNote}${extraNote ? ' · ' + extraNote : ''}`);
