@@ -817,6 +817,47 @@
     .leaflet-control-layers-toggle {
       background-color: #fff !important;
     }
+    /* ── AIS 실적 항로 패널 ── */
+    #aisPanel {
+      position: fixed;
+      top: 65px; left: 10px;
+      z-index: 1010;
+      background: rgba(8,20,45,0.95);
+      border: 1px solid rgba(80,200,120,0.4);
+      border-radius: 10px;
+      padding: 10px 14px 12px;
+      color: #e8f4ff;
+      font-size: 12px;
+      width: 300px;
+      max-height: 82vh;
+      overflow: auto;
+      backdrop-filter: blur(6px);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.55);
+      display: none;
+      cursor: default;
+    }
+    #aisPanel.visible { display: block; }
+    #aisPanel.minimized .ais-body { display: none; }
+    #aisPanel select { background:#0a1a35; color:#e8f4ff; border:1px solid rgba(80,160,255,0.3); border-radius:4px; padding:2px 4px; font-size:11px; }
+    #aisPanel input[type=range] { width:80px; }
+    .ais-btn { background:rgba(20,50,110,0.8); color:#7ecfff; border:1px solid rgba(80,160,255,0.35); border-radius:4px; padding:3px 9px; font-size:11px; cursor:pointer; }
+    .ais-btn:hover { background:rgba(40,90,170,0.8); }
+    .ais-btn.active { background:rgba(80,160,80,0.5); color:#88ffaa; border-color:rgba(80,200,80,0.5); }
+    .ais-title { font-size:13px; font-weight:700; color:#88ffaa; margin-bottom:6px; display:flex; align-items:center; gap:6px; cursor:move; user-select:none; }
+    .ais-title-btns { margin-left:auto; display:flex; gap:3px; }
+    .ais-title-btn { background:none; border:none; color:#88aacc; cursor:pointer; font-size:13px; padding:0 2px; line-height:1; }
+    .ais-sec { border-top:1px solid rgba(80,160,255,0.18); margin-top:8px; padding-top:7px; }
+    .ais-sec-lbl { font-size:10px; color:#556688; margin-bottom:5px; font-weight:600; letter-spacing:.5px; }
+    .ais-range { font-size:10px; color:#88aacc; margin-top:3px; }
+    #aisStatus { font-size:10px; color:#ffcc88; min-height:14px; margin-top:4px; }
+    #aisPlayInfo { font-size:11px; color:#aaddff; margin-top:5px; font-variant-numeric:tabular-nums; }
+    .ais-legend { display:flex; gap:6px; flex-wrap:wrap; margin-top:5px; font-size:10px; }
+    .ais-legend span { display:flex; align-items:center; gap:3px; }
+    .ais-swatch { width:10px; height:10px; border-radius:2px; display:inline-block; }
+    #simPanel, #legendPanel, #aisPanel, .ops-col, #shipMgrList {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(80,160,255,0.3) transparent;
+    }
   </style>
 </head>
 <body>
@@ -1222,6 +1263,78 @@
     </div>
   </div>
   <div id="simTimelapseEl"></div>
+</div>
+
+<!-- AIS 실적 항로 패널 -->
+<div id="aisPanel">
+  <div class="ais-title" id="aisPanelTitle">
+    📡 AIS 실적 항로
+    <div class="ais-title-btns">
+      <button class="ais-title-btn" onclick="_aisPanelMin()" title="최소화">─</button>
+      <button class="ais-title-btn" onclick="document.getElementById('aisPanel').classList.remove('visible')" title="닫기">✕</button>
+    </div>
+  </div>
+  <div class="ais-body">
+
+    <!-- 선박 선택 -->
+    <div class="ais-sec-lbl" style="margin-top:0">선박 선택</div>
+    <select id="aisVesselSel" style="width:100%;margin-bottom:4px" onchange="onAisVesselChange()">
+      <option value="beetle">비틀호 (JR 규슈)</option>
+      <option value="queenbeetle">퀸비틀 (JR 규슈)</option>
+      <option value="santamonica">산타모니카호 (시월드고속훼리)</option>
+      <option value="eldorado">엘도라도 익스프레스호 (대저페리)</option>
+    </select>
+    <div class="ais-range" id="aisRange">선박 선택 후 로드됩니다</div>
+    <div id="aisStatus"></div>
+
+    <!-- 날짜 조회 -->
+    <div class="ais-sec">
+      <div class="ais-sec-lbl">날짜별 조회</div>
+      <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
+        <select id="aisYear" onchange="onAisYearChange()" style="width:62px"><option>—</option></select>년
+        <select id="aisMonth" onchange="onAisMonthChange()" style="width:42px"><option>—</option></select>월
+        <select id="aisDay" style="width:42px"><option>—</option></select>일
+        <button class="ais-btn" onclick="onAisQuery()">조회</button>
+      </div>
+    </div>
+
+    <!-- 재생 -->
+    <div class="ais-sec">
+      <div class="ais-sec-lbl">재생 / 시뮬레이션</div>
+      <div style="display:flex;gap:5px;align-items:center">
+        <button class="ais-btn" id="aisBtnPlay" onclick="onAisPlay()">▶ 재생</button>
+        <button class="ais-btn" onclick="onAisStop()">■ 정지</button>
+        <select id="aisMul" style="width:62px">
+          <option value="10">10×</option>
+          <option value="60" selected>60×</option>
+          <option value="300">300×</option>
+          <option value="1000">1000×</option>
+        </select>
+        <span style="font-size:10px;color:#556688">배속</span>
+      </div>
+      <div id="aisPlayInfo">—</div>
+    </div>
+
+    <!-- 레이어 표시 옵션 -->
+    <div class="ais-sec">
+      <div class="ais-sec-lbl">표시 설정</div>
+      <label style="font-size:11px;cursor:pointer">
+        <input type="checkbox" id="aisShowPoints" checked onchange="onAisQuery()"> 포인트 마커 표시
+      </label>
+    </div>
+
+    <!-- 속도 범례 -->
+    <div class="ais-sec">
+      <div class="ais-sec-lbl">속도 범례 (kts)</div>
+      <div class="ais-legend">
+        <span><span class="ais-swatch" style="background:#888"></span> 정박 0~2</span>
+        <span><span class="ais-swatch" style="background:#44ccff"></span> 저속 2~10</span>
+        <span><span class="ais-swatch" style="background:#ffaa00"></span> 중속 10~25</span>
+        <span><span class="ais-swatch" style="background:#ff3333"></span> 고속 25+</span>
+      </div>
+    </div>
+
+  </div>
 </div>
 
 <div id="map"></div>
@@ -5918,6 +6031,288 @@ function _startOnboardingIntro() {
   try { introSeen = localStorage.getItem('hanjil_introSeen'); } catch(e) {}
   if (introSeen) return;
   setTimeout(_startOnboardingIntro, 1000);
+})();
+
+// ════════════════════════════════════════════════════
+//  AIS 실적 항로 뷰어
+// ════════════════════════════════════════════════════
+const _AIS_VESSELS = {
+  beetle:      { label:'비틀호',               file:'beetle_track-data-2012-01-01,2027-01-01.csv',      color:'#ff9955' },
+  queenbeetle: { label:'퀸비틀',               file:'queenbeetle_track-data-2012-01-01,2027-01-01.csv', color:'#44aaff' },
+  santamonica: { label:'산타모니카호',          file:'santamonica_track-data-2026-06-17,2026-08-06.csv',color:'#ffcc44' },
+  eldorado:    { label:'엘도라도 익스프레스호', file:'eldorado_track-data-2026-06-17,2026-08-06.csv',   color:'#88ff55' },
+};
+
+const _aisCache = {};        // key → { index:{date→[pts]}, dates[], minDate, maxDate }
+const _aisLayerGroup = { g: null }; // current rendered Leaflet layer
+let _aisPlay = { timer:null, marker:null, idx:0, pts:null };
+
+// ── CSV 파서 (quoted field 지원) ──
+function _parseAisCsv(text) {
+  const lines = text.split('\n');
+  const hdrs = lines[0].split(',').map(h => h.replace(/"/g,'').trim());
+  const pts = [];
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const parts = [], buf = [];
+    let inQ = false;
+    for (const c of line) {
+      if (c === '"') { inQ = !inQ; }
+      else if (c === ',' && !inQ) { parts.push(buf.join('')); buf.length = 0; }
+      else buf.push(c);
+    }
+    parts.push(buf.join(''));
+    if (parts.length < 4) continue;
+    const r = {};
+    hdrs.forEach((h,j) => r[h] = (parts[j]||'').trim());
+    if (!r.timestamp) continue;
+    pts.push({ lat:+r.lat, lon:+r.lon, speed:+r.speed, course:+r.course, ts:r.timestamp });
+  }
+  return pts;
+}
+
+// ── 날짜 인덱스 생성 ──
+function _buildAisIndex(pts) {
+  const index = {};
+  pts.forEach(p => {
+    const d = p.ts.slice(0,10);
+    (index[d] = index[d] || []).push(p);
+  });
+  const dates = Object.keys(index).sort();
+  return { index, dates, minDate: dates[0], maxDate: dates[dates.length-1] };
+}
+
+// ── CSV 로드 (lazy, 캐시) ──
+async function _loadAisVessel(key) {
+  if (_aisCache[key]) return _aisCache[key];
+  const v = _AIS_VESSELS[key];
+  _aisSetStatus(`${v.label} 데이터 로딩 중… (최초 1회)`);
+  try {
+    const r = await fetch(v.file + '?_=' + Date.now());
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const pts = _parseAisCsv(await r.text());
+    if (!pts.length) throw new Error('데이터 없음');
+    _aisCache[key] = _buildAisIndex(pts);
+    _aisSetStatus('');
+    return _aisCache[key];
+  } catch(e) {
+    _aisSetStatus('⚠ 로드 실패: ' + v.file);
+    return null;
+  }
+}
+
+// ── 속도 → 색상 ──
+function _aisSpeedColor(kts) {
+  if (kts < 2)  return '#888888';
+  if (kts < 10) return '#44ccff';
+  if (kts < 25) return '#ffaa00';
+  return '#ff3333';
+}
+
+// ── 레이어 제거 ──
+function _clearAisLayer() {
+  if (_aisLayerGroup.g) { map.removeLayer(_aisLayerGroup.g); _aisLayerGroup.g = null; }
+}
+
+// ── 하루 항적 렌더링 ──
+function _renderAisDay(key, dateStr) {
+  _clearAisLayer();
+  const data = _aisCache[key];
+  if (!data) return;
+  const pts = data.index[dateStr];
+  if (!pts || !pts.length) { _aisSetStatus(dateStr + ': 데이터 없음'); return; }
+
+  const g = L.layerGroup();
+  const showPts = document.getElementById('aisShowPoints') && document.getElementById('aisShowPoints').checked;
+
+  // 속도별 색상 폴리라인 (구간별)
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i-1], b = pts[i];
+    L.polyline([[a.lat, a.lon],[b.lat, b.lon]], {
+      color: _aisSpeedColor((a.speed + b.speed) / 2),
+      weight: 3, opacity: 0.85
+    }).addTo(g);
+  }
+
+  // 포인트 마커 (데이터가 많으면 간격 조절)
+  if (showPts) {
+    const step = Math.max(1, Math.floor(pts.length / 120));
+    pts.forEach((p, i) => {
+      const isEnd = i === 0 || i === pts.length - 1;
+      if (!isEnd && i % step !== 0) return;
+      const col = _aisSpeedColor(p.speed);
+      const timeStr = p.ts.replace('T',' ').slice(0,19) + ' UTC';
+      L.circleMarker([p.lat, p.lon], {
+        radius: isEnd ? 6 : 3,
+        color: isEnd ? (i===0?'#00ff88':'#ff4466') : col,
+        fillColor: isEnd ? (i===0?'#00ff88':'#ff4466') : col,
+        fillOpacity: 0.9, weight: 1
+      }).bindPopup(
+        `<b>${_AIS_VESSELS[key].label}</b><br>` +
+        `${timeStr}<br>` +
+        `속도: <b>${p.speed.toFixed(1)} kts</b>  방향: ${p.course.toFixed(0)}°` +
+        (i===0 ? '<br><span style="color:#00ff88">▲ 출발</span>' : i===pts.length-1 ? '<br><span style="color:#ff4466">▼ 도착</span>' : '')
+      ).addTo(g);
+    });
+  }
+
+  g.addTo(map);
+  _aisLayerGroup.g = g;
+
+  // 지도 중심 이동
+  const lats = pts.map(p=>p.lat), lons = pts.map(p=>p.lon);
+  map.fitBounds([[Math.min(...lats),Math.min(...lons)],[Math.max(...lats),Math.max(...lons)]], { padding:[30,30] });
+
+  const maxSpd = Math.max(...pts.map(p=>p.speed));
+  _aisSetStatus(`${_AIS_VESSELS[key].label} · ${dateStr} · ${pts.length}포인트 · 최고 ${maxSpd.toFixed(1)} kts`);
+}
+
+// ── 드롭다운 채우기 ──
+function _aisPopYears(key) {
+  const d = _aisCache[key]; if (!d) return;
+  const years = [...new Set(d.dates.map(x=>x.slice(0,4)))].sort().reverse();
+  const sel = document.getElementById('aisYear');
+  sel.innerHTML = years.map(y=>`<option value="${y}">${y}</option>`).join('');
+  _aisPopMonths(key);
+}
+function _aisPopMonths(key) {
+  const d = _aisCache[key]; if (!d) return;
+  const yr = document.getElementById('aisYear').value;
+  const months = [...new Set(d.dates.filter(x=>x.startsWith(yr)).map(x=>x.slice(5,7)))].sort();
+  const sel = document.getElementById('aisMonth');
+  sel.innerHTML = months.map(m=>`<option value="${m}">${m}</option>`).join('');
+  _aisPopDays(key);
+}
+function _aisPopDays(key) {
+  const d = _aisCache[key]; if (!d) return;
+  const yr = document.getElementById('aisYear').value;
+  const mo = document.getElementById('aisMonth').value;
+  const days = d.dates.filter(x=>x.startsWith(`${yr}-${mo}`)).map(x=>x.slice(8,10)).sort();
+  const sel = document.getElementById('aisDay');
+  sel.innerHTML = days.map(dy=>`<option value="${dy}">${dy}</option>`).join('');
+}
+
+// ── UI 이벤트 ──
+async function onAisVesselChange() {
+  const key = document.getElementById('aisVesselSel').value;
+  const data = await _loadAisVessel(key);
+  if (data) {
+    document.getElementById('aisRange').textContent =
+      `가용 기간: ${data.minDate} ~ ${data.maxDate}  (${data.dates.length}일)`;
+    _aisPopYears(key);
+  }
+}
+function onAisYearChange()  { _aisPopMonths(document.getElementById('aisVesselSel').value); }
+function onAisMonthChange() { _aisPopDays(document.getElementById('aisVesselSel').value); }
+function onAisQuery() {
+  const key = document.getElementById('aisVesselSel').value;
+  const yr  = document.getElementById('aisYear').value;
+  const mo  = document.getElementById('aisMonth').value;
+  const dy  = document.getElementById('aisDay').value;
+  if (yr==='—' || mo==='—' || dy==='—') { _aisSetStatus('날짜를 선택해 주세요'); return; }
+  _renderAisDay(key, `${yr}-${mo}-${dy}`);
+}
+
+// ── 재생 ──
+function onAisPlay() {
+  const key = document.getElementById('aisVesselSel').value;
+  const yr  = document.getElementById('aisYear').value;
+  const mo  = document.getElementById('aisMonth').value;
+  const dy  = document.getElementById('aisDay').value;
+  const dateStr = `${yr}-${mo}-${dy}`;
+  const data = _aisCache[key];
+  if (!data) { _aisSetStatus('먼저 조회하세요'); return; }
+  const pts = data.index[dateStr];
+  if (!pts || pts.length < 2) { _aisSetStatus(dateStr + ': 재생할 데이터 없음'); return; }
+
+  onAisStop();
+  _renderAisDay(key, dateStr);
+
+  const mul = parseInt(document.getElementById('aisMul').value) || 60;
+  const icon = L.divIcon({ html:'<div style="font-size:20px;line-height:1;filter:drop-shadow(0 0 3px #fff)">🚢</div>', className:'', iconSize:[22,22], iconAnchor:[11,11] });
+  const marker = L.marker([pts[0].lat, pts[0].lon], { icon, zIndexOffset:1000 }).addTo(map);
+  _aisPlay = { timer:null, marker, idx:0, pts };
+  document.getElementById('aisBtnPlay').textContent = '⏸ 재생 중';
+  document.getElementById('aisBtnPlay').classList.add('active');
+
+  function step() {
+    const { idx, pts } = _aisPlay;
+    if (idx >= pts.length - 1) { onAisStop(); return; }
+    const ni = idx + 1;
+    _aisPlay.idx = ni;
+    const p = pts[ni];
+    marker.setLatLng([p.lat, p.lon]);
+    const dt = ni + 1 < pts.length
+      ? Math.max(0, new Date(pts[ni+1].ts) - new Date(p.ts))
+      : 1000;
+    const delay = Math.max(30, dt / mul);
+    document.getElementById('aisPlayInfo').textContent =
+      `🕐 ${p.ts.slice(11,19)} UTC  |  ${p.speed.toFixed(1)} kts  |  ${p.course.toFixed(0)}°`;
+    _aisPlay.timer = setTimeout(step, delay);
+  }
+  step();
+}
+function onAisStop() {
+  if (_aisPlay.timer) { clearTimeout(_aisPlay.timer); _aisPlay.timer = null; }
+  if (_aisPlay.marker) { map.removeLayer(_aisPlay.marker); _aisPlay.marker = null; }
+  const btn = document.getElementById('aisBtnPlay');
+  if (btn) { btn.textContent = '▶ 재생'; btn.classList.remove('active'); }
+  document.getElementById('aisPlayInfo').textContent = '—';
+}
+
+function _aisSetStatus(msg) {
+  const el = document.getElementById('aisStatus');
+  if (el) el.textContent = msg;
+}
+function _aisPanelMin() {
+  document.getElementById('aisPanel').classList.toggle('minimized');
+}
+
+// ── 패널 드래그 ──
+(function() {
+  const panel = document.getElementById('aisPanel');
+  const title = document.getElementById('aisPanelTitle');
+  let ox=0, oy=0, dragging=false;
+  title.addEventListener('mousedown', e => {
+    dragging=true; ox=e.clientX-panel.offsetLeft; oy=e.clientY-panel.offsetTop;
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    panel.style.left = (e.clientX-ox)+'px';
+    panel.style.top  = (e.clientY-oy)+'px';
+  });
+  document.addEventListener('mouseup', () => { dragging=false; });
+})();
+
+// ── 지도에 AIS 토글 버튼 추가 ──
+(function() {
+  const AisCtrl = L.Control.extend({
+    options: { position: 'topleft' },
+    onAdd() {
+      const c = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+      const btn = L.DomUtil.create('a', '', c);
+      btn.href = '#'; btn.title = 'AIS 실적 항로 뷰어';
+      btn.innerHTML = '📡';
+      btn.style.cssText = 'font-size:16px;line-height:30px;width:30px;height:30px;display:block;text-align:center;text-decoration:none';
+      L.DomEvent.on(btn, 'click', e => {
+        L.DomEvent.stopPropagation(e);
+        L.DomEvent.preventDefault(e);
+        const p = document.getElementById('aisPanel');
+        if (p.classList.contains('visible')) {
+          p.classList.remove('visible');
+        } else {
+          p.classList.add('visible');
+          if (!_aisCache[document.getElementById('aisVesselSel').value]) {
+            onAisVesselChange();
+          }
+        }
+      });
+      return c;
+    }
+  });
+  new AisCtrl().addTo(map);
 })();
 
 </script>
