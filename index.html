@@ -846,13 +846,18 @@
       background: transparent;
     }
     .ais-tb-resizer:hover { background: rgba(80,160,255,0.2); }
-    /* 상단 컨트롤 행 */
+    /* 상단 컨트롤 행 — 좁은 화면에서 요소가 잘려 안 보이지 않도록 가로 스크롤 허용 */
     .ais-tb-top {
       display: flex; align-items: center; gap: 0;
       height: 38px; padding: 0 8px;
       border-bottom: 1px solid rgba(80,160,255,0.12);
       flex-shrink: 0;
+      overflow-x: auto; overflow-y: hidden;
+      scrollbar-width: thin;
     }
+    .ais-tb-top::-webkit-scrollbar { height: 4px; }
+    .ais-tb-top::-webkit-scrollbar-thumb { background: rgba(80,160,255,0.3); border-radius: 2px; }
+    .ais-tb-top > * { flex-shrink: 0; } /* 자식 그룹이 찌그러지지 않고 필요시 가로 스크롤되도록 */
     /* 재생 컨트롤 그룹 */
     .ais-tb-playback {
       display: flex; align-items: center; gap: 2px;
@@ -6552,8 +6557,8 @@ async function onAisVesselChange() {
   onAisStop();
   const data = await _loadAisVessel(key);
   if (data) {
-    document.getElementById('aisTbTimespan').textContent =
-      `${data.minDate} ~ ${data.maxDate}  (${data.dates.length}일)`;
+    // 전체기간은 이제 옆의 캘린더 두 개(아래)가 그대로 보여주므로, 여기엔 데이터 일수만 짧게 표시
+    document.getElementById('aisTbTimespan').textContent = `(${data.dates.length}일 데이터)`;
     // 캘린더 입력란을 이 선박의 전체 기간으로 초기화 (필터는 전체 기간 = 필터 없음 상태로 리셋)
     const fromEl = document.getElementById('aisRangeFrom');
     const toEl   = document.getElementById('aisRangeTo');
