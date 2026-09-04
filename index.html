@@ -1005,7 +1005,14 @@
         <label style="display:flex;flex-direction:column;gap:2px;font-size:10px;color:#aac8e8">엘도라도호 실측(kg/km)
           <input type="number" step="0.1" min="1" value="57.6" onchange="setFuelInput('kgPerKm', this.value)">
         </label>
-        <label style="display:flex;flex-direction:column;gap:2px;font-size:10px;color:#aac8e8">LSMGO 단가($/MT)
+        <label style="display:flex;flex-direction:column;gap:2px;font-size:10px;color:#aac8e8">
+          <span style="display:flex;align-items:center;gap:4px">
+            LSMGO 단가($/MT)
+            <button id="btnFetchFuel" onclick="fetchLiveFuelPrice()" title="Bunker Index 부산항 최신 시세 불러오기"
+              style="font-size:9px;padding:1px 5px;border-radius:3px;border:1px solid rgba(80,160,255,0.4);background:rgba(30,70,130,0.6);color:#7ecfff;cursor:pointer;line-height:1.4">
+              🔄 시세
+            </button>
+          </span>
           <input id="inputLsmgoUsd" type="number" step="0.01" min="1" value="1113.25" onchange="setFuelInput('lsmgoUsd', this.value)">
         </label>
         <label style="display:flex;flex-direction:column;gap:2px;font-size:10px;color:#aac8e8">환율(원/$)
@@ -4236,6 +4243,85 @@ function setFuelEngSetting(checked) {
     })
     .catch(() => { /* fuel_price.json 없으면 기본값 유지 */ });
 })();
+
+// ── Bunker Index 부산항 실시간 시세 직접 불러오기 ──
+// CORS 프록시를 통해 페이지 HTML을 가져온 뒤 DOMParser로 VLSFO·LSMGO 가격을 추출한다.
+const _BUNKER_URL = 'https://www.bunkerindex.com/prices/port.php?p=109&n=busan-republic-of-korea';
+const _PROXIES = [
+  u => `https://corsproxy.io/?url=${encodeURIComponent(u)}`,
+  u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+  u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+];
+function _parseBunkerHtml(html) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const result = {};
+  for (const tag of ['VLSFO', 'LSMGO']) {
+    // 페이지 내 텍스트에서 해당 유종 이름을 포함하는 요소를 찾고,
+    // 그 요소가 속한 테이블의 첫 번째 데이터 행 두 번째 셀(Price 컬럼)을 읽는다.
+    const walker = document.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
+    let node;
+    while ((node = walker.nextNode())) {
+      if (!node.textContent.trim().includes(tag)) continue;
+      const tbl = node.parentElement?.closest('table');
+      if (!tbl) continue;
+      const rows = tbl.querySelectorAll('tr');
+      for (const row of rows) {
+        const cells = row.querySelectorAll('td');
+        if (cells.length < 2) continue;
+        const raw = cells[1].textContent.replace(/,/g, '').trim();
+        const val = parseFloat(raw);
+        if (val > 100) { result[tag.toLowerCase()] = val; break; }
+      }
+      if (result[tag.toLowerCase()]) break;
+    }
+    // 테이블 방식 실패 시 정규식으로 날짜 뒤 첫 번째 숫자를 추출 (fallback)
+    if (!result[tag.toLowerCase()]) {
+      const re = new RegExp(tag + '[\\s\\S]{0,300}?\\d{4}-\\d{2}-\\d{2}[^\\d]+(\\d[\\d,.]+)', 'i');
+      const m = html.match(re);
+      if (m) { const v = parseFloat(m[1].replace(/,/g,'')); if (v > 100) result[tag.toLowerCase()] = v; }
+    }
+  }
+  // 날짜 추출
+  const dm = html.match(/(\d{4}-\d{2}-\d{2})/);
+  result.date = dm ? dm[1] : null;
+  return result;
+}
+async function fetchLiveFuelPrice() {
+  const btn = document.getElementById('btnFetchFuel');
+  const status = document.getElementById('fuelPriceStatus');
+  if (btn) { btn.textContent = '⏳'; btn.disabled = true; }
+  let lastErr = null;
+  for (const makeUrl of _PROXIES) {
+    try {
+      const res = await fetch(makeUrl(_BUNKER_URL), { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const html = await res.text();
+      const d = _parseBunkerHtml(html);
+      const lsmgo = d.lsmgo;
+      const vlsfo = d.vlsfo;
+      if (!lsmgo && !vlsfo) throw new Error('파싱 결과 없음');
+      // LSMGO → 입력란·변수 반영
+      if (lsmgo) {
+        fuelLsmgoUsdPerMt = lsmgo;
+        const el = document.getElementById('inputLsmgoUsd');
+        if (el) el.value = lsmgo;
+        _updateFuelCostTab();
+      }
+      // 상태 표시
+      if (status) {
+        document.getElementById('fuelPriceDate').textContent = d.date || '';
+        document.getElementById('fuelPriceLsmgo').textContent = lsmgo != null ? lsmgo.toLocaleString() : '—';
+        document.getElementById('fuelPriceVlsfo').textContent = vlsfo != null ? vlsfo.toLocaleString() : '—';
+        document.getElementById('fuelPriceNote').textContent = '(실시간 반영)';
+        status.style.display = 'block';
+      }
+      if (btn) { btn.textContent = '✅ 시세'; btn.disabled = false; }
+      return;
+    } catch (e) { lastErr = e; }
+  }
+  if (btn) { btn.textContent = '❌ 실패'; btn.disabled = false; setTimeout(()=>{ btn.textContent='🔄 시세'; }, 3000); }
+  console.warn('fetchLiveFuelPrice 실패:', lastErr);
+}
 // 왕복거리(km) 기준 연료소모량(톤)·비용(원)을 min~max로 계산해 숫자 그대로 돌려준다(단일값이면
 // min===max) — 여기서 문자열로 포맷하지 않는 건, 기타운항비용을 더한 합계까지 마저 계산한 뒤
 // 한꺼번에 표시 문자열을 만들기 위함이다.
