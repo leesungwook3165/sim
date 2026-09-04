@@ -306,6 +306,15 @@
     .custom-popup .leaflet-popup-tip { background: rgba(10, 25, 50, 0.95); }
     .popup-title { font-size: 13px; font-weight: 700; color: #7ecfff; margin-bottom: 5px; }
     .popup-body { font-size: 12px; line-height: 1.7; color: #cce0f0; }
+
+    /* AIS 실측 POI 라벨 (정박/출항/도착 — 클릭 없이 항상 보이는 시각 라벨) */
+    .ais-poi-label {
+      background: rgba(10, 25, 50, 0.92) !important;
+      color: #ffe6f7 !important;
+      border: 1px solid rgba(255,80,220,0.5) !important;
+      border-radius: 6px; font-size: 10px; font-weight: 700;
+      padding: 2px 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    }
     .c-btn { position:absolute; top:50%; transform:translateY(-50%); width:26px; height:26px;
       background:rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.25); border-radius:50%;
       color:#fff; font-size:12px; line-height:24px; text-align:center; cursor:pointer; z-index:10; padding:0; }
@@ -875,6 +884,11 @@
       border: 1px solid rgba(80,160,255,0.25); border-radius: 4px;
       padding: 3px 6px; font-size: 11px; cursor: pointer;
     }
+    .ais-tb-vessel input[type="date"] {
+      background: rgba(10,20,50,0.8); color: #c8dcf0;
+      border: 1px solid rgba(80,160,255,0.25); border-radius: 4px;
+      padding: 2px 4px; font-size: 10px; color-scheme: dark;
+    }
     .ais-tb-timespan { font-size: 11px; color: #6688aa; white-space: nowrap; }
     /* 인터벌 탭 */
     .ais-tb-ivtabs {
@@ -1355,6 +1369,9 @@
         <option value="santamonica">산타모니카호</option>
         <option value="eldorado">엘도라도 익스프레스호</option>
       </select>
+      <input type="date" id="aisRangeFrom" onchange="onAisRangeChange()" title="조회 시작일">
+      <span style="color:#557799;font-size:10px">~</span>
+      <input type="date" id="aisRangeTo" onchange="onAisRangeChange()" title="조회 종료일">
       <span class="ais-tb-timespan" id="aisTbTimespan">선박 선택 후 로드</span>
     </div>
     <!-- 인터벌 탭 -->
@@ -1362,6 +1379,7 @@
       <li><button class="ais-tb-ivbtn" data-iv="year"  onclick="onAisIvTab(this)">년도</button></li>
       <li><button class="ais-tb-ivbtn" data-iv="month" onclick="onAisIvTab(this)">월</button></li>
       <li><button class="ais-tb-ivbtn on" data-iv="day" onclick="onAisIvTab(this)">일</button></li>
+      <li><button class="ais-tb-ivbtn" data-iv="hour" onclick="onAisIvTab(this)">시간</button></li>
     </ul>
     <!-- 우측: 상태 + 재생정보 + 범례 -->
     <div class="ais-tb-right">
@@ -1371,7 +1389,7 @@
         <span><span class="ais-lsw" style="background:#888"></span>정박 0~2</span>
         <span><span class="ais-lsw" style="background:#44ccff"></span>저속 2~10</span>
         <span><span class="ais-lsw" style="background:#ffaa00"></span>중속 10~25</span>
-        <span><span class="ais-lsw" style="background:#ff3333"></span>고속 25+ kts</span>
+        <span><span class="ais-lsw" style="background:#ff3333"></span>고속 25+ knot</span>
       </div>
     </div>
   </div>
@@ -4389,6 +4407,9 @@ function setFuelEngSetting(checked) {
 }
 // fuel_price.json (GitHub Actions 자동 갱신) 로드 — LSMGO 단가를 입력란에 반영
 (function loadFuelPrice() {
+  // 로컬 file:// 환경에서는 fetch가 브라우저 CORS 정책에 막혀 콘솔에 에러만 찍히고
+  // 항상 실패한다 (GitHub Pages 등 http(s) 배포본에서만 정상 동작). 조용히 기본값 유지.
+  if (location.protocol === 'file:') return;
   fetch("fuel_price.json?_=" + Date.now())
     .then(r => r.ok ? r.json() : Promise.reject(r.status))
     .then(d => {
@@ -6093,6 +6114,8 @@ const _aisCache = {};
 const _aisLayerGroup = { g: null };
 let _aisPlay = { timer: null, marker: null, idx: 0, pts: null, loop: false };
 let _aisCurrIv = 'day';
+let _aisHourBaseDate = null; // '시간' 탭이 어느 날짜를 기준으로 시간대를 나열할지 (최근 선택한 '일' 기준)
+let _aisRangeFrom = null, _aisRangeTo = null; // 캘린더로 지정한 조회 기간 필터 ('YYYY-MM-DD', null=제한 없음)
 let _aisTlItems = [];
 let _aisTlIdx = 0;
 let _aisTbSpeeds = [10, 60, 300, 1000];
@@ -6166,17 +6189,77 @@ function _aisSpeedColor(kts) {
   return '#ff3333';
 }
 
+// ── 시각 포맷 (오전/오후 h:mm — UTC 타임스탬프 기준) ──
+function _aisFmtClock(ts) {
+  const hh = parseInt(ts.slice(11, 13), 10);
+  const mm = ts.slice(14, 16);
+  const ampm = hh < 12 ? '오전' : '오후';
+  let h12 = hh % 12; if (h12 === 0) h12 = 12;
+  return `${ampm} ${h12}:${mm}`;
+}
+function _aisFmtDateClock(ts) {
+  return ts.slice(0, 10) + ' ' + _aisFmtClock(ts);
+}
+
+// ── 진행방향 화살표 아이콘 (course 각도로 회전) ──
+function _aisArrowIcon(hdg, color) {
+  return L.divIcon({
+    html: `<div style="width:14px;height:14px;transform:rotate(${hdg}deg)">
+      <svg width="14" height="14" viewBox="0 0 14 14">
+        <polygon points="7,1 12,12 7,9 2,12" fill="${color}" stroke="#0a1832" stroke-width="0.75"/>
+      </svg>
+    </div>`,
+    className: '', iconSize: [14, 14], iconAnchor: [7, 7]
+  });
+}
+
 function _clearAisLayer() {
   if (_aisLayerGroup.g) { map.removeLayer(_aisLayerGroup.g); _aisLayerGroup.g = null; }
 }
 
-// ── 하루 항적 렌더링 ──
-function _renderAisDay(key, dateStr) {
+// ── 실측 정박/경유 POI 자동 감지 ──
+// 속도가 AIS_STOP_SPEED_KTS(kts) 이하로 AIS_STOP_MIN_MIN(분) 이상 지속되는 구간을
+// "정박/저속 체류"로 간주한다. (예: 팬스타 히타카츠 정박 30분 등 — 실측 CSV에서
+// 역산했던 값을 자동화한 것)
+const AIS_STOP_SPEED_KTS = 2;  // 이 속도 이하를 저속/정박으로 간주
+const AIS_STOP_MIN_MIN   = 8;  // 이 이상 지속돼야 POI로 표시 (짧은 노이즈 제거)
+function _detectAisStops(pts, speedThresh, minDurMin) {
+  speedThresh = speedThresh || AIS_STOP_SPEED_KTS;
+  minDurMin   = minDurMin   || AIS_STOP_MIN_MIN;
+  const stops = [];
+  let i = 0;
+  while (i < pts.length) {
+    if (pts[i].speed <= speedThresh) {
+      let j = i;
+      while (j + 1 < pts.length && pts[j + 1].speed <= speedThresh) j++;
+      const durMin = (new Date(pts[j].ts) - new Date(pts[i].ts)) / 60000;
+      if (durMin >= minDurMin) {
+        let sLat = 0, sLon = 0;
+        for (let k = i; k <= j; k++) { sLat += pts[k].lat; sLon += pts[k].lon; }
+        const n = j - i + 1;
+        stops.push({ lat: sLat / n, lon: sLon / n, startTs: pts[i].ts, endTs: pts[j].ts, durMin });
+      }
+      i = j + 1;
+    } else i++;
+  }
+  return stops;
+}
+
+// 좌표에서 가장 가까운 등록 항구(POI) 이름 — maxKm 이내일 때만 매칭
+function _nearestPortName(lat, lon, maxKm) {
+  maxKm = maxKm || 5;
+  let best = null, bestD = Infinity;
+  ports.forEach(p => {
+    const d = _simDist([lat, lon], [p.lat, p.lng]);
+    if (d < bestD) { bestD = d; best = p; }
+  });
+  return (best && bestD <= maxKm) ? best.name : null;
+}
+
+// ── 포인트 목록 렌더링 (하루/한 시간 공용) ──
+function _renderAisPointSet(key, pts, labelStr) {
   _clearAisLayer();
-  const data = _aisCache[key];
-  if (!data) return;
-  const pts = data.index[dateStr];
-  if (!pts || !pts.length) { _aisSetStatus(dateStr + ': 데이터 없음'); return; }
+  if (!pts || !pts.length) { _aisSetStatus(labelStr + ': 데이터 없음'); return; }
 
   const g = L.layerGroup();
   for (let i = 1; i < pts.length; i++) {
@@ -6186,21 +6269,49 @@ function _renderAisDay(key, dateStr) {
     }).addTo(g);
   }
 
+  // 중간 지점은 진행방향(course)을 알 수 있는 화살표 아이콘으로, 출항/도착은 큰 원으로 표시.
   const step = Math.max(1, Math.floor(pts.length / 120));
   pts.forEach((p, i) => {
     const isEnd = i === 0 || i === pts.length - 1;
     if (!isEnd && i % step !== 0) return;
     const col = _aisSpeedColor(p.speed);
-    L.circleMarker([p.lat, p.lon], {
-      radius: isEnd ? 6 : 3,
-      color: isEnd ? (i === 0 ? '#00ff88' : '#ff4466') : col,
-      fillColor: isEnd ? (i === 0 ? '#00ff88' : '#ff4466') : col,
-      fillOpacity: 0.9, weight: 1
-    }).bindPopup(
+    const mk = isEnd
+      ? L.circleMarker([p.lat, p.lon], {
+          radius: 6, color: i === 0 ? '#00ff88' : '#ff4466',
+          fillColor: i === 0 ? '#00ff88' : '#ff4466', fillOpacity: 0.9, weight: 1
+        })
+      : L.marker([p.lat, p.lon], { icon: _aisArrowIcon(p.course, col) });
+    mk.bindPopup(
       `<b>${_AIS_VESSELS[key].label}</b><br>` +
-      `${p.ts.replace('T', ' ').slice(0, 19)} UTC<br>` +
-      `속도: <b>${p.speed.toFixed(1)} kts</b>  방향: ${p.course.toFixed(0)}°` +
+      `${_aisFmtDateClock(p.ts)} UTC<br>` +
+      `속도: <b>${p.speed.toFixed(1)} knot</b>  방향: ${p.course.toFixed(0)}°` +
       (i === 0 ? '<br><span style="color:#00ff88">▲ 출발</span>' : i === pts.length - 1 ? '<br><span style="color:#ff4466">▼ 도착</span>' : '')
+    ).addTo(g);
+    // 출항/도착은 클릭 없이도 실제 시각이 바로 보이도록 항상-표시 라벨을 붙인다.
+    if (isEnd) {
+      mk.bindTooltip(
+        `${i === 0 ? '▲ 출항' : '▼ 도착'} ${_aisFmtClock(p.ts)} UTC`,
+        { permanent: true, direction: i === 0 ? 'right' : 'left', className: 'ais-poi-label' }
+      );
+    }
+  });
+
+  // ── 실측 정박/경유 POI — 실제 운항속도(CSV) 기반 자동 감지 ──
+  const stops = _detectAisStops(pts);
+  stops.forEach(st => {
+    const portName = _nearestPortName(st.lat, st.lon);
+    const startClock = _aisFmtClock(st.startTs);
+    const endClock = _aisFmtClock(st.endTs);
+    L.circleMarker([st.lat, st.lon], {
+      radius: 8, color: '#ff33cc', fillColor: '#ff33cc', fillOpacity: 0.3, weight: 2
+    }).bindTooltip(
+      `🛑 ${portName || '정박'} · ${startClock}~${endClock} UTC (${Math.round(st.durMin)}분)`,
+      { permanent: true, direction: 'top', className: 'ais-poi-label' }
+    ).bindPopup(
+      `<b>${_AIS_VESSELS[key].label} — 실측 정박</b><br>` +
+      `${portName ? portName + '<br>' : ''}` +
+      `${startClock} ~ ${endClock} UTC · <b>${Math.round(st.durMin)}분</b> 체류<br>` +
+      `(속도 ${AIS_STOP_SPEED_KTS}knot 이하 ${AIS_STOP_MIN_MIN}분+ 지속 구간 자동 감지)`
     ).addTo(g);
   });
 
@@ -6211,14 +6322,31 @@ function _renderAisDay(key, dateStr) {
   map.fitBounds([[Math.min(...lats), Math.min(...lons)], [Math.max(...lats), Math.max(...lons)]], { padding: [30, 80] });
 
   const maxSpd = Math.max(...pts.map(p => p.speed));
-  _aisSetStatus(`${_AIS_VESSELS[key].label} · ${dateStr} · ${pts.length}포인트 · 최고 ${maxSpd.toFixed(1)} kts`);
+  const stopNote = stops.length ? ` · 정박 ${stops.length}건(${stops.map(s => Math.round(s.durMin)).join(',')}분)` : '';
+  _aisSetStatus(`${_AIS_VESSELS[key].label} · ${labelStr} · ${pts.length}포인트 · 최고 ${maxSpd.toFixed(1)} knot${stopNote}`);
+}
+
+// ── 하루 항적 렌더링 ──
+function _renderAisDay(key, dateStr) {
+  const data = _aisCache[key];
+  if (!data) return;
+  _renderAisPointSet(key, data.index[dateStr], dateStr);
+}
+
+// ── 한 시간 항적 렌더링 (hourKey: "YYYY-MM-DDTHH") ──
+function _renderAisHour(key, hourKey) {
+  const data = _aisCache[key];
+  if (!data) return;
+  const [dateStr, hh] = hourKey.split('T');
+  const pts = (data.index[dateStr] || []).filter(p => p.ts.slice(11, 13) === hh);
+  _renderAisPointSet(key, pts, `${dateStr} ${parseInt(hh, 10)}시`);
 }
 
 // ── 기간(월·연도) 전체 렌더링 ──
 function _renderAisPeriod(key, prefix) {
   _clearAisLayer();
   const data = _aisCache[key]; if (!data) return;
-  const days = data.dates.filter(d => d.startsWith(prefix));
+  const days = _aisFilterDates(data.dates).filter(d => d.startsWith(prefix));
   if (!days.length) { _aisSetStatus(prefix + ': 데이터 없음'); return; }
   const g = L.layerGroup();
   let totalPts = 0;
@@ -6237,13 +6365,39 @@ function _renderAisPeriod(key, prefix) {
   _aisSetStatus(`${_AIS_VESSELS[key].label} · ${prefix} · ${days.length}일 · ${totalPts}포인트`);
 }
 
+// ── 캘린더로 지정한 조회 기간(_aisRangeFrom~_aisRangeTo) 필터 ──
+function _aisFilterDates(dates) {
+  return dates.filter(d => (!_aisRangeFrom || d >= _aisRangeFrom) && (!_aisRangeTo || d <= _aisRangeTo));
+}
+
+// 캘린더 두 개(조회 시작일·종료일) 변경 시 — 선택한 기간만 필터링해서 다시 렌더링
+function onAisRangeChange() {
+  const f = document.getElementById('aisRangeFrom').value;
+  const t = document.getElementById('aisRangeTo').value;
+  _aisRangeFrom = f || null;
+  _aisRangeTo   = t || null;
+  const key = document.getElementById('aisVesselSel').value;
+  if (!_aisCache[key]) return;
+  _aisTbRenderTl(key);
+  _aisTlApply();
+}
+
 // ── 타임라인 아이템 생성 ──
 function _aisTlItemsFor(key, iv) {
   const d = _aisCache[key]; if (!d) return [];
-  if (iv === 'day')   return d.dates;
-  if (iv === 'month') return [...new Set(d.dates.map(x => x.slice(0, 7)))].sort();
-  if (iv === 'year')  return [...new Set(d.dates.map(x => x.slice(0, 4)))].sort();
-  return d.dates;
+  const dates = _aisFilterDates(d.dates);
+  if (iv === 'day')   return dates;
+  if (iv === 'month') return [...new Set(dates.map(x => x.slice(0, 7)))].sort();
+  if (iv === 'year')  return [...new Set(dates.map(x => x.slice(0, 4)))].sort();
+  if (iv === 'hour') {
+    if (!dates.length) return [];
+    // '시간' 탭은 GFW처럼 전체 기간이 아니라 최근 선택한 '일'(_aisHourBaseDate) 하루를
+    // 기준으로 시간대만 나열한다 — 전체 기간 단위로 나열하면 버튼이 수만 개가 된다.
+    const base = (_aisHourBaseDate && dates.includes(_aisHourBaseDate)) ? _aisHourBaseDate : dates[dates.length - 1];
+    const hours = [...new Set((d.index[base] || []).map(p => p.ts.slice(11, 13)))].sort();
+    return hours.map(hh => base + 'T' + hh);
+  }
+  return dates;
 }
 
 // ── 타임라인 유닛 렌더링 ──
@@ -6258,6 +6412,11 @@ function _aisTbRenderTl(key) {
     let label = item;
     if (_aisCurrIv === 'month') label = item.slice(0, 4) + '.' + item.slice(5, 7);
     else if (_aisCurrIv === 'day')   label = item.slice(5); // MM-DD
+    else if (_aisCurrIv === 'hour') { // "YYYY-MM-DDTHH" → "오전/오후 H시" (GFW 스타일)
+      const hh = parseInt(item.slice(11, 13), 10);
+      let h12 = hh % 12; if (h12 === 0) h12 = 12;
+      label = `${hh < 12 ? '오전' : '오후'} ${h12}시`;
+    }
     return `<button class="ais-tb-unit${i === _aisTlIdx ? ' sel' : ''}" data-idx="${i}" onclick="_aisTbUnitClick(${i})">${label}</button>`;
   }).join('');
 
@@ -6279,8 +6438,9 @@ function _aisTbUnitClick(idx) {
 function _aisTlApply() {
   const key = document.getElementById('aisVesselSel').value;
   const item = _aisTlItems[_aisTlIdx];
-  if (!item) return;
-  if (_aisCurrIv === 'day') _renderAisDay(key, item);
+  if (!item) { _clearAisLayer(); _aisSetStatus('선택한 기간에 데이터가 없습니다'); return; }
+  if (_aisCurrIv === 'day') { _aisHourBaseDate = item; _renderAisDay(key, item); }
+  else if (_aisCurrIv === 'hour') _renderAisHour(key, item);
   else _renderAisPeriod(key, item);
 }
 
@@ -6305,6 +6465,17 @@ async function onAisVesselChange() {
   if (data) {
     document.getElementById('aisTbTimespan').textContent =
       `${data.minDate} ~ ${data.maxDate}  (${data.dates.length}일)`;
+    // 캘린더 입력란을 이 선박의 전체 기간으로 초기화 (필터는 전체 기간 = 필터 없음 상태로 리셋)
+    const fromEl = document.getElementById('aisRangeFrom');
+    const toEl   = document.getElementById('aisRangeTo');
+    if (fromEl && toEl) {
+      fromEl.min = toEl.min = data.minDate;
+      fromEl.max = toEl.max = data.maxDate;
+      fromEl.value = data.minDate;
+      toEl.value   = data.maxDate;
+    }
+    _aisRangeFrom = null; _aisRangeTo = null;
+    _aisHourBaseDate = null;
     _aisTbRenderTl(key);
     _aisTlApply();
   }
@@ -6343,18 +6514,27 @@ function onAisPlay() {
   const item = _aisTlItems[_aisTlIdx];
   if (!item) { _aisSetStatus('날짜를 선택하세요'); return; }
   if (_aisCurrIv === 'day') {
-    _playAisPoints(key, item);
+    _playAisPoints(key, item, _renderAisDay, dat => _aisCache[key].index[dat]);
+  } else if (_aisCurrIv === 'hour') {
+    _playAisPoints(key, item, _renderAisHour, hourKey => {
+      const [dateStr, hh] = hourKey.split('T');
+      return (_aisCache[key].index[dateStr] || []).filter(p => p.ts.slice(11, 13) === hh);
+    });
   } else {
     _playAisDateStepper(key);
   }
 }
 
-function _playAisPoints(key, dateStr) {
+// ── 포인트 재생 (하루/한 시간 공용) ──
+// item: dateStr("YYYY-MM-DD") 또는 hourKey("YYYY-MM-DDTHH")
+// renderFn: 바탕 항적을 그릴 렌더 함수 (_renderAisDay | _renderAisHour)
+// getPts: item → 재생할 포인트 배열
+function _playAisPoints(key, item, renderFn, getPts) {
   const data = _aisCache[key]; if (!data) return;
-  const pts = data.index[dateStr];
-  if (!pts || pts.length < 2) { _aisSetStatus(dateStr + ': 재생할 데이터 없음'); return; }
+  const pts = getPts(item);
+  if (!pts || pts.length < 2) { _aisSetStatus(item + ': 재생할 데이터 없음'); return; }
   onAisStop(true);
-  _renderAisDay(key, dateStr);
+  renderFn(key, item);
   const mul = _aisTbSpeeds[_aisTbSpdIdx];
   const icon = L.divIcon({ html: '<div style="font-size:20px;line-height:1;filter:drop-shadow(0 0 4px #0af)">🚢</div>', className: '', iconSize: [22, 22], iconAnchor: [11, 11] });
   const marker = L.marker([pts[0].lat, pts[0].lon], { icon, zIndexOffset: 1200 }).addTo(map);
@@ -6372,7 +6552,7 @@ function _playAisPoints(key, dateStr) {
     marker.setLatLng([p.lat, p.lon]);
     const dt = i + 1 < pts.length ? Math.max(0, new Date(pts[i + 1].ts) - new Date(p.ts)) : 2000;
     document.getElementById('aisPlayInfo').textContent =
-      `🕐 ${p.ts.slice(11, 19)} UTC  |  ${p.speed.toFixed(1)} kts  |  ${p.course.toFixed(0)}°`;
+      `🕐 ${_aisFmtClock(p.ts)} UTC  |  ${p.speed.toFixed(1)} knot  |  ${p.course.toFixed(0)}°`;
     _aisPlay.timer = setTimeout(step, Math.max(30, dt / mul));
   }
   step();
