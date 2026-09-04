@@ -3074,11 +3074,13 @@ function _earliestVisibleDepartMin() {
   return vals.length ? Math.max(0, Math.min(...vals)) : 0;
 }
 function setSimPlayScope(scope) {
-  simPlayScope = scope;
+  // 이미 켜져 있는 탭을 다시 누르면 'none'으로 꺼서 구상·참고 항로선을 지도에서 모두 감춘다
+  // (AIS 실적 항로를 볼 때 겹쳐 보이지 않도록).
+  simPlayScope = (simPlayScope === scope) ? 'none' : scope;
   _renderSimScopeTabs();
   // 시나리오1·2·운항비용 탭은 투입고려(core) 전용 — 다른 범위에선 숨긴다
   const scenEl = document.getElementById('simScenariosSection');
-  if (scenEl) scenEl.style.display = scope === 'core' ? '' : 'none';
+  if (scenEl) scenEl.style.display = simPlayScope === 'core' ? '' : 'none';
   // 범위와 무관하게 항상, 지금 탭에서 보이는 배들 중 가장 빨리 출항하는 배 기준으로 시간을
   // 당겨서(대기시간 없이) 바로 시뮬레이션이 가동되도록 한다.
   simSimMin = _earliestVisibleDepartMin();
@@ -3091,7 +3093,7 @@ function setSimPlayScope(scope) {
 // .sim-scope-mount 클래스가 붙은 모든 자리에 동시에 그려서 항상 서로 동기화되게 한다.
 function _renderSimScopeTabs() {
   const html = SIM_SCOPE_OPTS.map(o =>
-    `<button type="button" class="sim-scope-btn${simPlayScope===o.id?' active':''}" onclick="setSimPlayScope('${o.id}')">${o.label}</button>`
+    `<button type="button" class="sim-scope-btn${simPlayScope===o.id?' active':''}" onclick="setSimPlayScope('${o.id}')" title="${simPlayScope===o.id?'다시 누르면 항로 숨기기':o.label}">${o.label}</button>`
   ).join('');
   document.querySelectorAll('.sim-scope-mount').forEach(el => { el.innerHTML = html; });
 }
@@ -3550,7 +3552,9 @@ const _LINE_SHIP_ID = {
 function _portVisibleForScope(portId) {
   if (portId === 'busan') return true;
   let show;
-  if (portId === 'hitakatsu') {
+  if (simPlayScope === 'none') {
+    show = true; // 항로선을 모두 끈 상태에서도 항구 POI는 위치 참고용으로 남긴다
+  } else if (portId === 'hitakatsu') {
     show = (_simCoreVisible() && _activeSimTab === 1) || _simCustomVisible() || _simPendingVisible();
   } else if (portId === 'izuhara') {
     show = _simCustomVisible() || _simPendingVisible();
@@ -3581,6 +3585,8 @@ function _portVisibleForScope(portId) {
 // 각 선별로 직접 명시한다. skipPortFilter=true면 항구 필터는 무시하고 범위(탭) 조건만 본다
 // (위 _portVisibleForScope에서 "같은 항로 공유 여부"를 판단할 때 재귀적으로 걸리지 않게 하기 위함).
 function _lineVisibleForScope(key, skipPortFilter) {
+  // 재생 범위를 끈 상태('none') — 구상·참고 항로선을 전부 숨긴다 (AIS 실적 항로 확인용)
+  if (simPlayScope === 'none') return false;
   // ── 커스텀 선박 항로선 (cs_<id>) ──
   if (key.startsWith('cs_')) {
     const id = key.slice(3);
@@ -6176,7 +6182,8 @@ const _AIS_VESSELS = {
 
 const _aisCache = {};
 const _aisLayerGroup = { g: null };
-let _aisPlay = { timer: null, marker: null, idx: 0, pts: null, loop: false };
+let _aisPlay = { timer: null, raf: null, frameFn: null, marker: null, pts: null, loop: false,
+                 simMs: 0, tsMs: null, spanMs: 0 }; // simMs = 재생 가상시계(구간 시작 이후 경과 ms)
 let _aisCurrIv = 'day';
 let _aisSubHourSel = null; // '일' 탭에서 날짜를 고르면 그 날의 시간대(HH)가 자동으로 나열됨 — 선택된 시간(null=하루 전체)
 let _aisSubLegSel = null;  // 왕복일 때 선택된 구간 (null=왕복 전체, 'out'=출항편, 'back'=복항편)
@@ -6478,15 +6485,39 @@ function _aisAnalyzeVessel(key, data) {
   data.dayQuality = dayQuality;
 }
 
+// ── 시간축 보간 ──
+// AIS 핑은 항해 중 6~9분, 정박 중 70분 넘게 벌어진다. 포인트를 하나씩 밟으면
+// 그 사이를 순간이동하므로, 실제 시각 기준으로 두 포인트 사이를 보간해 부드럽게 움직인다.
+function _aisInterpAt(pts, tsMs, targetMs) {
+  const last = pts.length - 1;
+  if (targetMs <= tsMs[0])    return { lat: pts[0].lat,    lon: pts[0].lon,    speed: pts[0].speed,    course: pts[0].course,    tsMs: tsMs[0] };
+  if (targetMs >= tsMs[last]) return { lat: pts[last].lat, lon: pts[last].lon, speed: pts[last].speed, course: pts[last].course, tsMs: tsMs[last] };
+  let lo = 0, hi = last;
+  while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (tsMs[mid] <= targetMs) lo = mid; else hi = mid; }
+  const a = pts[lo], b = pts[hi];
+  const span = tsMs[hi] - tsMs[lo];
+  const fr = span > 0 ? (targetMs - tsMs[lo]) / span : 0;
+  // 진행 방향은 course 값을 보간하면 359°→1° 구간에서 튀므로 실제 구간 방위각을 쓴다.
+  const moved = _simDist([a.lat, a.lon], [b.lat, b.lon]) > 0.02;
+  return {
+    lat: a.lat + (b.lat - a.lat) * fr,
+    lon: a.lon + (b.lon - a.lon) * fr,
+    speed: a.speed + (b.speed - a.speed) * fr,
+    course: moved ? _bearing([a.lat, a.lon], [b.lat, b.lon]) : a.course,
+    tsMs: targetMs
+  };
+}
+
 // ── 속도 변화 그래프 (실제 타임스탬프 간격 기준) ──
-// currentIdx가 주어지면 그 지점에 재생 위치 마커를 함께 그린다 (재생 중 매 틱마다 호출).
-function _aisDrawSpeedChart(pts, currentIdx) {
+// cursor({tsMs, speed})가 주어지면 그 위치에 재생 마커를 함께 그린다 (재생 중 매 프레임 호출).
+// 보간 재생이라 포인트 인덱스가 아니라 "현재 시각"을 그대로 받는다.
+function _aisDrawSpeedChart(pts, cursor) {
   const canvas = document.getElementById('aisSpeedCanvas');
   const row = document.getElementById('aisTbChartRow');
   if (!canvas || !row) return;
   if (!pts || pts.length < 2) { row.style.display = 'none'; return; }
   row.style.display = 'block';
-  _aisLastChartPts = pts; _aisLastChartIdx = currentIdx;
+  _aisLastChartPts = pts; _aisLastChartIdx = cursor;
 
   const dpr = window.devicePixelRatio || 1;
   const rect = canvas.getBoundingClientRect();
@@ -6534,9 +6565,10 @@ function _aisDrawSpeedChart(pts, currentIdx) {
   ctx.fillText(`최고 ${maxSpd.toFixed(0)}kt`, padL, padT);
 
   // 현재 재생 위치 — 세로선 + 점 + 실시간 속도 숫자
-  if (currentIdx != null && pts[currentIdx]) {
-    const p = pts[currentIdx];
-    const x = xAt(p.ts), y = yAt(p.speed);
+  if (cursor && cursor.tsMs != null) {
+    const p = { speed: cursor.speed };
+    const x = padL + Math.max(0, Math.min(1, (cursor.tsMs - t0) / totalMs)) * plotW;
+    const y = yAt(cursor.speed);
     ctx.strokeStyle = 'rgba(255,255,255,0.55)';
     ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, padT + plotH); ctx.stroke();
     ctx.beginPath(); ctx.arc(x, y, 3.5, 0, Math.PI * 2);
@@ -6918,9 +6950,15 @@ function _aisTbToggleLoop() {
 // ── 재생 ──
 function onAisPlay() {
   const btn = document.getElementById('aisBtnPlay');
-  if (_aisPlay.timer) {
-    clearTimeout(_aisPlay.timer); _aisPlay.timer = null;
+  if (_aisPlay.timer || _aisPlay.raf) { // 재생 중 → 일시정지 (진행 위치는 유지)
+    if (_aisPlay.timer) { clearTimeout(_aisPlay.timer); _aisPlay.timer = null; }
+    if (_aisPlay.raf) { cancelAnimationFrame(_aisPlay.raf); _aisPlay.raf = null; }
     btn.textContent = '▶'; btn.classList.remove('playing');
+    return;
+  }
+  if (_aisPlay.frameFn && _aisPlay.marker) { // 일시정지 상태 → 이어서 재생
+    btn.textContent = '⏸'; btn.classList.add('playing');
+    _aisPlay.raf = requestAnimationFrame(_aisPlay.frameFn);
     return;
   }
   const key = document.getElementById('aisVesselSel').value;
@@ -6957,29 +6995,48 @@ function _playAisPoints(key, item, renderFn, getPts) {
   if (!pts || pts.length < 2) { _aisSetStatus(item + ': 재생할 데이터 없음'); return; }
   onAisStop(true);
   renderFn(key, item);
-  const mul = _aisTbSpeeds[_aisTbSpdIdx];
   const icon = L.divIcon({ html: '<div style="font-size:20px;line-height:1;filter:drop-shadow(0 0 4px #0af)">🚢</div>', className: '', iconSize: [22, 22], iconAnchor: [11, 11] });
   const marker = L.marker([pts[0].lat, pts[0].lon], { icon, zIndexOffset: 1200 }).addTo(map);
-  _aisPlay.marker = marker; _aisPlay.pts = pts; _aisPlay.idx = 0;
+  const tsMs = pts.map(p => new Date(p.ts).getTime());
+  const spanMs = Math.max(1, tsMs[tsMs.length - 1] - tsMs[0]);
+  _aisPlay.marker = marker; _aisPlay.pts = pts; _aisPlay.simMs = 0;
+  _aisPlay.tsMs = tsMs; _aisPlay.spanMs = spanMs;
   const btn = document.getElementById('aisBtnPlay');
   btn.textContent = '⏸'; btn.classList.add('playing');
-  _aisDrawSpeedChart(pts, 0); // 재생 시작 지점을 그래프에 바로 표시
-  function step() {
-    const i = ++_aisPlay.idx;
-    if (i >= pts.length) {
-      if (_aisPlay.loop) { _aisPlay.idx = 0; _aisPlay.timer = setTimeout(step, 500); }
-      else onAisStop();
-      return;
+
+  // 실제 시각 기준 가상시계 — 배속을 매 프레임 읽으므로 재생 중 배속 변경도 즉시 반영된다.
+  let lastReal = null, lastChart = 0;
+  function frame(now) {
+    if (!_aisPlay.raf) return; // 정지/일시정지됨
+    // 일시정지 후 재개나 탭 전환으로 프레임 간격이 크게 벌어져도 한 번에 튀지 않게 클램프
+    if (lastReal !== null) _aisPlay.simMs += Math.min(now - lastReal, 100) * _aisTbSpeeds[_aisTbSpdIdx];
+    lastReal = now;
+    if (_aisPlay.simMs >= spanMs) {
+      if (_aisPlay.loop) { _aisPlay.simMs = 0; }
+      else { _aisPlay.simMs = spanMs; _aisPlayRenderAt(pts, tsMs); onAisStop(); return; }
     }
-    const p = pts[i];
-    marker.setLatLng([p.lat, p.lon]);
-    const dt = i + 1 < pts.length ? Math.max(0, new Date(pts[i + 1].ts) - new Date(p.ts)) : 2000;
-    document.getElementById('aisPlayInfo').textContent =
-      `🕐 ${_aisFmtClock(p.ts)} UTC  |  ${p.speed.toFixed(1)} knot  |  ${p.course.toFixed(0)}°`;
-    _aisDrawSpeedChart(pts, i); // 재생 위치에 맞춰 속도 그래프도 함께 이동
-    _aisPlay.timer = setTimeout(step, Math.max(30, dt / mul));
+    const cur = _aisPlayRenderAt(pts, tsMs);
+    // 그래프는 매 프레임까지 다시 그릴 필요가 없어 약 15fps로 제한
+    if (now - lastChart > 66) { _aisDrawSpeedChart(pts, cur); lastChart = now; }
+    _aisPlay.raf = requestAnimationFrame(frame);
   }
-  step();
+  _aisPlay.frameFn = frame;
+  _aisPlayRenderAt(pts, tsMs);
+  _aisDrawSpeedChart(pts, _aisInterpAt(pts, tsMs, tsMs[0]));
+  lastReal = null;
+  _aisPlay.raf = requestAnimationFrame(frame);
+}
+
+// 현재 가상시각(_aisPlay.simMs)에 해당하는 위치로 마커·정보 표시를 갱신
+function _aisPlayRenderAt(pts, tsMs) {
+  const cur = _aisInterpAt(pts, tsMs, tsMs[0] + _aisPlay.simMs);
+  if (_aisPlay.marker) _aisPlay.marker.setLatLng([cur.lat, cur.lon]);
+  const el = document.getElementById('aisPlayInfo');
+  if (el) {
+    const iso = new Date(cur.tsMs).toISOString();
+    el.textContent = `🕐 ${_aisFmtClock(iso)} UTC  |  ${cur.speed.toFixed(1)} knot  |  ${cur.course.toFixed(0)}°`;
+  }
+  return cur;
 }
 
 function _playAisDateStepper(key) {
@@ -7002,6 +7059,8 @@ function _playAisDateStepper(key) {
 
 function onAisStop(markerOnly) {
   if (_aisPlay.timer) { clearTimeout(_aisPlay.timer); _aisPlay.timer = null; }
+  if (_aisPlay.raf) { cancelAnimationFrame(_aisPlay.raf); _aisPlay.raf = null; }
+  _aisPlay.frameFn = null; _aisPlay.simMs = 0;
   if (_aisPlay.marker) { map.removeLayer(_aisPlay.marker); _aisPlay.marker = null; }
   if (!markerOnly) {
     const btn = document.getElementById('aisBtnPlay');
