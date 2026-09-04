@@ -1841,7 +1841,7 @@ const _routeLabelScopes = [
     _carousel('c-sm', [
       { img:'santamonica.jpg',
         cap:'시월드고속훼리 산타모니카호' },
-      { img:'oceanflower2_ship.jpg', fit:'contain',
+      { img:'oceanflower2_ship.jpg', fit:'cover',
         cap:'대아고속해운 오션플라워호 (동급 자매선)',
         body:'<b style="color:#ffcc88">오션플라워 1·2호</b>는 대아고속해운이 운항하던 4,000톤급 Incat 쌍동선으로, 산타모니카·엘도라도호와 같은 선대입니다. ' +
              '부산↔이즈하라 항로를 운항하다 경영난으로 선대를 정리하게 됩니다. ' +
@@ -1985,8 +1985,8 @@ const _routeLabelScopes = [
   }).addTo(map).bindPopup(
     '<div class="popup-title" style="color:#ffe066">🕓 그레이스호 (정박 구상)</div>' +
     '<div style="height:160px;overflow:hidden;border-radius:5px;background:#06101e;margin:5px 0">' +
-    '<img src="grace_ship.jpg" style="width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in;transition:transform .38s ease;transform-origin:center" ' +
-    'onmouseover="this.style.transform=\'scale(1.13)\'" onmouseout="this.style.transform=\'scale(1)\'" onerror="this.parentNode.style.display=\'none\'">' +
+    '<img src="grace_ship.jpg" style="width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in" ' +
+    'onmouseover="_openImgZoom(this)" onmouseout="_closeImgZoom()" onerror="this.parentNode.style.display=\'none\'">' +
     '</div>' +
     '<div style="font-size:9px;text-align:center;color:#99b8d4;margin-bottom:3px">그레이스호 (전신: JR큐슈 퀸비틀) · Austal HSC 083</div>' +
     _shipSvgHtml('grace') +
