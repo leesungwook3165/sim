@@ -872,7 +872,57 @@
       </label>
       <button onclick="applySimSpeeds()" style="padding:3px 9px;background:rgba(0,160,80,0.4);border:1px solid rgba(0,200,100,0.4);color:#88ffbb;border-radius:5px;font-size:11px;cursor:pointer;font-family:inherit">적용</button>
     </div>
-    <div style="font-size:10px;color:#667788;margin-top:4px" id="simSpeedNote">※ 스케줄 역산 기준 · 출항시각·회항 시각은 "🚢 선박 스케줄 관리" 패널에서 선박마다 설정 (가장 이른 출항 기준으로 동시 재생)</div>
+    <div style="font-size:10px;color:#667788;margin-top:4px" id="simSpeedNote">※ 스케줄 역산 기준 · 아래 스케줄 설정에서 출항·회항 시각을 변경하세요</div>
+  </div>
+
+  <!-- 스케줄 설정 -->
+  <div style="background:rgba(255,255,255,0.05);border-radius:7px;padding:7px 10px;margin-bottom:8px;font-size:11px;color:#aac8e8">
+    <div style="color:#7ecfff;font-weight:700;margin-bottom:6px">⏱ 스케줄 설정</div>
+    <table style="width:100%;border-collapse:collapse;font-size:10.5px">
+      <thead>
+        <tr style="font-size:9px;color:#556677;border-bottom:1px solid rgba(255,255,255,0.08)">
+          <td style="padding:2px 4px">선박</td>
+          <td style="padding:2px 4px;text-align:center">출항시각</td>
+          <td style="padding:2px 4px;text-align:center">히타카츠<br>경유정박(분)</td>
+          <td style="padding:2px 4px;text-align:center">하카타<br>회항대기(분)</td>
+          <td style="padding:2px 4px;text-align:center">회항출발<br>(역산)</td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="padding:3px 4px;color:#ffcc44;font-weight:700">⛴ 산타모니카</td>
+          <td style="padding:3px 4px;text-align:center">
+            <input id="smDepartInput" type="time" value="09:00"
+              style="width:74px;background:rgba(40,80,140,0.8);border:1px solid rgba(80,160,255,0.4);color:#fff;border-radius:4px;padding:2px 4px;font-size:10.5px">
+          </td>
+          <td style="padding:3px 4px;text-align:center">
+            <input id="smStopInput" type="number" value="30" min="0" max="180" step="5"
+              style="width:46px;background:rgba(40,80,140,0.8);border:1px solid rgba(80,160,255,0.4);color:#fff;border-radius:4px;padding:2px 4px;font-size:10.5px">
+          </td>
+          <td style="padding:3px 4px;text-align:center">
+            <input id="smTurnInput" type="number" value="60" min="0" max="300" step="5"
+              style="width:46px;background:rgba(40,80,140,0.8);border:1px solid rgba(80,160,255,0.4);color:#fff;border-radius:4px;padding:2px 4px;font-size:10.5px">
+          </td>
+          <td style="padding:3px 4px;text-align:center;font-weight:700;color:#ffcc44" id="smReturnDisp">—</td>
+        </tr>
+        <tr>
+          <td style="padding:3px 4px;color:#66ccff;font-weight:700">🚢 퀸비틀</td>
+          <td style="padding:3px 4px;text-align:center">
+            <input id="qbDepartInput" type="time" value="09:00"
+              style="width:74px;background:rgba(40,80,140,0.8);border:1px solid rgba(80,160,255,0.4);color:#fff;border-radius:4px;padding:2px 4px;font-size:10.5px">
+          </td>
+          <td style="padding:3px 4px;text-align:center;color:#334455">—</td>
+          <td style="padding:3px 4px;text-align:center">
+            <input id="qbTurnInput" type="number" value="60" min="0" max="300" step="5"
+              style="width:46px;background:rgba(40,80,140,0.8);border:1px solid rgba(80,160,255,0.4);color:#fff;border-radius:4px;padding:2px 4px;font-size:10.5px">
+          </td>
+          <td style="padding:3px 4px;text-align:center;font-weight:700;color:#66ccff" id="qbReturnDisp">—</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="text-align:right;margin-top:5px">
+      <button onclick="applySimSchedule()" style="padding:3px 9px;background:rgba(0,160,80,0.4);border:1px solid rgba(0,200,100,0.4);color:#88ffbb;border-radius:5px;font-size:11px;cursor:pointer;font-family:inherit">적용</button>
+    </div>
   </div>
 
   <!-- 재생 범위 (기본선박/전체/등록선박만) — 타임랩스 바와 항상 동기화됨 -->
@@ -1044,7 +1094,8 @@
     </div>
 
     <div style="border:1px solid rgba(255,119,68,0.35);border-radius:7px;padding:7px 10px;margin-bottom:7px">
-      <div style="font-size:12px;font-weight:700;color:#ff9966;margin-bottom:4px">⛴ 엘도라도 익스프레스호 (기준)</div>
+      <div style="font-size:12px;font-weight:700;color:#ff9966;margin-bottom:2px">⛴ 엘도라도 익스프레스호</div>
+      <div style="font-size:9px;color:#99b8d4;margin-bottom:4px">대저페리 · 포항↔울릉도(도동항)</div>
       <div style="font-size:9px;color:#99b8d4;margin-bottom:5px">왕복거리 <span id="fcEldoDist">—</span> · 적용율 <span id="fcEldoRate">—</span></div>
       <table style="width:100%;border-collapse:collapse;font-size:10.5px">
         <tr style="font-size:9px;color:#7ecfff"><td></td><td style="text-align:right;padding:2px 4px;font-weight:700">편도</td><td style="text-align:right;padding:2px 4px;font-weight:700">왕복</td></tr>
@@ -2575,6 +2626,7 @@ function _inferShipGroup(name) {
   if (name.startsWith('팬스타')) return '팬스타';
   if (name.startsWith('스타라인')) return '스타라인';
   if (name.startsWith('대아고속해운')) return '대아고속해운';
+  if (name.includes('엘도라도')) return '대저페리';
   if (name.startsWith('카멜리아')) return '카멜리아';
   if (name.startsWith('하마유호')) return '관부훼리';
   if (name.includes('부관훼리') || name.startsWith('성희호')) return '부관훼리';
@@ -3704,6 +3756,34 @@ function applySimSpeeds() {
   simReset();
   _refreshOpenPanels();
 }
+function applySimSchedule() {
+  const smDep  = document.getElementById('smDepartInput')?.value;
+  const qbDep  = document.getElementById('qbDepartInput')?.value;
+  const stop   = parseInt(document.getElementById('smStopInput')?.value);
+  const smTurn = parseInt(document.getElementById('smTurnInput')?.value);
+  const qbTurn = parseInt(document.getElementById('qbTurnInput')?.value);
+  if (smDep)             simSMDepartHM = smDep;
+  if (qbDep)             simQBDepartHM = qbDep;
+  if (!isNaN(stop)   && stop   >= 0) SIM_STOP_MIN   = stop;
+  if (!isNaN(smTurn) && smTurn >= 0) simSMTurnMin   = smTurn;
+  if (!isNaN(qbTurn) && qbTurn >= 0) simQBTurnMin   = qbTurn;
+  simReset();
+  _refreshOpenPanels();
+  _updateScheduleReturnDisp();
+}
+// 스케줄 설정 테이블의 "회항출발(역산)" 열을 최신 계산값으로 갱신한다
+function _updateScheduleReturnDisp() {
+  const smEl = document.getElementById('smReturnDisp');
+  const qbEl = document.getElementById('qbReturnDisp');
+  if (smEl && typeof _totalMinSM !== 'undefined') {
+    const smRetMin = _hmToMin(simSMDepartHM) + _totalMinSM + simSMTurnMin;
+    smEl.textContent = _minToHM(smRetMin);
+  }
+  if (qbEl && typeof _totalMinQB !== 'undefined') {
+    const qbRetMin = _hmToMin(simQBDepartHM) + _totalMinQB + simQBTurnMin;
+    qbEl.textContent = _minToHM(qbRetMin);
+  }
+}
 
 function _interpTL(tl, simMin) {
   if (simMin <= tl[0].cumMin) return { pos: tl[0].pt, hdg: 0 };
@@ -4514,10 +4594,12 @@ function _seedDefaultCompetitorShips() {
       sourceUrl: null,
       sourceLabel: '⚠ 출항시각·정박시간 미확인 추정치 — 순항속력 43.9노트 · 편도 운항거리 217km(왕복 434km) 실측 기준',
       shipType: '고속선', tonnage: null,
-      group: '엘도라도익스프레스', nation: '한국라인'
+      group: '대저페리', nation: '한국라인'
     });
     try { localStorage.setItem('hanjil_seeded_eldorado', '1'); } catch(e) {}
   }
+  // 엘도라도 익스프레스호 group 마이그레이션 — 구 '엘도라도익스프레스' → '대저페리'
+  customShips.forEach(s => { if (s.name === '엘도라도 익스프레스호' && s.group !== '대저페리') s.group = '대저페리'; });
   // 엘도라도 익스프레스호 kts 보정(40.6→43.9, 실측 순항속력) — 기존 저장 데이터도 1회 반영.
   let eldoradoKtsFixed = null;
   try { eldoradoKtsFixed = localStorage.getItem('hanjil_eldorado_kts43_9_v1'); } catch(e) {}
@@ -5106,6 +5188,7 @@ function updateBerthSetting(which, value) {
 // 열려 있으면 선박 데이터가 바뀔 때마다 항상 함께 다시 그려서 동기화 상태를 유지한다.
 function _refreshOpenPanels() {
   if (simPlayScope !== 'core') _rebuildSimTimelapse(); // 등록 선박이 타임랩스에도 나오는 범위라면 함께 갱신
+  _updateScheduleReturnDisp();
   const p = document.getElementById('opsPanel');
   if (!p || !p.classList.contains('visible')) return;
   renderShipMgrList();
