@@ -4271,11 +4271,14 @@ async function fetchLiveFuelPrice() {
     }
     if (btn) { btn.textContent = '✅ 시세'; btn.disabled = false; }
   } catch (e) {
+    const isFileProtocol = location.protocol === 'file:';
     if (btn) {
-      btn.textContent = '❌ 미생성';
+      btn.textContent = isFileProtocol ? '⚠️ 로컬' : '❌ 미생성';
       btn.disabled = false;
-      btn.title = 'fuel_price.json 없음 — GitHub Actions를 한 번 실행하거나 scrape_fuel.py를 로컬에서 실행하세요';
-      setTimeout(() => { btn.textContent = '🔄 시세'; btn.title = 'Bunker Index 부산항 최신 시세 불러오기'; }, 4000);
+      btn.title = isFileProtocol
+        ? '로컬 파일에서는 fetch가 차단됩니다.\n프로젝트 폴더에서 "python -m http.server 8000" 실행 후\nhttp://localhost:8000 으로 접속하세요.'
+        : 'fuel_price.json 없음 — GitHub Actions를 한 번 실행하거나 scrape_fuel.py를 로컬에서 실행하세요';
+      setTimeout(() => { btn.textContent = '🔄 시세'; btn.title = 'Bunker Index 부산항 최신 시세 불러오기'; }, 5000);
     }
     console.warn('fetchLiveFuelPrice:', e);
   }
