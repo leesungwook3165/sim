@@ -94,10 +94,11 @@ def patch_html(data: dict) -> bool:
     original = html
 
     if lsmgo:
-        # inputLsmgoUsd 입력란 value 패치
+        lsmgo_display = f"{int(lsmgo):,}" if lsmgo == int(lsmgo) else f"{lsmgo:,.2f}"
+        # inputLsmgoUsd 입력란 value 패치 (콤마 포맷)
         html = re.sub(
             r'(id="inputLsmgoUsd"[^>]*value=")[^"]*(")',
-            lambda m: m.group(1) + str(lsmgo) + m.group(2),
+            lambda m: m.group(1) + lsmgo_display + m.group(2),
             html,
         )
         # JS 변수 기본값 패치
@@ -109,10 +110,11 @@ def patch_html(data: dict) -> bool:
 
     if krw:
         krw_rounded = round(krw)
-        # inputKrwRate 입력란 value 패치
+        krw_display = f"{krw_rounded:,}"
+        # inputKrwRate 입력란 value 패치 (콤마 포맷)
         html = re.sub(
             r'(id="inputKrwRate"[^>]*value=")[^"]*(")',
-            lambda m: m.group(1) + str(krw_rounded) + m.group(2),
+            lambda m: m.group(1) + krw_display + m.group(2),
             html,
         )
         # JS 변수 기본값 패치

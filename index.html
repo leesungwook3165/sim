@@ -1011,10 +1011,10 @@
               🔄 시세
             </button>
           </span>
-          <input id="inputLsmgoUsd" type="number" step="0.01" min="1" value="1350.0" onchange="setFuelInput('lsmgoUsd', this.value)">
+          <input id="inputLsmgoUsd" type="text" inputmode="decimal" value="1,350" onfocus="_fuelFocus(this)" onblur="_fuelBlur(this,'lsmgoUsd',true)">
         </label>
         <label style="display:flex;flex-direction:column;gap:2px;font-size:10px;color:#aac8e8">환율(원/$)
-          <input id="inputKrwRate" type="number" step="1" min="1" value="1357" onchange="setFuelInput('krwRate', this.value)">
+          <input id="inputKrwRate" type="text" inputmode="numeric" value="1,357" onfocus="_fuelFocus(this)" onblur="_fuelBlur(this,'krwRate',false)">
         </label>
         <div style="display:flex;flex-direction:column;justify-content:flex-end;font-size:10px;color:#aac8e8">환산 단가(원/MT)<br><b id="fuelKrwPerKg" style="color:#ffcc44;font-size:12px">—</b></div>
       </div>
@@ -4204,6 +4204,16 @@ let fuelUseEngSetting = false;
 // 기타운항비용(인건비·정비·항비 등) — 연료비 대비 %. 엘도라도호·산타모니카(경유·직항) 셋 다 공용.
 let fuelOtherPctMin = 23;
 let fuelOtherPctMax = 25;
+function _numComma(n, dec) {
+  return dec
+    ? parseFloat(n).toLocaleString(undefined, {maximumFractionDigits: 2})
+    : Math.round(n).toLocaleString();
+}
+function _fuelFocus(el) { el.value = el.value.replace(/,/g, ''); }
+function _fuelBlur(el, field, dec) {
+  const v = parseFloat(el.value.replace(/,/g, ''));
+  if (!isNaN(v) && v > 0) { setFuelInput(field, v); el.value = _numComma(v, dec); }
+}
 function setFuelInput(field, value) {
   const v = parseFloat(value);
   if (isNaN(v) || v < 0) return;
@@ -4228,7 +4238,7 @@ function setFuelEngSetting(checked) {
       if (lsmgo && lsmgo > 0) {
         fuelLsmgoUsdPerMt = lsmgo;
         const el = document.getElementById("inputLsmgoUsd");
-        if (el) { el.value = lsmgo; }
+        if (el) { el.value = _numComma(lsmgo, true); }
         _updateFuelCostTab();
       }
       const status = document.getElementById("fuelPriceStatus");
@@ -4259,13 +4269,13 @@ async function fetchLiveFuelPrice() {
     if (lsmgo) {
       fuelLsmgoUsdPerMt = lsmgo;
       const el = document.getElementById('inputLsmgoUsd');
-      if (el) el.value = lsmgo;
+      if (el) el.value = _numComma(lsmgo, true);
     }
     const krw = d.usd_krw_rate;
     if (krw) {
       fuelUsdKrwRate = Math.round(krw);
       const el = document.getElementById('inputKrwRate');
-      if (el) el.value = Math.round(krw);
+      if (el) el.value = _numComma(Math.round(krw), false);
     }
     if (lsmgo || krw) _updateFuelCostTab();
     if (status) {
