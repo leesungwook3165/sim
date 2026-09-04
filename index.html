@@ -881,7 +881,8 @@
   <div style="font-size:10px;color:#88aabb;margin-bottom:3px">재생 범위</div>
   <div class="sim-scope-tabs sim-scope-mount" style="margin-bottom:8px"></div>
 
-  <!-- 탭 버튼 -->
+  <!-- 탭 버튼 + 콘텐츠 — 투입고려(core) 범위에서만 표시 -->
+  <div id="simScenariosSection">
   <div class="sim-tabs">
     <button class="sim-tab-btn active" id="tabBtn1" onclick="switchSimTab(1)">⛴ 시나리오 1<br><span style="font-size:9px;font-weight:400;color:inherit">경유 vs 직항 비교</span></button>
     <button class="sim-tab-btn" id="tabBtn2" onclick="switchSimTab(2)">🚀 시나리오 2<br><span style="font-size:9px;font-weight:400;color:inherit">하카타 직항 왕복</span></button>
@@ -1087,6 +1088,7 @@
     <div style="font-size:9px;color:#667788;margin-top:2px">※ 엘도라도 익스프레스호는 실측 기준선이라 공학적 세팅 보정과 무관하게 항상 그대로 적용됩니다.</div>
 
   </div><!-- /.simTabContent3 -->
+  </div><!-- /#simScenariosSection -->
 
   <!-- 공통 컨트롤 버튼 -->
   <div style="margin-top:8px">
@@ -2828,6 +2830,9 @@ function _earliestVisibleDepartMin() {
 function setSimPlayScope(scope) {
   simPlayScope = scope;
   _renderSimScopeTabs();
+  // 시나리오1·2·운항비용 탭은 투입고려(core) 전용 — 다른 범위에선 숨긴다
+  const scenEl = document.getElementById('simScenariosSection');
+  if (scenEl) scenEl.style.display = scope === 'core' ? '' : 'none';
   // 범위와 무관하게 항상, 지금 탭에서 보이는 배들 중 가장 빨리 출항하는 배 기준으로 시간을
   // 당겨서(대기시간 없이) 바로 시뮬레이션이 가동되도록 한다.
   simSimMin = _earliestVisibleDepartMin();
