@@ -6344,12 +6344,22 @@ const AIS_MAX_PLAUSIBLE_KTS = 70;  // 이보다 빠른 "순간 이동"은 GPS �
 const AIS_MIN_POINTS_NORMAL = 20;  // 이보다 포인트가 적으면 항로 형태를 신뢰할 수 없음
 const AIS_DIST_TOLERANCE_LO = 0.6; // 예상 편도거리 대비 이 비율 미만이면 "너무 짧음"
 const AIS_DIST_TOLERANCE_HI = 1.6; // 예상 편도거리 대비 이 비율 초과면 "너무 김"
+const AIS_PORT_BUFFER_KM    = 15;  // 출발/도착 지점이 등록 항구에서 이 거리(km) 버퍼 이내여야 정상 항로로 인정
 // 선박별 예상 편도 거리(km) — 공식/실측 거리가 있으면 사용, 없으면 데이터 중앙값으로 자동 추정
 const AIS_EXPECTED_DIST_KM = {
   beetle:      QB_DIST_KM,    // 부산↔하카타 직항
   queenbeetle: QB_DIST_KM,    // 부산↔하카타 직항
   santamonica: SM_DIST_LEG1,  // 부산↔히타카츠 (현재 실운항 구간 — 하카타 경유는 구상안)
 };
+
+// 출발/도착 지점이 등록 항구(ports 배열 — 어느 선박·항로가 추가되든 동일하게 적용되는
+// 공용 판정) 인근(버퍼 이내)인지 확인한다. 부분적으로 잘린 하루치 데이터나 항구가 아닌
+// 곳에서 시작/끝나는 비정상 트랙을 걸러내기 위함.
+function _aisStartEndNearPort(pts) {
+  const startPort = _nearestPortName(pts[0].lat, pts[0].lon, AIS_PORT_BUFFER_KM);
+  const endPort   = _nearestPortName(pts[pts.length - 1].lat, pts[pts.length - 1].lon, AIS_PORT_BUFFER_KM);
+  return { startPort, endPort, ok: !!(startPort && endPort) };
+}
 
 // 하루치 포인트의 총 이동거리 · 최대 순간이동속도(구간별 implied speed) 계산
 function _aisDayStats(pts) {
@@ -6365,15 +6375,17 @@ function _aisDayStats(pts) {
 }
 
 // 첫 포인트가 어느 항구에 가까운지로 "OO발" 판정 (매칭 실패 시 대략 동/서로 판정)
-function _aisOrigin(pts) {
+// startPortName을 미리 계산해뒀으면 그대로 받아 중복 계산을 피한다.
+function _aisOrigin(pts, startPortName) {
   if (!pts || !pts.length) return '—';
-  const first = pts[0];
-  const name = _nearestPortName(first.lat, first.lon, 15);
+  const name = startPortName !== undefined ? startPortName : _nearestPortName(pts[0].lat, pts[0].lon, AIS_PORT_BUFFER_KM);
   if (name) return name.replace(/(국제여객터미널|국제터미널|여객선터미널|도동항|항)$/, '').trim() + '발';
-  return first.lon < 129.3 ? '부산 인근발' : '일본 인근발';
+  return pts[0].lon < 129.3 ? '부산 인근발' : '일본 인근발';
 }
 
-// 선박 로드 직후 1회 호출 — 날짜별 통계·정상여부·출발항을 계산해 캐시에 저장
+// 선박 로드 직후 1회 호출 — 날짜별 통계·정상여부·출발항을 계산해 캐시에 저장.
+// ports 배열을 통째로 참조하는 공용 판정(_aisStartEndNearPort 등)이라 새 선박·항로가
+// 추가돼도 이 함수 수정 없이 그대로 적용된다.
 function _aisAnalyzeVessel(key, data) {
   const rawDists = data.dates.map(d => _aisDayStats(data.index[d]).totalDist).filter(x => x > 5);
   let expected = AIS_EXPECTED_DIST_KM[key];
@@ -6385,11 +6397,21 @@ function _aisAnalyzeVessel(key, data) {
   data.dates.forEach(d => {
     const pts = data.index[d];
     const stats = _aisDayStats(pts);
-    let isNormal = stats.n >= AIS_MIN_POINTS_NORMAL && stats.maxJumpKts <= AIS_MAX_PLAUSIBLE_KTS;
-    if (isNormal && expected != null) {
-      isNormal = stats.totalDist >= expected * AIS_DIST_TOLERANCE_LO && stats.totalDist <= expected * AIS_DIST_TOLERANCE_HI;
+    const portCheck = _aisStartEndNearPort(pts);
+    const reasons = [];
+    if (stats.n < AIS_MIN_POINTS_NORMAL) reasons.push('포인트 부족');
+    if (stats.maxJumpKts > AIS_MAX_PLAUSIBLE_KTS) reasons.push('비정상 순간이동(GPS 공백 의심)');
+    if (expected != null) {
+      if (stats.totalDist < expected * AIS_DIST_TOLERANCE_LO) reasons.push('이동거리 과소');
+      else if (stats.totalDist > expected * AIS_DIST_TOLERANCE_HI) reasons.push('이동거리 과다');
     }
-    dayQuality[d] = Object.assign({ isNormal, origin: _aisOrigin(pts) }, stats);
+    if (!portCheck.startPort) reasons.push('출발지점이 항구 인근 아님');
+    if (!portCheck.endPort)   reasons.push('도착지점이 항구 인근 아님');
+    dayQuality[d] = Object.assign(
+      { isNormal: reasons.length === 0, reasons, origin: _aisOrigin(pts, portCheck.startPort),
+        startPort: portCheck.startPort, endPort: portCheck.endPort },
+      stats
+    );
   });
   data.expectedDist = expected;
   data.dayQuality = dayQuality;
@@ -6547,7 +6569,7 @@ function _renderAisDay(key, dateStr) {
   const data = _aisCache[key];
   if (!data) return;
   const q = data.dayQuality && data.dayQuality[dateStr];
-  const extra = q ? `${q.origin}${q.isNormal ? '' : ' · ⚠비정상(항로이탈 의심)'}` : '';
+  const extra = q ? `${q.origin}${q.isNormal ? '' : ' · ⚠비정상(' + q.reasons.join(', ') + ')'}` : '';
   _renderAisPointSet(key, data.index[dateStr], dateStr, extra);
 }
 
@@ -6628,14 +6650,16 @@ function _aisTbRenderTl(key) {
 
   const d = _aisCache[key];
   tl.innerHTML = items.map((item, i) => {
-    let label = item, abnormal = false;
+    let label = item, abnormal = false, reasonTitle = '';
     if (_aisCurrIv === 'month') label = item.slice(0, 4) + '.' + item.slice(5, 7);
     else if (_aisCurrIv === 'day') {
       label = item.slice(5); // MM-DD
       // 필터를 꺼서 비정상 날짜도 함께 보일 때는 흐리게 구분 표시
-      abnormal = !_aisNormalOnly && d && d.dayQuality && d.dayQuality[item] && !d.dayQuality[item].isNormal;
+      const q = d && d.dayQuality && d.dayQuality[item];
+      abnormal = !_aisNormalOnly && q && !q.isNormal;
+      if (abnormal) reasonTitle = '항로 이탈 의심: ' + q.reasons.join(', ');
     }
-    return `<button class="ais-tb-unit${i === _aisTlIdx ? ' sel' : ''}${abnormal ? ' abnormal' : ''}" data-idx="${i}" onclick="_aisTbUnitClick(${i})" title="${abnormal ? '항로 이탈 의심(비정상)' : ''}">${label}</button>`;
+    return `<button class="ais-tb-unit${i === _aisTlIdx ? ' sel' : ''}${abnormal ? ' abnormal' : ''}" data-idx="${i}" onclick="_aisTbUnitClick(${i})" title="${reasonTitle}">${label}</button>`;
   }).join('');
 
   // 선택된 유닛으로 스크롤
