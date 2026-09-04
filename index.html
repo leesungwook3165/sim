@@ -1016,7 +1016,7 @@
         <label style="display:flex;flex-direction:column;gap:2px;font-size:10px;color:#aac8e8">환율(원/$)
           <input id="inputKrwRate" type="number" step="1" min="1" value="1357" onchange="setFuelInput('krwRate', this.value)">
         </label>
-        <div style="display:flex;flex-direction:column;justify-content:flex-end;font-size:10px;color:#aac8e8">환산 단가<br><b id="fuelKrwPerKg" style="color:#ffcc44;font-size:12px">—</b></div>
+        <div style="display:flex;flex-direction:column;justify-content:flex-end;font-size:10px;color:#aac8e8">환산 단가(원/MT)<br><b id="fuelKrwPerKg" style="color:#ffcc44;font-size:12px">—</b></div>
       </div>
       <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#ffdd88;cursor:pointer;margin-bottom:6px">
         <input type="checkbox" onchange="setFuelEngSetting(this.checked)"> 산타모니카호 공학적 세팅 보정 적용 (엘도라도호 대비 저출력·저속 -15~20%)
@@ -4313,8 +4313,8 @@ function _fmtRange(lo, hi, fmt) {
 }
 function _updateFuelCostTab() {
   const el = id => document.getElementById(id);
-  const krwPerKg = (fuelLsmgoUsdPerMt / 1000) * fuelUsdKrwRate;
-  if (el('fuelKrwPerKg')) el('fuelKrwPerKg').textContent = '₩' + krwPerKg.toFixed(1) + '/kg';
+  const krwPerMt = fuelLsmgoUsdPerMt * fuelUsdKrwRate;
+  if (el('fuelKrwPerKg')) el('fuelKrwPerKg').textContent = '₩' + Math.round(krwPerMt).toLocaleString() + '/MT';
 
   const eldoRT = 434;                                    // 엘도라도 익스프레스호 실측 왕복거리(포항↔울릉도)
   const smViaRT = (SM_DIST_LEG1 + SM_DIST_LEG2) * 2;   // 산타모니카(경유) 왕복 — 74+132km 편도×2
