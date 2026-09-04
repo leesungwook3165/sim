@@ -22,10 +22,6 @@ HEADERS = {
     "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.8",
 }
 
-def first_number(text: str) -> float | None:
-    m = re.search(r"[\d,]+\.?\d*", text.replace(",", ""))
-    return float(m.group()) if m else None
-
 
 def scrape() -> dict:
     r = requests.get(URL, headers=HEADERS, timeout=20)
@@ -33,28 +29,34 @@ def scrape() -> dict:
     soup = BeautifulSoup(r.text, "lxml")
 
     prices = {}
-    # 페이지 내 모든 <th>/<td> 텍스트로 유종 헤더를 찾고 같은 행의 다음 셀에서 가격 추출
-    for tag in ("VLSFO", "LSMGO"):
-        found = soup.find(string=re.compile(tag, re.I))
-        if not found:
-            continue
-        # 헤더가 포함된 테이블에서 첫 번째 데이터 행의 가격(두 번째 컬럼) 추출
-        tbl = found.find_parent("table")
-        if not tbl:
-            continue
-        rows = tbl.find_all("tr")
-        for row in rows:
-            cells = row.find_all(["td", "th"])
-            if len(cells) >= 2:
-                price_text = cells[1].get_text(strip=True)
-                val = first_number(price_text)
-                if val and val > 100:   # 의미있는 가격값만
-                    prices[tag.lower()] = val
-                    break
+    price_date = None
 
-    # 날짜: 페이지 내 yyyy-mm-dd 형식 첫 번째 매칭
-    date_m = re.search(r"\d{4}-\d{2}-\d{2}", r.text)
-    price_date = date_m.group() if date_m else None
+    # 페이지 내 <script> 태그에 let data=[...]; let productName='VLSFO'; 형태로 데이터가 삽입됨
+    for script in soup.find_all("script"):
+        text = script.string or ""
+        # productName 추출
+        name_m = re.search(r"let\s+productName\s*=\s*'([^']+)'", text)
+        if not name_m:
+            continue
+        product = name_m.group(1).upper()
+        if product not in ("VLSFO", "LSMGO"):
+            continue
+
+        # data 배열 추출
+        data_m = re.search(r"let\s+data\s*=\s*(\[.*?\]);", text, re.S)
+        if not data_m:
+            continue
+        records = json.loads(data_m.group(1))
+        if not records:
+            continue
+
+        # 마지막 항목 = 최신 날짜
+        latest = records[-1]
+        val = float(latest["price"])
+        if val > 0:
+            prices[product.lower()] = val
+            if price_date is None:
+                price_date = latest["date"]
 
     if not prices:
         raise RuntimeError("가격 파싱 실패 — 페이지 구조가 변경되었을 수 있습니다.")
