@@ -947,6 +947,26 @@
     }
     .ais-tb-unit.abnormal { opacity: 0.4; }
     .ais-tb-unit.abnormal.sel { opacity: 0.7; }
+    /* 선택한 날짜의 시간대 세부 행 */
+    .ais-tb-subtl-row {
+      position: relative; height: 28px; overflow: hidden;
+      flex-shrink: 0; background: rgba(0,0,0,0.15);
+      border-bottom: 1px solid rgba(80,160,255,0.12);
+    }
+    .ais-tb-subtl {
+      display: flex; height: 100%; align-items: center;
+      overflow-x: auto; overflow-y: hidden; scrollbar-width: none;
+      padding: 0 8px;
+    }
+    .ais-tb-subtl::-webkit-scrollbar { display: none; }
+    .ais-tb-subunit {
+      flex-shrink: 0; background: none; border: none;
+      border-right: 1px solid rgba(80,160,255,0.08);
+      color: #5a7a99; font-size: 9px; cursor: pointer;
+      padding: 3px 8px; white-space: nowrap; border-radius: 3px;
+    }
+    .ais-tb-subunit:hover { background: rgba(80,160,255,0.12); color: #aaccee; }
+    .ais-tb-subunit.sel { background: rgba(255,80,220,0.25); color: #ffaaee; }
     /* 속도 범례 */
     .ais-tb-legend {
       display: flex; align-items: center; gap: 10px; font-size: 10px; color: #7799bb;
@@ -1394,7 +1414,6 @@
       <li><button class="ais-tb-ivbtn" data-iv="year"  onclick="onAisIvTab(this)">년도</button></li>
       <li><button class="ais-tb-ivbtn" data-iv="month" onclick="onAisIvTab(this)">월</button></li>
       <li><button class="ais-tb-ivbtn on" data-iv="day" onclick="onAisIvTab(this)">일</button></li>
-      <li><button class="ais-tb-ivbtn" data-iv="hour" onclick="onAisIvTab(this)">시간</button></li>
     </ul>
     <!-- 정상 항로만 보기 ('일' 탭에서만 표시) -->
     <label id="aisNormalOnlyWrap" class="ais-tb-normal">
@@ -1417,6 +1436,10 @@
     <div class="ais-tb-tl" id="aisTbTl">
       <!-- 유닛 버튼들이 JS로 동적 렌더링됨 -->
     </div>
+  </div>
+  <!-- 선택한 날짜의 시간대 세부 행 ('일' 탭에서 날짜를 고르면 자동으로 나타남) -->
+  <div class="ais-tb-subtl-row" id="aisTbSubTlRow" style="display:none">
+    <div class="ais-tb-subtl" id="aisTbSubTl"></div>
   </div>
 </div>
 
@@ -6133,7 +6156,7 @@ const _aisCache = {};
 const _aisLayerGroup = { g: null };
 let _aisPlay = { timer: null, marker: null, idx: 0, pts: null, loop: false };
 let _aisCurrIv = 'day';
-let _aisHourBaseDate = null; // '시간' 탭이 어느 날짜를 기준으로 시간대를 나열할지 (최근 선택한 '일' 기준)
+let _aisSubHourSel = null; // '일' 탭에서 날짜를 고르면 그 날의 시간대(HH)가 자동으로 나열됨 — 선택된 시간(null=하루 전체)
 let _aisRangeFrom = null, _aisRangeTo = null; // 캘린더로 지정한 조회 기간 필터 ('YYYY-MM-DD', null=제한 없음)
 let _aisNormalOnly = true; // '일' 탭에서만 적용되는 정상 항로 필터 (기본 on)
 let _aisTlItems = [];
@@ -6424,7 +6447,9 @@ function _renderAisHour(key, hourKey) {
   if (!data) return;
   const [dateStr, hh] = hourKey.split('T');
   const pts = (data.index[dateStr] || []).filter(p => p.ts.slice(11, 13) === hh);
-  _renderAisPointSet(key, pts, `${dateStr} ${parseInt(hh, 10)}시`);
+  const h = parseInt(hh, 10);
+  let h12 = h % 12; if (h12 === 0) h12 = 12;
+  _renderAisPointSet(key, pts, `${dateStr} ${h < 12 ? '오전' : '오후'} ${h12}시`);
 }
 
 // ── 기간(월·연도) 전체 렌더링 ──
@@ -6472,20 +6497,12 @@ function _aisTlItemsFor(key, iv) {
   const d = _aisCache[key]; if (!d) return [];
   const dates = _aisFilterDates(d.dates);
   if (iv === 'day') {
-    // '정상 항로만' 필터는 '일' 탭 목록에만 적용한다 (월/년/시간 탭은 항상 전체 날짜 기준).
+    // '정상 항로만' 필터는 '일' 탭 목록에만 적용한다 (월/년 탭은 항상 전체 날짜 기준).
     if (_aisNormalOnly && d.dayQuality) return dates.filter(x => d.dayQuality[x] && d.dayQuality[x].isNormal);
     return dates;
   }
   if (iv === 'month') return [...new Set(dates.map(x => x.slice(0, 7)))].sort();
   if (iv === 'year')  return [...new Set(dates.map(x => x.slice(0, 4)))].sort();
-  if (iv === 'hour') {
-    if (!dates.length) return [];
-    // '시간' 탭은 GFW처럼 전체 기간이 아니라 최근 선택한 '일'(_aisHourBaseDate) 하루를
-    // 기준으로 시간대만 나열한다 — 전체 기간 단위로 나열하면 버튼이 수만 개가 된다.
-    const base = (_aisHourBaseDate && dates.includes(_aisHourBaseDate)) ? _aisHourBaseDate : dates[dates.length - 1];
-    const hours = [...new Set((d.index[base] || []).map(p => p.ts.slice(11, 13)))].sort();
-    return hours.map(hh => base + 'T' + hh);
-  }
   return dates;
 }
 
@@ -6506,11 +6523,6 @@ function _aisTbRenderTl(key) {
       // 필터를 꺼서 비정상 날짜도 함께 보일 때는 흐리게 구분 표시
       abnormal = !_aisNormalOnly && d && d.dayQuality && d.dayQuality[item] && !d.dayQuality[item].isNormal;
     }
-    else if (_aisCurrIv === 'hour') { // "YYYY-MM-DDTHH" → "오전/오후 H시" (GFW 스타일)
-      const hh = parseInt(item.slice(11, 13), 10);
-      let h12 = hh % 12; if (h12 === 0) h12 = 12;
-      label = `${hh < 12 ? '오전' : '오후'} ${h12}시`;
-    }
     return `<button class="ais-tb-unit${i === _aisTlIdx ? ' sel' : ''}${abnormal ? ' abnormal' : ''}" data-idx="${i}" onclick="_aisTbUnitClick(${i})" title="${abnormal ? '항로 이탈 의심(비정상)' : ''}">${label}</button>`;
   }).join('');
 
@@ -6519,6 +6531,37 @@ function _aisTbRenderTl(key) {
     const sel = tl.querySelector('.ais-tb-unit.sel');
     if (sel) sel.scrollIntoView({ inline: 'center', block: 'nearest' });
   });
+}
+
+// ── 선택한 날짜의 시간대 세부 행 ('일' 탭에서 날짜를 고르면 자동으로 나타남) ──
+function _aisRenderSubHours(key, dateStr) {
+  const wrap = document.getElementById('aisTbSubTlRow');
+  const sub  = document.getElementById('aisTbSubTl');
+  if (!wrap || !sub) return;
+  const d = _aisCache[key];
+  const pts = d && d.index[dateStr];
+  const hours = pts ? [...new Set(pts.map(p => p.ts.slice(11, 13)))].sort() : [];
+  if (!hours.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'flex';
+  sub.innerHTML =
+    `<button class="ais-tb-subunit${_aisSubHourSel == null ? ' sel' : ''}" onclick="_aisSubHourClick(null)">🕐 하루 전체</button>` +
+    hours.map(hh => {
+      const h = parseInt(hh, 10);
+      let h12 = h % 12; if (h12 === 0) h12 = 12;
+      const label = `${h < 12 ? '오전' : '오후'} ${h12}시`;
+      return `<button class="ais-tb-subunit${_aisSubHourSel === hh ? ' sel' : ''}" onclick="_aisSubHourClick('${hh}')">${label}</button>`;
+    }).join('');
+}
+
+// 시간대 세부 행에서 특정 시간(또는 "하루 전체")을 클릭
+function _aisSubHourClick(hh) {
+  _aisSubHourSel = hh;
+  const key = document.getElementById('aisVesselSel').value;
+  const dateStr = _aisTlItems[_aisTlIdx];
+  if (!dateStr) return;
+  _aisRenderSubHours(key, dateStr); // sel 상태 갱신을 위해 다시 그림
+  if (hh == null) _renderAisDay(key, dateStr);
+  else _renderAisHour(key, dateStr + 'T' + hh);
 }
 
 function _aisTbUnitClick(idx) {
@@ -6532,10 +6575,20 @@ function _aisTbUnitClick(idx) {
 function _aisTlApply() {
   const key = document.getElementById('aisVesselSel').value;
   const item = _aisTlItems[_aisTlIdx];
-  if (!item) { _clearAisLayer(); _aisSetStatus('선택한 기간에 데이터가 없습니다'); return; }
-  if (_aisCurrIv === 'day') { _aisHourBaseDate = item; _renderAisDay(key, item); }
-  else if (_aisCurrIv === 'hour') _renderAisHour(key, item);
-  else _renderAisPeriod(key, item);
+  const subWrap = document.getElementById('aisTbSubTlRow');
+  if (!item) {
+    _clearAisLayer(); _aisSetStatus('선택한 기간에 데이터가 없습니다');
+    if (subWrap) subWrap.style.display = 'none';
+    return;
+  }
+  if (_aisCurrIv === 'day') {
+    _aisSubHourSel = null; // 날짜가 바뀌면 시간 선택은 "하루 전체"로 리셋
+    _renderAisDay(key, item);
+    _aisRenderSubHours(key, item); // 그 날의 시간대를 바로 아래에 나눠서 표시
+  } else {
+    _renderAisPeriod(key, item);
+    if (subWrap) subWrap.style.display = 'none';
+  }
 }
 
 // ── 스텝 이동 ──
@@ -6569,7 +6622,7 @@ async function onAisVesselChange() {
       toEl.value   = data.maxDate;
     }
     _aisRangeFrom = null; _aisRangeTo = null;
-    _aisHourBaseDate = null;
+    _aisSubHourSel = null;
     _aisTbRenderTl(key);
     _aisTlApply();
   }
@@ -6619,13 +6672,15 @@ function onAisPlay() {
   const key = document.getElementById('aisVesselSel').value;
   const item = _aisTlItems[_aisTlIdx];
   if (!item) { _aisSetStatus('날짜를 선택하세요'); return; }
-  if (_aisCurrIv === 'day') {
-    _playAisPoints(key, item, _renderAisDay, dat => _aisCache[key].index[dat]);
-  } else if (_aisCurrIv === 'hour') {
-    _playAisPoints(key, item, _renderAisHour, hourKey => {
-      const [dateStr, hh] = hourKey.split('T');
+  if (_aisCurrIv === 'day' && _aisSubHourSel != null) {
+    // 시간대 세부 행에서 특정 시간을 골라둔 상태면 그 시간만 재생
+    const hourKey = item + 'T' + _aisSubHourSel;
+    _playAisPoints(key, hourKey, _renderAisHour, hk => {
+      const [dateStr, hh] = hk.split('T');
       return (_aisCache[key].index[dateStr] || []).filter(p => p.ts.slice(11, 13) === hh);
     });
+  } else if (_aisCurrIv === 'day') {
+    _playAisPoints(key, item, _renderAisDay, dat => _aisCache[key].index[dat]);
   } else {
     _playAisDateStepper(key);
   }
