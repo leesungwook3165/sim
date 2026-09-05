@@ -1459,13 +1459,11 @@
         <input type="checkbox" id="aisRefOnly" onchange="onAisRefOnlyChange()"> ★기준일만
       </span>
     </label>
-    <label class="ais-tb-normal" id="aisWorkWrap" title="고쳐야 할 날(육지 관통이 남은 날)과 이미 고친 날을 바로 추려봅니다.">
-      🛠 작업
-      <select id="aisWorkFilter" onchange="onAisWorkFilterChange()">
-        <option value="all">전체</option>
-        <option value="land">⚠ 육지관통 남은 날</option>
-        <option value="corr">✏ 보정한 날</option>
-      </select>
+    <label class="ais-tb-normal" id="aisWorkWrap" title="보정을 저장해둔 날만 / 아직 육지를 지나는 구간이 남은 날만 추려봅니다. 둘 다 켜면 &quot;보정했는데 아직 남은 날&quot;이 나옵니다.">
+      <input type="checkbox" id="aisCorrOnly" onchange="onAisWorkFilterChange()"> ✏ 보정일만
+      <span class="ais-tb-refchk" style="color:#ff8888">
+        <input type="checkbox" id="aisLandOnly" onchange="onAisWorkFilterChange()"> ⚠ 고칠 날만
+      </span>
     </label>
     <label class="ais-tb-normal" id="aisCorrWrap" title="원본 AIS는 그대로 두고, 구간을 직접 끌어 보정해 따로 저장합니다. 보정 기록에는 원본 일자·시각이 함께 남습니다.">
       <input type="checkbox" id="aisCorrEdit" onchange="onAisCorrEditChange()"> ✏ 보정 편집
@@ -6338,7 +6336,8 @@ let _aisSubLegSel = null;  // 왕복일 때 선택된 구간 (null=왕복 전체
 let _aisRangeFrom = null, _aisRangeTo = null; // 캘린더로 지정한 조회 기간 필터 ('YYYY-MM-DD', null=제한 없음)
 let _aisNormalOnly = true; // '일' 탭에서만 적용되는 정상 항로 필터 (기본 on)
 let _aisRefOnly = false;   // ★기준일(항구 출입 가속·감속이 온전히 기록된 날)만 보기
-let _aisWorkFilter = 'all'; // 작업 목록 — 'land'=육지관통 남은 날, 'corr'=보정한 날
+let _aisCorrOnly = false;  // ✏ 보정한 날만 보기
+let _aisLandOnly = false;  // ⚠ 육지 관통이 남은 날(고칠 날)만 보기
 let _aisCallFilter = 'all'; // 특정 항구에 기항한 날만 보기 ('all' 또는 항구명)
 let _aisLastChartPts = null, _aisLastChartIdx = null; // 창 크기·타임바 높이 변경 시 그래프 재그리기용
 let _aisChartGeom = null; // 그래프 좌표계 (마우스 x → 시각 환산용)
@@ -7447,6 +7446,8 @@ function _aisEmptyReason(key) {
     const short = _aisCallFilter.replace(/(국제여객터미널|국제터미널|여객선터미널|항)$/, "");
     parts.push("⚓" + short + " 기항 " + cnt(x => (d.dayQuality[x].calls || []).some(c => c.name === _aisCallFilter)) + "일");
   }
+  if (_aisCorrOnly) parts.push("✏보정일 " + cnt(x => _aisCorrCount(key, x) > 0) + "일");
+  if (_aisLandOnly) parts.push("⚠고칠 날 " + cnt(x => (d.dayQuality[x].landSegs || 0) > 0) + "일");
   if (_aisRefOnly) parts.push("★기준일 " + cnt(x => d.dayQuality[x].isRef) + "일");
   if (_aisNormalOnly) parts.push("정상 항로 " + cnt(x => d.dayQuality[x].isNormal) + "일");
   return parts.length ? " — 조건별 단독 적용 시: " + parts.join(" / ") + " (조합하면 0일)" : "";
@@ -7462,9 +7463,9 @@ function _aisAllDays(key) {
   if (_aisCallFilter !== 'all') {
     dates = dates.filter(x => (d.dayQuality[x].calls || []).some(c => c.name === _aisCallFilter));
   }
-  // 작업 목록 필터 — 고칠 날(⚠)과 이미 고친 날(✏)을 바로 추려본다
-  if (_aisWorkFilter === 'land') dates = dates.filter(x => (d.dayQuality[x].landSegs || 0) > 0);
-  else if (_aisWorkFilter === 'corr') dates = dates.filter(x => _aisCorrCount(key, x) > 0);
+  // 작업 목록 필터 — 각각 독립이라 둘 다 켜면 "보정했는데 아직 관통이 남은 날"이 나온다
+  if (_aisCorrOnly) dates = dates.filter(x => _aisCorrCount(key, x) > 0);
+  if (_aisLandOnly) dates = dates.filter(x => (d.dayQuality[x].landSegs || 0) > 0);
   if (_aisRefOnly)    return dates.filter(x => d.dayQuality[x].isRef);
   if (_aisNormalOnly) return dates.filter(x => d.dayQuality[x].isNormal);
   return dates;
@@ -7936,9 +7937,10 @@ function onAisShowRawChange() {
   _aisTlApply();
 }
 
-// '🛠 작업' 드롭다운 — 고칠 날 / 고친 날 추리기
+// '✏ 보정일만' / '⚠ 고칠 날만' 체크박스
 function onAisWorkFilterChange() {
-  _aisWorkFilter = document.getElementById('aisWorkFilter').value;
+  _aisCorrOnly = document.getElementById('aisCorrOnly').checked;
+  _aisLandOnly = document.getElementById('aisLandOnly').checked;
   const key = document.getElementById('aisVesselSel').value;
   if (!_aisCache[key]) return;
   _aisTbRenderTl(key);
