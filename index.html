@@ -1733,7 +1733,7 @@ const ports = [
   // 좌표는 AIS에서 배가 실제로 접안한 저속 지점의 중앙값이다. 처음에는 "하루의 시작·끝
   // 지점" 군집 중심을 썼는데 1km 안팎씩 밀려 있었고, 그 탓에 진도항을 옆 어항인
   // 서망항으로 잘못 적기까지 했다(정박 549점이 모두 진도항 쪽, 최근접 0.15km).
-  { id:'jindo',      name:'진도항 (팽목항)',        lat:34.375230,  lng:126.134410,  color:'#ffcc44', role:'참고 (국내 항로)', desc:'전남 진도군 임회면 팽목리. 2013년 팽목항에서 진도항으로 개칭. 씨월드고속훼리 산타모니카호의 제주·추자 항로 기점. 공식 좌표 34.37389, 126.13444 (약 150m 차이).', tags:['참고','진도항','팽목항','제주항로','국내 항로'] },
+  { id:'jindo',      name:'진도항',                lat:34.375230,  lng:126.134410,  color:'#ffcc44', role:'참고 (국내 항로)', desc:'전남 진도군 임회면 팽목리. 2013년 팽목항에서 진도항으로 개칭. 씨월드고속훼리 산타모니카호의 제주·추자 항로 기점. 공식 좌표 34.37389, 126.13444 (약 150m 차이).', tags:['참고','진도항','팽목항','제주항로','국내 항로'] },
   { id:'chujado',    name:'추자항 (상추자도)',      lat:33.962020,  lng:126.297520,  color:'#ffcc44', role:'참고 (국내 항로)', desc:'제주시 추자면. 산타모니카호가 제주 항로 중간에 들르기도 하고 그냥 지나기도 하는 경유지.', tags:['참고','추자도','추자항','제주항로','경유','국내 항로'] },
   { id:'jeju',       name:'제주항 국제여객터미널',   lat:33.520000,  lng:126.533330,  color:'#ffcc44', role:'참고 (국내 항로)', desc:'제주시 건입동 소재. 제주 항로 도착지.', tags:['참고','제주','제주항','제주항로','국내 항로'] }
 ];
@@ -6504,19 +6504,23 @@ function _parseAisCsvLine(line) {
 // 30만 행짜리 파일을 문자 하나씩 훑으면 카멜리아 기준 1.3초가 걸린다. 이 CSV들은
 // 따옴표 안에 쉼표가 없으므로(전 파일 확인) split(',')으로 자르면 5배 빠르다.
 // 혹시 쉼표가 든 값이 들어와 열 수가 어긋나면 그 줄만 위의 정식 파서로 다시 자른다.
-function _parseAisCsv(text) {
-  const lines = text.split('\n');
+// 헤더에서 열 위치를 한 번만 읽어 둔다
+function _parseAisCsvHead(lines) {
   const hdrs = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
   const iLat = hdrs.indexOf('lat'), iLon = hdrs.indexOf('lon'),
         iSpd = hdrs.indexOf('speed'), iCrs = hdrs.indexOf('course'),
         iTs  = hdrs.indexOf('timestamp');
-  if (iLat < 0 || iLon < 0 || iTs < 0) return [];
-  const need = Math.max(iLat, iLon, iSpd, iCrs, iTs) + 1;
-  const nCol = hdrs.length;
+  if (iLat < 0 || iLon < 0 || iTs < 0) return null;
+  return { iLat, iLon, iSpd, iCrs, iTs, need: Math.max(iLat, iLon, iSpd, iCrs, iTs) + 1, nCol: hdrs.length };
+}
+
+// lines[from, to) 구간만 읽어 pts에 붙인다 — 로딩을 쪼개서 지도가 굳지 않게 하려고
+// 파서를 구간 단위로 부를 수 있게 했다.
+function _parseAisCsvRange(lines, h, from, to, pts) {
+  const { iLat, iLon, iSpd, iCrs, iTs, need, nCol } = h;
   // 값에 붙은 따옴표만 떼어낸다 (timestamp·seg_id가 따옴표로 감싸여 있다)
   const unq = v => v.charCodeAt(0) === 34 ? v.slice(1, -1) : v;
-  const pts = [];
-  for (let i = 1; i < lines.length; i++) {
+  for (let i = from; i < to; i++) {
     const line = lines[i];
     if (line.length < 10) continue;
     let p = line.split(',');
@@ -6535,6 +6539,31 @@ function _parseAisCsv(text) {
   return pts;
 }
 
+// 동기 버전 — 한 번에 다 읽는다 (검증 스크립트 등)
+function _parseAisCsv(text) {
+  const lines = text.split('\n');
+  const h = _parseAisCsvHead(lines);
+  if (!h) return [];
+  return _parseAisCsvRange(lines, h, 1, lines.length, []);
+}
+
+// 비동기 버전 — 몇만 줄마다 브라우저에 제어권을 넘긴다. 30만 행이면 파싱만으로도
+// 0.3초 넘게 한 덩어리로 잡혀 그 동안 줌이 안 먹었다.
+const AIS_PARSE_CHUNK = 40000;
+async function _parseAisCsvAsync(text, onStep) {
+  const lines = text.split('\n');
+  const h = _parseAisCsvHead(lines);
+  if (!h) return [];
+  const pts = [];
+  for (let from = 1; from < lines.length; from += AIS_PARSE_CHUNK) {
+    const to = Math.min(lines.length, from + AIS_PARSE_CHUNK);
+    _parseAisCsvRange(lines, h, from, to, pts);
+    if (onStep) onStep(Math.round(to / lines.length * 100) + '%');
+    await _aisYield();
+  }
+  return pts;
+}
+
 // ── 날짜 인덱스 ──
 function _buildAisIndex(pts) {
   const index = {};
@@ -6547,8 +6576,18 @@ function _buildAisIndex(pts) {
 }
 
 // ── CSV 로드 (lazy, 캐시) ──
+// 로딩을 쪼개 놓으니 그 틈에 사용자가 날짜를 누를 수 있다. 캐시에 반쯤 만든 객체가
+// 올라가 있으면 dayQuality가 없는 상태로 그려지다 터진다. 그래서 다 만든 뒤에만 캐시에
+// 올리고, 같은 배를 겹쳐 요청하면 진행 중인 약속을 그대로 돌려준다.
+const _aisLoading = {};
 async function _loadAisVessel(key) {
   if (_aisCache[key]) return _aisCache[key];
+  if (_aisLoading[key]) return _aisLoading[key];
+  const p = _loadAisVesselInner(key);
+  _aisLoading[key] = p;
+  try { return await p; } finally { delete _aisLoading[key]; }
+}
+async function _loadAisVesselInner(key) {
   const v = _AIS_VESSELS[key];
   _aisSetStatus(`${v.label} 로딩 중…`);
   if (location.protocol === 'file:') {
@@ -6559,19 +6598,17 @@ async function _loadAisVessel(key) {
     const r = await fetch(v.file + '?_=' + Date.now());
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const text = await r.text();
-    _aisSetStatus(v.label + ' 읽는 중…');
-    await _aisYield();
-    const pts = _parseAisCsv(text);
+    const pts = await _parseAisCsvAsync(text, pct => _aisSetStatus(v.label + ' 읽는 중 ' + pct + '…'));
     if (!pts.length) throw new Error('데이터 없음');
     await _aisYield();
-    _aisCache[key] = _buildAisIndex(pts);
+    const data = _buildAisIndex(pts);           // 다 만들 때까지 지역 변수로만 든다
     await _aisYield();
-    await _aisAnalyzeVessel(key, _aisCache[key],
-      msg => _aisSetStatus(v.label + ' ' + msg + '…'));
+    await _aisAnalyzeVessel(key, data, msg => _aisSetStatus(v.label + ' ' + msg + '…'));
     await _aisYield();
+    _aisCache[key] = data;                      // 이제서야 공개
     _aisComputeLand(key); // 어느 날에 육지 관통이 남았는지 미리 세어둔다
     _aisSetStatus('');
-    return _aisCache[key];
+    return data;
   } catch (e) {
     _aisSetStatus('⚠ 로드 실패: ' + e.message);
     return null;
@@ -8405,6 +8442,11 @@ function _aisSubHourClick(hh) {
 
 function _aisTlApply() {
   const key = document.getElementById('aisVesselSel').value;
+  const ready = _aisCache[key];
+  if (!ready || !ready.dayQuality) {
+    // 로딩 중이거나 아직 안 고른 배 — 그릴 게 없다 (로딩이 끝나면 onAisVesselChange가 다시 부른다)
+    return;
+  }
   const subWrap = document.getElementById('aisTbSubTlRow');
   const chartRow = document.getElementById('aisTbChartRow');
   const hideSub = () => { if (subWrap) subWrap.style.display = 'none'; };
