@@ -1452,6 +1452,9 @@
         <input type="checkbox" id="aisRefOnly" onchange="onAisRefOnlyChange()"> ★기준일만
       </span>
     </label>
+    <label class="ais-tb-normal" id="aisSnapWrap" title="AIS 핑이 벌어져 직선이 육지를 관통하는 구간을, 미리 그려둔 항로(직접 그린 선 포함)를 따라 우회시켜 그린다. 보간 구간은 점선으로 표시된다.">
+      <input type="checkbox" id="aisSnapOn" checked onchange="onAisSnapChange()"> 🧭 항로 보간
+    </label>
     <label class="ais-tb-normal" id="aisCallFilterWrap" title="그 항구에 실제로 배를 댄(정박한) 날만 — 옆을 지나간 날은 제외">
       ⚓ 기항지
       <select id="aisCallFilter" onchange="onAisCallFilterChange()"><option value="all">전체</option></select>
@@ -6671,6 +6674,100 @@ function _aisAnalyzeVessel(key, data) {
   data.dayQuality = dayQuality;
 }
 
+// ════════════════════════════════════════════════════
+//  항로 보간 — 끊긴 AIS 구간을 "손으로 그린 항로"에 맞춰 이어준다
+//  AIS 핑이 항해 중 6~9분(약 5km), 길게는 70분 넘게 벌어지다 보니 두 점을 직선으로
+//  이으면 섬·방파제를 관통한다. 그런 긴 구간은 미리 그려둔 항로(구상 항로·참고 항로,
+//  그리고 사용자가 지도에 직접 그린 선) 중 가장 잘 맞는 것을 찾아 그 경로를 따라가게 한다.
+// ════════════════════════════════════════════════════
+const AIS_SNAP_MIN_SEG_KM = 8;   // 이보다 긴 구간만 보간 대상 (짧은 구간은 직선이어도 무해)
+const AIS_SNAP_MAX_OFF_KM = 10;  // 양 끝점이 기준 항로에서 이보다 멀면 다른 항로로 간주해 포기
+const AIS_SNAP_MAX_DETOUR = 1.6; // 보간 경로가 직선의 이 배를 넘으면 과한 우회로 보고 포기
+let _aisSnapOn = true;           // 항로 보간 사용 여부
+
+// 보간 기준이 되는 항로 목록. 사용자가 지도에 직접 그린 선(leaflet.draw)도 함께 후보로 쓴다.
+function _aisRefRoutes() {
+  const list = [
+    { name: '부산→히타카츠 구상',  pts: _simWP1 },
+    { name: '히타카츠→하카타 구상', pts: _simWP2 },
+    { name: '하카타→부산 복귀',    pts: _retWP },
+    { name: '부산↔하카타 직항',    pts: _qbWP },
+    { name: '이즈하라 경유',       pts: _izuharaWP },
+    { name: '이즈하라 직항',       pts: _izuharaDirectWP },
+    { name: '부산↔시모노세키',     pts: _shimonosekiWP },
+    { name: '부산↔오사카',        pts: _miracleWP },
+    { name: '광양↔시모노세키',     pts: _gwangyangWP },
+    { name: '포항↔울릉도',        pts: _eldoradoWP }
+  ];
+  if (typeof drawnItems !== 'undefined') {
+    drawnItems.getLayers().forEach((l, i) => {
+      if (!(l instanceof L.Polyline) || l instanceof L.Polygon) return;
+      const lls = l.getLatLngs();
+      if (!Array.isArray(lls) || lls.length < 2) return;
+      list.push({ name: '직접 그린 항로 ' + (i + 1), pts: lls.map(ll => [ll.lat, ll.lng]), user: true });
+    });
+  }
+  return list;
+}
+
+// 점을 항로 폴리라인에 수직 투영 — 어느 구간(idx)의 어디쯤(t)에 붙는지와 거리(km)를 돌려준다
+function _projectOnRoute(p, route) {
+  let best = { dist: Infinity, idx: 0, t: 0, pt: route[0] };
+  for (let i = 1; i < route.length; i++) {
+    const a = route[i - 1], b = route[i];
+    const latRef = (a[0] + b[0]) / 2;
+    const kx = 111.32 * Math.cos(latRef * Math.PI / 180), ky = 110.57; // 도 → km 근사
+    const ax = a[1] * kx, ay = a[0] * ky, bx = b[1] * kx, by = b[0] * ky;
+    const px = p[1] * kx, py = p[0] * ky;
+    const dx = bx - ax, dy = by - ay;
+    const len2 = dx * dx + dy * dy;
+    let t = len2 ? ((px - ax) * dx + (py - ay) * dy) / len2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    const d = Math.hypot(px - (ax + dx * t), py - (ay + dy * t));
+    if (d < best.dist) best = { dist: d, idx: i - 1, t, pt: [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t] };
+  }
+  return best;
+}
+
+// 투영된 두 지점 사이의 항로 구간을 잘라낸다 (진행 방향에 맞춰 앞/뒤 모두 지원)
+function _routeSlice(route, p1, p2) {
+  const out = [p1.pt];
+  if (p1.idx < p2.idx || (p1.idx === p2.idx && p1.t <= p2.t)) {
+    for (let i = p1.idx + 1; i <= p2.idx; i++) out.push(route[i]);
+  } else {
+    for (let i = p1.idx; i > p2.idx; i--) out.push(route[i]);
+  }
+  out.push(p2.pt);
+  return out;
+}
+
+function _routeLen(pts) {
+  let d = 0;
+  for (let i = 1; i < pts.length; i++) d += _simDist(pts[i - 1], pts[i]);
+  return d;
+}
+
+// 끊긴 구간 하나를 기준 항로에 맞춰 보간한다. 마땅한 항로가 없으면 null(직선 유지).
+function _aisSnapSegment(a, b) {
+  const A = [a.lat, a.lon], B = [b.lat, b.lon];
+  const straight = _simDist(A, B);
+  if (straight < AIS_SNAP_MIN_SEG_KM) return null;
+  let best = null;
+  _aisRefRoutes().forEach(r => {
+    if (!r.pts || r.pts.length < 2) return;
+    const p1 = _projectOnRoute(A, r.pts), p2 = _projectOnRoute(B, r.pts);
+    if (p1.dist > AIS_SNAP_MAX_OFF_KM || p2.dist > AIS_SNAP_MAX_OFF_KM) return;
+    // 사용자가 직접 그린 항로를 우선한다
+    const err = (p1.dist + p2.dist) * (r.user ? 0.5 : 1);
+    if (!best || err < best.err) best = { err, r, p1, p2 };
+  });
+  if (!best) return null;
+  const mid = _routeSlice(best.r.pts, best.p1, best.p2);
+  const path = [A, ...mid, B];
+  if (_routeLen(path) > straight * AIS_SNAP_MAX_DETOUR) return null; // 과한 우회는 포기
+  return { path, name: best.r.name, straight, snapped: _routeLen(path) };
+}
+
 // ── 시간축 보간 ──
 // AIS 핑은 항해 중 6~9분, 정박 중 70분 넘게 벌어진다. 포인트를 하나씩 밟으면
 // 그 사이를 순간이동하므로, 실제 시각 기준으로 두 포인트 사이를 보간해 부드럽게 움직인다.
@@ -6816,13 +6913,19 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
   // 두 개를 겹쳐 그린다. 마커는 25개 지점에만 있어서 회항점 같은 변곡점을 눌러도
   // 잡히지 않았는데, 이렇게 하면 선 위 어디를 눌러도 값이 뜬다.
   const legs = _aisSplitLegs(pts);
+  let snapCount = 0;
   for (let i = 1; i < pts.length; i++) {
     const a = pts[i - 1], b = pts[i];
     const isBack = legs && i > legs.turnIdx;
-    const latlngs = [[a.lat, a.lon], [b.lat, b.lon]];
+    // 핑이 벌어져 직선이 육지를 관통하는 구간은 손으로 그린 항로에 맞춰 우회시킨다.
+    // 보간한 구간은 실측이 아니므로 점선으로 구분해 그린다.
+    const snap = _aisSnapOn ? _aisSnapSegment(a, b) : null;
+    const latlngs = snap ? snap.path : [[a.lat, a.lon], [b.lat, b.lon]];
+    if (snap) snapCount++;
     L.polyline(latlngs, {
       color: _aisSpeedColor((a.speed + b.speed) / 2), weight: isBack ? 4 : 3,
-      opacity: isBack ? 0.75 : 0.9, dashArray: isBack ? '5 7' : null, interactive: false
+      opacity: snap ? 0.85 : (isBack ? 0.75 : 0.9),
+      dashArray: snap ? '2 6' : (isBack ? '5 7' : null), interactive: false
     }).addTo(g);
 
     const segKm = _simDist([a.lat, a.lon], [b.lat, b.lon]);
@@ -6835,6 +6938,7 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
         `${_aisFmtClock(a.ts)} → ${_aisFmtClock(b.ts)} UTC (${segMin.toFixed(0)}분)<br>` +
         `속도 <b>${a.speed.toFixed(1)} → ${b.speed.toFixed(1)} knot</b> · 방향 ${b.course.toFixed(0)}°<br>` +
         `구간 ${segKm.toFixed(1)}km · 구간평균 ${avgKts.toFixed(1)} knot` +
+        (snap ? `<br><span style="color:#88ddff">🧭 보간: ${snap.name} 따라 ${snap.snapped.toFixed(1)}km (직선 ${snap.straight.toFixed(1)}km)</span>` : '') +
         (nearPort ? `<br>⚓ ${nearPort} 부근` : ''),
         { className: 'custom-popup', maxWidth: 260 }
       ).addTo(g);
@@ -6908,7 +7012,8 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
 
   const maxSpd = Math.max(...pts.map(p => p.speed));
   const stopNote = stops.length ? ` · 정박 ${stops.length}건(${stops.map(s => Math.round(s.durMin)).join(',')}분)` : '';
-  _aisSetStatus(`${_AIS_VESSELS[key].label} · ${labelStr} · ${pts.length}포인트 · 최고 ${maxSpd.toFixed(1)} knot${stopNote}${extraNote ? ' · ' + extraNote : ''}`);
+  const snapNote = snapCount ? ` · 🧭보간 ${snapCount}구간` : '';
+  _aisSetStatus(`${_AIS_VESSELS[key].label} · ${labelStr} · ${pts.length}포인트 · 최고 ${maxSpd.toFixed(1)} knot${stopNote}${snapNote}${extraNote ? ' · ' + extraNote : ''}`);
 
   // 이 구간의 속도 변화 그래프(정적) — 재생 중에는 _playAisPoints가 재생 위치를 얹어 다시 그린다.
   _aisDrawSpeedChart(pts, null);
@@ -6961,7 +7066,7 @@ function _renderAisPeriod(key, prefix) {
   const data = _aisCache[key]; if (!data) return;
   const days = _aisAllDays(key).filter(d => d.startsWith(prefix || ''));
   const scopeLabel = prefix || '전체 기간';
-  if (!days.length) { _aisSetStatus(scopeLabel + ': 조건에 맞는 데이터 없음'); return; }
+  if (!days.length) { _aisSetStatus(scopeLabel + ': 조건에 맞는 날짜가 없습니다' + _aisEmptyReason(key)); return; }
   const g = L.layerGroup();
   let totalPts = 0;
   // 수천 개 선을 SVG로 그리면 브라우저가 버거우므로 집계 뷰는 캔버스로 렌더링한다
@@ -7045,6 +7150,23 @@ function onAisRangeChange() {
 }
 
 // ── 타임라인 아이템 생성 ──
+// 필터를 걸어 결과가 0일이 됐을 때, 어느 조건이 얼마나 걸러냈는지 알려준다.
+// (조합에 따라 실제로 0일이 나오는 경우가 있어 화면이 비면 원인을 알기 어려웠다)
+function _aisEmptyReason(key) {
+  const d = _aisCache[key];
+  if (!d || !d.dayQuality) return "";
+  const base = _aisFilterDates(d.dates);
+  const cnt = fn => base.filter(fn).length;
+  const parts = [];
+  if (_aisCallFilter !== "all") {
+    const short = _aisCallFilter.replace(/(국제여객터미널|국제터미널|여객선터미널|항)$/, "");
+    parts.push("⚓" + short + " 기항 " + cnt(x => (d.dayQuality[x].calls || []).some(c => c.name === _aisCallFilter)) + "일");
+  }
+  if (_aisRefOnly) parts.push("★기준일 " + cnt(x => d.dayQuality[x].isRef) + "일");
+  if (_aisNormalOnly) parts.push("정상 항로 " + cnt(x => d.dayQuality[x].isNormal) + "일");
+  return parts.length ? " — 조건별 단독 적용 시: " + parts.join(" / ") + " (조합하면 0일)" : "";
+}
+
 // ── 계층별 목록 ──
 // 일자 목록에만 '정상 항로만'·'★기준일만' 필터가 걸리고, 년·월 목록은 그 결과를 접어 만든다.
 function _aisAllDays(key) {
@@ -7246,7 +7368,7 @@ function _aisTlApply() {
   } else if (_aisViewLevel === 'year' && _aisSelYear) {
     _renderAisPeriod(key, _aisSelYear); hideSub();
   } else {
-    _clearAisLayer(); _aisSetStatus('선택한 기간에 데이터가 없습니다');
+    _clearAisLayer(); _aisSetStatus('선택한 조건에 맞는 날짜가 없습니다' + _aisEmptyReason(key));
     hideSub();
     if (chartRow) chartRow.style.display = 'none';
   }
@@ -7316,6 +7438,12 @@ function onAisNormalOnlyChange() {
   const key = document.getElementById('aisVesselSel').value;
   if (!_aisCache[key]) return;
   _aisTbRenderTl(key);
+  _aisTlApply();
+}
+
+// '🧭 항로 보간' 체크박스
+function onAisSnapChange() {
+  _aisSnapOn = document.getElementById('aisSnapOn').checked;
   _aisTlApply();
 }
 
