@@ -6402,6 +6402,12 @@ function _aisArrowIcon(hdg, color) {
 
 function _clearAisLayer() {
   if (_aisLayerGroup.g) { map.removeLayer(_aisLayerGroup.g); _aisLayerGroup.g = null; }
+  // 집계 뷰를 벗어나면 마우스 핸들러와 인덱스를 반드시 놓아준다 (안 그러면 계속 계산한다)
+  if (_aisAgg) {
+    map.off('mousemove', _aisAggOnMove).off('click', _aisAggOnClick);
+    if (_aisAgg.tip) map.closeTooltip(_aisAgg.tip);
+    _aisAgg = null;
+  }
 }
 
 // 실제 "이동거리" 기준으로 인덱스를 고르게 골라준다 — 포인트 개수 기준으로 고르면
@@ -7054,6 +7060,81 @@ function _renderAisHour(key, hourKey) {
 }
 
 // ── 기간(월·연도) 전체 렌더링 ──
+// ── 집계 뷰 마우스 처리 ──
+// 선마다 이벤트를 달면 Leaflet 캔버스 렌더러가 mousemove마다 모든 선을 순회하며
+// 좌표 포함 여부를 계산한다(카멜리아 전체 = 4,334개). 그래서 지도를 끌 때 버벅였다.
+// 대신 선은 전부 비대화형으로 그리고, 격자 인덱스로 커서 주변 후보만 검사한다.
+const AIS_AGG_CELL = 0.02;   // 인덱스 격자 ≈ 2km
+const AIS_AGG_HIT_PX = 12;   // 이 픽셀 안에 들어오면 그 항적으로 본다
+let _aisAgg = null;          // { grid:Map, days:[{day,pts,q}], hi, tip, key }
+let _aisAggLastMove = 0;
+
+function _aisAggCellKey(lat, lon) {
+  return Math.round(lat / AIS_AGG_CELL) + ',' + Math.round(lon / AIS_AGG_CELL);
+}
+
+// 커서에서 가장 가까운 항적(하루)을 찾는다 — 주변 9개 격자의 후보만 검사한다
+function _aisAggPick(latlng) {
+  if (!_aisAgg) return null;
+  const ci = Math.round(latlng.lat / AIS_AGG_CELL), cj = Math.round(latlng.lng / AIS_AGG_CELL);
+  const cand = new Set();
+  for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) {
+    const list = _aisAgg.grid.get((ci + a) + ',' + (cj + b));
+    if (list) list.forEach(x => cand.add(x));
+  }
+  if (!cand.size) return null;
+  const cur = map.latLngToLayerPoint(latlng);
+  let best = null;
+  cand.forEach(di => {
+    const d = _aisAgg.days[di];
+    for (let i = 1; i < d.pts.length; i++) {
+      const p1 = map.latLngToLayerPoint(L.latLng(d.pts[i - 1][0], d.pts[i - 1][1]));
+      const p2 = map.latLngToLayerPoint(L.latLng(d.pts[i][0], d.pts[i][1]));
+      const dx = p2.x - p1.x, dy = p2.y - p1.y;
+      const len2 = dx * dx + dy * dy;
+      let t = len2 ? ((cur.x - p1.x) * dx + (cur.y - p1.y) * dy) / len2 : 0;
+      t = Math.max(0, Math.min(1, t));
+      const dist = Math.hypot(cur.x - (p1.x + dx * t), cur.y - (p1.y + dy * t));
+      if (!best || dist < best.dist) best = { dist, di };
+    }
+  });
+  return best && best.dist <= AIS_AGG_HIT_PX ? _aisAgg.days[best.di] : null;
+}
+
+const AIS_AGG_HOVER_MAX_DAYS = 400; // 이보다 많으면 hover 식별을 끈다(겹쳐 있어 의미도 적고 무겁다)
+function _aisAggOnMove(e) {
+  if (!_aisAgg || _aisAgg.days.length > AIS_AGG_HOVER_MAX_DAYS) return;
+  if (map.dragging && map.dragging.moving()) return; // 지도를 끄는 중에는 계산하지 않는다
+  const now = Date.now();
+  if (now - _aisAggLastMove < 50) return;            // 초당 20회로 제한
+  _aisAggLastMove = now;
+  const hit = _aisAggPick(e.latlng);
+  if (!hit) {
+    if (_aisAgg.hi) _aisAgg.hi.setLatLngs([]);
+    if (_aisAgg.tip) map.closeTooltip(_aisAgg.tip);
+    return;
+  }
+  _aisAgg.hi.setLatLngs(hit.pts.map(p => [p[0], p[1]]));
+  _aisAgg.tip.setLatLng(e.latlng).setContent(hit.day + (hit.q.isRef ? ' ★' : ''));
+  map.openTooltip(_aisAgg.tip);
+}
+
+function _aisAggOnClick(e) {
+  const hit = _aisAggPick(e.latlng);
+  if (!hit) return;
+  const q = hit.q;
+  const callTxt = (q.calls || []).length
+    ? '<br>⚓ ' + q.calls.map(c => c.name.replace(/(국제여객터미널|국제터미널|여객선터미널|항)$/, '') + ' ' + Math.round(c.durMin) + '분').join(', ')
+    : '';
+  L.popup({ className: 'custom-popup', maxWidth: 260 })
+    .setLatLng(e.latlng)
+    .setContent(
+      `<b>${_AIS_VESSELS[_aisAgg.key].label}</b> · ${hit.day}${q.isRef ? ' <span style="color:#ffd75e">★기준일</span>' : ''}<br>` +
+      `${q.origin || ''} · ${(q.totalDist || 0).toFixed(0)}km${callTxt}<br>` +
+      `<a href="#" onclick="_aisPickDay('${hit.day}');return false;" style="color:#7ecfff">▶ 이 날짜만 자세히 보기</a>`)
+    .openOn(map);
+}
+
 // ── 기간 집계 렌더링 (월·연도·전체) ──
 // 하루를 폴리라인 하나로 그린다. 예전에는 구간마다 하나씩 그려서(카멜리아 전체 = 29만 개)
 // 연도·전체 보기가 사실상 불가능했다. 하루 1개면 전체 기간도 수천 개 수준이라 열린다.
@@ -7069,67 +7150,91 @@ function _renderAisPeriod(key, prefix) {
   if (!days.length) { _aisSetStatus(scopeLabel + ': 조건에 맞는 날짜가 없습니다' + _aisEmptyReason(key)); return; }
   const g = L.layerGroup();
   let totalPts = 0;
-  // 수천 개 선을 SVG로 그리면 브라우저가 버거우므로 집계 뷰는 캔버스로 렌더링한다
-  // (마우스 hover·클릭 이벤트는 캔버스에서도 그대로 동작한다).
+  // 수천 개 선을 SVG로 그리면 브라우저가 버거우므로 집계 뷰는 캔버스로 렌더링한다.
   const renderer = L.canvas({ padding: 0.5 });
+  const grid = new Map(), idxDays = [];
   // 색은 항상 지도 범례와 같은 속도색(_aisSpeedColor)을 쓴다.
   // 날짜 수가 적으면 같은 속도대끼리 묶어 여러 조각으로 그려 실제 속도 변화를 그대로 보여주고,
   // 아주 많으면(전체 기간 등) 하루를 한 선으로 그리되 그 날의 순항속도(상위 25%) 색으로 칠한다.
+  // ── 그리는 방식 ──
+  // 하루에 폴리라인 하나씩 만들면 레이어가 수천 개가 되고, 캔버스는 pan이 끝날 때마다
+  // 등록된 레이어를 전부 재투영·재그리기 하므로 지도를 끌 때 눈에 띄게 버벅인다.
+  // 그래서 같은 색끼리 하나의 멀티 폴리라인으로 합쳐 레이어 수를 색 개수(최대 4개)로 줄인다.
+  // 날짜가 많을 때는 점도 하루 20개로 솎아낸다 (축소된 지도에서는 형태 차이가 없다).
   const detailed = days.length <= 400;
+  const MAX_PTS_PER_DAY = 20;
   const dayCruiseColor = pts => {
     const sp = pts.map(p => p.speed).filter(v => v > 0.5).sort((a, b) => a - b);
     return _aisSpeedColor(sp.length ? sp[Math.floor(sp.length * 0.75)] : 0);
   };
+  const buckets = new Map(); // "색|굵기|투명도" -> [[latlng...], ...]
+  const bucketPush = (color, wt, op, line) => {
+    const k = color + '|' + wt + '|' + op;
+    if (!buckets.has(k)) buckets.set(k, { color, wt, op, lines: [] });
+    buckets.get(k).lines.push(line);
+  };
   days.forEach(day => {
-    const pts = data.index[day]; if (!pts || pts.length < 2) return;
+    const pts = data.index[day];
+    if (!pts || pts.length < 2) return;
     totalPts += pts.length;
     const q = data.dayQuality[day] || {};
-    const color = dayCruiseColor(pts);
     const wt = q.isRef ? 3 : 2, op = q.isRef ? 0.75 : 0.45;
+
     if (detailed) {
-      // 같은 속도대가 이어지는 구간끼리 묶어서 그린다 (구간마다 그리면 수가 폭발하므로)
+      // 같은 속도대가 이어지는 구간끼리 묶어 색을 살린다
       let runStart = 0;
       for (let i = 1; i <= pts.length; i++) {
         const endOfRun = i === pts.length
           || _aisSpeedColor(pts[i].speed) !== _aisSpeedColor(pts[runStart].speed);
         if (!endOfRun) continue;
         const seg = pts.slice(runStart, Math.min(i + 1, pts.length));
-        if (seg.length >= 2) {
-          L.polyline(seg.map(p => [p.lat, p.lon]), {
-            color: _aisSpeedColor(pts[runStart].speed), weight: wt, opacity: op,
-            smoothFactor: 2, renderer, interactive: false
-          }).addTo(g);
-        }
+        if (seg.length >= 2) bucketPush(_aisSpeedColor(pts[runStart].speed), wt, op, seg.map(p => [p.lat, p.lon]));
         runStart = i;
       }
+    } else {
+      // 날짜가 많으면 하루를 한 선으로, 점도 솎아서 그린다
+      const step = Math.ceil(pts.length / MAX_PTS_PER_DAY);
+      const thin = step > 1 ? pts.filter((_, i) => i % step === 0 || i === pts.length - 1) : pts;
+      bucketPush(dayCruiseColor(pts), wt, op, thin.map(p => [p.lat, p.lon]));
     }
-    // 클릭·hover 대상 선 — 상세 모드에서는 위 색 조각들 위에 투명하게 얹고,
-    // 대량 모드에서는 이 선 자체가 그 날의 순항속도 색으로 보인다.
-    const line = L.polyline(pts.map(p => [p.lat, p.lon]), {
-      color, weight: detailed ? 6 : wt, opacity: detailed ? 0 : op,
-      smoothFactor: 2, renderer
+
+    // 마우스로 날짜를 짚기 위한 격자 인덱스 (원본 좌표 기준)
+    const di = idxDays.length;
+    const latlngs = pts.map(p => [p.lat, p.lon]);
+    idxDays.push({ day, pts: latlngs, q });
+    const seen = new Set();
+    latlngs.forEach(p => {
+      const k = _aisAggCellKey(p[0], p[1]);
+      if (seen.has(k)) return;
+      seen.add(k);
+      if (!grid.has(k)) grid.set(k, []);
+      grid.get(k).push(di);
     });
-    const callTxt = (q.calls || []).length
-      ? '<br>⚓ ' + q.calls.map(c => c.name.replace(/(국제여객터미널|국제터미널|여객선터미널|항)$/, '') + ' ' + Math.round(c.durMin) + '분').join(', ')
-      : '';
-    line.bindTooltip(`${day}${q.isRef ? ' ★' : ''}`, { sticky: true, className: 'ais-poi-label' });
-    line.bindPopup(
-      `<b>${_AIS_VESSELS[key].label}</b> · ${day}${q.isRef ? ' <span style="color:#ffd75e">★기준일</span>' : ''}<br>` +
-      `${q.origin || ''} · ${(q.totalDist || 0).toFixed(0)}km${callTxt}<br>` +
-      `<a href="#" onclick="_aisPickDay('${day}');return false;" style="color:#7ecfff">▶ 이 날짜만 자세히 보기</a>`,
-      { className: 'custom-popup', maxWidth: 260 }
-    );
-    // hover 강조 — 겹쳐 그려진 항적 중 어느 것을 가리키는지 눈으로 구분되게
-    line.on('mouseover', () => { line.setStyle({ color: '#ffffff', weight: 4, opacity: 1 }); line.bringToFront(); });
-    line.on('mouseout',  () => { line.setStyle({ color, weight: detailed ? 6 : wt, opacity: detailed ? 0 : op }); });
-    line.addTo(g);
   });
+  // 색깔별로 딱 한 겹씩만 그린다
+  buckets.forEach(b => {
+    L.polyline(b.lines, {
+      color: b.color, weight: b.wt, opacity: b.op,
+      smoothFactor: detailed ? 2 : 4, renderer, interactive: false
+    }).addTo(g);
+  });
+
+  // 강조선·툴팁은 하나만 만들어 재사용한다 (선마다 만들면 그게 다시 부하가 된다)
+  const hi = L.polyline([], { color: '#ffffff', weight: 4, opacity: 1, interactive: false }).addTo(g);
+  const tip = L.tooltip({ sticky: true, className: 'ais-poi-label' });
+  _aisAgg = { grid, days: idxDays, hi, tip, key };
+  map.off('mousemove', _aisAggOnMove).on('mousemove', _aisAggOnMove);
+  map.off('click', _aisAggOnClick).on('click', _aisAggOnClick);
+
   g.addTo(map);
   _aisLayerGroup.g = g;
   const refN = days.filter(d => data.dayQuality[d] && data.dayQuality[d].isRef).length;
   const colorNote = detailed ? '구간별 속도색' : '하루 순항속도색';
+  const hoverNote = days.length > AIS_AGG_HOVER_MAX_DAYS
+    ? ' · 날짜 식별은 클릭(hover는 날짜가 많아 꺼짐)'
+    : ' · 선에 마우스를 올리면 날짜';
   const heavy = days.length > 1500 ? ' · 많아서 느리면 필터로 좁히세요' : '';
-  _aisSetStatus(`${_AIS_VESSELS[key].label} · ${scopeLabel} · ${days.length}일(★${refN}) · ${totalPts}포인트 · ${colorNote} · 선에 마우스를 올리면 날짜 표시${heavy}`);
+  _aisSetStatus(`${_AIS_VESSELS[key].label} · ${scopeLabel} · ${days.length}일(★${refN}) · ${totalPts}포인트 · ${colorNote}${hoverNote}${heavy}`);
 }
 
 // ── 캘린더로 지정한 조회 기간(_aisRangeFrom~_aisRangeTo) 필터 ──
