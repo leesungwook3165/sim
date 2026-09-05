@@ -1074,6 +1074,7 @@
     .ais-tb-subunit.sel { background: rgba(255,80,220,0.25); color: #ffaaee; }
     .ais-tb-subunit.ais-tb-leg { color: #ffcc66; font-weight: 700; }
     .ais-tb-subunit.ais-tb-leg.sel { background: rgba(255,190,60,0.25); color: #ffdd99; }
+    .ais-corr-raw { color: #b98cf0; font-weight: 600; margin-left: 3px; }
     .ais-tb-daysum {
       flex-shrink: 0; font-size: 10px; color: #9fd8ff; font-weight: 700;
       white-space: nowrap; padding: 0 4px; font-variant-numeric: tabular-nums;
@@ -7329,9 +7330,10 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
       dashArray: corr ? null : (isBack ? '5 7' : null), interactive: false
     }).addTo(g);
 
-    const segKm = _simDist([a.lat, a.lon], [b.lat, b.lon]);
+    const segRawKm = _simDist([a.lat, a.lon], [b.lat, b.lon]);
+    const segKm = corr ? _routeLen(corr.path) : segRawKm; // 보정했으면 그 경로 길이
     const segMin = (new Date(b.ts) - new Date(a.ts)) / 60000;
-    const avgKts = segMin > 0 ? (segKm / 1.852) / (segMin / 60) : 0;
+    const avgKts = _aisAvgKts(segKm, segMin);
     const nearPort = _nearestPortName(b.lat, b.lon, AIS_CALL_BUFFER_KM);
     const hit = L.polyline(latlngs, { color: '#000', weight: 14, opacity: 0, interactive: true });
     if (_aisCorrEdit) {
@@ -7343,7 +7345,9 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
         `<b>${_AIS_VESSELS[key].label}</b>${isBack ? ' <span style="color:#ffaa66">· 복항편</span>' : ''}<br>` +
         `${_aisFmtClock(a.ts)} → ${_aisFmtClock(b.ts)} KST (${segMin.toFixed(0)}분)<br>` +
         `속도 <b>${a.speed.toFixed(1)} → ${b.speed.toFixed(1)} knot</b> · 방향 ${b.course.toFixed(0)}°<br>` +
-        `구간 ${segKm.toFixed(1)}km · 구간평균 ${avgKts.toFixed(1)} knot` +
+        `구간 ${segKm.toFixed(1)}km` +
+        (corr ? ` <span style="color:#c07bff">(✏보정 · 원본 ${segRawKm.toFixed(1)}km)</span>` : '') +
+        ` · 구간평균 ${avgKts.toFixed(1)} knot` +
         (corr ? `<br><span style="color:#c07bff">✏ 수동 보정됨 — ${corr.routeName}` +
                 `<br>원본 ${corr.srcDate} ${_aisFmtClock(corr.srcFromTs)}→${_aisFmtClock(corr.srcToTs)}` +
                 ` (직선 ${corr.srcKm.toFixed(1)}km → 보정 ${corr.corrKm.toFixed(1)}km)` +
@@ -7932,15 +7936,57 @@ function _aisVoyageTimes(pts, terminals) {
   return out;
 }
 
+// ── 보정을 반영한 거리 ──
+// 원본은 그대로 두고 보정분만 따로 저장하므로, 거리도 두 가지가 존재한다.
+//  · 원본 거리 — AIS 두 점을 직선으로 이은 길이 (통계·기준일 판정의 기준)
+//  · 보정 거리 — 손으로 고친 구간은 그 경로 길이를 쓴 길이 (실제로 지나간 길에 가깝다)
+// 화면에는 둘 다 보여준다. 보정이 없는 구간·날은 두 값이 같다.
+function _aisSegKm(key, a, b) {
+  const corr = _aisCorrGet(key, a.ts.slice(0, 10), a.ts);
+  if (corr && corr.path && corr.path.length >= 2) return { km: _routeLen(corr.path), corrected: true };
+  return { km: _simDist([a.lat, a.lon], [b.lat, b.lon]), corrected: false };
+}
+
+function _aisRangeKm(key, pts, from, to) {
+  const i0 = (from || 0) + 1, i1 = (to == null ? pts.length - 1 : to);
+  let rawKm = 0, corrKm = 0, nCorr = 0;
+  for (let i = i0; i <= i1; i++) {
+    const a = pts[i - 1], b = pts[i];
+    rawKm += _simDist([a.lat, a.lon], [b.lat, b.lon]);
+    const seg = _aisSegKm(key, a, b);
+    corrKm += seg.km;
+    if (seg.corrected) nCorr++;
+  }
+  return { rawKm, corrKm, nCorr };
+}
+
+// 거리(km)와 걸린 시간(분)으로 평균 속력(knot)을 낸다
+function _aisAvgKts(km, min) { return min > 0 ? (km / 1.852) / (min / 60) : 0; }
+
 function _aisDaySummary(key, dateStr) {
   const data = _aisCache[key];
   const pts = data && data.index[dateStr];
   if (!pts || pts.length < 2) return null;
   const q = data.dayQuality[dateStr] || {};
   const v = _aisVoyageTimes(pts, data.terminals);
-  return Object.assign({
-    totalKm: q.totalDist || 0, onewayKm: q.onewayDist || 0, isRound: !!q.isRound
+  const km = _aisRangeKm(key, pts);
+  const out = Object.assign({
+    rawTotalKm: km.rawKm, totalKm: km.corrKm,
+    rawOnewayKm: q.onewayDist || 0, onewayKm: q.onewayDist || 0,
+    nCorr: km.nCorr, isRound: !!q.isRound
   }, v);
+  // 왕복이면 출항편·복항편 거리도 보정을 반영해 따로 낸다
+  if (v.turnIdx != null) {
+    const outKm = _aisRangeKm(key, pts, 0, v.turnIdx);
+    const backKm = _aisRangeKm(key, pts, v.turnIdx);
+    out.outKm = outKm.corrKm; out.rawOutKm = outKm.rawKm;
+    out.backKm = backKm.corrKm; out.rawBackKm = backKm.rawKm;
+    out.onewayKm = outKm.corrKm; // 편도 기준은 출항편 거리
+  }
+  // 걸린 시간은 실측 그대로다. 길이 늘어난 만큼 평균 속력이 올라간다.
+  out.avgKts = _aisAvgKts(out.totalKm, out.sailMin);
+  out.rawAvgKts = _aisAvgKts(out.rawTotalKm, out.sailMin);
+  return out;
 }
 
 // ── 선택한 날짜의 구간·시간대 세부 행 ('일' 탭에서 날짜를 고르면 자동으로 나타남) ──
@@ -7959,13 +8005,20 @@ function _aisRenderSubHours(key, dateStr) {
   const sum = _aisDaySummary(key, dateStr);
   let sumHtml = '';
   if (sum) {
-    const parts = ['📏 ' + sum.totalKm.toFixed(0) + 'km'];
+    // 보정한 구간이 있으면 보정 거리를 앞에 두고 원본을 함께 적는다
+    const parts = [sum.nCorr
+      ? '📏 ' + sum.totalKm.toFixed(0) + 'km <span class="ais-corr-raw">(원본 ' +
+        sum.rawTotalKm.toFixed(0) + 'km · ✏' + sum.nCorr + '구간)</span>'
+      : '📏 ' + sum.totalKm.toFixed(0) + 'km'];
+    if (sum.sailMin > 0) parts.push('평균 ' + sum.avgKts.toFixed(1) + 'kt');
     if (sum.startPort) {
       parts.push('⚓ ' + sum.startPort + (sum.turnPort ? ' → ' + sum.turnPort : '') +
                  (sum.isRound ? ' 왕복' : (sum.endPort ? ' → ' + sum.endPort : '')));
     }
     if (sum.isRound && sum.outMin != null) {
-      parts.push('편도 ' + sum.onewayKm.toFixed(0) + 'km');
+      parts.push('편도 ' + sum.onewayKm.toFixed(0) + 'km' +
+        (sum.rawOutKm && Math.abs(sum.onewayKm - sum.rawOutKm) >= 0.5
+          ? '<span class="ais-corr-raw">(원본 ' + sum.rawOutKm.toFixed(0) + ')</span>' : ''));
       parts.push('🕐 출항편 ' + _simDurLabel(sum.outMin) + ' / 복항편 ' + _simDurLabel(sum.backMin));
       if (sum.turnStopMin > 0) parts.push('회항정박 ' + _simDurLabel(sum.turnStopMin));
       parts.push('항해합계 ' + _simDurLabel(sum.sailMin));
