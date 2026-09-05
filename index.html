@@ -6528,6 +6528,15 @@ const AIS_DIST_TOLERANCE_LO = 0.6; // 기대 편도거리 대비 이 비율 미�
 const AIS_DIST_TOLERANCE_HI = 1.6; // 기대 편도거리 대비 이 비율 초과면 "너무 김"
 const AIS_PORT_BUFFER_KM    = 15;  // 출발/도착 지점이 터미널에서 이 거리(km) 버퍼 이내여야 정상 항로로 인정
 const AIS_MIN_MOVING_KM     = 20;  // 이보다 적게 움직인 날은 "운항하지 않은 날"로 보고 기대거리 산정에서 제외
+// 실제 항해시간은 늘 이론값(거리÷순항속도)보다 길다 — 출입항 저속·감속 구간 때문이다.
+// 세 선박 모두 깨끗한 날의 배율이 1.3~1.4대로 모이는데, 이건 선박 특성이 아니라
+// "항해 중 저속 구간의 비중"이라는 물리적 성질이라 그렇다.
+// 반면 오염(정박이 항해시간에 섞임, AIS 공백)은 시간을 늘리기만 하고 줄이지 않는다.
+// 그래서 중앙값이 아니라 분포의 아래쪽(하위 10%)을 그 선박의 "깨끗한 리듬"으로 삼고,
+// 거기서 크게 벗어나지 않는 날만 ★기준일로 인정한다.
+const AIS_REF_MIN_DAYS = 5;                         // 기대거리를 기준일로 정하려면 최소 이만큼은 있어야 한다
+const AIS_TIME_BASE_Q = 0.10;                       // 기준 배율로 쓸 분위수
+const AIS_TIME_DEV_LO = 0.85, AIS_TIME_DEV_HI = 1.20; // 기준 배율 대비 허용 범위
 const AIS_TERMINAL_CLUSTER_KM = 12; // 시작·끝 지점을 이 거리 이내면 같은 터미널로 묶음
 const AIS_TERMINAL_MIN_HITS   = 3;  // 최소 이 횟수 이상 반복 등장해야 터미널로 인정
 
@@ -6577,7 +6586,13 @@ function _aisSplitLegs(pts) {
   });
   // 회항점이 양 끝에 붙어 있거나 거의 움직이지 않은 날은 왕복으로 보지 않음
   if (turnIdx < 2 || turnIdx > pts.length - 3 || farDist < AIS_MIN_MOVING_KM) return null;
-  return { turnIdx, farDist, out: pts.slice(0, turnIdx + 1), back: pts.slice(turnIdx) };
+  // 편도거리는 "총거리÷2"가 아니라 회항 지점까지 실제로 그린 항적 길이로 잡는다.
+  // 하루에 왕복을 두 번 이상 한 날(비틀호)에서도 편도값이 부풀지 않는다.
+  let outKm = 0;
+  for (let i = 1; i <= turnIdx; i++) {
+    outKm += _simDist([pts[i - 1].lat, pts[i - 1].lon], [pts[i].lat, pts[i].lon]);
+  }
+  return { turnIdx, farDist, outKm, out: pts.slice(0, turnIdx + 1), back: pts.slice(turnIdx) };
 }
 
 function _aisTerminalLabel(t) {
@@ -6673,23 +6688,51 @@ function _aisAnalyzeVessel(key, data) {
     const isRound = !!(startT && endT && _simDist([startT.lat, startT.lon], [endT.lat, endT.lon]) <= AIS_PORT_BUFFER_KM);
     const ramps = _aisCountRamps(pts, cruise);
     const calls = _aisPortCalls(pts);
-    // ★기준일 — 항구 출입 가속·감속이 왕복 양쪽 모두 온전히 기록된 날.
-    // 거리 조건을 넣지 않는다(기대거리를 이 날들로부터 산출하므로 순환 참조 방지).
-    const isRef = !!(isRound && startT && endT && ramps.up >= 2 && ramps.down >= 2
+    // 항구 좌표 기준 실제 항해시간(정박 제외). 이걸로 "운항 타임라인이 맞는 날"을 가린다.
+    const voy = _aisVoyageTimes(pts, terminals);
+    // 그 날 이동거리를 순항속도로 달렸을 때의 이론 소요시간과 비교한다.
+    // 정박이 시간에 섞였거나 AIS 공백으로 늘어진 날은 비율이 커져 걸러진다.
+    const idealMin = cruise > 0 ? (stats.totalDist / (cruise * 1.852)) * 60 : null;
+    const timeRatio = (idealMin && voy.sailMin > 0) ? voy.sailMin / idealMin : null;
+    // 형태 조건 — 왕복이고 양쪽 항구 출입 가속·감속이 온전히 기록된 날.
+    // 거리 조건은 넣지 않는다(기대거리를 이 날들로부터 산출하므로 순환 참조 방지).
+    const shapeOk = !!(isRound && startT && endT && ramps.up >= 2 && ramps.down >= 2
       && stats.n >= AIS_MIN_POINTS_NORMAL && stats.maxJumpKts <= AIS_MAX_PLAUSIBLE_KTS);
-    pre[d] = { stats, startT, endT, isRound, ramps, isRef, calls,
-               onewayDist: isRound ? stats.totalDist / 2 : stats.totalDist };
+    const legs = _aisSplitLegs(pts);
+    pre[d] = { stats, startT, endT, isRound, ramps, shapeOk, isRef: false, calls, voy, timeRatio,
+               onewayDist: (isRound && legs && legs.outKm > 0) ? legs.outKm
+                         : (isRound ? stats.totalDist / 2 : stats.totalDist) };
   });
 
-  // 2차: 기대 편도거리는 ★기준일들의 중앙값으로 잡는다 (기준일이 없으면 운항일 전체 중앙값)
+  // 2차: ★기준일 = 형태 조건을 통과하면서, 실제 운항 타임라인이 그 선박의 통상 리듬과 같은 날.
+  // 정박이 시간에 섞였거나 AIS 공백으로 늘어진 날은 배율이 커져 여기서 걸러진다.
+  // 회항 정박이 실제로 잡힌 날만 기준으로 삼는다 — 정박을 못 가르면
+  // 출항편/복항편 소요시간을 나눌 수 없고, 기준일은 바로 그 값을 쓰기 때문이다.
+  const cand = Object.values(pre)
+    .filter(x => x.shapeOk && x.timeRatio != null && x.voy.turnStopMin > 0)
+    .map(x => x.timeRatio).sort((a, b) => a - b);
+  const baseRatio = cand.length ? cand[Math.floor(cand.length * AIS_TIME_BASE_Q)] : null;
+  Object.values(pre).forEach(x => {
+    x.isRef = !!(x.shapeOk && baseRatio != null && x.timeRatio != null && x.voy.turnStopMin > 0
+      && x.timeRatio >= baseRatio * AIS_TIME_DEV_LO
+      && x.timeRatio <= baseRatio * AIS_TIME_DEV_HI);
+  });
+
+  // 3차: 기대 편도거리는 ★기준일들의 중앙값으로 잡는다 (기준일이 없으면 운항일 전체 중앙값)
+  // 기준일이 몇 건 안 되면 그 중앙값은 우연에 좌우된다(짧은 구간 하루가 기대거리 전체를
+  // 끌어내리는 식). 그럴 땐 운항일 전체 중앙값을 쓴다.
   const refDists = Object.values(pre).filter(x => x.isRef).map(x => x.onewayDist).sort((a, b) => a - b);
-  const moving = Object.values(pre).map(x => x.onewayDist).filter(x => x > AIS_MIN_MOVING_KM).sort((a, b) => a - b);
-  const expected = refDists.length ? refDists[Math.floor(refDists.length / 2)]
+  // 대체값도 왕복이 확인된 날에서만 뽑는다 — 편도 아닌 날의 하루 총거리가 섞이면 부풀어 오른다.
+  const roundOnly = Object.values(pre).filter(x => x.isRound).map(x => x.onewayDist)
+                          .filter(x => x > AIS_MIN_MOVING_KM).sort((a, b) => a - b);
+  const allMoving = Object.values(pre).map(x => x.onewayDist).filter(x => x > AIS_MIN_MOVING_KM).sort((a, b) => a - b);
+  const moving = roundOnly.length >= AIS_REF_MIN_DAYS ? roundOnly : allMoving;
+  const expected = refDists.length >= AIS_REF_MIN_DAYS ? refDists[Math.floor(refDists.length / 2)]
                  : (moving.length ? moving[Math.floor(moving.length / 2)] : null);
 
   const dayQuality = {};
   data.dates.forEach(d => {
-    const { stats, startT, endT, isRound, onewayDist, ramps, isRef, calls } = pre[d];
+    const { stats, startT, endT, isRound, onewayDist, ramps, isRef, calls, voy, timeRatio } = pre[d];
     const reasons = [];
     if (stats.n < AIS_MIN_POINTS_NORMAL) reasons.push('포인트 부족');
     if (stats.maxJumpKts > AIS_MAX_PLAUSIBLE_KTS) reasons.push('비정상 순간이동(GPS 공백 의심)');
@@ -6706,7 +6749,9 @@ function _aisAnalyzeVessel(key, data) {
       : (data.index[d][0].lon < 129.3 ? '부산 인근발' : '일본 인근발');
     dayQuality[d] = Object.assign(
       { isNormal: reasons.length === 0, reasons, isRound, onewayDist, origin, ramps, isRef, calls,
-        startPort: startLabel, endPort: endLabel },
+        startPort: startLabel, endPort: endLabel,
+        sailMin: voy.sailMin, dockMin: voy.turnStopMin || 0, timeRatio,
+        departTs: voy.departTs, arriveTs: voy.arriveTs },
       stats
     );
   });
@@ -6717,6 +6762,7 @@ function _aisAnalyzeVessel(key, data) {
   data.dates.forEach(d => (dayQuality[d].calls || []).forEach(c => { callTally[c.name] = (callTally[c.name] || 0) + 1; }));
   data.callPorts = Object.entries(callTally).sort((a, b) => b[1] - a[1]).map(([name, days]) => ({ name, days }));
   data.expectedDist = expected;
+  data.timeRatioBase = baseRatio; // 그 선박의 깨끗한 항해시간 배율(이론 대비)
   data.refDays = data.dates.filter(d => dayQuality[d].isRef);
   // 기준일들에서 뽑은 편도·왕복 기준값 (거리 판정과 화면 표시에 함께 쓴다)
   const refRound = data.refDays.map(d => dayQuality[d].totalDist).sort((a, b) => a - b);
@@ -7593,38 +7639,93 @@ function _aisPickDay(dt) {
 
 // 그 날의 이동거리와 편도·왕복 소요시간을 계산한다.
 // 왕복이면 회항 지점을 기준으로 출항편/복항편 시간을 나누고, 편도면 전체 시간을 쓴다.
+// ── 항구 좌표를 기준으로 그 날의 실제 출항·도착 시각을 잡는다 ──
+// 시간순 첫/마지막 정박을 쓰면 엉뚱한 정박(항로 중간 표류, 대기)을 집을 수 있고,
+// 최근접점만 쓰면 계류 중 마지막 핑(정박 중엔 핑 간격이 70분대)이라 정박시간이 섞인다.
+// 그래서 "그 항구에 가장 가까운 정박"을 항구 좌표로 고른 뒤, 그 정박의 끝(출항)·시작(도착)을 쓴다.
+// 정박이 안 잡히면 최근접점 시각으로 대체한다.
+const AIS_NEAR_BAND_KM = 0.4;
+
+function _aisStopAtPort(stops, port, tFrom, tTo) {
+  if (!port) return null;
+  let best = null, bd = Infinity;
+  stops.forEach(st => {
+    const sMs = new Date(st.startTs).getTime(), eMs = new Date(st.endTs).getTime();
+    if (tFrom != null && eMs < tFrom) return;
+    if (tTo != null && sMs > tTo) return;
+    const d = _simDist([st.lat, st.lon], [port.lat, port.lon]);
+    if (d <= AIS_PORT_BUFFER_KM && d < bd) { bd = d; best = st; }
+  });
+  return best;
+}
+
+function _aisNearestApproach(pts, port, from, to, which) {
+  if (!port) return null;
+  const dist = i => _simDist([pts[i].lat, pts[i].lon], [port.lat, port.lon]);
+  let minD = Infinity;
+  for (let i = from; i <= to; i++) { const d = dist(i); if (d < minD) minD = d; }
+  if (!isFinite(minD)) return null;
+  const band = minD + AIS_NEAR_BAND_KM;
+  let idx = -1;
+  for (let i = from; i <= to; i++) {
+    if (dist(i) <= band) { idx = i; if (which === 'arrive') break; }
+  }
+  return idx < 0 ? null : { idx, ts: pts[idx].ts, minKm: minD };
+}
+
+// 하루치 항적에서 출항·도착·회항 시각을 뽑는다. 정박시간은 항해시간에서 제외된다.
+function _aisVoyageTimes(pts, terminals) {
+  const ms = t => new Date(t).getTime();
+  const last = pts.length - 1;
+  const stops = _detectAisStops(pts);
+  const legs = _aisSplitLegs(pts);
+  const turnIdx = legs ? legs.turnIdx : null;
+  const near = p => _aisTerminalAt(terminals || [], p.lat, p.lon);
+  const startPort = near(pts[0]), endPort = near(pts[last]);
+  const turnPort = turnIdx != null ? near(pts[turnIdx]) : null;
+  const tTurn = turnIdx != null ? ms(pts[turnIdx].ts) : null;
+
+  // 출항 = 출발항 정박이 끝나는 시각 / 도착 = 도착항 정박이 시작되는 시각
+  const sStop = _aisStopAtPort(stops, startPort, null, tTurn);
+  const eStop = _aisStopAtPort(stops, endPort, tTurn, null);
+  const sNear = _aisNearestApproach(pts, startPort, 0, turnIdx != null ? turnIdx : last, 'depart');
+  const eNear = _aisNearestApproach(pts, endPort, turnIdx != null ? turnIdx : 0, last, 'arrive');
+  const departTs = sStop ? sStop.endTs   : (sNear ? sNear.ts : pts[0].ts);
+  const arriveTs = eStop ? eStop.startTs : (eNear ? eNear.ts : pts[last].ts);
+
+  const out = {
+    departTs, arriveTs, spanMin: (ms(arriveTs) - ms(departTs)) / 60000,
+    startPort: _aisTerminalLabel(startPort), endPort: _aisTerminalLabel(endPort),
+    departKm: sNear ? sNear.minKm : null, arriveKm: eNear ? eNear.minKm : null,
+    byStop: !!(sStop && eStop), isRound: !!legs, turnIdx
+  };
+  out.sailMin = out.spanMin;
+
+  if (legs) {
+    // 반대편 항구 — 도착(정박 시작) ~ 출발(정박 끝). 그 사이가 회항 정박시간.
+    const tStop = _aisStopAtPort(stops, turnPort, null, null);
+    const turnIn  = tStop ? ms(tStop.startTs) : ms(pts[turnIdx].ts);
+    const turnOut = tStop ? ms(tStop.endTs)   : ms(pts[turnIdx].ts);
+    out.turnPort = _aisTerminalLabel(turnPort);
+    out.turnInTs = new Date(turnIn).toISOString();
+    out.turnOutTs = new Date(turnOut).toISOString();
+    out.outMin  = (turnIn - ms(departTs)) / 60000;
+    out.backMin = (ms(arriveTs) - turnOut) / 60000;
+    out.turnStopMin = Math.max(0, (turnOut - turnIn) / 60000);
+    out.sailMin = out.outMin + out.backMin; // 정박 뺀 순수 항해시간
+  }
+  return out;
+}
+
 function _aisDaySummary(key, dateStr) {
   const data = _aisCache[key];
   const pts = data && data.index[dateStr];
   if (!pts || pts.length < 2) return null;
   const q = data.dayQuality[dateStr] || {};
-  const ms = t => new Date(t).getTime();
-  const legs = _aisSplitLegs(pts);
-  const stops = _detectAisStops(pts);
-  // 하루치 데이터는 대개 정박한 채로 시작해 정박한 채로 끝난다(00:00Z~23:59Z).
-  // 그래서 첫·마지막 핑을 그대로 쓰면 정박 시간이 항해 시간에 섞인다.
-  // 실제 "항해 시간"은 출항(첫 정박이 끝나는 시각)부터 도착(마지막 정박이 시작되는 시각)까지다.
-  const first = pts[0], last = pts[pts.length - 1];
-  const headStop = stops.find(st => Math.abs(ms(st.startTs) - ms(first.ts)) < 60000);
-  const tailStop = [...stops].reverse().find(st => Math.abs(ms(st.endTs) - ms(last.ts)) < 60000);
-  const departTs = headStop ? headStop.endTs : first.ts;   // 실제 출항 시각
-  const arriveTs = tailStop ? tailStop.startTs : last.ts;  // 실제 도착 시각
-  const out = {
-    totalKm: q.totalDist || 0, onewayKm: q.onewayDist || 0, isRound: !!q.isRound,
-    departTs, arriveTs, spanMin: (ms(arriveTs) - ms(departTs)) / 60000
-  };
-  if (legs) {
-    const turnPt = pts[legs.turnIdx];
-    // 회항 지점 부근의 정박 = 반대편 항구에서 머문 시간
-    const turnStop = stops.find(st => _simDist([st.lat, st.lon], [turnPt.lat, turnPt.lon]) <= AIS_PORT_BUFFER_KM);
-    const turnIn  = turnStop ? ms(turnStop.startTs) : ms(turnPt.ts);
-    const turnOut = turnStop ? ms(turnStop.endTs)   : ms(turnPt.ts);
-    out.outMin  = (turnIn - ms(departTs)) / 60000;   // 출항 → 반대편 도착
-    out.backMin = (ms(arriveTs) - turnOut) / 60000;  // 반대편 출발 → 복귀 도착
-    out.turnStopMin = turnStop ? turnStop.durMin : 0;
-    out.sailMin = out.outMin + out.backMin;          // 정박 뺀 순수 항해시간
-  }
-  return out;
+  const v = _aisVoyageTimes(pts, data.terminals);
+  return Object.assign({
+    totalKm: q.totalDist || 0, onewayKm: q.onewayDist || 0, isRound: !!q.isRound
+  }, v);
 }
 
 // ── 선택한 날짜의 구간·시간대 세부 행 ('일' 탭에서 날짜를 고르면 자동으로 나타남) ──
@@ -7644,6 +7745,10 @@ function _aisRenderSubHours(key, dateStr) {
   let sumHtml = '';
   if (sum) {
     const parts = ['📏 ' + sum.totalKm.toFixed(0) + 'km'];
+    if (sum.startPort) {
+      parts.push('⚓ ' + sum.startPort + (sum.turnPort ? ' → ' + sum.turnPort : '') +
+                 (sum.isRound ? ' 왕복' : (sum.endPort ? ' → ' + sum.endPort : '')));
+    }
     if (sum.isRound && sum.outMin != null) {
       parts.push('편도 ' + sum.onewayKm.toFixed(0) + 'km');
       parts.push('🕐 출항편 ' + _simDurLabel(sum.outMin) + ' / 복항편 ' + _simDurLabel(sum.backMin));
