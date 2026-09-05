@@ -1042,15 +1042,6 @@
     }
     .ais-tb-empty { font-size: 10px; color: #667788; padding: 0 10px; align-self: center; }
     .ais-tb-unit.refday { color: #ffd75e; font-weight: 700; }
-    .ais-tb-unit.bestday { box-shadow: inset 0 0 0 1px #7dffb0; }  /* 사람이 표시한 최적일 */
-    .ais-best-btn {
-      background: rgba(10,20,50,0.8); color: #9ff0c4;
-      border: 1px solid rgba(125,255,176,0.35); border-radius: 4px;
-      padding: 2px 6px; font-size: 10px; cursor: pointer; margin-left: 5px; white-space: nowrap;
-    }
-    .ais-best-btn:hover:not(:disabled) { border-color: rgba(125,255,176,0.8); color: #fff; }
-    .ais-best-btn.on { background: rgba(125,255,176,0.22); color: #fff; }
-    .ais-best-btn:disabled { opacity: 0.4; cursor: default; }
     .ais-tb-unit.landday { box-shadow: inset 0 -2px 0 #ff4444; }   /* 고칠 날 */
     .ais-tb-unit.corrday { box-shadow: inset 0 -2px 0 #c07bff; }   /* 고친 날 */
     .ais-tb-unit.landday.corrday { box-shadow: inset 0 -2px 0 #ff4444, inset 0 -4px 0 #c07bff; }
@@ -1084,50 +1075,6 @@
     .ais-tb-subunit.ais-tb-leg { color: #ffcc66; font-weight: 700; }
     .ais-tb-subunit.ais-tb-leg.sel { background: rgba(255,190,60,0.25); color: #ffdd99; }
     .ais-corr-raw { color: #b98cf0; font-weight: 600; margin-left: 3px; }
-    /* ── 선박 다중 선택 ── */
-    .ais-vsel { position: relative; }
-    .ais-vsel > button {
-      background: rgba(10,20,50,0.8); color: #c8dcf0;
-      border: 1px solid rgba(80,160,255,0.25); border-radius: 4px;
-      padding: 3px 8px; font-size: 11px; cursor: pointer; white-space: nowrap;
-    }
-    .ais-vsel > button:hover { border-color: rgba(120,200,255,0.6); color: #fff; }
-    .ais-vsel-menu {
-      display: none; position: fixed;
-      z-index: 1200; min-width: 232px; max-height: 60vh; overflow-y: auto; padding: 5px;
-      background: rgba(8,20,45,0.97); backdrop-filter: blur(8px);
-      border: 1px solid rgba(80,160,255,0.4); border-radius: 8px;
-      box-shadow: 0 -6px 22px rgba(0,0,0,0.5);
-    }
-    .ais-vsel-menu.on { display: block; }
-    .ais-vsel-menu label {
-      display: flex; align-items: center; gap: 7px;
-      padding: 4px 6px; border-radius: 5px; font-size: 11px; color: #dbe9f7; cursor: pointer;
-    }
-    .ais-vsel-menu label:hover { background: rgba(126,207,255,0.14); }
-    .ais-vsel-menu input { accent-color: #4aa3ff; margin: 0; cursor: pointer; }
-    .ais-vsel-swatch { width: 9px; height: 9px; border-radius: 50%; flex: none; }
-    .ais-vsel-menu .vsel-main { margin-left: auto; font-size: 9px; color: #7ecfff; font-weight: 700; }
-    .ais-vsel-menu .vsel-hint {
-      border-top: 1px solid rgba(80,160,255,0.22); margin-top: 4px; padding: 5px 6px 2px;
-      font-size: 9.5px; color: #8fa8bf; line-height: 1.45;
-    }
-    /* ── 고정해서 겹친 항적 ── */
-    .ais-pin-btn {
-      background: rgba(10,20,50,0.8); color: #c8dcf0;
-      border: 1px solid rgba(80,160,255,0.25); border-radius: 4px;
-      padding: 3px 7px; font-size: 10.5px; cursor: pointer; white-space: nowrap;
-    }
-    .ais-pin-btn:hover { border-color: rgba(120,200,255,0.6); color: #fff; }
-    .ais-pin-row { display: flex; gap: 4px; align-items: center; flex-wrap: nowrap; overflow-x: auto; max-width: 340px; }
-    .ais-pin-chip {
-      display: inline-flex; align-items: center; gap: 4px; flex: none;
-      padding: 2px 5px; border-radius: 10px; font-size: 9.5px; font-weight: 700;
-      background: rgba(255,255,255,0.08); border: 1px solid rgba(160,190,220,0.3); color: #dbe9f7;
-      white-space: nowrap; font-variant-numeric: tabular-nums;
-    }
-    .ais-pin-chip .x { cursor: pointer; color: #ff8899; font-weight: 900; }
-    .ais-pin-chip .x:hover { color: #ff3355; }
     .ais-tb-voy {
       flex-shrink: 0; font-size: 10px; color: #9ad8c8; font-weight: 700;
       white-space: nowrap; padding: 0 2px; font-variant-numeric: tabular-nums;
@@ -1568,10 +1515,6 @@
 <!-- 보정 편집 조작 안내 — 편집 모드에서만 보인다 -->
 <div id="aisCorrHelp"></div>
 
-<!-- 선박 다중 선택 메뉴 — 타임바 조작행이 overflow:hidden이라 그 안에 두면 잘린다.
-     body에 두고 버튼의 화면 좌표에 맞춰 띄운다. -->
-<div id="aisVesselMenu" class="ais-vsel-menu"></div>
-
 <div id="aisTimebar">
   <button id="aisMinBtn" onclick="toggleAisTimebar()" title="AIS 타임바 최소화 / 복원" style="position:absolute;top:5px;right:10px;z-index:3;background:transparent;border:none;color:#aac8e8;font-size:14px;line-height:1;padding:2px 6px;cursor:pointer;border-radius:4px;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#aac8e8'">─</button>
   <div class="ais-tb-resizer" id="aisTbResizer" title="드래그하여 높이 조절"></div>
@@ -1586,14 +1529,8 @@
     </div>
     <!-- 선박 선택 + 기간 -->
     <div class="ais-tb-vessel">
-      <!-- 기준 선박. 기존 코드가 .value로 읽으므로 그대로 두고 화면에서만 감춘다 -->
-      <select id="aisVesselSel" onchange="onAisVesselChange()" style="display:none"></select>
-      <!-- 여러 척을 골라 같은 날짜로 겹쳐 보는 메뉴 -->
-      <div class="ais-vsel">
-        <button id="aisVesselBtn" onclick="_aisVesselMenuToggle(event)" title="선박 선택 (여러 척을 고르면 같은 날짜로 겹쳐 그립니다)">선박 선택 ▾</button>
-      </div>
-      <button id="aisPinBtn" class="ais-pin-btn" onclick="_aisPinAdd()" title="지금 보고 있는 선박·기간을 그대로 고정해 겹칩니다 (다른 날짜로 옮겨도 남아 있습니다)">📌 겹치기</button>
-      <span id="aisPinRow" class="ais-pin-row"></span>
+      <!-- 항목은 _AIS_VESSELS 등록부에서 자동으로 채운다 -->
+      <select id="aisVesselSel" onchange="onAisVesselChange()"></select>
       <input type="date" id="aisRangeFrom" onchange="onAisRangeChange()" title="조회 시작일">
       <span style="color:#557799;font-size:10px">~</span>
       <input type="date" id="aisRangeTo" onchange="onAisRangeChange()" title="조회 종료일">
@@ -1609,12 +1546,6 @@
       <span class="ais-tb-refchk" title="항구 출입 가속·감속(정박→저속→중속→순항)이 왕복 양쪽 모두 온전히 기록된 날">
         <input type="checkbox" id="aisRefOnly" onchange="onAisRefOnlyChange()"> ★기준일만
       </span>
-    </label>
-    <label class="ais-tb-normal" id="aisBestWrap" title="눈으로 확인해 &quot;이 날이 제일 깨끗하다&quot;고 표시해 둔 날만 봅니다. ★기준일은 규칙으로 자동 판정한 것이고, ◎최적일은 사람이 직접 고른 것입니다.">
-      <span class="ais-tb-refchk" style="color:#7dffb0">
-        <input type="checkbox" id="aisBestOnly" onchange="onAisWorkFilterChange()"> ◎ 최적일만
-      </span>
-      <button id="aisBestBtn" class="ais-best-btn" onclick="_aisBestToggle()" title="지금 고른 날짜를 최적일로 표시하거나 해제합니다">◎ 최적일 표시</button>
     </label>
     <label class="ais-tb-normal" id="aisWorkWrap" title="보정을 저장해둔 날만 / 아직 육지를 지나는 구간이 남은 날만 추려봅니다. 둘 다 켜면 &quot;보정했는데 아직 남은 날&quot;이 나옵니다.">
       <input type="checkbox" id="aisCorrOnly" onchange="onAisWorkFilterChange()"> ✏ 보정일만
@@ -6532,9 +6463,6 @@ const _AIS_VESSELS = {
   sel.innerHTML = Object.entries(_AIS_VESSELS).map(([k, v]) =>
     '<option value="' + k + '">' + v.label + (v.sub ? ' (' + v.sub + ')' : '') + '</option>'
   ).join('');
-  // 스크립트가 끝난 뒤에 부른다 — 이 함수가 쓰는 _aisOverlayKeys가 아래에서 let으로
-  // 선언돼 있어, 여기서 바로 부르면 TDZ 오류로 이후 스크립트 전체가 죽는다.
-  setTimeout(_aisVesselLabelUpdate, 0);
 })();
 
 const _aisCache = {};
@@ -6549,67 +6477,6 @@ let _aisSubLegSel = null;  // 왕복일 때 선택된 구간 (null=왕복 전체
 let _aisRangeFrom = null, _aisRangeTo = null; // 캘린더로 지정한 조회 기간 필터 ('YYYY-MM-DD', null=제한 없음)
 let _aisNormalOnly = true; // '일' 탭에서만 적용되는 정상 항로 필터 (기본 on)
 let _aisRefOnly = false;   // ★기준일(항구 출입 가속·감속이 온전히 기록된 날)만 보기
-// ── ◎ 최적일 — 사람이 직접 표시해 둔 "이 날 데이터가 제일 깨끗하다"는 기록 ──
-// ★기준일은 규칙으로 자동 판정한 것이라 놓치거나 잘못 잡는 날이 있다. 눈으로 확인한
-// 날을 따로 표시해 두면 기준값을 잡을 때 그쪽을 먼저 볼 수 있다. 메모도 함께 남긴다.
-const AIS_BEST_KEY = 'hanjil_ais_bestdays';
-const AIS_BEST_SEEDED = 'hanjil_ais_bestdays_seeded';
-const _AIS_BEST_SEED = {
-  queenbeetle:  { '2024-08-07': '출입항 가속·감속이 왕복 양쪽 모두 온전' },
-  tsushimalink: { '2023-02-27': '출항~도착~회항까지 가장 깔끔',
-                  '2023-03-18': '깔끔한 편',
-                  '2023-03-19': '깔끔한 편',
-                  '2026-07-20': '히타카츠 경유 사례' },
-  santamonica:  { '2026-06-28': '' }
-};
-let _aisBest = {};
-(function _aisBestLoad() {
-  try { _aisBest = JSON.parse(localStorage.getItem(AIS_BEST_KEY) || '{}') || {}; } catch (e) { _aisBest = {}; }
-  // 처음 한 번만 기본값을 넣는다 — 나중에 지운 것이 되살아나지 않도록 플래그를 남긴다
-  try {
-    if (!localStorage.getItem(AIS_BEST_SEEDED)) {
-      Object.entries(_AIS_BEST_SEED).forEach(([k, days]) => {
-        _aisBest[k] = Object.assign({}, days, _aisBest[k] || {});
-      });
-      localStorage.setItem(AIS_BEST_SEEDED, '1');
-      localStorage.setItem(AIS_BEST_KEY, JSON.stringify(_aisBest));
-    }
-  } catch (e) {}
-})();
-function _aisBestSave() {
-  try { localStorage.setItem(AIS_BEST_KEY, JSON.stringify(_aisBest)); } catch (e) {}
-}
-function _aisBestHas(key, date) { return !!(_aisBest[key] && _aisBest[key][date] !== undefined); }
-function _aisBestNote(key, date) { return (_aisBest[key] || {})[date] || ''; }
-function _aisBestCount(key) { return Object.keys(_aisBest[key] || {}).length; }
-function _aisBestToggle() {
-  const key = document.getElementById('aisVesselSel').value;
-  const dt = _aisSelDay;
-  if (!dt) { _aisSetStatus('◎ 먼저 날짜를 고르세요'); return; }
-  if (_aisBestHas(key, dt)) {
-    delete _aisBest[key][dt];
-    _aisSetStatus('◎ 최적일 표시를 지웠습니다 — ' + dt);
-  } else {
-    const note = window.prompt('◎ 최적일로 표시합니다. 메모를 남기시겠어요? (비워도 됩니다)', '');
-    _aisBest[key] = _aisBest[key] || {};
-    _aisBest[key][dt] = note == null ? '' : note;
-    _aisSetStatus('◎ 최적일로 표시했습니다 — ' + dt + (note ? ' · ' + note : ''));
-  }
-  _aisBestSave();
-  _aisBestBtnUpdate();
-  _aisTbRenderTl(key);
-}
-function _aisBestBtnUpdate() {
-  const btn = document.getElementById('aisBestBtn');
-  if (!btn) return;
-  const key = document.getElementById('aisVesselSel').value;
-  const on = _aisSelDay && _aisBestHas(key, _aisSelDay);
-  btn.textContent = on ? '◎ 최적일 해제' : '◎ 최적일 표시';
-  btn.classList.toggle('on', !!on);
-  btn.disabled = !_aisSelDay;
-}
-
-let _aisBestOnly = false;  // ◎ 사람이 표시한 최적일만 보기
 let _aisCorrOnly = false;  // ✏ 보정한 날만 보기
 let _aisLandOnly = false;  // ⚠ 육지 관통이 남은 날(고칠 날)만 보기
 let _aisCallFilter = 'all'; // 특정 항구에 기항한 날만 보기 ('all' 또는 항구명)
@@ -6677,128 +6544,6 @@ function _buildAisIndex(pts) {
   return { index, dates, minDate: dates[0], maxDate: dates[dates.length - 1] };
 }
 
-// ══════════════════════════════════════════════════════════════
-//  AIS 로드를 워커로 — 파싱·분석이 화면을 붙잡지 않도록
-// ══════════════════════════════════════════════════════════════
-// 카멜리아(29만 행) 기준 메인 스레드에서 파싱 270ms + 분석 755ms가 걸려 그동안 화면이
-// 통째로 멎었다. 이 일을 워커로 넘기고 결과만 받아오면 메인이 하는 일은 45ms로 준다.
-//
-// 코드를 별도 파일로 쪼개지 않고, 이미 있는 함수의 소스를 toString()으로 떠서 워커
-// 소스를 만든다. 같은 코드가 두 벌 존재하지 않으므로 한쪽만 고쳐지는 일이 없다.
-//
-// 좌표·속도는 TypedArray로 넘긴다(복사 없이 소유권만 이전). 시각 문자열은 숫자로 바꿔
-// 보내면 메인에서 되돌리는 데 254ms가 들어(측정) 오히려 손해라, 한 덩이 문자열로 보내
-// split 한 번으로 되살린다.
-function _aisWorkerSource() {
-  const K = {
-    AIS_STOP_SPEED_KTS, AIS_STOP_MIN_MIN, AIS_MAX_PLAUSIBLE_KTS, AIS_MIN_POINTS_NORMAL,
-    AIS_DIST_TOLERANCE_LO, AIS_DIST_TOLERANCE_HI, AIS_PORT_BUFFER_KM, AIS_MIN_MOVING_KM,
-    AIS_REF_MIN_DAYS, AIS_TIME_BASE_Q, AIS_TIME_DEV_LO, AIS_TIME_DEV_HI,
-    AIS_TERMINAL_CLUSTER_KM, AIS_TERMINAL_MIN_HITS, AIS_TERMINAL_NAME_KM,
-    AIS_CALL_BUFFER_KM, AIS_VOY_MIN_KM, AIS_VOY_MAX_H, AIS_NEAR_BAND_KM
-  };
-  const fns = [
-    _parseAisCsvLine, _parseAisCsv, _simDist, _bearing, _routeLen, _buildAisIndex,
-    _detectAisStops, _aisSplitLegs, _aisTerminalAt, _aisTerminalLabel, _nearestPortName,
-    _aisFindTerminals, _aisDayStats, _aisCruiseSpeed, _aisSpeedBand, _aisCountRamps,
-    _aisPortCalls, _aisStopAtPort, _aisNearestApproach, _aisVoyageTimes,
-    _aisSegKm, _aisRangeKm, _aisAvgKts, _aisCorrGet,
-    _aisBuildVoyages, _aisVoyageRoutes, _aisAnalyzeVessel
-  ];
-  // 항구는 이름 짓기에만 쓰이므로 필요한 세 값만 넘긴다
-  const slimPorts = ports.map(p => ({ name: p.name, lat: p.lat, lng: p.lng }));
-  return [
-    Object.entries(K).map(([k, v]) => 'const ' + k + ' = ' + JSON.stringify(v) + ';').join('\n'),
-    'const ports = ' + JSON.stringify(slimPorts) + ';',
-    'let _aisCorr = {};', // 실제 값은 매 요청 메시지로 받는다 (소스는 한 번 만들어 재사용)
-    fns.map(fn => fn.toString()).join('\n'),
-    `
-self.onmessage = async function(e) {
-  const key = e.data.key, url = e.data.url;
-  _aisCorr = e.data.corr || {}; // 보정은 요청마다 최신값을 받는다
-  try {
-    const r = await fetch(url);
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const pts = _parseAisCsv(await r.text());
-    if (!pts.length) throw new Error('데이터 없음');
-    const data = _buildAisIndex(pts);
-    _aisAnalyzeVessel(key, data);
-    // 날짜별로 나뉜 것을 한 줄로 펴서 TypedArray에 담는다
-    const flat = [], dayOff = new Int32Array(data.dates.length);
-    data.dates.forEach(function(d, i) {
-      dayOff[i] = flat.length;
-      const p = data.index[d];
-      for (let k = 0; k < p.length; k++) flat.push(p[k]);
-    });
-    const n = flat.length;
-    const lat = new Float64Array(n), lon = new Float64Array(n);
-    const spd = new Float32Array(n), crs = new Float32Array(n);
-    const ts = new Array(n);
-    for (let i = 0; i < n; i++) {
-      lat[i] = flat[i].lat; lon[i] = flat[i].lon;
-      spd[i] = flat[i].speed; crs[i] = flat[i].course; ts[i] = flat[i].ts;
-    }
-    self.postMessage({
-      ok: true, key: key, n: n, lat: lat, lon: lon, spd: spd, crs: crs,
-      tsJoined: ts.join('\\n'), dates: data.dates, dayOff: dayOff,
-      minDate: data.minDate, maxDate: data.maxDate,
-      dayQuality: data.dayQuality, terminals: data.terminals, cruiseKts: data.cruiseKts,
-      expectedDist: data.expectedDist, refDays: data.refDays, refOneWayKm: data.refOneWayKm,
-      refRoundKm: data.refRoundKm, callPorts: data.callPorts, timeRatioBase: data.timeRatioBase,
-      voyages: data.voyages, voyRoutes: data.voyRoutes, voyMain: data.voyMain
-    }, [lat.buffer, lon.buffer, spd.buffer, crs.buffer, dayOff.buffer]);
-  } catch (err) {
-    self.postMessage({ ok: false, key: key, error: String((err && err.message) || err) });
-  }
-};`
-  ].join('\n');
-}
-
-let _aisWorkerUrl = null;
-function _aisWorkerMake() {
-  if (!_aisWorkerUrl) {
-    _aisWorkerUrl = URL.createObjectURL(new Blob([_aisWorkerSource()], { type: 'text/javascript' }));
-  }
-  return new Worker(_aisWorkerUrl);
-}
-
-// 워커가 보낸 결과를 원래 쓰던 모양({index, dates, dayQuality, …})으로 되돌린다
-function _aisWorkerRebuild(msg) {
-  const tsArr = msg.tsJoined.length ? msg.tsJoined.split('\n') : [];
-  const flat = new Array(msg.n);
-  for (let i = 0; i < msg.n; i++) {
-    flat[i] = { lat: msg.lat[i], lon: msg.lon[i], speed: msg.spd[i], course: msg.crs[i], ts: tsArr[i] };
-  }
-  const index = {};
-  msg.dates.forEach((d, i) => {
-    const from = msg.dayOff[i];
-    const to = (i + 1 < msg.dates.length) ? msg.dayOff[i + 1] : msg.n;
-    index[d] = flat.slice(from, to);
-  });
-  return {
-    index, dates: msg.dates, minDate: msg.minDate, maxDate: msg.maxDate,
-    dayQuality: msg.dayQuality, terminals: msg.terminals, cruiseKts: msg.cruiseKts,
-    expectedDist: msg.expectedDist, refDays: msg.refDays, refOneWayKm: msg.refOneWayKm,
-    refRoundKm: msg.refRoundKm, callPorts: msg.callPorts, timeRatioBase: msg.timeRatioBase,
-    voyages: msg.voyages, voyRoutes: msg.voyRoutes, voyMain: msg.voyMain, voyPts: flat
-  };
-}
-
-function _aisLoadViaWorker(key, url) {
-  return new Promise((resolve, reject) => {
-    let w;
-    try { w = _aisWorkerMake(); } catch (e) { reject(e); return; }
-    const done = (fn, arg) => { try { w.terminate(); } catch (e) {} fn(arg); };
-    w.onmessage = ev => {
-      const msg = ev.data;
-      if (!msg || !msg.ok) { done(reject, new Error((msg && msg.error) || '워커 오류')); return; }
-      done(resolve, _aisWorkerRebuild(msg));
-    };
-    w.onerror = e => done(reject, new Error(e.message || '워커 실행 실패'));
-    w.postMessage({ key, url, corr: _aisCorr || {} });
-  });
-}
-
 // ── CSV 로드 (lazy, 캐시) ──
 async function _loadAisVessel(key) {
   if (_aisCache[key]) return _aisCache[key];
@@ -6808,24 +6553,13 @@ async function _loadAisVessel(key) {
     _aisSetStatus('⚠ file:// 환경 — python -m http.server 8000 실행 후 localhost:8000 접속 필요');
     return null;
   }
-  const url = v.file + '?_=' + Date.now();
   try {
-    // 워커로 파싱·분석을 넘긴다. 워커를 못 만드는 환경(구형 브라우저·file://·CSP)에서는
-    // 예전처럼 메인 스레드에서 처리한다.
-    let data = null;
-    if (typeof Worker !== 'undefined') {
-      try { data = await _aisLoadViaWorker(key, url); }
-      catch (e) { console.warn('AIS 워커 실패 — 메인 스레드로 처리합니다:', e.message); }
-    }
-    if (!data) {
-      const r = await fetch(url);
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      const pts = _parseAisCsv(await r.text());
-      if (!pts.length) throw new Error('데이터 없음');
-      data = _buildAisIndex(pts);
-      _aisAnalyzeVessel(key, data);
-    }
-    _aisCache[key] = data;
+    const r = await fetch(v.file + '?_=' + Date.now());
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const pts = _parseAisCsv(await r.text());
+    if (!pts.length) throw new Error('데이터 없음');
+    _aisCache[key] = _buildAisIndex(pts);
+    _aisAnalyzeVessel(key, _aisCache[key]);
     _aisComputeLand(key); // 어느 날에 육지 관통이 남았는지 미리 세어둔다
     _aisSetStatus('');
     return _aisCache[key];
@@ -7171,165 +6905,6 @@ function _aisBuildVoyages(key, data) {
   }
   data.voyPts = all;
   return voyages;
-}
-
-// ══════════════════════════════════════════════════════════════
-//  선박·기간 겹쳐 보기
-// ══════════════════════════════════════════════════════════════
-// 두 갈래로 겹친다.
-//  ① 선박 다중 선택 — 지금 보고 있는 기간(년/월/일)을 고른 배들에 똑같이 적용해 겹친다.
-//  ② 📌 고정      — 지금의 선박·기간 조합을 그대로 얼려 둔다. 다른 날짜로 옮겨도 남는다.
-// 기준 선박(aisVesselSel)은 그대로 두고 그 위에 얹기만 하므로 기존 동작은 바뀌지 않는다.
-let _aisOverlayKeys = [];  // 기준 선박 외에 함께 그릴 선박
-let _aisPins = [];         // [{ key, prefix, label }]
-let _aisOverlayGroup = null;
-
-function _aisVesselMenuToggle(ev) {
-  if (ev) ev.stopPropagation();
-  const m = document.getElementById('aisVesselMenu');
-  if (!m) return;
-  const willOpen = !m.classList.contains('on');
-  m.classList.toggle('on', willOpen);
-  if (willOpen) {
-    _aisVesselMenuBuild();
-    // 버튼 바로 위에 띄운다 (타임바가 화면 아래에 붙어 있으므로 위로 연다)
-    const btn = document.getElementById('aisVesselBtn');
-    if (btn) {
-      const r = btn.getBoundingClientRect();
-      m.style.left = Math.max(6, Math.min(r.left, window.innerWidth - 244)) + 'px';
-      m.style.bottom = (window.innerHeight - r.top + 6) + 'px';
-    }
-  }
-}
-document.addEventListener('click', e => {
-  const m = document.getElementById('aisVesselMenu');
-  const btn = document.getElementById('aisVesselBtn');
-  if (!m || !m.classList.contains('on')) return;
-  if (m.contains(e.target) || (btn && btn.contains(e.target))) return;
-  m.classList.remove('on');
-});
-
-function _aisVesselMenuBuild() {
-  const m = document.getElementById('aisVesselMenu');
-  if (!m) return;
-  const primary = document.getElementById('aisVesselSel').value;
-  m.innerHTML = Object.entries(_AIS_VESSELS).map(([k, v]) => {
-    const on = k === primary || _aisOverlayKeys.includes(k);
-    return '<label>' +
-      '<input type="checkbox" ' + (on ? 'checked' : '') + ' onchange="_aisVesselToggle(\'' + k + '\', this.checked)">' +
-      '<span class="ais-vsel-swatch" style="background:' + (v.color || '#888') + '"></span>' +
-      '<span>' + v.label + '</span>' +
-      (k === primary ? '<span class="vsel-main">기준</span>' : '') +
-      '</label>';
-  }).join('') +
-  '<div class="vsel-hint">맨 위로 체크한 배가 기준이 됩니다. 나머지는 같은 기간으로 겹쳐 그립니다.</div>';
-}
-
-function _aisVesselLabelUpdate() {
-  const btn = document.getElementById('aisVesselBtn');
-  if (!btn) return;
-  const primary = document.getElementById('aisVesselSel').value;
-  const v = _AIS_VESSELS[primary];
-  btn.textContent = (v ? v.label : '선박 선택') +
-    (_aisOverlayKeys.length ? ' +' + _aisOverlayKeys.length + '척' : '') + ' ▾';
-}
-
-async function _aisVesselToggle(key, on) {
-  const sel = document.getElementById('aisVesselSel');
-  const primary = sel.value;
-  if (on) {
-    if (key !== primary && !_aisOverlayKeys.includes(key)) _aisOverlayKeys.push(key);
-  } else {
-    _aisOverlayKeys = _aisOverlayKeys.filter(k => k !== key);
-    if (key === primary) {
-      // 기준을 껐으면 겹쳐둔 배 중 하나를 기준으로 올린다
-      if (!_aisOverlayKeys.length) { _aisVesselMenuBuild(); return; } // 마지막 한 척은 남긴다
-      const next = _aisOverlayKeys.shift();
-      sel.value = next;
-      _aisVesselMenuBuild(); _aisVesselLabelUpdate();
-      await onAisVesselChange();
-      return;
-    }
-  }
-  _aisVesselMenuBuild();
-  _aisVesselLabelUpdate();
-  await _aisDrawOverlays();
-}
-
-// 지금 보고 있는 기간을 '2024' / '2024-08' / '2024-08-07' / '' 로 돌려준다
-function _aisScopePrefix() {
-  if (_aisViewLevel === 'day' && _aisSelDay) return _aisSelDay;
-  if (_aisViewLevel === 'month' && _aisSelMonth) return _aisSelMonth;
-  if (_aisViewLevel === 'year' && _aisSelYear) return _aisSelYear;
-  return '';
-}
-
-function _aisPinAdd() {
-  const key = document.getElementById('aisVesselSel').value;
-  const prefix = _aisScopePrefix();
-  if (_aisPins.some(p => p.key === key && p.prefix === prefix)) {
-    _aisSetStatus('이미 겹쳐둔 조합입니다');
-    return;
-  }
-  _aisPins.push({ key, prefix, label: (_AIS_VESSELS[key] || {}).label || key });
-  _aisRenderPins();
-  _aisDrawOverlays();
-}
-
-function _aisPinRemove(i) {
-  _aisPins.splice(i, 1);
-  _aisRenderPins();
-  _aisDrawOverlays();
-}
-
-function _aisRenderPins() {
-  const row = document.getElementById('aisPinRow');
-  if (!row) return;
-  row.innerHTML = _aisPins.map((p, i) => {
-    const c = (_AIS_VESSELS[p.key] || {}).color || '#888';
-    return '<span class="ais-pin-chip" title="고정해 겹친 항적">' +
-      '<span class="ais-vsel-swatch" style="background:' + c + '"></span>' +
-      p.label + ' ' + (p.prefix || '전체') +
-      '<span class="x" onclick="_aisPinRemove(' + i + ')">×</span></span>';
-  }).join('');
-}
-
-// 겹쳐 그리기 — 기준 선박 위에 얹는 별도 레이어라 기존 렌더를 건드리지 않는다
-async function _aisDrawOverlays() {
-  if (_aisOverlayGroup) { map.removeLayer(_aisOverlayGroup); _aisOverlayGroup = null; }
-  const jobs = [];
-  const prefix = _aisScopePrefix();
-  _aisOverlayKeys.forEach(k => jobs.push({ key: k, prefix, pinned: false }));
-  _aisPins.forEach(p => jobs.push({ key: p.key, prefix: p.prefix, pinned: true }));
-  if (!jobs.length) return;
-
-  const g = L.layerGroup();
-  const renderer = L.canvas({ padding: 0.5 });
-  for (const job of jobs) {
-    const data = _aisCache[job.key] || await _loadAisVessel(job.key);
-    if (!data) continue;
-    const days = data.dates.filter(d => d.startsWith(job.prefix || ''));
-    if (!days.length) continue;
-    // 날짜가 많으면 점을 솎아 낸다 (집계 뷰와 같은 예산 방식)
-    const perDay = Math.max(4, Math.min(40, Math.floor(AIS_AGG_PT_BUDGET / 2 / Math.max(1, days.length))));
-    const lines = [];
-    days.forEach(d => {
-      const pts = data.index[d];
-      if (!pts || pts.length < 2) return;
-      const step = Math.ceil(pts.length / perDay);
-      const thin = step > 1 ? pts.filter((_, i) => i % step === 0 || i === pts.length - 1) : pts;
-      lines.push(thin.map(p => [p.lat, p.lon]));
-    });
-    if (!lines.length) continue;
-    const color = (_AIS_VESSELS[job.key] || {}).color || '#88aaff';
-    L.polyline(lines, {
-      color, weight: job.pinned ? 3 : 2, opacity: job.pinned ? 0.9 : 0.7,
-      dashArray: job.pinned ? null : '5 4',
-      renderer, interactive: false
-    }).addTo(g);
-  }
-  g.addTo(map);
-  _aisOverlayGroup = g;
 }
 
 // 항차 요약을 타임바 머리에 적는다 — 주항로의 편도거리·소요시간·평균속력.
@@ -8261,7 +7836,6 @@ function _aisEmptyReason(key) {
     const short = _aisCallFilter.replace(/(국제여객터미널|국제터미널|여객선터미널|항)$/, "");
     parts.push("⚓" + short + " 기항 " + cnt(x => (d.dayQuality[x].calls || []).some(c => c.name === _aisCallFilter)) + "일");
   }
-  if (_aisBestOnly) parts.push("◎최적일 " + cnt(x => _aisBestHas(key, x)) + "일");
   if (_aisCorrOnly) parts.push("✏보정일 " + cnt(x => _aisCorrCount(key, x) > 0) + "일");
   if (_aisLandOnly) parts.push("⚠고칠 날 " + cnt(x => (d.dayQuality[x].landSegs || 0) > 0) + "일");
   if (_aisRefOnly) parts.push("★기준일 " + cnt(x => d.dayQuality[x].isRef) + "일");
@@ -8280,13 +7854,10 @@ function _aisAllDays(key) {
     dates = dates.filter(x => (d.dayQuality[x].calls || []).some(c => c.name === _aisCallFilter));
   }
   // 작업 목록 필터 — 각각 독립이라 둘 다 켜면 "보정했는데 아직 관통이 남은 날"이 나온다
-  if (_aisBestOnly) dates = dates.filter(x => _aisBestHas(key, x));
   if (_aisCorrOnly) dates = dates.filter(x => _aisCorrCount(key, x) > 0);
   if (_aisLandOnly) dates = dates.filter(x => (d.dayQuality[x].landSegs || 0) > 0);
-  // 사람이 ◎최적일로 표시한 날은 자동 판정으로 숨기지 않는다.
-  // 눈으로 확인해 골라둔 날인데 "편도거리 과소" 같은 규칙에 걸려 사라지면 표시한 의미가 없다.
-  if (_aisRefOnly)    return dates.filter(x => d.dayQuality[x].isRef    || _aisBestHas(key, x));
-  if (_aisNormalOnly) return dates.filter(x => d.dayQuality[x].isNormal || _aisBestHas(key, x));
+  if (_aisRefOnly)    return dates.filter(x => d.dayQuality[x].isRef);
+  if (_aisNormalOnly) return dates.filter(x => d.dayQuality[x].isNormal);
   return dates;
 }
 function _aisYears(key)        { return [...new Set(_aisAllDays(key).map(x => x.slice(0, 4)))].sort(); }
@@ -8364,12 +7935,9 @@ function _aisTbRenderTl(key) {
          + (q.isRef ? ' · ★기준일(가속 ' + q.ramps.up + '회/감속 ' + q.ramps.down + '회)' : '')
          + (q.isNormal ? '' : ' · 제외: ' + q.reasons.join(', ')))
       : dt;
-    const isBest = _aisBestHas(key, dt);         // 사람이 직접 표시한 최적일
-    const marks = (isBest ? '◎' : '') + (nCorr ? '✏' : '') + (nLand ? '⚠' : '');
-    const bestNote = isBest ? (_aisBestNote(key, dt) || '표시해 둔 날') : '';
-    const workTitle = (isBest ? ' · ◎최적일: ' + bestNote : '')
-      + (nCorr ? ' · ✏보정 ' + nCorr + '구간' : '') + (nLand ? ' · ⚠육지관통 ' + nLand + '구간' : '');
-    return `<button class="ais-tb-unit${dt === _aisSelDay ? ' sel' : ''}${abnormal ? ' abnormal' : ''}${isRef ? ' refday' : ''}${isBest ? ' bestday' : ''}${nLand ? ' landday' : ''}${nCorr ? ' corrday' : ''}" onclick="_aisPickDay('${dt}')" title="${title}${workTitle}">${isRef ? '★' : ''}${marks}${+dt.slice(8, 10)}일</button>`;
+    const marks = (nCorr ? '✏' : '') + (nLand ? '⚠' : '');
+    const workTitle = (nCorr ? ' · ✏보정 ' + nCorr + '구간' : '') + (nLand ? ' · ⚠육지관통 ' + nLand + '구간' : '');
+    return `<button class="ais-tb-unit${dt === _aisSelDay ? ' sel' : ''}${abnormal ? ' abnormal' : ''}${isRef ? ' refday' : ''}${nLand ? ' landday' : ''}${nCorr ? ' corrday' : ''}" onclick="_aisPickDay('${dt}')" title="${title}${workTitle}">${isRef ? '★' : ''}${marks}${+dt.slice(8, 10)}일</button>`;
   }).join('') : '<span class="ais-tb-empty">이 달에는 조건에 맞는 날짜가 없습니다</span>';
 
   _aisRenderCrumb();
@@ -8408,7 +7976,6 @@ function _aisPickDay(dt) {
   const key = document.getElementById('aisVesselSel').value;
   onAisStop();
   _aisCorrClearDraft();
-  setTimeout(_aisBestBtnUpdate, 0); // 선택이 반영된 뒤 버튼 문구를 맞춘다
   _aisSelYear = dt.slice(0, 4); _aisSelMonth = dt.slice(0, 7); _aisSelDay = dt;
   _aisSubHourSel = null; _aisSubLegSel = null; _aisViewLevel = 'day';
   _aisTbRenderTl(key); _aisTlApply();
@@ -8663,7 +8230,6 @@ function _aisTlApply() {
     if (chartRow) chartRow.style.display = 'none';
   }
   _aisRenderCrumb();
-  _aisDrawOverlays(); // 기간이 바뀌면 겹쳐둔 항적도 따라 바뀐다(고정한 것은 그대로)
 }
 
 // ── 스텝 이동 (⏮⏭) — 지금 보고 있는 단계의 목록에서 앞뒤로 ──
@@ -8702,9 +8268,6 @@ async function onAisVesselChange() {
       (data.refOneWayKm ? ` · 편도 ${data.refOneWayKm.toFixed(0)}km` : '') +
       ` · ⚠고칠 날 ${landDays}일 · ✏고친 날 ${corrDays}일)`;
     _aisRenderVoySummary(key);
-    _aisVesselLabelUpdate();
-    _aisRenderPins();
-    _aisBestBtnUpdate();
     // 캘린더 입력란을 이 선박의 전체 기간으로 초기화 (필터는 전체 기간 = 필터 없음 상태로 리셋)
     const fromEl = document.getElementById('aisRangeFrom');
     const toEl   = document.getElementById('aisRangeTo');
@@ -8961,7 +8524,6 @@ function onAisShowRawChange() {
 
 // '✏ 보정일만' / '⚠ 고칠 날만' 체크박스
 function onAisWorkFilterChange() {
-  _aisBestOnly = document.getElementById('aisBestOnly').checked;
   _aisCorrOnly = document.getElementById('aisCorrOnly').checked;
   _aisLandOnly = document.getElementById('aisLandOnly').checked;
   const key = document.getElementById('aisVesselSel').value;
@@ -9333,10 +8895,6 @@ function _aisHoverShipHide() {
         if (tb.classList.contains('visible')) {
           tb.classList.remove('visible');
           onAisStop();
-          // 겹쳐둔 항적도 함께 걷는다 (지도에 남아 시뮬레이션 화면을 가리지 않도록)
-          if (_aisOverlayGroup) { map.removeLayer(_aisOverlayGroup); _aisOverlayGroup = null; }
-          const vm = document.getElementById('aisVesselMenu');
-          if (vm) vm.classList.remove('on'); // 메뉴는 body에 있어 따로 남을 수 있다
           // AIS를 닫으면 가려뒀던 구상·참고 항로선과 시뮬레이션 시점을 원래대로 되돌린다
           if (_aisPrevScope != null) {
             setSimPlayScope(_aisPrevScope);
@@ -9357,8 +8915,6 @@ function _aisHoverShipHide() {
           _syncBottomBars();
           if (!_aisCache[document.getElementById('aisVesselSel').value]) {
             onAisVesselChange();
-          } else {
-            _aisVesselLabelUpdate(); _aisRenderPins(); _aisDrawOverlays();
           }
         }
       });
