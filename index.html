@@ -8144,11 +8144,16 @@ function _aisAggPick(latlng) {
 }
 
 const AIS_AGG_HOVER_MAX_DAYS = 400; // 이보다 많으면 hover 식별을 끈다(겹쳐 있어 의미도 적고 무겁다)
-// 캔버스는 지도를 끌거나 확대할 때마다 등록된 점을 전부 다시 투영·묘사한다.
-// 그래서 하루 몇 점이 아니라 "화면 전체에 그릴 점 수"를 예산으로 잡고 날짜 수로 나눈다.
-// 실측(카멜리아 전체 4,335일): 42,064점일 때 휠 줌 한 번이 페인트까지 1.7초.
-// 전체 기간은 항로가 한 줄기 띠로 보이는 축척이라 점을 줄여도 형태가 달라지지 않는다.
-const AIS_AGG_PT_BUDGET = 18000;
+// 예전에는 "N개마다 하나"로 점을 솎아 그렸는데, 그 방식은 모양을 보지 않고 버려서
+// 오차 상한이 없다 — 실측하니 항로가 중앙 5.77km, 최악 12.43km 어긋났다(줌 8에서 11~24픽셀).
+//
+// 솎지 않기로 한 근거(카멜리아 전체 기간, 3회 반복 측정):
+//     그리는 점      첫 줌      안정 후 줌
+//      30,328점    1,275ms        0ms     ← 예전(솎음). 대신 위 왜곡이 생긴다
+//      42,214점    2,330ms        0ms     ← 더글라스-포이커 2km
+//     264,137점    2,290ms        0ms     ← 전부 그리기
+// 4만 점 근처에서 비용이 포화되어, 전부 그려도 솎은 것과 값이 같다. 그래서 솎을 이유가 없다.
+// 비용은 배를 바꾼 뒤 첫 줌 한 번뿐이고 그 뒤로는 지연이 없다.
 function _aisAggOnMove(e) {
   if (!_aisAgg || _aisAgg.days.length > AIS_AGG_HOVER_MAX_DAYS) return;
   if (map.dragging && map.dragging.moving()) return; // 지도를 끄는 중에는 계산하지 않는다
@@ -8209,8 +8214,9 @@ function _renderAisPeriod(key, prefix) {
   // 등록된 레이어를 전부 재투영·재그리기 하므로 지도를 끌 때 눈에 띄게 버벅인다.
   // 그래서 같은 색끼리 하나의 멀티 폴리라인으로 합쳐 레이어 수를 색 개수(최대 4개)로 줄인다.
   // 날짜가 많을 때는 점도 하루 20개로 솎아낸다 (축소된 지도에서는 형태 차이가 없다).
+  // 날짜가 적으면 속도대별로 색을 나눠 그리고, 많으면 하루를 한 선으로 그린다.
+  // 어느 쪽이든 점은 전부 쓴다.
   const detailed = days.length <= AIS_AGG_HOVER_MAX_DAYS;
-  const MAX_PTS_PER_DAY = Math.max(6, Math.min(20, Math.floor(AIS_AGG_PT_BUDGET / Math.max(1, days.length))));
   const dayCruiseColor = pts => {
     const sp = pts.map(p => p.speed).filter(v => v > 0.5).sort((a, b) => a - b);
     return _aisSpeedColor(sp.length ? sp[Math.floor(sp.length * 0.75)] : 0);
@@ -8242,10 +8248,8 @@ function _renderAisPeriod(key, prefix) {
         runStart = i;
       }
     } else {
-      // 날짜가 많으면 하루를 한 선으로, 점도 솎아서 그린다
-      const step = Math.ceil(pts.length / MAX_PTS_PER_DAY);
-      const thin = step > 1 ? pts.filter((_, i) => i % step === 0 || i === pts.length - 1) : pts;
-      bucketPush(dayCruiseColor(pts), wt, op, thin.map(p => [p.lat, p.lon]));
+      // 날짜가 많으면 하루를 한 선으로 그린다 (색은 그 날 순항속도색). 점은 솎지 않는다.
+      bucketPush(dayCruiseColor(pts), wt, op, pts.map(p => [p.lat, p.lon]));
     }
 
     // 마우스로 날짜를 짚기 위한 격자 인덱스 (원본 좌표 기준).
@@ -8291,7 +8295,7 @@ function _renderAisPeriod(key, prefix) {
     ? ' · 날짜 식별은 클릭(hover는 날짜가 많아 꺼짐)'
     : ' · 선에 마우스를 올리면 날짜';
   const heavy = days.length > 1500 ? ' · 많아서 느리면 필터로 좁히세요' : '';
-  // 점 수는 "실제로 그린 것 / 원본"을 함께 보여준다 — 줌·팬이 무거운 이유가 드러난다
+  // 솎지 않으므로 그린 점과 원본이 같다 (다르면 어딘가 빠뜨린 것이므로 드러나게 둔다)
   const ptNote = drawnPts < totalPts
     ? `${drawnPts.toLocaleString()}점(원본 ${totalPts.toLocaleString()} 중)`
     : `${totalPts.toLocaleString()}포인트`;
