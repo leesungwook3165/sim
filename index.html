@@ -6388,17 +6388,25 @@ function _aisSpeedColor(kts) {
   return '#ff3333';
 }
 
-// ── 시각 포맷 (오전/오후 h:mm — UTC 타임스탬프 기준) ──
+// ── 시각 포맷 (오전/오후 h:mm) ──
+// AIS 원본 타임스탬프는 UTC다. 그대로 보여주면 한국·일본 운항시간이 9시간 밀려
+// 새벽처럼 보이므로, 표시할 때는 현지시각(KST/JST, 둘 다 UTC+9)으로 환산한다.
+// ※ 날짜 묶음(하루치 그룹)은 UTC 기준을 그대로 유지한다 — 부산↔하카타 야간편도
+//   UTC 날짜 안에 온전히 들어와서, KST로 묶으면 오히려 자정에 잘린다.
+const AIS_TZ_OFFSET_MIN = 9 * 60;
+function _aisLocalDate(ts) { return new Date(new Date(ts).getTime() + AIS_TZ_OFFSET_MIN * 60000); }
 function _aisFmtClock(ts) {
-  const hh = parseInt(ts.slice(11, 13), 10);
-  const mm = ts.slice(14, 16);
+  const d = _aisLocalDate(ts);
+  const hh = d.getUTCHours(), mm = String(d.getUTCMinutes()).padStart(2, '0');
   const ampm = hh < 12 ? '오전' : '오후';
   let h12 = hh % 12; if (h12 === 0) h12 = 12;
   return `${ampm} ${h12}:${mm}`;
 }
 function _aisFmtDateClock(ts) {
-  return ts.slice(0, 10) + ' ' + _aisFmtClock(ts);
+  return _aisLocalDate(ts).toISOString().slice(0, 10) + ' ' + _aisFmtClock(ts);
 }
+// UTC 시(hour) 문자열("13")을 현지 시로 바꾼다 — 시간대 버튼·라벨용
+function _aisLocalHour(utcHH) { return (parseInt(utcHH, 10) + 9) % 24; }
 
 // ── 진행방향 화살표 아이콘 (course 각도로 회전) ──
 function _aisArrowIcon(hdg, color) {
@@ -6905,7 +6913,7 @@ function _aisDrawSpeedChart(pts, cursor) {
       const x = padL + ((t - t0) / totalMs) * plotW;
       ctx.strokeStyle = 'rgba(255,255,255,0.05)';
       ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, padT + plotH); ctx.stroke();
-      const hh = new Date(t).getUTCHours();
+      const hh = (new Date(t).getUTCHours() + 9) % 24; // 현지시(UTC+9)로 표기
       let h12 = hh % 12; if (h12 === 0) h12 = 12;
       ctx.fillStyle = '#5a7a99';
       ctx.fillText((hh < 12 ? '오전' : '오후') + ' ' + h12 + '시', x, padT + plotH + 3);
@@ -7034,7 +7042,7 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
       hit.addTo(g);
     } else hit.bindPopup(
         `<b>${_AIS_VESSELS[key].label}</b>${isBack ? ' <span style="color:#ffaa66">· 복항편</span>' : ''}<br>` +
-        `${_aisFmtClock(a.ts)} → ${_aisFmtClock(b.ts)} UTC (${segMin.toFixed(0)}분)<br>` +
+        `${_aisFmtClock(a.ts)} → ${_aisFmtClock(b.ts)} KST (${segMin.toFixed(0)}분)<br>` +
         `속도 <b>${a.speed.toFixed(1)} → ${b.speed.toFixed(1)} knot</b> · 방향 ${b.course.toFixed(0)}°<br>` +
         `구간 ${segKm.toFixed(1)}km · 구간평균 ${avgKts.toFixed(1)} knot` +
         (snap ? `<br><span style="color:#88ddff">🧭 보간: ${snap.name} 따라 ${snap.snapped.toFixed(1)}km (직선 ${snap.straight.toFixed(1)}km)</span>` : '') +
@@ -7054,11 +7062,11 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
     L.circleMarker([t.lat, t.lon], {
       radius: 7, color: '#ffdd44', fillColor: '#ffdd44', fillOpacity: 0.25, weight: 2
     }).bindTooltip(
-      `🔄 회항 ${_aisFmtClock(t.ts)} UTC`,
+      `🔄 회항 ${_aisFmtClock(t.ts)} KST`,
       { permanent: true, direction: 'bottom', className: 'ais-poi-label' }
     ).bindPopup(
       `<b>${_AIS_VESSELS[key].label} — 회항 지점</b><br>` +
-      `${_aisFmtDateClock(t.ts)} UTC<br>출발지에서 ${legs.farDist.toFixed(0)}km<br>` +
+      `${_aisFmtDateClock(t.ts)} KST<br>출발지에서 ${legs.farDist.toFixed(0)}km<br>` +
       `출항편 ${legs.out.length}포인트 / 복항편(점선) ${legs.back.length}포인트`
     ).addTo(g);
   }
@@ -7079,14 +7087,14 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
       : L.marker([p.lat, p.lon], { icon: _aisArrowIcon(p.course, col) });
     mk.bindPopup(
       `<b>${_AIS_VESSELS[key].label}</b><br>` +
-      `${_aisFmtDateClock(p.ts)} UTC<br>` +
+      `${_aisFmtDateClock(p.ts)} KST<br>` +
       `속도: <b>${p.speed.toFixed(1)} knot</b>  방향: ${p.course.toFixed(0)}°` +
       (i === 0 ? '<br><span style="color:#00ff88">▲ 출발</span>' : i === pts.length - 1 ? '<br><span style="color:#ff4466">▼ 도착</span>' : '')
     ).addTo(g);
     // 출항/도착은 클릭 없이도 실제 시각이 바로 보이도록 항상-표시 라벨을 붙인다.
     if (isEnd) {
       mk.bindTooltip(
-        `${i === 0 ? '▲ 출항' : '▼ 도착'} ${_aisFmtClock(p.ts)} UTC`,
+        `${i === 0 ? '▲ 출항' : '▼ 도착'} ${_aisFmtClock(p.ts)} KST`,
         { permanent: true, direction: i === 0 ? 'right' : 'left', className: 'ais-poi-label' }
       );
     }
@@ -7116,12 +7124,12 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
     L.circleMarker([st.lat, st.lon], {
       radius: 8, color: '#ff33cc', fillColor: '#ff33cc', fillOpacity: 0.3, weight: 2
     }).bindTooltip(
-      `🛑 ${portName || '정박'} · ${startClock}~${endClock} UTC (${Math.round(st.durMin)}분)`,
+      `🛑 ${portName || '정박'} · ${startClock}~${endClock} KST (${Math.round(st.durMin)}분)`,
       { permanent: true, direction: 'top', className: 'ais-poi-label' }
     ).bindPopup(
       `<b>${_AIS_VESSELS[key].label} — 실측 정박</b><br>` +
       `${portName ? portName + '<br>' : ''}` +
-      `${startClock} ~ ${endClock} UTC · <b>${Math.round(st.durMin)}분</b> 체류<br>` +
+      `${startClock} ~ ${endClock} KST · <b>${Math.round(st.durMin)}분</b> 체류<br>` +
       `(속도 ${AIS_STOP_SPEED_KTS}knot 이하 ${AIS_STOP_MIN_MIN}분+ 지속 구간 자동 감지)`
     ).addTo(g);
   });
@@ -7168,7 +7176,7 @@ function _renderAisHour(key, hourKey) {
   if (!data) return;
   const [dateStr, hh] = hourKey.split('T');
   const pts = (data.index[dateStr] || []).filter(p => p.ts.slice(11, 13) === hh);
-  const h = parseInt(hh, 10);
+  const h = _aisLocalHour(hh);
   let h12 = h % 12; if (h12 === 0) h12 = 12;
   _renderAisPointSet(key, pts, `${dateStr} ${h < 12 ? '오전' : '오후'} ${h12}시`);
 }
@@ -7428,7 +7436,7 @@ function _aisRenderCrumb() {
   if (_aisSelMonth) parts.push(+_aisSelMonth.slice(5, 7) + '월');
   if (_aisSelDay)   parts.push(+_aisSelDay.slice(8, 10) + '일');
   if (_aisSubHourSel != null) {
-    const h = parseInt(_aisSubHourSel, 10); let h12 = h % 12; if (h12 === 0) h12 = 12;
+    const h = _aisLocalHour(_aisSubHourSel); let h12 = h % 12; if (h12 === 0) h12 = 12;
     parts.push((h < 12 ? '오전' : '오후') + ' ' + h12 + '시');
   }
   el.textContent = parts.length ? '📍 ' + parts.join(' › ') : '';
@@ -7594,7 +7602,7 @@ function _aisRenderSubHours(key, dateStr) {
   sub.innerHTML = sumHtml + legHtml +
     `<button class="ais-tb-subunit${_aisSubHourSel == null && (!legs || _aisSubLegSel == null) ? ' sel' : ''}" onclick="_aisSubHourClick(null)">🕐 ${legs ? '전체' : '하루 전체'}</button>` +
     hours.map(hh => {
-      const h = parseInt(hh, 10);
+      const h = _aisLocalHour(hh);
       let h12 = h % 12; if (h12 === 0) h12 = 12;
       const label = `${h < 12 ? '오전' : '오후'} ${h12}시`;
       return `<button class="ais-tb-subunit${_aisSubHourSel === hh ? ' sel' : ''}" onclick="_aisSubHourClick('${hh}')">${label}</button>`;
@@ -7921,7 +7929,7 @@ function _aisPlayRenderAt(pts, tsMs, key, redrawIcon) {
   const el = document.getElementById('aisPlayInfo');
   if (el) {
     const iso = new Date(cur.tsMs).toISOString();
-    el.textContent = `🕐 ${_aisFmtClock(iso)} UTC  |  ${cur.speed.toFixed(1)} knot  |  ${cur.course.toFixed(0)}°`;
+    el.textContent = `🕐 ${_aisFmtClock(iso)} KST  |  ${cur.speed.toFixed(1)} knot  |  ${cur.course.toFixed(0)}°`;
   }
   return cur;
 }
