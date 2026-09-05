@@ -1,0 +1,8 @@
+# AIS 원본 다운로드 묶음 — 여기서 뽑아낸 *_track-data-*.csv 만 저장소에 둔다
+route/
+
+# OS·에디터 부산물
+Thumbs.db
+desktop.ini
+.DS_Store
+*.swp

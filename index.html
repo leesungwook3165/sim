@@ -7342,6 +7342,10 @@ function _aisAggPick(latlng) {
 }
 
 const AIS_AGG_HOVER_MAX_DAYS = 400; // 이보다 많으면 hover 식별을 끈다(겹쳐 있어 의미도 적고 무겁다)
+// 캔버스는 지도를 끌거나 확대할 때마다 등록된 점을 전부 다시 투영·묘사한다.
+// 그래서 하루 몇 점이 아니라 "화면 전체에 그릴 점 수"를 예산으로 잡고 날짜 수로 나눈다.
+// (카멜리아 전체 기간은 하루 20점이면 88,621점이 되는데, 그 축척에서는 형태 차이가 없다)
+const AIS_AGG_PT_BUDGET = 40000;
 function _aisAggOnMove(e) {
   if (!_aisAgg || _aisAgg.days.length > AIS_AGG_HOVER_MAX_DAYS) return;
   if (map.dragging && map.dragging.moving()) return; // 지도를 끄는 중에는 계산하지 않는다
@@ -7393,6 +7397,7 @@ function _renderAisPeriod(key, prefix) {
   // 수천 개 선을 SVG로 그리면 브라우저가 버거우므로 집계 뷰는 캔버스로 렌더링한다.
   const renderer = L.canvas({ padding: 0.5 });
   const grid = new Map(), idxDays = [];
+  const wantHover = days.length <= AIS_AGG_HOVER_MAX_DAYS;
   // 색은 항상 지도 범례와 같은 속도색(_aisSpeedColor)을 쓴다.
   // 날짜 수가 적으면 같은 속도대끼리 묶어 여러 조각으로 그려 실제 속도 변화를 그대로 보여주고,
   // 아주 많으면(전체 기간 등) 하루를 한 선으로 그리되 그 날의 순항속도(상위 25%) 색으로 칠한다.
@@ -7401,8 +7406,8 @@ function _renderAisPeriod(key, prefix) {
   // 등록된 레이어를 전부 재투영·재그리기 하므로 지도를 끌 때 눈에 띄게 버벅인다.
   // 그래서 같은 색끼리 하나의 멀티 폴리라인으로 합쳐 레이어 수를 색 개수(최대 4개)로 줄인다.
   // 날짜가 많을 때는 점도 하루 20개로 솎아낸다 (축소된 지도에서는 형태 차이가 없다).
-  const detailed = days.length <= 400;
-  const MAX_PTS_PER_DAY = 20;
+  const detailed = days.length <= AIS_AGG_HOVER_MAX_DAYS;
+  const MAX_PTS_PER_DAY = Math.max(6, Math.min(20, Math.floor(AIS_AGG_PT_BUDGET / Math.max(1, days.length))));
   const dayCruiseColor = pts => {
     const sp = pts.map(p => p.speed).filter(v => v > 0.5).sort((a, b) => a - b);
     return _aisSpeedColor(sp.length ? sp[Math.floor(sp.length * 0.75)] : 0);
@@ -7438,18 +7443,22 @@ function _renderAisPeriod(key, prefix) {
       bucketPush(dayCruiseColor(pts), wt, op, thin.map(p => [p.lat, p.lon]));
     }
 
-    // 마우스로 날짜를 짚기 위한 격자 인덱스 (원본 좌표 기준)
-    const di = idxDays.length;
-    const latlngs = pts.map(p => [p.lat, p.lon]);
-    idxDays.push({ day, pts: latlngs, q });
-    const seen = new Set();
-    latlngs.forEach(p => {
-      const k = _aisAggCellKey(p[0], p[1]);
-      if (seen.has(k)) return;
-      seen.add(k);
-      if (!grid.has(k)) grid.set(k, []);
-      grid.get(k).push(di);
-    });
+    // 마우스로 날짜를 짚기 위한 격자 인덱스 (원본 좌표 기준).
+    // hover가 꺼지는 규모(400일 초과)에서는 쓰지도 않으면서 좌표를 통째로 복사해
+    // 두고 있었다 — 카멜리아 전체 기간이면 29만 쌍이라 그 자체로 큰 부담이었다.
+    if (wantHover) {
+      const di = idxDays.length;
+      const latlngs = pts.map(p => [p.lat, p.lon]);
+      idxDays.push({ day, pts: latlngs, q });
+      const seen = new Set();
+      latlngs.forEach(p => {
+        const k = _aisAggCellKey(p[0], p[1]);
+        if (seen.has(k)) return;
+        seen.add(k);
+        if (!grid.has(k)) grid.set(k, []);
+        grid.get(k).push(di);
+      });
+    }
   });
   // 색깔별로 딱 한 겹씩만 그린다
   buckets.forEach(b => {
@@ -7463,8 +7472,11 @@ function _renderAisPeriod(key, prefix) {
   const hi = L.polyline([], { color: '#ffffff', weight: 4, opacity: 1, interactive: false }).addTo(g);
   const tip = L.tooltip({ sticky: true, className: 'ais-poi-label' });
   _aisAgg = { grid, days: idxDays, hi, tip, key };
-  map.off('mousemove', _aisAggOnMove).on('mousemove', _aisAggOnMove);
-  map.off('click', _aisAggOnClick).on('click', _aisAggOnClick);
+  // hover를 안 쓸 규모면 핸들러도 걸지 않는다 (마우스를 움직일 때마다 헛돌 필요 없다)
+  map.off('mousemove', _aisAggOnMove).off('click', _aisAggOnClick);
+  if (wantHover) {
+    map.on('mousemove', _aisAggOnMove).on('click', _aisAggOnClick);
+  }
 
   g.addTo(map);
   _aisLayerGroup.g = g;
