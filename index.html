@@ -6532,7 +6532,9 @@ const _AIS_VESSELS = {
   sel.innerHTML = Object.entries(_AIS_VESSELS).map(([k, v]) =>
     '<option value="' + k + '">' + v.label + (v.sub ? ' (' + v.sub + ')' : '') + '</option>'
   ).join('');
-  _aisVesselLabelUpdate(); // 버튼에 기본 선박 이름을 바로 띄운다
+  // 스크립트가 끝난 뒤에 부른다 — 이 함수가 쓰는 _aisOverlayKeys가 아래에서 let으로
+  // 선언돼 있어, 여기서 바로 부르면 TDZ 오류로 이후 스크립트 전체가 죽는다.
+  setTimeout(_aisVesselLabelUpdate, 0);
 })();
 
 const _aisCache = {};
