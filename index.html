@@ -1107,19 +1107,7 @@
     .ais-vsel-menu label:hover { background: rgba(126,207,255,0.14); }
     .ais-vsel-menu input { accent-color: #4aa3ff; margin: 0; cursor: pointer; }
     .ais-vsel-swatch { width: 9px; height: 9px; border-radius: 50%; flex: none; }
-    .ais-vsel-menu .vsel-name { flex: 1; }
-    .ais-vsel-menu .vsel-name:hover { text-decoration: underline; }
     .ais-vsel-menu .vsel-main { margin-left: auto; font-size: 9px; color: #7ecfff; font-weight: 700; }
-    .ais-vsel-menu .vsel-set {
-      margin-left: auto; font-size: 9px; color: #90a8bf; font-weight: 700;
-      border: 1px solid rgba(160,190,220,0.3); border-radius: 4px; padding: 1px 4px;
-    }
-    .ais-vsel-menu .vsel-set:hover { color: #fff; border-color: rgba(126,207,255,0.8); }
-    .ais-vsel-menu .vsel-none {
-      margin-top: 3px; border-top: 1px solid rgba(80,160,255,0.22); padding-top: 5px;
-      color: #ff9aa8; font-weight: 700;
-    }
-    .ais-vsel > button.off { color: #8fa8bf; border-style: dashed; }
     .ais-vsel-menu .vsel-hint {
       border-top: 1px solid rgba(80,160,255,0.22); margin-top: 4px; padding: 5px 6px 2px;
       font-size: 9.5px; color: #8fa8bf; line-height: 1.45;
@@ -6669,13 +6657,10 @@ function _parseAisCsv(text) {
     }
     const ts = p[iTs];
     if (!ts) continue;
-    const tsStr = unq(ts);
-    // 시각을 숫자로도 담아 둔다. 코드 곳곳에서 new Date(p.ts)로 문자열을 다시 파싱하는데,
-    // 전 포인트를 한 번 훑을 때마다 81ms가 든다(카멜리아 29만 행 측정). 숫자 필드면 1ms다.
     pts.push({
       lat: +p[iLat], lon: +p[iLon],
       speed: +p[iSpd], course: +p[iCrs],
-      ts: tsStr, tsMs: Date.parse(tsStr)
+      ts: unq(ts)
     });
   }
   return pts;
@@ -6710,8 +6695,7 @@ function _aisWorkerSource() {
     AIS_DIST_TOLERANCE_LO, AIS_DIST_TOLERANCE_HI, AIS_PORT_BUFFER_KM, AIS_MIN_MOVING_KM,
     AIS_REF_MIN_DAYS, AIS_TIME_BASE_Q, AIS_TIME_DEV_LO, AIS_TIME_DEV_HI,
     AIS_TERMINAL_CLUSTER_KM, AIS_TERMINAL_MIN_HITS, AIS_TERMINAL_NAME_KM,
-    AIS_CALL_BUFFER_KM, AIS_VOY_MIN_KM, AIS_VOY_MAX_H, AIS_NEAR_BAND_KM,
-    AIS_VOY_KM_LO, AIS_VOY_KM_HI, AIS_VOY_MIN_LO, AIS_VOY_MIN_HI, AIS_VOY_ROUTE_MIN_N
+    AIS_CALL_BUFFER_KM, AIS_VOY_MIN_KM, AIS_VOY_MAX_H, AIS_NEAR_BAND_KM
   };
   const fns = [
     _parseAisCsvLine, _parseAisCsv, _simDist, _bearing, _routeLen, _buildAisIndex,
@@ -6721,13 +6705,6 @@ function _aisWorkerSource() {
     _aisSegKm, _aisRangeKm, _aisAvgKts, _aisCorrGet,
     _aisBuildVoyages, _aisVoyageRoutes, _aisAnalyzeVessel
   ];
-  // 함수들이 쓰는 AIS_ 상수 중 위 목록에서 빠진 게 있으면 워커가 실행 중에 죽는다.
-  // 조용히 메인 스레드로 되돌아가 느려질 뿐 눈에 안 띄므로 여기서 미리 알린다.
-  const used = new Set();
-  fns.forEach(fn => (fn.toString().match(/AIS_[A-Z0-9_]+/g) || []).forEach(n => used.add(n)));
-  const missing = [...used].filter(n => !(n in K));
-  if (missing.length) console.warn('AIS 워커에 빠진 상수:', missing.join(', '));
-
   // 항구는 이름 짓기에만 쓰이므로 필요한 세 값만 넘긴다
   const slimPorts = ports.map(p => ({ name: p.name, lat: p.lat, lng: p.lng }));
   return [
@@ -6756,22 +6733,20 @@ self.onmessage = async function(e) {
     const n = flat.length;
     const lat = new Float64Array(n), lon = new Float64Array(n);
     const spd = new Float32Array(n), crs = new Float32Array(n);
-    const tms = new Float64Array(n);
     const ts = new Array(n);
     for (let i = 0; i < n; i++) {
       lat[i] = flat[i].lat; lon[i] = flat[i].lon;
-      spd[i] = flat[i].speed; crs[i] = flat[i].course;
-      ts[i] = flat[i].ts; tms[i] = flat[i].tsMs;
+      spd[i] = flat[i].speed; crs[i] = flat[i].course; ts[i] = flat[i].ts;
     }
     self.postMessage({
-      ok: true, key: key, n: n, lat: lat, lon: lon, spd: spd, crs: crs, tms: tms,
+      ok: true, key: key, n: n, lat: lat, lon: lon, spd: spd, crs: crs,
       tsJoined: ts.join('\\n'), dates: data.dates, dayOff: dayOff,
       minDate: data.minDate, maxDate: data.maxDate,
       dayQuality: data.dayQuality, terminals: data.terminals, cruiseKts: data.cruiseKts,
       expectedDist: data.expectedDist, refDays: data.refDays, refOneWayKm: data.refOneWayKm,
       refRoundKm: data.refRoundKm, callPorts: data.callPorts, timeRatioBase: data.timeRatioBase,
       voyages: data.voyages, voyRoutes: data.voyRoutes, voyMain: data.voyMain
-    }, [lat.buffer, lon.buffer, spd.buffer, crs.buffer, tms.buffer, dayOff.buffer]);
+    }, [lat.buffer, lon.buffer, spd.buffer, crs.buffer, dayOff.buffer]);
   } catch (err) {
     self.postMessage({ ok: false, key: key, error: String((err && err.message) || err) });
   }
@@ -6792,8 +6767,7 @@ function _aisWorkerRebuild(msg) {
   const tsArr = msg.tsJoined.length ? msg.tsJoined.split('\n') : [];
   const flat = new Array(msg.n);
   for (let i = 0; i < msg.n; i++) {
-    flat[i] = { lat: msg.lat[i], lon: msg.lon[i], speed: msg.spd[i], course: msg.crs[i],
-                ts: tsArr[i], tsMs: msg.tms ? msg.tms[i] : Date.parse(tsArr[i]) };
+    flat[i] = { lat: msg.lat[i], lon: msg.lon[i], speed: msg.spd[i], course: msg.crs[i], ts: tsArr[i] };
   }
   const index = {};
   msg.dates.forEach((d, i) => {
@@ -6950,7 +6924,7 @@ function _detectAisStops(pts, speedThresh, minDurMin) {
     if (pts[i].speed <= speedThresh) {
       let j = i;
       while (j + 1 < pts.length && pts[j + 1].speed <= speedThresh) j++;
-      const durMin = (pts[j].tsMs - pts[i].tsMs) / 60000;
+      const durMin = (new Date(pts[j].ts) - new Date(pts[i].ts)) / 60000;
       if (durMin >= minDurMin) {
         let sLat = 0, sLon = 0;
         for (let k = i; k <= j; k++) { sLat += pts[k].lat; sLon += pts[k].lon; }
@@ -7124,7 +7098,7 @@ function _aisDayStats(pts) {
   for (let i = 1; i < pts.length; i++) {
     const d = _simDist([pts[i - 1].lat, pts[i - 1].lon], [pts[i].lat, pts[i].lon]);
     totalDist += d;
-    const dtH = Math.max((pts[i].tsMs - pts[i - 1].tsMs) / 3600000, 1 / 3600);
+    const dtH = Math.max((new Date(pts[i].ts) - new Date(pts[i - 1].ts)) / 3600000, 1 / 3600);
     const impliedKts = (d / 1.852) / dtH;
     if (impliedKts > maxJumpKts) maxJumpKts = impliedKts;
   }
@@ -7142,12 +7116,6 @@ function _aisDayStats(pts) {
 // 그래서 날짜 경계를 무시하고 "항구 정박과 정박 사이"를 한 항차로 잘라 따로 집계한다.
 // 원본 데이터도, 기존 날짜별 통계도 건드리지 않고 나란히 둔다.
 
-// 항차가 "그 항로의 평소 모습"과 맞는지 보는 허용범위 (항로 대표값 대비 비율)
-const AIS_VOY_KM_LO = 0.80, AIS_VOY_KM_HI = 1.25;
-// 시간 하한은 느슨하게 둔다 — 데이터 문제(정박 섞임·AIS 공백)는 시간을 늘리기만 하고,
-// 평소보다 빨랐던 항차는 거리 조건이 이미 맞는 이상 이상 데이터가 아니다.
-const AIS_VOY_MIN_LO = 0.60, AIS_VOY_MIN_HI = 1.45;
-const AIS_VOY_ROUTE_MIN_N = 3; // 항로 대표값을 믿으려면 최소 이만큼 반복돼야 한다
 const AIS_VOY_MIN_KM = 20;   // 이보다 적게 움직인 구간은 항차로 보지 않는다(부두 이동 등)
 const AIS_VOY_MAX_H  = 72;   // 이보다 오래 걸린 구간은 AIS 공백으로 보고 제외
 
@@ -7158,7 +7126,7 @@ function _aisBuildVoyages(key, data) {
   const all = [];
   data.dates.forEach(d => { const p = data.index[d]; if (p) for (let i = 0; i < p.length; i++) all.push(p[i]); });
   if (all.length < 4) return [];
-  const tsMs = all.map(p => p.tsMs);
+  const tsMs = all.map(p => new Date(p.ts).getTime());
 
   // 항구 인근 정박만 항차의 경계로 삼는다 (해상 표류·대기는 경계가 아니다)
   const gates = [];
@@ -7213,7 +7181,6 @@ function _aisBuildVoyages(key, data) {
 //  ② 📌 고정      — 지금의 선박·기간 조합을 그대로 얼려 둔다. 다른 날짜로 옮겨도 남는다.
 // 기준 선박(aisVesselSel)은 그대로 두고 그 위에 얹기만 하므로 기존 동작은 바뀌지 않는다.
 let _aisOverlayKeys = [];  // 기준 선박 외에 함께 그릴 선박
-let _aisNoVessel = false;  // 아무 배도 안 보는 상태 (고정해둔 항적만 남길 때 쓴다)
 let _aisPins = [];         // [{ key, prefix, label }]
 let _aisOverlayGroup = null;
 
@@ -7245,89 +7212,42 @@ document.addEventListener('click', e => {
 function _aisVesselMenuBuild() {
   const m = document.getElementById('aisVesselMenu');
   if (!m) return;
-  const primary = _aisNoVessel ? null : document.getElementById('aisVesselSel').value;
+  const primary = document.getElementById('aisVesselSel').value;
   m.innerHTML = Object.entries(_AIS_VESSELS).map(([k, v]) => {
-    const isMain = k === primary;
-    const on = isMain || _aisOverlayKeys.includes(k);
-    // 이름을 누르면 그 배가 기준이 된다 (체크만 하면 겹쳐 그리기로 들어간다)
+    const on = k === primary || _aisOverlayKeys.includes(k);
     return '<label>' +
       '<input type="checkbox" ' + (on ? 'checked' : '') + ' onchange="_aisVesselToggle(\'' + k + '\', this.checked)">' +
       '<span class="ais-vsel-swatch" style="background:' + (v.color || '#888') + '"></span>' +
-      '<span class="vsel-name" onclick="event.preventDefault();_aisVesselSetPrimary(\'' + k + '\')">' + v.label + '</span>' +
-      (isMain ? '<span class="vsel-main">기준</span>'
-              : (on ? '<span class="vsel-set" onclick="event.preventDefault();_aisVesselSetPrimary(\'' + k + '\')">기준으로</span>' : '')) +
+      '<span>' + v.label + '</span>' +
+      (k === primary ? '<span class="vsel-main">기준</span>' : '') +
       '</label>';
   }).join('') +
-  '<label class="vsel-none" onclick="event.preventDefault();_aisVesselClear()">' +
-  '<span style="width:13px"></span><span>✕ 모두 끄기 (선박 없음)</span></label>' +
-  '<div class="vsel-hint">체크하면 겹쳐 그리고, 이름을 누르면 그 배가 기준이 됩니다.' +
-  '<br>모두 꺼도 📌로 고정해둔 항적은 남습니다.</div>';
-}
-
-// 기준 선박을 바꾼다. 원래 기준이던 배는 체크를 유지해 겹쳐 그리기로 내린다.
-async function _aisVesselSetPrimary(key) {
-  const sel = document.getElementById('aisVesselSel');
-  const old = _aisNoVessel ? null : sel.value;
-  if (!_aisNoVessel && old === key) return;
-  _aisOverlayKeys = _aisOverlayKeys.filter(k => k !== key);
-  if (old && old !== key && !_aisOverlayKeys.includes(old)) _aisOverlayKeys.push(old);
-  _aisNoVessel = false;
-  sel.value = key;
-  _aisVesselMenuBuild();
-  await onAisVesselChange();
-  _aisVesselLabelUpdate();
-}
-
-// 모두 끄기 — 고정해둔 항적(📌)은 그대로 둔다
-function _aisVesselClear() {
-  _aisNoVessel = true;
-  _aisOverlayKeys = [];
-  onAisStop();       // 재생 중이었으면 멈춘다
-  _clearAisLayer();
-  const sub = document.getElementById('aisTbSubTlRow');
-  if (sub) sub.style.display = 'none';
-  const chart = document.getElementById('aisTbChartRow');
-  if (chart) chart.style.display = 'none';
-  _aisVesselMenuBuild();
-  _aisVesselLabelUpdate();
-  _aisDrawOverlays();
-  _aisSetStatus('선박 없음 — 목록에서 배를 고르면 다시 그립니다' +
-    (_aisPins.length ? ' (고정해둔 항적 ' + _aisPins.length + '개는 그대로 있습니다)' : ''));
+  '<div class="vsel-hint">맨 위로 체크한 배가 기준이 됩니다. 나머지는 같은 기간으로 겹쳐 그립니다.</div>';
 }
 
 function _aisVesselLabelUpdate() {
   const btn = document.getElementById('aisVesselBtn');
   if (!btn) return;
-  if (_aisNoVessel) {
-    btn.textContent = (_aisPins.length ? '선박 없음 (📌' + _aisPins.length + ') ▾' : '선박 없음 ▾');
-    btn.classList.add('off');
-    return;
-  }
-  btn.classList.remove('off');
-  const v = _AIS_VESSELS[document.getElementById('aisVesselSel').value];
+  const primary = document.getElementById('aisVesselSel').value;
+  const v = _AIS_VESSELS[primary];
   btn.textContent = (v ? v.label : '선박 선택') +
     (_aisOverlayKeys.length ? ' +' + _aisOverlayKeys.length + '척' : '') + ' ▾';
 }
 
 async function _aisVesselToggle(key, on) {
   const sel = document.getElementById('aisVesselSel');
+  const primary = sel.value;
   if (on) {
-    // 아무것도 안 보던 상태였다면 지금 켠 배가 기준이 된다
-    if (_aisNoVessel) { await _aisVesselSetPrimary(key); return; }
-    if (key !== sel.value && !_aisOverlayKeys.includes(key)) _aisOverlayKeys.push(key);
+    if (key !== primary && !_aisOverlayKeys.includes(key)) _aisOverlayKeys.push(key);
   } else {
     _aisOverlayKeys = _aisOverlayKeys.filter(k => k !== key);
-    if (!_aisNoVessel && key === sel.value) {
-      // 기준을 껐다 — 겹쳐둔 배가 있으면 그중 하나를 기준으로 올리고, 없으면 선박 없음
-      if (_aisOverlayKeys.length) {
-        const next = _aisOverlayKeys.shift();
-        sel.value = next;
-        _aisVesselMenuBuild();
-        await onAisVesselChange();
-        _aisVesselLabelUpdate();
-        return;
-      }
-      _aisVesselClear();
+    if (key === primary) {
+      // 기준을 껐으면 겹쳐둔 배 중 하나를 기준으로 올린다
+      if (!_aisOverlayKeys.length) { _aisVesselMenuBuild(); return; } // 마지막 한 척은 남긴다
+      const next = _aisOverlayKeys.shift();
+      sel.value = next;
+      _aisVesselMenuBuild(); _aisVesselLabelUpdate();
+      await onAisVesselChange();
       return;
     }
   }
@@ -7384,7 +7304,7 @@ async function _aisDrawOverlays() {
   if (!jobs.length) return;
 
   const g = L.layerGroup();
-  const renderer = L.canvas({ padding: 0.2 });
+  const renderer = L.canvas({ padding: 0.5 });
   for (const job of jobs) {
     const data = _aisCache[job.key] || await _loadAisVessel(job.key);
     if (!data) continue;
@@ -7458,32 +7378,9 @@ function _aisVoyageRoutes(voyages) {
 function _aisAnalyzeVessel(key, data) {
   const terminals = _aisFindTerminals(data);
   const cruise = _aisCruiseSpeed(data);
-  data.terminals = terminals; // _aisBuildVoyages가 참조한다
 
-  // 1차: 항차부터 만든다. 날짜 경계는 배마다 제각각이라("하루 여러 항차" 비틀호,
-  // "하루 편도 하나" 부관훼리, "항차 하나가 이틀" 미라클호) 기준거리·기준일 판정을
-  // 하루가 아니라 항차 위에 세운다.
-  const voyages = _aisBuildVoyages(key, data);
-  const voyRoutes = _aisVoyageRoutes(voyages);
-  const routeBy = new Map(voyRoutes.map(r => [r.pair, r]));
-  // 항차마다 "그 항로의 평소 모습"과 얼마나 맞는지 표시한다
-  voyages.forEach(v => {
-    const r = routeBy.get((v.from || '?') + ' → ' + (v.to || '?'));
-    v.kmRatio  = (r && r.km  > 0) ? v.corrKm / r.km  : null;
-    v.minRatio = (r && r.min > 0) ? v.min    / r.min : null;
-    v.ok = !!(r && r.n >= AIS_VOY_ROUTE_MIN_N && v.kmRatio != null && v.minRatio != null
-      && v.kmRatio  >= AIS_VOY_KM_LO  && v.kmRatio  <= AIS_VOY_KM_HI
-      && v.minRatio >= AIS_VOY_MIN_LO && v.minRatio <= AIS_VOY_MIN_HI);
-  });
-  // 항차를 출항일에 매단다 (도착이 다음날이어도 출항한 날의 것으로 센다)
-  const voyByDay = {};
-  voyages.forEach(v => { (voyByDay[v.dateFrom] = voyByDay[v.dateFrom] || []).push(v); });
-  // 이 선박의 기준 편도거리 = 주항로의 대표 거리 (반대 방향이 있으면 둘의 평균)
-  const mainR = voyRoutes[0] || null;
-  const backR = mainR ? voyRoutes.find(r => r !== mainR && r.from === mainR.to && r.to === mainR.from) : null;
-  const routeOneWayKm = mainR ? (backR ? (mainR.km + backR.km) / 2 : mainR.km) : null;
-
-  // 2차: 하루치 통계
+  // 1차: 하루치 통계 + 왕복 여부 → "편도 환산 거리"
+  // (시작·끝이 같은 터미널이면 왕복으로 보고 총거리를 절반으로 환산해 편도 기준으로 비교)
   const pre = {};
   data.dates.forEach(d => {
     const pts = data.index[d];
@@ -7499,43 +7396,53 @@ function _aisAnalyzeVessel(key, data) {
     // 정박이 시간에 섞였거나 AIS 공백으로 늘어진 날은 비율이 커져 걸러진다.
     const idealMin = cruise > 0 ? (stats.totalDist / (cruise * 1.852)) * 60 : null;
     const timeRatio = (idealMin && voy.sailMin > 0) ? voy.sailMin / idealMin : null;
-    // ★기준일 — 그 날 출항한 항차가 모두 "그 항로의 평소 모습"과 맞는 날.
-    // 가속·감속은 항차 수만큼 있어야 한다(편도 1회면 ↑1↓1, 하루 왕복이면 ↑2↓2).
-    // 그래서 배마다 다른 운항 형태(편도·왕복·하루 여러 항차)를 한 규칙으로 다룬다.
-    const dayVoys = voyByDay[d] || [];
-    const rampOk = dayVoys.length > 0 && ramps.up >= dayVoys.length && ramps.down >= dayVoys.length;
-    const shapeOk = !!(rampOk && stats.n >= AIS_MIN_POINTS_NORMAL
-      && stats.maxJumpKts <= AIS_MAX_PLAUSIBLE_KTS);
-    const isRef = shapeOk && dayVoys.every(v => v.ok);
+    // 형태 조건 — 왕복이고 양쪽 항구 출입 가속·감속이 온전히 기록된 날.
+    // 거리 조건은 넣지 않는다(기대거리를 이 날들로부터 산출하므로 순환 참조 방지).
+    const shapeOk = !!(isRound && startT && endT && ramps.up >= 2 && ramps.down >= 2
+      && stats.n >= AIS_MIN_POINTS_NORMAL && stats.maxJumpKts <= AIS_MAX_PLAUSIBLE_KTS);
     const legs = _aisSplitLegs(pts);
-    // 그 날 편도거리 — 항차가 있으면 그 항차 거리(여러 개면 중앙값)를 쓴다
-    const voyKms = dayVoys.map(v => v.corrKm).sort((a, b) => a - b);
-    pre[d] = { stats, startT, endT, isRound, ramps, shapeOk, isRef, calls, voy, timeRatio, dayVoys,
-               onewayDist: voyKms.length ? voyKms[Math.floor(voyKms.length / 2)]
-                         : ((isRound && legs && legs.outKm > 0) ? legs.outKm
-                           : (isRound ? stats.totalDist / 2 : stats.totalDist)) };
+    pre[d] = { stats, startT, endT, isRound, ramps, shapeOk, isRef: false, calls, voy, timeRatio,
+               onewayDist: (isRound && legs && legs.outKm > 0) ? legs.outKm
+                         : (isRound ? stats.totalDist / 2 : stats.totalDist) };
   });
 
-  // 기준 편도거리는 주항로의 대표값을 쓴다. 항차가 아예 없는 배만 예전처럼 하루 통계로 뽑는다.
+  // 2차: ★기준일 = 형태 조건을 통과하면서, 실제 운항 타임라인이 그 선박의 통상 리듬과 같은 날.
+  // 정박이 시간에 섞였거나 AIS 공백으로 늘어진 날은 배율이 커져 여기서 걸러진다.
+  // 회항 정박이 실제로 잡힌 날만 기준으로 삼는다 — 정박을 못 가르면
+  // 출항편/복항편 소요시간을 나눌 수 없고, 기준일은 바로 그 값을 쓰기 때문이다.
+  const cand = Object.values(pre)
+    .filter(x => x.shapeOk && x.timeRatio != null && x.voy.turnStopMin > 0)
+    .map(x => x.timeRatio).sort((a, b) => a - b);
+  const baseRatio = cand.length ? cand[Math.floor(cand.length * AIS_TIME_BASE_Q)] : null;
+  Object.values(pre).forEach(x => {
+    x.isRef = !!(x.shapeOk && baseRatio != null && x.timeRatio != null && x.voy.turnStopMin > 0
+      && x.timeRatio >= baseRatio * AIS_TIME_DEV_LO
+      && x.timeRatio <= baseRatio * AIS_TIME_DEV_HI);
+  });
+
+  // 3차: 기대 편도거리는 ★기준일들의 중앙값으로 잡는다 (기준일이 없으면 운항일 전체 중앙값)
+  // 기준일이 몇 건 안 되면 그 중앙값은 우연에 좌우된다(짧은 구간 하루가 기대거리 전체를
+  // 끌어내리는 식). 그럴 땐 운항일 전체 중앙값을 쓴다.
+  const refDists = Object.values(pre).filter(x => x.isRef).map(x => x.onewayDist).sort((a, b) => a - b);
+  // 대체값도 왕복이 확인된 날에서만 뽑는다 — 편도 아닌 날의 하루 총거리가 섞이면 부풀어 오른다.
+  const roundOnly = Object.values(pre).filter(x => x.isRound).map(x => x.onewayDist)
+                          .filter(x => x > AIS_MIN_MOVING_KM).sort((a, b) => a - b);
   const allMoving = Object.values(pre).map(x => x.onewayDist).filter(x => x > AIS_MIN_MOVING_KM).sort((a, b) => a - b);
-  const expected = routeOneWayKm != null ? routeOneWayKm
-                 : (allMoving.length ? allMoving[Math.floor(allMoving.length / 2)] : null);
-  const baseRatio = null; // 시간 판정은 항차의 minRatio가 대신한다
+  const moving = roundOnly.length >= AIS_REF_MIN_DAYS ? roundOnly : allMoving;
+  const expected = refDists.length >= AIS_REF_MIN_DAYS ? refDists[Math.floor(refDists.length / 2)]
+                 : (moving.length ? moving[Math.floor(moving.length / 2)] : null);
 
   const dayQuality = {};
   data.dates.forEach(d => {
-    const { stats, startT, endT, isRound, onewayDist, ramps, isRef, calls, voy, timeRatio, dayVoys } = pre[d];
+    const { stats, startT, endT, isRound, onewayDist, ramps, isRef, calls, voy, timeRatio } = pre[d];
     const reasons = [];
     if (stats.n < AIS_MIN_POINTS_NORMAL) reasons.push('포인트 부족');
     if (stats.maxJumpKts > AIS_MAX_PLAUSIBLE_KTS) reasons.push('비정상 순간이동(GPS 공백 의심)');
-    // 정상 여부도 항차로 본다. 예전에는 하루의 시작·끝이 항구여야 했는데, 항해가 자정을
-    // 넘는 배(미라클호는 전 항차가 이틀에 걸친다)는 그 조건을 영영 못 맞춘다.
-    if (!dayVoys.length) {
-      reasons.push('항차 없음(항구 정박 사이의 이동이 잡히지 않음)');
-    } else {
-      const bad = dayVoys.filter(v => v.kmRatio != null &&
-        (v.kmRatio < AIS_DIST_TOLERANCE_LO || v.kmRatio > AIS_DIST_TOLERANCE_HI));
-      if (bad.length) reasons.push('항차 거리 이상 ' + bad.length + '건');
+    if (!startT) reasons.push('출발지점이 터미널 인근 아님');
+    if (!endT)   reasons.push('도착지점이 터미널 인근 아님');
+    if (expected != null) {
+      if (onewayDist < expected * AIS_DIST_TOLERANCE_LO) reasons.push('편도거리 과소');
+      else if (onewayDist > expected * AIS_DIST_TOLERANCE_HI) reasons.push('편도거리 과다');
     }
     const startLabel = _aisTerminalLabel(startT);
     const endLabel   = _aisTerminalLabel(endT);
@@ -7544,30 +7451,29 @@ function _aisAnalyzeVessel(key, data) {
       : (data.index[d][0].lon < 129.3 ? '부산 인근발' : '일본 인근발');
     dayQuality[d] = Object.assign(
       { isNormal: reasons.length === 0, reasons, isRound, onewayDist, origin, ramps, isRef, calls,
-        voyN: dayVoys.length,
-        voyKm: dayVoys.reduce((a, v) => a + v.corrKm, 0),
-        voyPairs: dayVoys.map(v => (v.from || '?') + '→' + (v.to || '?')),
         startPort: startLabel, endPort: endLabel,
         sailMin: voy.sailMin, dockMin: voy.turnStopMin || 0, timeRatio,
         departTs: voy.departTs, arriveTs: voy.arriveTs },
       stats
     );
   });
+  data.terminals = terminals;
   data.cruiseKts = cruise;
   // 이 선박이 실제로 기항한 적 있는 항구 목록 (드롭다운 선택지로 쓴다)
   const callTally = {};
   data.dates.forEach(d => (dayQuality[d].calls || []).forEach(c => { callTally[c.name] = (callTally[c.name] || 0) + 1; }));
   data.callPorts = Object.entries(callTally).sort((a, b) => b[1] - a[1]).map(([name, days]) => ({ name, days }));
   data.expectedDist = expected;
-  data.timeRatioBase = baseRatio;
-  data.voyages = voyages;
-  data.voyRoutes = voyRoutes;
-  data.voyMain = mainR;
+  data.timeRatioBase = baseRatio; // 그 선박의 깨끗한 항해시간 배율(이론 대비)
+  // 날짜와 무관한 "항차" 집계 — 하루에 안 맞는 배(미라클·부관훼리·비틀)도 제대로 나온다
+  data.voyages = _aisBuildVoyages(key, data);
+  data.voyRoutes = _aisVoyageRoutes(data.voyages);
+  data.voyMain = data.voyRoutes[0] || null;
   data.refDays = data.dates.filter(d => dayQuality[d].isRef);
-  data.refVoyages = voyages.filter(v => v.ok);
-  // 화면에 쓰는 기준값 — 주항로 대표 거리(편도)와 그 두 배(왕복)
-  data.refOneWayKm = routeOneWayKm;
-  data.refRoundKm  = routeOneWayKm != null ? routeOneWayKm * 2 : null;
+  // 기준일들에서 뽑은 편도·왕복 기준값 (거리 판정과 화면 표시에 함께 쓴다)
+  const refRound = data.refDays.map(d => dayQuality[d].totalDist).sort((a, b) => a - b);
+  data.refOneWayKm = refDists.length ? refDists[Math.floor(refDists.length / 2)] : null;
+  data.refRoundKm  = refRound.length ? refRound[Math.floor(refRound.length / 2)] : null;
   data.dayQuality = dayQuality;
 }
 
@@ -7815,8 +7721,8 @@ function _aisDrawSpeedChart(pts, cursor) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, W, H);
 
-  const t0 = pts[0].tsMs;
-  const t1 = pts[pts.length - 1].tsMs;
+  const t0 = new Date(pts[0].ts).getTime();
+  const t1 = new Date(pts[pts.length - 1].ts).getTime();
   const totalMs = Math.max(1, t1 - t0);
   const maxSpd = Math.max(5, ...pts.map(p => p.speed)); // 최소 5kts 스케일 확보
 
@@ -7824,7 +7730,7 @@ function _aisDrawSpeedChart(pts, cursor) {
   const roomy = H >= 90;
   const padL = roomy ? 34 : 4, padR = 34, padT = roomy ? 12 : 6, padB = roomy ? 16 : 4;
   const plotW = W - padL - padR, plotH = H - padT - padB;
-  const xAt = ms => padL + ((ms - t0) / totalMs) * plotW; // 숫자 시각을 그대로 받는다
+  const xAt = ts => padL + ((new Date(ts).getTime() - t0) / totalMs) * plotW;
   const yAt = spd => padT + plotH - Math.min(1, spd / maxSpd) * plotH;
 
   ctx.font = '9px sans-serif';
@@ -7863,9 +7769,9 @@ function _aisDrawSpeedChart(pts, cursor) {
 
   // 속도 영역(그라데이션 채우기) + 라인
   ctx.beginPath();
-  ctx.moveTo(xAt(pts[0].tsMs), padT + plotH);
-  pts.forEach(p => ctx.lineTo(xAt(p.tsMs), yAt(p.speed)));
-  ctx.lineTo(xAt(pts[pts.length - 1].tsMs), padT + plotH);
+  ctx.moveTo(xAt(pts[0].ts), padT + plotH);
+  pts.forEach(p => ctx.lineTo(xAt(p.ts), yAt(p.speed)));
+  ctx.lineTo(xAt(pts[pts.length - 1].ts), padT + plotH);
   ctx.closePath();
   const grad = ctx.createLinearGradient(0, padT, 0, padT + plotH);
   grad.addColorStop(0, 'rgba(80,200,255,0.45)');
@@ -7877,8 +7783,8 @@ function _aisDrawSpeedChart(pts, cursor) {
   ctx.lineWidth = roomy ? 2 : 1.3;
   for (let i = 1; i < pts.length; i++) {
     ctx.beginPath();
-    ctx.moveTo(xAt(pts[i - 1].tsMs), yAt(pts[i - 1].speed));
-    ctx.lineTo(xAt(pts[i].tsMs), yAt(pts[i].speed));
+    ctx.moveTo(xAt(pts[i - 1].ts), yAt(pts[i - 1].speed));
+    ctx.lineTo(xAt(pts[i].ts), yAt(pts[i].speed));
     ctx.strokeStyle = _aisSpeedColor((pts[i - 1].speed + pts[i].speed) / 2);
     ctx.stroke();
   }
@@ -7889,7 +7795,7 @@ function _aisDrawSpeedChart(pts, cursor) {
     const band = _aisSpeedColor(p.speed);
     if (prevBand !== null && band !== prevBand) {
       ctx.beginPath();
-      ctx.arc(xAt(p.tsMs), yAt(p.speed), 2.5, 0, Math.PI * 2);
+      ctx.arc(xAt(p.ts), yAt(p.speed), 2.5, 0, Math.PI * 2);
       ctx.fillStyle = band;
       ctx.fill();
       ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.stroke();
@@ -7934,10 +7840,6 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
   if (!pts || !pts.length) { _aisSetStatus(labelStr + ': 데이터 없음'); return; }
 
   const g = L.layerGroup();
-  // 항적은 캔버스에 그린다. 기본값(SVG)으로 두면 구간마다 <path> 두 개(표시선·클릭선)가
-  // DOM에 쌓여, 확대·축소할 때마다 브라우저가 그 전부를 다시 투영하고 다시 그린다.
-  // 캔버스는 요소 하나라 줌이 훨씬 가볍고, 팝업·클릭 판정은 그대로 동작한다.
-  const dayRenderer = L.canvas({ padding: 0.3 });
   // 왕복이면 복항편을 점선으로 구분해서 그린다 (같은 항로를 겹쳐 지나가므로).
   // 항적의 어느 지점을 클릭해도 그 구간의 AIS 값이 보이도록, 각 구간마다
   //  ① 눈에 보이는 색 선 ② 그 위에 투명하고 두꺼운 클릭용 선(팝업 부착)
@@ -7962,28 +7864,28 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
     }
     if (landKm > 0.3) {
       landCount++;
-      L.polyline(latlngs, { color: '#ff2b2b', weight: 8, opacity: 0.3, interactive: false, renderer: dayRenderer }).addTo(g);
+      L.polyline(latlngs, { color: '#ff2b2b', weight: 8, opacity: 0.3, interactive: false }).addTo(g);
     }
     // 원본 대조 — 보정·보간으로 모양이 바뀐 구간은 원본 직선을 회색으로 깔아
     // 무엇이 어떻게 달라졌는지 눈으로 바로 비교할 수 있게 한다 (편집 중에는 항상 켠다).
     if ((_aisShowRaw || _aisCorrEdit) && corr) {
       L.polyline([[a.lat, a.lon], [b.lat, b.lon]], {
-        color: "#8899aa", weight: 1.5, opacity: 0.65, dashArray: "3 4", interactive: false, renderer: dayRenderer
+        color: "#8899aa", weight: 1.5, opacity: 0.65, dashArray: "3 4", interactive: false
       }).addTo(g);
     }
     L.polyline(latlngs, {
       color: corr ? '#c07bff' : _aisSpeedColor((a.speed + b.speed) / 2),
       weight: corr ? 4 : (isBack ? 4 : 3),
       opacity: corr ? 0.95 : (isBack ? 0.75 : 0.9),
-      dashArray: corr ? null : (isBack ? '5 7' : null), interactive: false, renderer: dayRenderer
+      dashArray: corr ? null : (isBack ? '5 7' : null), interactive: false
     }).addTo(g);
 
     const segRawKm = _simDist([a.lat, a.lon], [b.lat, b.lon]);
     const segKm = corr ? _routeLen(corr.path) : segRawKm; // 보정했으면 그 경로 길이
-    const segMin = (b.tsMs - a.tsMs) / 60000;
+    const segMin = (new Date(b.ts) - new Date(a.ts)) / 60000;
     const avgKts = _aisAvgKts(segKm, segMin);
     const nearPort = _nearestPortName(b.lat, b.lon, AIS_CALL_BUFFER_KM);
-    const hit = L.polyline(latlngs, { color: '#000', weight: 14, opacity: 0, interactive: true, renderer: dayRenderer });
+    const hit = L.polyline(latlngs, { color: '#000', weight: 14, opacity: 0, interactive: true });
     if (_aisCorrEdit) {
       // 편집 모드 — 팝업 대신 이 구간을 보정 대상으로 고른다
       const segA = a, segB = b;
@@ -8185,9 +8087,7 @@ const AIS_AGG_HOVER_MAX_DAYS = 400; // 이보다 많으면 hover 식별을 끈�
 // 캔버스는 지도를 끌거나 확대할 때마다 등록된 점을 전부 다시 투영·묘사한다.
 // 그래서 하루 몇 점이 아니라 "화면 전체에 그릴 점 수"를 예산으로 잡고 날짜 수로 나눈다.
 // (카멜리아 전체 기간은 하루 20점이면 88,621점이 되는데, 그 축척에서는 형태 차이가 없다)
-// 캔버스는 확대·축소할 때마다 등록된 점을 전부 다시 투영·묘사한다. 예산이 크면 그만큼
-// 줌이 무거워진다. 축소된 지도에서는 형태 차이가 없으므로 넉넉히 솎아낸다.
-const AIS_AGG_PT_BUDGET = 22000;
+const AIS_AGG_PT_BUDGET = 40000;
 function _aisAggOnMove(e) {
   if (!_aisAgg || _aisAgg.days.length > AIS_AGG_HOVER_MAX_DAYS) return;
   if (map.dragging && map.dragging.moving()) return; // 지도를 끄는 중에는 계산하지 않는다
@@ -8237,9 +8137,7 @@ function _renderAisPeriod(key, prefix) {
   const g = L.layerGroup();
   let totalPts = 0;
   // 수천 개 선을 SVG로 그리면 브라우저가 버거우므로 집계 뷰는 캔버스로 렌더링한다.
-  // 여백(padding)은 화면 밖까지 미리 그려두는 비율이다. 0.5면 화면의 2배를 그리게 되므로
-  // 줌 비용이 그만큼 커진다 — 0.2로 줄이면 그리는 면적이 절반 아래로 떨어진다.
-  const renderer = L.canvas({ padding: 0.2 });
+  const renderer = L.canvas({ padding: 0.5 });
   const grid = new Map(), idxDays = [];
   const wantHover = days.length <= AIS_AGG_HOVER_MAX_DAYS;
   // 색은 항상 지도 범례와 같은 속도색(_aisSpeedColor)을 쓴다.
@@ -8746,7 +8644,6 @@ function _aisSubHourClick(hh) {
 }
 
 function _aisTlApply() {
-  if (_aisNoVessel) { _clearAisLayer(); _aisDrawOverlays(); _aisRenderCrumb(); return; }
   const key = document.getElementById('aisVesselSel').value;
   const subWrap = document.getElementById('aisTbSubTlRow');
   const chartRow = document.getElementById('aisTbChartRow');
@@ -8793,7 +8690,6 @@ function _aisTlStep(dir) {
 
 // ── 선박 변경 ──
 async function onAisVesselChange() {
-  _aisNoVessel = false; // 배를 그리는 경로이므로 "선박 없음" 상태를 푼다
   const key = document.getElementById('aisVesselSel').value;
   onAisStop();
   const data = await _loadAisVessel(key);
@@ -9170,7 +9066,7 @@ function _playAisPoints(key, item, renderFn, getPts) {
     icon: _makeShipIcon(pts[0].course || 0, vColor, '#0a1832', `${_AIS_VESSELS[key].label}<br>${pts[0].speed.toFixed(1)} knot`),
     zIndexOffset: 1200
   }).addTo(map);
-  const tsMs = pts.map(p => p.tsMs);
+  const tsMs = pts.map(p => new Date(p.ts).getTime());
   const spanMs = Math.max(1, tsMs[tsMs.length - 1] - tsMs[0]);
   _aisPlay.marker = marker; _aisPlay.pts = pts; _aisPlay.simMs = 0;
   _aisPlay.tsMs = tsMs; _aisPlay.spanMs = spanMs;
@@ -9355,7 +9251,7 @@ function _aisHoverShipHide() {
     const tsMs = g.t0 + frac * g.totalMs;
     // 시각 배열은 항적이 바뀔 때만 다시 만든다 (매 프레임 map()을 돌 필요가 없다)
     if (tsCacheFor !== _aisLastChartPts) {
-      tsCache = _aisLastChartPts.map(p => p.tsMs);
+      tsCache = _aisLastChartPts.map(p => new Date(p.ts).getTime());
       tsCacheFor = _aisLastChartPts;
     }
     const vkey = document.getElementById('aisVesselSel').value;
