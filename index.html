@@ -6672,6 +6672,18 @@ function _detectAisStops(pts, speedThresh, minDurMin) {
 }
 
 // 좌표에서 가장 가까운 등록 항구(POI) 이름 — maxKm 이내일 때만 매칭
+// 이름만이 아니라 항구 객체(좌표 포함)를 돌려준다 — 검출된 터미널을 실제 항구
+// 좌표로 맞춰 붙일 때 쓴다.
+function _nearestPortObj(lat, lon, maxKm) {
+  maxKm = maxKm || 5;
+  let best = null, bestD = Infinity;
+  ports.forEach(p => {
+    const d = _simDist([lat, lon], [p.lat, p.lng]);
+    if (d < bestD) { bestD = d; best = p; }
+  });
+  return (best && bestD <= maxKm) ? { port: best, km: bestD } : null;
+}
+
 function _nearestPortName(lat, lon, maxKm) {
   maxKm = maxKm || 5;
   let best = null, bestD = Infinity;
@@ -6728,10 +6740,25 @@ function _aisFindTerminals(data) {
       }
     });
   });
-  return clusters
+  // 군집 중심점은 항적이 모이는 자리라 실제 부두에서 10km 넘게 밀리기도 한다.
+  // 그 좌표를 출발지로 쓰면 거리·시간이 다 틀어지므로, 등록된 항구가 가까이 있으면
+  // 그 항구의 실제 좌표로 맞춰 붙인다. 같은 항구로 붙는 군집은 하나로 합친다.
+  const snapped = [];
+  clusters
     .filter(c => c.n >= AIS_TERMINAL_MIN_HITS)
     .sort((a, b) => b.n - a.n)
-    .map(c => ({ lat: c.lat, lon: c.lon, n: c.n, name: _nearestPortName(c.lat, c.lon, AIS_TERMINAL_NAME_KM) }));
+    .forEach(c => {
+      const hit = _nearestPortObj(c.lat, c.lon, AIS_TERMINAL_NAME_KM);
+      if (hit) {
+        const same = snapped.find(t => t.name === hit.port.name);
+        if (same) { same.n += c.n; same.driftKm = Math.max(same.driftKm, hit.km); return; }
+        snapped.push({ lat: hit.port.lat, lon: hit.port.lng, n: c.n,
+                       name: hit.port.name, snapped: true, driftKm: hit.km });
+      } else {
+        snapped.push({ lat: c.lat, lon: c.lon, n: c.n, name: null, snapped: false, driftKm: 0 });
+      }
+    });
+  return snapped.sort((a, b) => b.n - a.n);
 }
 
 // 좌표가 이 선박의 터미널 중 하나(버퍼 이내)인지 — 어느 항로든 동일하게 적용되는 공용 판정
@@ -6852,6 +6879,80 @@ function _aisDayStats(pts) {
 
 const AIS_VOY_MIN_KM = 20;   // 이보다 적게 움직인 구간은 항차로 보지 않는다(부두 이동 등)
 const AIS_VOY_MAX_H  = 72;   // 이보다 오래 걸린 구간은 AIS 공백으로 보고 제외
+const AIS_VOY_GATE_KM = 10;  // 정박 지점이 항구에서 이 거리 안이면 항차의 경계로 본다
+// 짧게 들렀다 나가는 기항(추자도·울릉도 등)은 "2kt 이하 8분 지속"에 안 걸린다.
+// 핑 간격이 몇 분이라 접안했다 떠나도 저속 점이 한두 개만 남기 때문이다.
+// 그래서 "항구에 바짝 붙었고 속도가 확 떨어진 지점"도 기항으로 본다.
+const AIS_CALL_NEAR_KM  = 3;   // 항구 중심에서 이 거리 안
+const AIS_CALL_SLOW_KTS = 3;   // 이 속도 이하로 떨어졌으면 접안한 것으로 본다
+const AIS_PORT_MIN_HITS = 2;   // 정박이 이만큼 반복된 자리를 항구로 인정
+
+// ── 정박을 모아 항구를 찾는다 ──
+// 기존 _aisFindTerminals는 "하루의 시작·끝 지점"을 모으는데, 날짜 경계가 09:00 KST라
+// 야간 항해선(부관훼리)은 도착 직전에 날이 바뀌어 해협 한복판에 가짜 터미널이 생긴다.
+// 실제로 배가 멈춘 자리를 모으면 그런 허상이 안 생긴다.
+function _aisFindPortsFromStops(all) {
+  const clusters = [];
+  _detectAisStops(all).forEach(st => {
+    const hit = clusters.find(c => _simDist([c.lat, c.lon], [st.lat, st.lon]) <= AIS_TERMINAL_CLUSTER_KM);
+    if (hit) {
+      hit.n++;
+      hit.lat += (st.lat - hit.lat) / hit.n;
+      hit.lon += (st.lon - hit.lon) / hit.n;
+    } else clusters.push({ lat: st.lat, lon: st.lon, n: 1 });
+  });
+  // 등록된 항구가 가까이 있으면 그 실제 좌표로 맞춰 붙이고, 같은 항구는 하나로 합친다
+  const out = [];
+  clusters.filter(c => c.n >= AIS_PORT_MIN_HITS).sort((a, b) => b.n - a.n).forEach(c => {
+    const hit = _nearestPortObj(c.lat, c.lon, AIS_TERMINAL_NAME_KM);
+    if (hit) {
+      const same = out.find(t => t.name === hit.port.name);
+      if (same) { same.n += c.n; return; }
+      out.push({ lat: hit.port.lat, lon: hit.port.lng, n: c.n, name: hit.port.name, snapped: true });
+    } else out.push({ lat: c.lat, lon: c.lon, n: c.n, name: null, snapped: false });
+  });
+  return out;
+}
+
+// ── 기항 지점 찾기 ──
+// 오래 선 정박이든 잠깐 들른 것이든, "항구에 붙었고 느려졌다"를 기준으로 한 번에 잡는다.
+// 연속된 점은 한 번의 기항으로 묶는다.
+function _aisFindCalls(all, gatePorts) {
+  const calls = [];
+  let cur = null;
+  for (let i = 0; i < all.length; i++) {
+    const p = all[i];
+    if (p.speed > AIS_CALL_SLOW_KTS) { if (cur) { calls.push(cur); cur = null; } continue; }
+    let g = null, bd = Infinity;
+    for (let k = 0; k < gatePorts.length; k++) {
+      const x = gatePorts[k];
+      const d = _simDist([x.lat, x.lon], [p.lat, p.lon]);
+      if (d <= AIS_CALL_NEAR_KM && d < bd) { bd = d; g = x; }
+    }
+    if (!g) { if (cur) { calls.push(cur); cur = null; } continue; }
+    if (cur && cur.port === g) { cur.endTs = p.ts; cur.i1 = i; if (bd < cur.minKm) cur.minKm = bd; }
+    else { if (cur) calls.push(cur); cur = { port: g, startTs: p.ts, endTs: p.ts, i0: i, i1: i, minKm: bd }; }
+  }
+  if (cur) calls.push(cur);
+  return calls.map(c => Object.assign(c, {
+    durMin: (new Date(c.endTs) - new Date(c.startTs)) / 60000
+  }));
+}
+
+// 항차의 경계가 될 수 있는 지점들 — 검출된 터미널 + 등록된 항구.
+// 터미널은 "하루의 시작·끝"이 모이는 자리라서, 하루 중간에 들르기만 하는 경유항
+// (울릉도·추자도·이즈하라 등)은 터미널로 안 잡힌다. 그래서 등록된 항구를 함께 넣는다.
+function _aisGatePorts(data) {
+  // 정박으로 찾은 항구를 우선 쓰고(허상이 없다), 없으면 날짜 끝점 터미널로 대체한다
+  const base = (data.stopPorts && data.stopPorts.length) ? data.stopPorts : (data.terminals || []);
+  const list = base.map(t => ({ lat: t.lat, lon: t.lon, name: t.name }));
+  ports.forEach(p => {
+    if (!list.some(t => _simDist([t.lat, t.lon], [p.lat, p.lng]) <= AIS_VOY_GATE_KM)) {
+      list.push({ lat: p.lat, lon: p.lng, name: p.name, fromRegistry: true });
+    }
+  });
+  return list;
+}
 
 function _aisBuildVoyages(key, data) {
   const terms = data.terminals || [];
@@ -6862,12 +6963,15 @@ function _aisBuildVoyages(key, data) {
   if (all.length < 4) return [];
   const tsMs = all.map(p => new Date(p.ts).getTime());
 
-  // 항구 인근 정박만 항차의 경계로 삼는다 (해상 표류·대기는 경계가 아니다)
-  const gates = [];
-  _detectAisStops(all).forEach(st => {
-    const t = _aisTerminalAt(terms, st.lat, st.lon);
-    if (t) gates.push({ st, t });
-  });
+  // 실제로 배가 멈춘 자리를 모아 항구를 찾고(날짜 경계가 만드는 허상 제거),
+  // 거기에 등록된 항구를 더해 항차의 경계 후보로 삼는다.
+  data.stopPorts = _aisFindPortsFromStops(all);
+  const gatePorts = _aisGatePorts(data);
+  // 오래 선 정박이든 잠깐 들른 것이든 "붙었고 느려졌다"로 기항을 잡는다
+  const gates = _aisFindCalls(all, gatePorts).map(c => ({
+    st: { startTs: c.startTs, endTs: c.endTs, durMin: c.durMin, lat: c.port.lat, lon: c.port.lon },
+    t: c.port
+  }));
 
   // 시각 → 배열 위치 (이분 탐색)
   const at = ms => {
