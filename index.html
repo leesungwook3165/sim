@@ -6442,6 +6442,7 @@ const _AIS_VESSELS = {
   camellia:    { label:'카멜리아호',            sub:'카멜리아라인', file:'camellia_track-data-2013-01-01,2027-01-01.csv',    color:'#ff66aa' },
   seonghee:    { label:'성희호',               file:'seonghee_track-data-2012-01-01,2027-01-01.csv',    color:'#cc88ff' },
   hamayuu:     { label:'하마유호',              file:'hamayuu_track-data-2012-01-01,2026-12-31.csv',     color:'#55ffdd' },
+  panstarmiracle:{ label:'팬스타 미라클호',      sub:'팬스타·부산↔오사카', file:'panstarmiracle_track-data-2025-03-01,2026-09-01.csv', color:'#33ccaa' },
   santamonica: { label:'산타모니카호',          sub:'제주항로·중고매입 후보', file:'santamonica_track-data-2026-06-17,2026-08-06.csv', color:'#ffcc44' },
   eldorado:    { label:'엘도라도 익스프레스호', file:'eldorado_track-data-2026-06-17,2026-08-06.csv',    color:'#88ff55' },
 };
@@ -7906,11 +7907,20 @@ function _aisVoyageTimes(pts, terminals) {
 
   // 출항 = 출발항 정박이 끝나는 시각 / 도착 = 도착항 정박이 시작되는 시각
   const sStop = _aisStopAtPort(stops, startPort, null, tTurn);
-  const eStop = _aisStopAtPort(stops, endPort, tTurn, null);
   const sNear = _aisNearestApproach(pts, startPort, 0, turnIdx != null ? turnIdx : last, 'depart');
-  const eNear = _aisNearestApproach(pts, endPort, turnIdx != null ? turnIdx : 0, last, 'arrive');
-  const departTs = sStop ? sStop.endTs   : (sNear ? sNear.ts : pts[0].ts);
-  const arriveTs = eStop ? eStop.startTs : (eNear ? eNear.ts : pts[last].ts);
+  const departTs = sStop ? sStop.endTs : (sNear ? sNear.ts : pts[0].ts);
+  const departMs = ms(departTs);
+
+  // 도착은 반드시 출항 이후에서 찾는다. 왕복이 아닌 날은 회항 지점이 없어 탐색 범위에
+  // 제한이 없었는데, 출발항과 도착항이 같은 자리면(항구에 머물다 나간 날) 출항보다 이른
+  // 정박을 도착으로 집어 항해시간이 음수로 나왔다.
+  const eStop = _aisStopAtPort(stops, endPort, departMs, null);
+  let arrFrom = turnIdx != null ? turnIdx : 0;
+  if (sNear && sNear.idx > arrFrom) arrFrom = sNear.idx;
+  const eNear = _aisNearestApproach(pts, endPort, arrFrom, last, 'arrive');
+  let arriveTs = eStop ? eStop.startTs : (eNear ? eNear.ts : pts[last].ts);
+  if (ms(arriveTs) < departMs) arriveTs = pts[last].ts;   // 그래도 뒤집혔으면 마지막 핑
+  if (ms(arriveTs) < departMs) arriveTs = departTs;       // 하루가 통째로 정박인 날
 
   const out = {
     departTs, arriveTs, spanMin: (ms(arriveTs) - ms(departTs)) / 60000,
@@ -7923,8 +7933,12 @@ function _aisVoyageTimes(pts, terminals) {
   if (legs) {
     // 반대편 항구 — 도착(정박 시작) ~ 출발(정박 끝). 그 사이가 회항 정박시간.
     const tStop = _aisStopAtPort(stops, turnPort, null, null);
-    const turnIn  = tStop ? ms(tStop.startTs) : ms(pts[turnIdx].ts);
-    const turnOut = tStop ? ms(tStop.endTs)   : ms(pts[turnIdx].ts);
+    // 반대편 정박은 출항과 도착 사이에 있어야 한다 (밖으로 나가면 편도 시간이 음수가 된다)
+    const dMs = ms(departTs), aMs = ms(arriveTs);
+    let turnIn  = tStop ? ms(tStop.startTs) : ms(pts[turnIdx].ts);
+    let turnOut = tStop ? ms(tStop.endTs)   : ms(pts[turnIdx].ts);
+    turnIn  = Math.min(Math.max(turnIn, dMs), aMs);
+    turnOut = Math.min(Math.max(turnOut, turnIn), aMs);
     out.turnPort = _aisTerminalLabel(turnPort);
     out.turnInTs = new Date(turnIn).toISOString();
     out.turnOutTs = new Date(turnOut).toISOString();
