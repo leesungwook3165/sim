@@ -1438,13 +1438,8 @@
     </div>
     <!-- 선박 선택 + 기간 -->
     <div class="ais-tb-vessel">
-      <select id="aisVesselSel" onchange="onAisVesselChange()">
-        <option value="beetle">비틀호 (JR규슈)</option>
-        <option value="queenbeetle">퀸비틀 (JR규슈)</option>
-        <option value="camellia">카멜리아호 (카멜리아라인)</option>
-        <option value="santamonica">산타모니카호</option>
-        <option value="eldorado">엘도라도 익스프레스호</option>
-      </select>
+      <!-- 항목은 _AIS_VESSELS 등록부에서 자동으로 채운다 -->
+      <select id="aisVesselSel" onchange="onAisVesselChange()"></select>
       <input type="date" id="aisRangeFrom" onchange="onAisRangeChange()" title="조회 시작일">
       <span style="color:#557799;font-size:10px">~</span>
       <input type="date" id="aisRangeTo" onchange="onAisRangeChange()" title="조회 종료일">
@@ -1628,7 +1623,12 @@ const ports = [
   { id:'osaka',       name:'오사카항 국제페리터미널', lat:34.643200, lng:135.422051, color:'#ff9933', role:'참고 (타 항로)', desc:'오사카시 스미노에구 소재, 오사카메트로 뉴트램 "페리터미널역"과 연결(코스모스퀘어역에서 팬스타 무료 셔틀버스 운행). 세토내해를 지나는 크루즈형 훼리 취항지 — 팬스타 미라클호(22,000톤급)가 부산-오사카를 왕복 운항.', tags:['참고','오사카','미라클호'] },
   { id:'gwangyang',  name:'광양항 국제여객터미널',   lat:34.9217916, lng:127.6979195, color:'#44eebb', role:'참고 (광양훼리)', lineName:'광양훼리', desc:'전남 광양시 소재 국제여객터미널. 광양비츠호(3만톤급 투입 예정) 출항지. 광양 ↔ 시모노세키 (대한해협 → 히비키나다 → 간몬해협 경유) 항로.', tags:['참고','광양','광양훼리','광양비츠호'] },
   { id:'pohang',     name:'포항여객선터미널',       lat:36.051198,  lng:129.378573,  color:'#ffcc33', role:'참고 (국내 항로)', desc:'경북 포항시 소재 여객선터미널. 포항 ↔ 울릉도(도동항) 국내 항로 출항지.', tags:['참고','포항','국내 항로'] },
-  { id:'ulleungdo',  name:'울릉도 도동항',          lat:37.480948,  lng:130.910023,  color:'#66aaff', role:'참고 (국내 항로)', desc:'경북 울릉군 소재 도동항. 포항 ↔ 울릉도 국내 항로 도착지.', tags:['참고','울릉도','도동항','국내 항로'] }
+  { id:'ulleungdo',  name:'울릉도 도동항',          lat:37.480948,  lng:130.910023,  color:'#66aaff', role:'참고 (국내 항로)', desc:'경북 울릉군 소재 도동항. 포항 ↔ 울릉도 국내 항로 도착지.', tags:['참고','울릉도','도동항','국내 항로'] },
+  // 제주 항로 — 산타모니카호가 다니는 구간. 좌표는 AIS 항적에서 자동 검출된 터미널
+  // 중심점을 그대로 썼다(하루의 시작·끝 지점이 반복해서 모이는 자리).
+  { id:'seomang',    name:'진도 서망항',            lat:34.366900,  lng:126.133100,  color:'#ffcc44', role:'참고 (국내 항로)', desc:'전남 진도군 임회면 소재. 산타모니카호 제주 항로의 육지 쪽 기점.', tags:['참고','진도','서망항','제주항로','국내 항로'] },
+  { id:'chujado',    name:'추자도',                lat:33.966200,  lng:126.313500,  color:'#ffcc44', role:'참고 (국내 항로)', desc:'제주시 추자면. 산타모니카호가 제주 항로 중간에 들르기도 하고 그냥 지나기도 하는 경유지.', tags:['참고','추자도','제주항로','경유','국내 항로'] },
+  { id:'jeju',       name:'제주항 국제여객터미널',   lat:33.522500,  lng:126.541700,  color:'#ffcc44', role:'참고 (국내 항로)', desc:'제주시 건입동 소재. 제주 항로 도착지.', tags:['참고','제주','제주항','제주항로','국내 항로'] }
 ];
 
 function makeIcon(color, highlight) {
@@ -6316,13 +6316,26 @@ function _startOnboardingIntro() {
 // ════════════════════════════════════════════════════
 //  AIS 실적 항로 뷰어 (GFW 타임바 스타일)
 // ════════════════════════════════════════════════════
+// 선박을 추가할 때는 여기 한 줄만 넣으면 된다 — 선택 드롭다운도 이 표에서 만들고,
+// 터미널·순항속도·기대거리·기준일은 모두 데이터에서 자동 산출한다(하드코딩 없음).
 const _AIS_VESSELS = {
-  beetle:      { label:'비틀호',               file:'beetle_track-data-2012-01-01,2027-01-01.csv',      color:'#ff9955' },
-  queenbeetle: { label:'퀸비틀',               file:'queenbeetle_track-data-2012-01-01,2027-01-01.csv', color:'#44aaff' },
-  camellia:    { label:'카멜리아호',            file:'camellia_track-data-2013-01-01,2027-01-01.csv',    color:'#ff66aa' },
-  santamonica: { label:'산타모니카호',          file:'santamonica_track-data-2026-06-17,2026-08-06.csv', color:'#ffcc44' },
+  beetle:      { label:'비틀호',               sub:'JR규슈',      file:'beetle_track-data-2012-01-01,2027-01-01.csv',      color:'#ff9955' },
+  queenbeetle: { label:'퀸비틀',               sub:'JR규슈',      file:'queenbeetle_track-data-2012-01-01,2027-01-01.csv', color:'#44aaff' },
+  camellia:    { label:'카멜리아호',            sub:'카멜리아라인', file:'camellia_track-data-2013-01-01,2027-01-01.csv',    color:'#ff66aa' },
+  seonghee:    { label:'성희호',               file:'seonghee_track-data-2012-01-01,2027-01-01.csv',    color:'#cc88ff' },
+  hamayuu:     { label:'하마유호',              file:'hamayuu_track-data-2012-01-01,2026-12-31.csv',     color:'#55ffdd' },
+  santamonica: { label:'산타모니카호',          sub:'제주항로·중고매입 후보', file:'santamonica_track-data-2026-06-17,2026-08-06.csv', color:'#ffcc44' },
   eldorado:    { label:'엘도라도 익스프레스호', file:'eldorado_track-data-2026-06-17,2026-08-06.csv',    color:'#88ff55' },
 };
+
+// 드롭다운은 등록부에서 만든다 — 선박을 추가해도 HTML을 따로 고칠 필요가 없다
+(function() {
+  const sel = document.getElementById('aisVesselSel');
+  if (!sel) return;
+  sel.innerHTML = Object.entries(_AIS_VESSELS).map(([k, v]) =>
+    '<option value="' + k + '">' + v.label + (v.sub ? ' (' + v.sub + ')' : '') + '</option>'
+  ).join('');
+})();
 
 const _aisCache = {};
 const _aisLayerGroup = { g: null };
@@ -6576,6 +6589,7 @@ const AIS_TIME_BASE_Q = 0.10;                       // 기준 배율로 쓸 분�
 const AIS_TIME_DEV_LO = 0.85, AIS_TIME_DEV_HI = 1.20; // 기준 배율 대비 허용 범위
 const AIS_TERMINAL_CLUSTER_KM = 12; // 시작·끝 지점을 이 거리 이내면 같은 터미널로 묶음
 const AIS_TERMINAL_MIN_HITS   = 3;  // 최소 이 횟수 이상 반복 등장해야 터미널로 인정
+const AIS_TERMINAL_NAME_KM    = 10; // 터미널 중심이 항구에서 이 거리 안일 때만 그 항구 이름을 붙인다
 
 // ── 선박별 터미널(항구) 지점 자동 도출 ──
 // 등록된 ports 배열에 없는 항구를 오가는 선박도 있으므로(예: 산타모니카호는 부산·대마도가
@@ -6600,7 +6614,7 @@ function _aisFindTerminals(data) {
   return clusters
     .filter(c => c.n >= AIS_TERMINAL_MIN_HITS)
     .sort((a, b) => b.n - a.n)
-    .map(c => ({ lat: c.lat, lon: c.lon, n: c.n, name: _nearestPortName(c.lat, c.lon, 25) }));
+    .map(c => ({ lat: c.lat, lon: c.lon, n: c.n, name: _nearestPortName(c.lat, c.lon, AIS_TERMINAL_NAME_KM) }));
 }
 
 // 좌표가 이 선박의 터미널 중 하나(버퍼 이내)인지 — 어느 항로든 동일하게 적용되는 공용 판정
