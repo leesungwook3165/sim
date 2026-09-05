@@ -601,6 +601,48 @@
     .sim-tab-content { display: none; }
     .sim-tab-content.active { display: block; }
 
+    /* ── 보정 편집 안내 (편집 모드일 때만 보인다) ── */
+    #aisCorrHelp {
+      position: fixed;
+      right: 14px; bottom: calc(var(--bottom-bars, 0px) + 14px); /* 좌하단은 저장 패널이 쓴다 */
+      z-index: 1011; display: none;
+      width: 264px;
+      background: rgba(8,20,45,0.95);
+      border: 1px solid rgba(192,123,255,0.5);
+      border-radius: 10px;
+      box-shadow: 0 6px 22px rgba(0,0,0,0.5);
+      backdrop-filter: blur(8px);
+      color: #e8f4ff; font-size: 11px; line-height: 1.5;
+      padding: 10px 12px 11px;
+    }
+    #aisCorrHelp.on { display: block; }
+    #aisCorrHelp h4 {
+      margin: 0 0 6px; font-size: 11.5px; color: #d9b6ff; font-weight: 700;
+      display: flex; align-items: center; gap: 5px;
+    }
+    #aisCorrHelp .ch-sub {
+      font-size: 10px; color: #9fb6cc; margin: -3px 0 7px; font-variant-numeric: tabular-nums;
+    }
+    #aisCorrHelp ul { margin: 0; padding: 0; list-style: none; }
+    #aisCorrHelp li { display: flex; gap: 6px; margin: 0 0 3px; color: #cfe2f5; }
+    #aisCorrHelp li b { color: #fff; font-weight: 700; flex: none; }
+    #aisCorrHelp .ch-key {
+      display: inline-block; padding: 0 4px; border-radius: 3px; flex: none;
+      background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22);
+      font-size: 10px; font-weight: 700; color: #fff;
+    }
+    #aisCorrHelp .ch-btns { display: flex; gap: 6px; margin-top: 9px; }
+    #aisCorrHelp button {
+      flex: 1; padding: 5px 6px; font-size: 10.5px; font-weight: 700;
+      border-radius: 6px; cursor: pointer; color: #e8f4ff;
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(160,190,220,0.35);
+    }
+    #aisCorrHelp button:hover { background: rgba(255,255,255,0.16); }
+    #aisCorrHelp button.primary {
+      background: rgba(192,123,255,0.28); border-color: rgba(192,123,255,0.7); color: #fff;
+    }
+    #aisCorrHelp button.primary:hover { background: rgba(192,123,255,0.42); }
+
     /* ── 운항 관리 패널 (선박 스케줄 관리 + 선석 스케줄, 좌우 2열) ── */
     #opsPanel {
       position: fixed;
@@ -1463,6 +1505,9 @@
 </div>
 
 <!-- AIS 타임바 (GFW 스타일, 하단 고정) -->
+<!-- 보정 편집 조작 안내 — 편집 모드에서만 보인다 -->
+<div id="aisCorrHelp"></div>
+
 <div id="aisTimebar">
   <button id="aisMinBtn" onclick="toggleAisTimebar()" title="AIS 타임바 최소화 / 복원" style="position:absolute;top:5px;right:10px;z-index:3;background:transparent;border:none;color:#aac8e8;font-size:14px;line-height:1;padding:2px 6px;cursor:pointer;border-radius:4px;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#aac8e8'">─</button>
   <div class="ais-tb-resizer" id="aisTbResizer" title="드래그하여 높이 조절"></div>
@@ -2888,6 +2933,13 @@ let lastClickLL = null;
 map.on('contextmenu', e => {
   L.DomEvent.preventDefault(e.originalEvent); // 브라우저 기본 우클릭 메뉴 대신 좌표 팝업을 띄운다
   if (measuring) return;  // 거리재기 모드에선 좌표팝업 생략
+  // 보정 편집 중 빈 바다를 우클릭하면 그 구간 편집을 끝낸다.
+  // 꼭짓점 위에서 누른 우클릭은 그 점을 지우는 동작이므로 여기서 가로채지 않는다.
+  if (_aisCorrDraft) {
+    const t = e.originalEvent && e.originalEvent.target;
+    const onHandle = t && t.closest && t.closest('.leaflet-marker-icon');
+    if (!onHandle) { _aisCorrFinishSeg(); return; }
+  }
   lastClickLL = e.latlng;
 
   const lat = e.latlng.lat.toFixed(6);
@@ -8088,6 +8140,7 @@ function _aisCorrRenderDraft() {
 function _aisCorrCommitDraft() {
   const d = _aisCorrDraft;
   if (!d) return;
+  _aisCorrHelpUpdate(); // 꼭짓점 수를 안내에 반영
   const key = document.getElementById('aisVesselSel').value;
   const A = [d.a.lat, d.a.lon], B = [d.b.lat, d.b.lon];
   const srcKm = _simDist(A, B), corrKm = _routeLen(d.path);
@@ -8103,10 +8156,81 @@ function _aisCorrCommitDraft() {
     '직선 ' + srcKm.toFixed(1) + 'km → 보정 ' + corrKm.toFixed(1) + 'km · 계속 당겨서 다듬을 수 있습니다');
 }
 
+// ── 편집 안내 패널 ──
+// 조작법을 상태줄에 한 번 띄우고 마는 대신, 편집하는 동안 계속 옆에 둔다.
+// 구간을 고르기 전과 고른 뒤에 할 일이 다르므로 내용도 그때그때 바꾼다.
+function _aisCorrHelpUpdate() {
+  const el = document.getElementById('aisCorrHelp');
+  if (!el) return;
+  if (!_aisCorrEdit) { el.classList.remove('on'); el.innerHTML = ''; return; }
+  el.classList.add('on');
+
+  if (!_aisCorrDraft) {
+    const all = _aisRefRoutes(), mine = all.filter(r => r.user).length;
+    el.innerHTML =
+      '<h4>✏ 보정 편집 중</h4>' +
+      '<div class="ch-sub">안내선 ' + all.length + '개 (내가 그린 ' + mine + ' · 구상·참고 ' + (all.length - mine) + ')</div>' +
+      '<ul>' +
+      '<li><b>①</b><span>고칠 구간을 지도에서 클릭하세요</span></li>' +
+      '<li><b>·</b><span>굵은 빨간 선이 육지를 지나는 구간입니다</span></li>' +
+      '<li><b>·</b><span>원본 AIS는 바뀌지 않고 보정분만 따로 저장됩니다</span></li>' +
+      '</ul>' +
+      '<div class="ch-btns"><button onclick="_aisCorrExit()">편집 끝내기</button></div>';
+    return;
+  }
+
+  const d = _aisCorrDraft;
+  const nV = Math.max(0, d.path.length - 2);
+  el.innerHTML =
+    '<h4>✏ 구간 편집 중</h4>' +
+    '<div class="ch-sub">' + d.a.ts.slice(0, 10) + ' ' + _aisFmtClock(d.a.ts) + ' → ' + _aisFmtClock(d.b.ts) +
+      ' · 꼭짓점 ' + nV + '개</div>' +
+    '<ul>' +
+    '<li><b>흰 점</b><span>끌어서 항로를 당깁니다 (끌 때마다 저장)</span></li>' +
+    '<li><b>옅은 점</b><span>끌면 그 자리에 꼭짓점이 생깁니다</span></li>' +
+    '<li><b>우클릭</b><span>꼭짓점 위에서 누르면 그 점을 지웁니다</span></li>' +
+    '<li><b>청록선</b><span>클릭하면 그 경로로 한 번에 맞춥니다</span></li>' +
+    '</ul>' +
+    '<ul style="margin-top:6px">' +
+    '<li><span class="ch-key">Esc</span><span>또는 빈 바다 우클릭 — 이 구간 완료</span></li>' +
+    '</ul>' +
+    '<div class="ch-btns">' +
+      '<button class="primary" onclick="_aisCorrFinishSeg()">이 구간 완료</button>' +
+      '<button onclick="_aisCorrExit()">편집 끝내기</button>' +
+    '</div>';
+}
+
+// 지금 고른 구간의 편집을 끝낸다 (보정분은 끌 때마다 이미 저장돼 있다)
+function _aisCorrFinishSeg() {
+  if (!_aisCorrDraft && !_aisCorrSel) return false;
+  const had = !!_aisCorrDraft;
+  _aisCorrClearDraft();
+  _aisCorrSel = null;
+  _aisTlApply();          // 안내선을 걷고 보정된 항로로 다시 그린다
+  _aisCorrHelpUpdate();
+  if (had) _aisSetStatus('✏ 구간 편집 완료 — 다른 구간을 클릭하면 이어서 고칠 수 있습니다');
+  return true;
+}
+
+// 편집 모드 자체를 끝낸다
+function _aisCorrExit() {
+  const cb = document.getElementById('aisCorrEdit');
+  if (cb) { cb.checked = false; }
+  onAisCorrEditChange();
+}
+
+// Esc — 구간을 고른 상태면 그 구간만 끝내고, 아니면 편집 모드를 끝낸다
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape' || !_aisCorrEdit) return;
+  if (_aisCorrFinishSeg()) return;
+  _aisCorrExit();
+});
+
 // 편집 모드에서 보정할 구간을 고른다
 function _aisCorrPick(a, b) {
   _aisCorrSel = { a, b };
   _aisCorrStartDraft(a, b); // 흰 꼭짓점을 끌어 직접 다듬는다
+  _aisCorrHelpUpdate();
   _aisSetStatus(`✏ 구간 선택: ${_aisFmtClock(a.ts)} → ${_aisFmtClock(b.ts)} ` +
     `(직선 ${_simDist([a.lat, a.lon], [b.lat, b.lon]).toFixed(1)}km) — ` +
     `보라 선의 점을 끌어 다듬으세요(끌 때마다 저장). 청록 안내선을 클릭하면 그 경로로 한 번에 맞춥니다`);
@@ -8142,6 +8266,7 @@ function onAisCorrEditChange() {
   _aisCorrEdit = document.getElementById('aisCorrEdit').checked;
   _aisCorrSel = null;
   _aisCorrClearDraft();
+  _aisCorrHelpUpdate();
   if (_aisCorrEdit) {
     const all = _aisRefRoutes(), guides = all.length, mine = all.filter(r => r.user).length;
     _aisSetStatus(guides
