@@ -1107,7 +1107,19 @@
     .ais-vsel-menu label:hover { background: rgba(126,207,255,0.14); }
     .ais-vsel-menu input { accent-color: #4aa3ff; margin: 0; cursor: pointer; }
     .ais-vsel-swatch { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+    .ais-vsel-menu .vsel-name { flex: 1; }
+    .ais-vsel-menu .vsel-name:hover { text-decoration: underline; }
     .ais-vsel-menu .vsel-main { margin-left: auto; font-size: 9px; color: #7ecfff; font-weight: 700; }
+    .ais-vsel-menu .vsel-set {
+      margin-left: auto; font-size: 9px; color: #90a8bf; font-weight: 700;
+      border: 1px solid rgba(160,190,220,0.3); border-radius: 4px; padding: 1px 4px;
+    }
+    .ais-vsel-menu .vsel-set:hover { color: #fff; border-color: rgba(126,207,255,0.8); }
+    .ais-vsel-menu .vsel-none {
+      margin-top: 3px; border-top: 1px solid rgba(80,160,255,0.22); padding-top: 5px;
+      color: #ff9aa8; font-weight: 700;
+    }
+    .ais-vsel > button.off { color: #8fa8bf; border-style: dashed; }
     .ais-vsel-menu .vsel-hint {
       border-top: 1px solid rgba(80,160,255,0.22); margin-top: 4px; padding: 5px 6px 2px;
       font-size: 9.5px; color: #8fa8bf; line-height: 1.45;
@@ -7201,6 +7213,7 @@ function _aisBuildVoyages(key, data) {
 //  ② 📌 고정      — 지금의 선박·기간 조합을 그대로 얼려 둔다. 다른 날짜로 옮겨도 남는다.
 // 기준 선박(aisVesselSel)은 그대로 두고 그 위에 얹기만 하므로 기존 동작은 바뀌지 않는다.
 let _aisOverlayKeys = [];  // 기준 선박 외에 함께 그릴 선박
+let _aisNoVessel = false;  // 아무 배도 안 보는 상태 (고정해둔 항적만 남길 때 쓴다)
 let _aisPins = [];         // [{ key, prefix, label }]
 let _aisOverlayGroup = null;
 
@@ -7232,42 +7245,89 @@ document.addEventListener('click', e => {
 function _aisVesselMenuBuild() {
   const m = document.getElementById('aisVesselMenu');
   if (!m) return;
-  const primary = document.getElementById('aisVesselSel').value;
+  const primary = _aisNoVessel ? null : document.getElementById('aisVesselSel').value;
   m.innerHTML = Object.entries(_AIS_VESSELS).map(([k, v]) => {
-    const on = k === primary || _aisOverlayKeys.includes(k);
+    const isMain = k === primary;
+    const on = isMain || _aisOverlayKeys.includes(k);
+    // 이름을 누르면 그 배가 기준이 된다 (체크만 하면 겹쳐 그리기로 들어간다)
     return '<label>' +
       '<input type="checkbox" ' + (on ? 'checked' : '') + ' onchange="_aisVesselToggle(\'' + k + '\', this.checked)">' +
       '<span class="ais-vsel-swatch" style="background:' + (v.color || '#888') + '"></span>' +
-      '<span>' + v.label + '</span>' +
-      (k === primary ? '<span class="vsel-main">기준</span>' : '') +
+      '<span class="vsel-name" onclick="event.preventDefault();_aisVesselSetPrimary(\'' + k + '\')">' + v.label + '</span>' +
+      (isMain ? '<span class="vsel-main">기준</span>'
+              : (on ? '<span class="vsel-set" onclick="event.preventDefault();_aisVesselSetPrimary(\'' + k + '\')">기준으로</span>' : '')) +
       '</label>';
   }).join('') +
-  '<div class="vsel-hint">맨 위로 체크한 배가 기준이 됩니다. 나머지는 같은 기간으로 겹쳐 그립니다.</div>';
+  '<label class="vsel-none" onclick="event.preventDefault();_aisVesselClear()">' +
+  '<span style="width:13px"></span><span>✕ 모두 끄기 (선박 없음)</span></label>' +
+  '<div class="vsel-hint">체크하면 겹쳐 그리고, 이름을 누르면 그 배가 기준이 됩니다.' +
+  '<br>모두 꺼도 📌로 고정해둔 항적은 남습니다.</div>';
+}
+
+// 기준 선박을 바꾼다. 원래 기준이던 배는 체크를 유지해 겹쳐 그리기로 내린다.
+async function _aisVesselSetPrimary(key) {
+  const sel = document.getElementById('aisVesselSel');
+  const old = _aisNoVessel ? null : sel.value;
+  if (!_aisNoVessel && old === key) return;
+  _aisOverlayKeys = _aisOverlayKeys.filter(k => k !== key);
+  if (old && old !== key && !_aisOverlayKeys.includes(old)) _aisOverlayKeys.push(old);
+  _aisNoVessel = false;
+  sel.value = key;
+  _aisVesselMenuBuild();
+  await onAisVesselChange();
+  _aisVesselLabelUpdate();
+}
+
+// 모두 끄기 — 고정해둔 항적(📌)은 그대로 둔다
+function _aisVesselClear() {
+  _aisNoVessel = true;
+  _aisOverlayKeys = [];
+  onAisStop();       // 재생 중이었으면 멈춘다
+  _clearAisLayer();
+  const sub = document.getElementById('aisTbSubTlRow');
+  if (sub) sub.style.display = 'none';
+  const chart = document.getElementById('aisTbChartRow');
+  if (chart) chart.style.display = 'none';
+  _aisVesselMenuBuild();
+  _aisVesselLabelUpdate();
+  _aisDrawOverlays();
+  _aisSetStatus('선박 없음 — 목록에서 배를 고르면 다시 그립니다' +
+    (_aisPins.length ? ' (고정해둔 항적 ' + _aisPins.length + '개는 그대로 있습니다)' : ''));
 }
 
 function _aisVesselLabelUpdate() {
   const btn = document.getElementById('aisVesselBtn');
   if (!btn) return;
-  const primary = document.getElementById('aisVesselSel').value;
-  const v = _AIS_VESSELS[primary];
+  if (_aisNoVessel) {
+    btn.textContent = (_aisPins.length ? '선박 없음 (📌' + _aisPins.length + ') ▾' : '선박 없음 ▾');
+    btn.classList.add('off');
+    return;
+  }
+  btn.classList.remove('off');
+  const v = _AIS_VESSELS[document.getElementById('aisVesselSel').value];
   btn.textContent = (v ? v.label : '선박 선택') +
     (_aisOverlayKeys.length ? ' +' + _aisOverlayKeys.length + '척' : '') + ' ▾';
 }
 
 async function _aisVesselToggle(key, on) {
   const sel = document.getElementById('aisVesselSel');
-  const primary = sel.value;
   if (on) {
-    if (key !== primary && !_aisOverlayKeys.includes(key)) _aisOverlayKeys.push(key);
+    // 아무것도 안 보던 상태였다면 지금 켠 배가 기준이 된다
+    if (_aisNoVessel) { await _aisVesselSetPrimary(key); return; }
+    if (key !== sel.value && !_aisOverlayKeys.includes(key)) _aisOverlayKeys.push(key);
   } else {
     _aisOverlayKeys = _aisOverlayKeys.filter(k => k !== key);
-    if (key === primary) {
-      // 기준을 껐으면 겹쳐둔 배 중 하나를 기준으로 올린다
-      if (!_aisOverlayKeys.length) { _aisVesselMenuBuild(); return; } // 마지막 한 척은 남긴다
-      const next = _aisOverlayKeys.shift();
-      sel.value = next;
-      _aisVesselMenuBuild(); _aisVesselLabelUpdate();
-      await onAisVesselChange();
+    if (!_aisNoVessel && key === sel.value) {
+      // 기준을 껐다 — 겹쳐둔 배가 있으면 그중 하나를 기준으로 올리고, 없으면 선박 없음
+      if (_aisOverlayKeys.length) {
+        const next = _aisOverlayKeys.shift();
+        sel.value = next;
+        _aisVesselMenuBuild();
+        await onAisVesselChange();
+        _aisVesselLabelUpdate();
+        return;
+      }
+      _aisVesselClear();
       return;
     }
   }
@@ -8678,6 +8738,7 @@ function _aisSubHourClick(hh) {
 }
 
 function _aisTlApply() {
+  if (_aisNoVessel) { _clearAisLayer(); _aisDrawOverlays(); _aisRenderCrumb(); return; }
   const key = document.getElementById('aisVesselSel').value;
   const subWrap = document.getElementById('aisTbSubTlRow');
   const chartRow = document.getElementById('aisTbChartRow');
@@ -8724,6 +8785,7 @@ function _aisTlStep(dir) {
 
 // ── 선박 변경 ──
 async function onAisVesselChange() {
+  _aisNoVessel = false; // 배를 그리는 경로이므로 "선박 없음" 상태를 푼다
   const key = document.getElementById('aisVesselSel').value;
   onAisStop();
   const data = await _loadAisVessel(key);
