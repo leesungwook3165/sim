@@ -504,12 +504,11 @@
       background: rgba(255,80,80,0.9) !important;
       color: #fff !important;
     }
-    /* 헤더 높이만큼 우측 상단 컨트롤 밀기 */
-    .leaflet-top.leaflet-right {
-      margin-top: 52px;
-    }
+    /* 헤더 높이만큼 상단 컨트롤 밀기 — 헤더는 폭에 따라 한 줄~세 줄로 늘어나므로
+       고정값 대신 JS가 재서 넣는 --header-h를 쓴다(아래 resize 처리 참고) */
+    .leaflet-top.leaflet-right,
     .leaflet-top.leaflet-left {
-      margin-top: 52px;
+      margin-top: calc(var(--header-h, 52px) + 0px);
     }
     /* 운항 관리 패널이 열리면 상단 중앙이 겹치므로 시계를 하단 바 위 중앙으로 내린다 */
     #topDayClock { transition: top 0.15s, bottom 0.15s; }
@@ -798,6 +797,57 @@
     .berth-call-status.ok   { color: #44ffaa; }
     .berth-call-status.conflict { color: #ff5566; }
     .berth-call-gaps { font-size: 10px; color: #88aabb; margin-top: 2px; }
+
+    /* ══════════════════════════════════════════════════════════════
+       반응형 — 태블릿(≤1024px) · 스마트폰(≤640px)
+       데스크톱 규칙은 그대로 두고 좁은 화면에서만 덮어쓴다.
+       ══════════════════════════════════════════════════════════════ */
+    @media (max-width: 1024px) {
+      /* 하단 바가 화면의 절반 이상을 먹지 않게 (실측: 태블릿 가로에서 61%, AIS까지 71%) */
+      #simTimelapseBar { max-height: 42vh; }
+      #aisTimebar      { max-height: 40vh; }
+      #simPanel   { width: 340px; right: 52px; }
+      #legendPanel { max-height: 40vh; }
+      #opsPanel   { width: min(1320px, 96vw); }
+    }
+
+    @media (max-width: 640px) {
+      /* 헤더: 제목은 줄바꿈, 부제는 숨김, 탭은 다음 줄로 */
+      .header-top { flex-wrap: wrap; gap: 6px 10px; }
+      #header { padding: 8px 12px; }
+      #header h1 { font-size: 15px; white-space: normal; letter-spacing: 0; }
+      #header .subtitle { display: none; }
+      .header-tabs { flex-wrap: wrap; width: 100%; gap: 5px; }
+      .header-tab { padding: 4px 9px; font-size: 11px; }
+
+      /* 지도 컨트롤은 (두세 줄이 된) 헤더 아래로 — --header-h가 실제 높이를 준다 */
+      .leaflet-top.leaflet-left, .leaflet-top.leaflet-right { margin-top: calc(var(--header-h, 78px) + 4px); }
+
+      /* 타임랩스 머리 — 폭을 강제하던 3열 그리드를 줄바꿈되는 flex로 */
+      #tlHead-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 10px; }
+      #tlHead-controls .sim-btns, #tlHead-controls .sim-speed { grid-column: auto; justify-self: auto; }
+      #simTimelapseBar { padding: 6px 10px 0; max-height: 38vh; }
+      #aisTimebar { max-height: 42vh; }
+
+      /* 떠 있는 패널은 화면 폭에 맞춘다. 끌어서 옮기면 인라인 좌표가 이긴다 */
+      #simPanel { top: calc(var(--header-h, 78px) + 8px); left: 6px; right: 6px; width: auto; min-width: 0;
+                  max-height: calc(100vh - var(--header-h, 78px) - 32px - var(--bottom-bars, 0px)); padding: 8px 10px; }
+      #opsPanel { top: calc(var(--header-h, 78px) + 8px); left: 6px; right: 6px; width: auto; min-width: 0; transform: none;
+                  max-height: calc(100vh - var(--header-h, 78px) - 20px - var(--bottom-bars, 0px)); }
+      #legendPanel { top: calc(var(--header-h, 78px) + 8px); left: 6px; max-width: 72vw; max-height: 44vh; font-size: 11px; padding: 6px 10px 8px; }
+      #topDayClock { top: calc(var(--header-h, 78px) + 8px); font-size: 18px; padding: 5px 16px; }
+      #savePanel   { left: 6px; right: 6px; }
+      #aisCorrHelp { left: 6px; right: 6px; width: auto; }
+
+      /* 터치에서 좌표줄은 의미가 없다(마우스 좌표) */
+      #coordBar { display: none; }
+
+      /* AIS 타임바: 날짜 칸을 좁히고 터치 표적을 키운다 */
+      .ais-tb-unit { min-width: 52px; font-size: 9.5px; padding: 0 3px; }
+      .ais-tb-btn, .map-ctrl-btn { min-width: 34px; min-height: 32px; }
+      .ais-tb-chart-row { height: 72px; }
+      #aisTbStatus { max-width: 40vw; }
+    }
 
     /* vis-timeline 다크테마 오버라이드 */
     #berthTimelineEl { border-radius: 6px; overflow: hidden; }
@@ -9165,6 +9215,11 @@ function _syncBottomBars() {
 
     // 저장된 상태가 있는 항목만 되돌린다 (처음 쓰는 사람은 기본값 그대로)
     const st = read();
+    // 스마트폰에서 처음 열면 지도부터 보이게 — 패널은 닫고 타임랩스는 접는다.
+    // (한 번이라도 켜고 끄면 그 상태가 저장되어 다음부터는 그대로 열린다)
+    if (!Object.keys(st).length && window.matchMedia && window.matchMedia('(max-width: 640px)').matches) {
+      st.sim = false; st.legend = false; st.tlMin = true;
+    }
     const setVis = (id, on) => { const p = el(id); if (p) p.classList.toggle('visible', on); };
     if ('sim' in st)    setVis('simPanel', st.sim);
     if ('ops' in st)    { setVis('opsPanel', st.ops); if (st.ops && typeof renderShipMgrList === 'function') { renderShipMgrList(); renderBerthPanel(); } }
@@ -9185,6 +9240,14 @@ function _syncBottomBars() {
     });
   })();
 
+  // 헤더 실제 높이 → --header-h. 좁은 화면에서 헤더가 여러 줄로 늘어나도
+  // 지도 컨트롤·패널이 그 밑으로 들어가지 않게 한다.
+  function _syncHeaderH() {
+    const h = document.getElementById('header');
+    if (h) document.documentElement.style.setProperty('--header-h', h.offsetHeight + 'px');
+  }
+  _syncHeaderH();
+  window.addEventListener('resize', _syncHeaderH);
   window.addEventListener('resize', _syncBottomBars);
   setTimeout(_syncBottomBars, 0);
 })();
