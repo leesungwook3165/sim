@@ -1452,6 +1452,12 @@
         <input type="checkbox" id="aisRefOnly" onchange="onAisRefOnlyChange()"> ★기준일만
       </span>
     </label>
+    <label class="ais-tb-normal" id="aisRawWrap" title="보정·보간으로 모양이 바뀐 구간의 원본 직선을 회색 점선으로 함께 표시합니다 (보정 편집 중에는 항상 켜집니다).">
+      <input type="checkbox" id="aisShowRaw" onchange="onAisShowRawChange()"> 🆚 원본 대조
+    </label>
+    <label class="ais-tb-normal" id="aisCorrWrap" title="원본 AIS는 그대로 두고, 내가 그린 항로로 특정 구간만 보정해 따로 저장합니다. 보정 기록에는 원본 일자·시각이 함께 남습니다.">
+      <input type="checkbox" id="aisCorrEdit" onchange="onAisCorrEditChange()"> ✏ 보정 편집
+    </label>
     <label class="ais-tb-normal" id="aisSnapWrap" title="AIS 핑이 벌어져 직선이 육지를 관통하는 구간을, 미리 그려둔 항로(직접 그린 선 포함)를 따라 우회시켜 그린다. 보간 구간은 점선으로 표시된다.">
       <input type="checkbox" id="aisSnapOn" checked onchange="onAisSnapChange()"> 🧭 항로 보간
     </label>
@@ -6681,6 +6687,48 @@ function _aisAnalyzeVessel(key, data) {
 }
 
 // ════════════════════════════════════════════════════
+//  수동 항로 보정 — 원본 AIS는 건드리지 않고 보정분만 따로 저장한다
+//  원본 CSV는 읽기 전용이고, 여기에는 "어느 선박 · 어느 날짜 · 몇 번째 구간을
+//  어떤 경로로 바꿔 그릴지"와 그 근거가 된 원본 데이터의 일자·시각을 함께 남긴다.
+//  (localStorage에만 저장되므로 원본 파일과 저장소 데이터는 그대로 유지된다)
+// ════════════════════════════════════════════════════
+const AIS_CORR_KEY = 'hanjil_ais_corrections';
+let _aisCorr = {};        // { 선박: { 날짜: { 구간번호: 보정기록 } } }
+let _aisCorrEdit = false; // 보정 편집 모드
+let _aisShowRaw = false;  // 원본 대조 — 보정·보간 구간의 원본 직선을 함께 표시
+let _aisCorrSel = null;   // 편집 중 선택한 구간 { i, a, b }
+
+function _aisCorrLoad() {
+  try { _aisCorr = JSON.parse(localStorage.getItem(AIS_CORR_KEY)) || {}; } catch (e) { _aisCorr = {}; }
+}
+function _aisCorrSave() {
+  try { localStorage.setItem(AIS_CORR_KEY, JSON.stringify(_aisCorr)); } catch (e) {}
+}
+function _aisCorrGet(key, date, i) {
+  return ((_aisCorr[key] || {})[date] || {})[i] || null;
+}
+function _aisCorrCount(key, date) {
+  return Object.keys((_aisCorr[key] || {})[date] || {}).length;
+}
+function _aisCorrSet(key, date, i, rec) {
+  if (!_aisCorr[key]) _aisCorr[key] = {};
+  if (!_aisCorr[key][date]) _aisCorr[key][date] = {};
+  _aisCorr[key][date][i] = rec;
+  _aisCorrSave();
+}
+function _aisCorrDelete(date, segKey) {
+  const key = document.getElementById('aisVesselSel').value;
+  if ((_aisCorr[key] || {})[date]) {
+    delete _aisCorr[key][date][segKey];
+    if (!Object.keys(_aisCorr[key][date]).length) delete _aisCorr[key][date];
+    _aisCorrSave();
+  }
+  _aisTlApply();
+  return false;
+}
+_aisCorrLoad();
+
+// ════════════════════════════════════════════════════
 //  항로 보간 — 끊긴 AIS 구간을 "손으로 그린 항로"에 맞춰 이어준다
 //  AIS 핑이 항해 중 6~9분(약 5km), 길게는 70분 넘게 벌어지다 보니 두 점을 직선으로
 //  이으면 섬·방파제를 관통한다. 그런 긴 구간은 미리 그려둔 항로(구상 항로·참고 항로,
@@ -6919,34 +6967,56 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
   // 두 개를 겹쳐 그린다. 마커는 25개 지점에만 있어서 회항점 같은 변곡점을 눌러도
   // 잡히지 않았는데, 이렇게 하면 선 위 어디를 눌러도 값이 뜬다.
   const legs = _aisSplitLegs(pts);
-  let snapCount = 0;
+  let snapCount = 0, corrCount = 0;
   for (let i = 1; i < pts.length; i++) {
     const a = pts[i - 1], b = pts[i];
     const isBack = legs && i > legs.turnIdx;
-    // 핑이 벌어져 직선이 육지를 관통하는 구간은 손으로 그린 항로에 맞춰 우회시킨다.
-    // 보간한 구간은 실측이 아니므로 점선으로 구분해 그린다.
-    const snap = _aisSnapOn ? _aisSnapSegment(a, b) : null;
-    const latlngs = snap ? snap.path : [[a.lat, a.lon], [b.lat, b.lon]];
+    // 우선순위: ① 사람이 직접 만든 보정 ② 자동 보간 ③ 원본 직선
+    // 보정·보간은 실측이 아니므로 선 모양으로 구분한다.
+    // 보정 키는 구간 번호가 아니라 원본 포인트의 시각을 쓴다 — 하루 전체·출항편·시간
+    // 뷰마다 pts 배열이 잘려 번호가 달라지기 때문이다.
+    const corr = _aisCorrGet(key, a.ts.slice(0, 10), a.ts);
+    const snap = (!corr && _aisSnapOn && !_aisCorrEdit) ? _aisSnapSegment(a, b) : null;
+    const latlngs = corr ? corr.path : (snap ? snap.path : [[a.lat, a.lon], [b.lat, b.lon]]);
     if (snap) snapCount++;
+    if (corr) corrCount++;
+    // 원본 대조 — 보정·보간으로 모양이 바뀐 구간은 원본 직선을 회색으로 깔아
+    // 무엇이 어떻게 달라졌는지 눈으로 바로 비교할 수 있게 한다 (편집 중에는 항상 켠다).
+    if ((_aisShowRaw || _aisCorrEdit) && (corr || snap)) {
+      L.polyline([[a.lat, a.lon], [b.lat, b.lon]], {
+        color: "#8899aa", weight: 1.5, opacity: 0.65, dashArray: "3 4", interactive: false
+      }).addTo(g);
+    }
     L.polyline(latlngs, {
-      color: _aisSpeedColor((a.speed + b.speed) / 2), weight: isBack ? 4 : 3,
-      opacity: snap ? 0.85 : (isBack ? 0.75 : 0.9),
-      dashArray: snap ? '2 6' : (isBack ? '5 7' : null), interactive: false
+      color: corr ? '#c07bff' : _aisSpeedColor((a.speed + b.speed) / 2),
+      weight: corr ? 4 : (isBack ? 4 : 3),
+      opacity: corr ? 0.95 : (snap ? 0.85 : (isBack ? 0.75 : 0.9)),
+      dashArray: corr ? null : (snap ? '2 6' : (isBack ? '5 7' : null)), interactive: false
     }).addTo(g);
 
     const segKm = _simDist([a.lat, a.lon], [b.lat, b.lon]);
     const segMin = (new Date(b.ts) - new Date(a.ts)) / 60000;
     const avgKts = segMin > 0 ? (segKm / 1.852) / (segMin / 60) : 0;
     const nearPort = _nearestPortName(b.lat, b.lon, AIS_CALL_BUFFER_KM);
-    L.polyline(latlngs, { color: '#000', weight: 14, opacity: 0, interactive: true })
-      .bindPopup(
+    const hit = L.polyline(latlngs, { color: '#000', weight: 14, opacity: 0, interactive: true });
+    if (_aisCorrEdit) {
+      // 편집 모드 — 팝업 대신 이 구간을 보정 대상으로 고른다
+      const segA = a, segB = b;
+      hit.on('click', () => _aisCorrPick(segA, segB));
+      hit.addTo(g);
+    } else hit.bindPopup(
         `<b>${_AIS_VESSELS[key].label}</b>${isBack ? ' <span style="color:#ffaa66">· 복항편</span>' : ''}<br>` +
         `${_aisFmtClock(a.ts)} → ${_aisFmtClock(b.ts)} UTC (${segMin.toFixed(0)}분)<br>` +
         `속도 <b>${a.speed.toFixed(1)} → ${b.speed.toFixed(1)} knot</b> · 방향 ${b.course.toFixed(0)}°<br>` +
         `구간 ${segKm.toFixed(1)}km · 구간평균 ${avgKts.toFixed(1)} knot` +
         (snap ? `<br><span style="color:#88ddff">🧭 보간: ${snap.name} 따라 ${snap.snapped.toFixed(1)}km (직선 ${snap.straight.toFixed(1)}km)</span>` : '') +
+        (corr ? `<br><span style="color:#c07bff">✏ 수동 보정됨 — ${corr.routeName}` +
+                `<br>원본 ${corr.srcDate} ${_aisFmtClock(corr.srcFromTs)}→${_aisFmtClock(corr.srcToTs)}` +
+                ` (직선 ${corr.srcKm.toFixed(1)}km → 보정 ${corr.corrKm.toFixed(1)}km)` +
+                `<br>저장 ${corr.savedAt.slice(0, 16).replace('T', ' ')}` +
+                ` · <a href="#" onclick="return _aisCorrDelete('${corr.srcDate}','${corr.srcFromTs}')" style="color:#ff8888">보정 삭제</a></span>` : '') +
         (nearPort ? `<br>⚓ ${nearPort} 부근` : ''),
-        { className: 'custom-popup', maxWidth: 260 }
+        { className: 'custom-popup', maxWidth: 280 }
       ).addTo(g);
   }
 
@@ -6994,6 +7064,21 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
     }
   });
 
+  // ── 보정 편집 모드 — 내가 그린 항로를 안내선으로 함께 띄운다 ──
+  // 편집 중에만 임시로 보이며, 안내선을 클릭하면 선택한 구간이 그 경로로 보정된다.
+  if (_aisCorrEdit) {
+    _aisRefRoutes().filter(r => r.user).forEach(r => {
+      L.polyline(r.pts, { color: '#66ffee', weight: 3, opacity: 0.9, dashArray: '6 5' })
+        .bindTooltip('✏ ' + r.name + ' — 클릭하면 선택한 구간을 이 경로로 보정', { sticky: true, className: 'ais-poi-label' })
+        .on('click', () => _aisCorrApply(r))
+        .addTo(g);
+    });
+    if (_aisCorrSel) {
+      L.polyline([[_aisCorrSel.a.lat, _aisCorrSel.a.lon], [_aisCorrSel.b.lat, _aisCorrSel.b.lon]],
+        { color: '#ffffff', weight: 6, opacity: 0.9, interactive: false }).addTo(g);
+    }
+  }
+
   // ── 실측 정박/경유 POI — 실제 운항속도(CSV) 기반 자동 감지 ──
   const stops = _detectAisStops(pts);
   stops.forEach(st => {
@@ -7018,7 +7103,8 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
 
   const maxSpd = Math.max(...pts.map(p => p.speed));
   const stopNote = stops.length ? ` · 정박 ${stops.length}건(${stops.map(s => Math.round(s.durMin)).join(',')}분)` : '';
-  const snapNote = snapCount ? ` · 🧭보간 ${snapCount}구간` : '';
+  const snapNote = (snapCount ? ` · 🧭보간 ${snapCount}구간` : '')
+    + (corrCount ? ` · ✏보정 ${corrCount}구간` : '');
   _aisSetStatus(`${_AIS_VESSELS[key].label} · ${labelStr} · ${pts.length}포인트 · 최고 ${maxSpd.toFixed(1)} knot${stopNote}${snapNote}${extraNote ? ' · ' + extraNote : ''}`);
 
   // 이 구간의 속도 변화 그래프(정적) — 재생 중에는 _playAisPoints가 재생 위치를 얹어 다시 그린다.
@@ -7543,6 +7629,56 @@ function onAisNormalOnlyChange() {
   const key = document.getElementById('aisVesselSel').value;
   if (!_aisCache[key]) return;
   _aisTbRenderTl(key);
+  _aisTlApply();
+}
+
+// 편집 모드에서 보정할 구간을 고른다
+function _aisCorrPick(a, b) {
+  _aisCorrSel = { a, b };
+  _aisSetStatus(`✏ 구간 선택: ${_aisFmtClock(a.ts)} → ${_aisFmtClock(b.ts)} ` +
+    `(직선 ${_simDist([a.lat, a.lon], [b.lat, b.lon]).toFixed(1)}km) — 청록색 안내선을 클릭하면 그 경로로 보정합니다`);
+  _aisTlApply();
+}
+
+// 선택한 구간을 안내선(내가 그린 항로) 경로로 보정해 저장한다.
+// 원본 AIS는 그대로 두고, 보정 기록에 원본 일자·시각을 함께 남긴다.
+function _aisCorrApply(route) {
+  if (!_aisCorrSel) { _aisSetStatus('✏ 먼저 보정할 구간을 클릭해서 고르세요'); return; }
+  const key = document.getElementById('aisVesselSel').value;
+  const { a, b } = _aisCorrSel;
+  const A = [a.lat, a.lon], B = [b.lat, b.lon];
+  const p1 = _projectOnRoute(A, route.pts), p2 = _projectOnRoute(B, route.pts);
+  const path = [A, ..._routeSlice(route.pts, p1, p2), B];
+  _aisCorrSet(key, a.ts.slice(0, 10), a.ts, {
+    path,
+    srcDate: _aisSelDay,          // 보정의 근거가 된 원본 데이터 일자
+    srcFromTs: a.ts, srcToTs: b.ts, // 원본 구간의 시각
+    srcKm: _simDist(A, B),
+    corrKm: _routeLen(path),
+    routeName: route.name,
+    savedAt: new Date().toISOString()
+  });
+  _aisCorrSel = null;
+  _aisTlApply();
+  _aisSetStatus(`✏ 보정 저장됨 — ${a.ts.slice(0,10)} ${_aisFmtClock(a.ts)} 구간 (${route.name})`);
+}
+
+// '✏ 보정 편집' 체크박스
+function onAisCorrEditChange() {
+  _aisCorrEdit = document.getElementById('aisCorrEdit').checked;
+  _aisCorrSel = null;
+  if (_aisCorrEdit) {
+    const guides = _aisRefRoutes().filter(r => r.user).length;
+    _aisSetStatus(guides
+      ? '✏ 보정 편집: 항적에서 고칠 구간을 클릭한 뒤, 청록색 안내선을 클릭하세요'
+      : '✏ 보정 편집: 먼저 지도 그리기 도구로 항로를 그려주세요 (그 선이 안내선이 됩니다)');
+  }
+  _aisTlApply();
+}
+
+// '🆚 원본 대조' 체크박스
+function onAisShowRawChange() {
+  _aisShowRaw = document.getElementById("aisShowRaw").checked;
   _aisTlApply();
 }
 
