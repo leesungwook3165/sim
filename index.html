@@ -48,6 +48,17 @@
       cursor: pointer;
       transition: background .15s, border-color .15s;
     }
+    /* 헤더로 옮긴 맵툴 버튼 — Leaflet 흰 막대 대신 헤더 탭과 같은 톤, 가로 배치 */
+    .header-tools { display: flex; align-items: center; margin-right: 8px; }
+    .header-tools .map-ctrl-group { display: flex; gap: 5px; }
+    .header-tools .map-ctrl-btn {
+      width: 30px; height: 28px; line-height: 26px; font-size: 14px;
+      border-radius: 5px; border: 1px solid rgba(80,160,255,0.4);
+      background: rgba(30,70,130,0.55); color: #cfe6ff;
+      transition: background .15s, border-color .15s;
+    }
+    .header-tools .map-ctrl-btn:hover { background: rgba(50,110,200,0.75); border-color: rgba(120,200,255,0.7); }
+    .header-tools .map-ctrl-btn.active { background: rgba(255,200,80,0.28); border-color: rgba(255,210,100,0.7); color: #ffe9a8; }
     .header-tab:hover {
       background: rgba(50,110,200,0.75);
       border-color: rgba(120,200,255,0.7);
@@ -265,7 +276,9 @@
     /* 범례 — 여닫기·드래그 가능한 패널 */
     #legendPanel {
       position: fixed;
-      inset: 150.181px auto auto 1568.71px;
+      /* 좌측 줌 컨트롤(헤더 52 + 여백 10 + 버튼 2×30) 아래. 우상단은 레이어 컨트롤과
+         맵툴 버튼 기둥이 쓰므로 들어가지 않는다. 끌어서 옮기면 인라인 left/top이 이긴다. */
+      left: 12px; top: 134px;
       z-index: 1007;
       background: rgba(10, 25, 50, 0.88);
       color: #e8f4ff;
@@ -273,14 +286,14 @@
       font-size: 11.5px;
       border: 1px solid rgba(80,160,255,0.3);
       min-width: 190px;
-      max-height: 70vh;
+      /* 하단 바(타임랩스·AIS)와 좌표줄 위에서 끝나게 */
+      max-height: calc(100vh - 134px - var(--bottom-bars, 0px) - 52px);
       overflow: auto;
       resize: both;
       padding: 8px 14px 10px;
       box-shadow: 0 4px 16px rgba(0,0,0,0.45);
       display: none;
-      transform: scale(0.8);
-      transform-origin: bottom right;
+      transform-origin: top left;
     }
     #legendPanel.visible { display: block; }
     #legendPanel .sim-title { font-size: 12px; margin-bottom: 6px; border-bottom: 1px solid rgba(80,160,255,0.3); padding-bottom: 5px; }
@@ -370,9 +383,9 @@
 
     /* 저장 패널 */
     #savePanel {
-      position: absolute;
-      bottom: 30px; left: 42px;
-      z-index: 1002;
+      position: fixed;
+      bottom: calc(var(--bottom-bars, 0px) + 42px); left: 12px;
+      z-index: 1011;
       background: rgba(10, 25, 50, 0.92);
       border: 1px solid rgba(80,160,255,0.35);
       border-radius: 8px;
@@ -403,7 +416,8 @@
     /* 마우스 좌표 표시 */
     #coordBar {
       position: absolute;
-      bottom: 0; left: 0; right: 0;
+      /* 타임랩스·AIS 바가 열리면 그 높이만큼 위로 — 뒤에 가려져 안 보이던 것 */
+      bottom: var(--bottom-bars, 0px); left: 0; right: 0;
       z-index: 1002;
       background: rgba(10, 25, 50, 0.82);
       border-top: 1px solid rgba(80,160,255,0.2);
@@ -497,13 +511,20 @@
     .leaflet-top.leaflet-left {
       margin-top: 52px;
     }
+    /* 운항 관리 패널이 열리면 상단 중앙이 겹치므로 시계를 하단 바 위 중앙으로 내린다 */
+    #topDayClock { transition: top 0.15s, bottom 0.15s; }
+    body.ops-open #topDayClock { top: auto; bottom: calc(var(--bottom-bars, 0px) + 44px); }
+
     /* ── 시뮬레이션 패널 ── */
     /* 하단 바(타임랩스·AIS)가 차지한 높이만큼 패널 최대 높이를 줄여 뒤로 숨지 않게 한다 */
-    #simPanel { max-height: calc(100vh - 80px - var(--bottom-bars, 0px)); }
-    #opsPanel { max-height: calc(100vh - 75px - var(--bottom-bars, 0px)); }
+    /* 80/75px = 헤더+여백, 30px = 좌표줄 높이+여백. 하단 바 높이는 CSS 변수로 들어온다 */
+    #simPanel { max-height: calc(100vh - 110px - var(--bottom-bars, 0px)); }
+    #opsPanel { max-height: calc(100vh - 105px - var(--bottom-bars, 0px)); }
     #simPanel {
       position: fixed;
-      top: 65px; left: 1115px; right: auto; bottom: auto;
+      /* 우상단 맵툴 버튼 기둥(30px) + Leaflet 여백(10px) + 간격을 비운 자리. 화면 폭이
+         달라져도 기둥을 덮지 않는다. 끌어서 옮기면 인라인 left/top이 이긴다. */
+      top: 62px; left: auto; right: 58px; bottom: auto;
       z-index: 1010;
       background: rgba(8,20,45,0.94);
       border: 1px solid rgba(80,160,255,0.4);
@@ -604,7 +625,7 @@
     /* ── 보정 편집 안내 (편집 모드일 때만 보인다) ── */
     #aisCorrHelp {
       position: fixed;
-      right: 14px; bottom: calc(var(--bottom-bars, 0px) + 14px); /* 좌하단은 저장 패널이 쓴다 */
+      right: 14px; bottom: calc(var(--bottom-bars, 0px) + 42px); /* 좌하단은 저장 패널, 바로 위 띠는 좌표줄 */
       z-index: 1011; display: none;
       width: 264px;
       background: rgba(8,20,45,0.95);
@@ -654,7 +675,8 @@
       color: #e8f4ff;
       font-size: 12px;
       width: min(1320px, 96vw);
-      max-height: 86vh;
+      /* 하단 바(타임랩스·AIS)와 좌표줄 위에서 끝나게 — 86vh만 두면 그 아래로 내려갔다 */
+      max-height: min(86vh, calc(100vh - 105px - var(--bottom-bars, 0px)));
       min-width: 480px;
       min-height: 320px;
       overflow: hidden;
@@ -1123,6 +1145,9 @@
       <div class="subtitle">시월드고속훼리 산타모니카호 · 부산 ↔ 히타카츠(쓰시마) ↔ 하카타 경유 구상</div>
     </div>
     <div class="header-tabs">
+      <!-- ⛴🚢📖❓ 앱 동작 버튼. 지도 우상단에 두면 레이어 컨트롤·그리기 도구와 한 기둥에
+           쌓여 하단 바 뒤로 밀렸다. 지도 조작이 아니라 앱 동작이라 헤더가 제자리다. -->
+      <div id="headerTools" class="header-tools"></div>
       <a class="header-tab" href="대마도 항로 손익분기 시뮬레이터.html" target="_blank">대마도 손익분석</a>
       <div class="header-tab-wrap">
         <span class="header-tab disabled">하카타 손익분석</span>
@@ -1710,7 +1735,9 @@ L.control.layers(
     '🏨 카미소호텔 · 히타카츠': _hotelLayers.kamiso,
     '🏨 대아호텔 · 이즈하라': _hotelLayers.daea_hotel
   },
-  { position: 'topright', collapsed: false }
+  // 접어 두면 우상단이 36px만 쓴다. 펼친 채로 두면 189×228px가 자리를 차지해 그 아래
+  // 그리기 도구와 ⛴🚢📖❓ 맵툴 기둥이 하단 바 뒤로 밀려 안 보였다. 마우스를 올리면 펼쳐진다.
+  { position: 'topright', collapsed: true }
 ).addTo(map);
 
 // 체크박스를 켤 때 노선 GeoJSON 로드 + 버스 시뮬레이션 초기화
@@ -6245,6 +6272,16 @@ const SimControl = L.Control.extend({
   }
 });
 new SimControl().addTo(map);
+// 컨트롤로 만든 버튼 묶음을 지도 모서리에서 떼어 헤더로 옮긴다. 클릭 동작은 그대로다.
+(function() {
+  const slot = document.getElementById('headerTools');
+  const grp = document.querySelector('.map-ctrl-group');
+  if (!slot || !grp) return;
+  grp.classList.remove('leaflet-bar');
+  const corner = grp.parentElement;          // .leaflet-top.leaflet-right 컨테이너
+  slot.appendChild(grp);
+  if (corner && corner.classList.contains('leaflet-control')) corner.remove();
+})();
 
 // ── 속도 입력값 초기화 (스케줄 역산 기준) ──
 (function() {
@@ -9106,6 +9143,48 @@ function _syncBottomBars() {
   const tl = document.getElementById('simTimelapseBar');
   // 타임랩스가 접히거나 드래그로 높이가 바뀌면 AIS 바 위치도 따라 조정
   if (tl && typeof ResizeObserver !== 'undefined') new ResizeObserver(_syncBottomBars).observe(tl);
+  // ── 패널·바를 켜고 끈 상태를 기억한다 ──
+  // 새로고침할 때마다 범례·시뮬레이션·운항관리 패널과 타임랩스·AIS 바를 다시 접고 펴야 했다.
+  // 다섯 요소의 class 변화를 한 곳에서 지켜보고 localStorage에 적어 두었다가 다음에 그대로 편다.
+  // 운항 관리 패널이 열렸는지도 여기서 body.ops-open으로 알려 시계가 자리를 비키게 한다.
+  (function() {
+    const KEY = 'hanjil_ui_state';
+    const el = id => document.getElementById(id);
+    const read = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } };
+    const snapshot = () => ({
+      sim:    !!(el('simPanel')       && el('simPanel').classList.contains('visible')),
+      simMin: !!(el('simPanel')       && el('simPanel').classList.contains('minimized')),
+      ops:    !!(el('opsPanel')       && el('opsPanel').classList.contains('visible')),
+      legend: !!(el('legendPanel')    && el('legendPanel').classList.contains('visible')),
+      tlMin:  !!(el('simTimelapseBar')&& el('simTimelapseBar').classList.contains('tl-minimized')),
+      aisMin: !!(el('aisTimebar')     && el('aisTimebar').classList.contains('ais-minimized'))
+    });
+    let t = 0;
+    const save = () => { clearTimeout(t); t = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(snapshot())); } catch (e) {} }, 150); };
+    const syncOps = () => document.body.classList.toggle('ops-open', !!(el('opsPanel') && el('opsPanel').classList.contains('visible')));
+
+    // 저장된 상태가 있는 항목만 되돌린다 (처음 쓰는 사람은 기본값 그대로)
+    const st = read();
+    const setVis = (id, on) => { const p = el(id); if (p) p.classList.toggle('visible', on); };
+    if ('sim' in st)    setVis('simPanel', st.sim);
+    if ('ops' in st)    { setVis('opsPanel', st.ops); if (st.ops && typeof renderShipMgrList === 'function') { renderShipMgrList(); renderBerthPanel(); } }
+    if ('legend' in st) setVis('legendPanel', st.legend);
+    if ('simMin' in st && el('simPanel')) {
+      el('simPanel').classList.toggle('minimized', st.simMin);
+      const b = el('btnSimMin'); if (b) b.textContent = st.simMin ? '□' : '─';
+    }
+    if ('tlMin' in st && el('simTimelapseBar') && st.tlMin !== el('simTimelapseBar').classList.contains('tl-minimized')) toggleTimelapse();
+    if ('aisMin' in st && el('aisTimebar') && el('aisTimebar').classList.contains('visible')
+        && st.aisMin !== el('aisTimebar').classList.contains('ais-minimized')) toggleAisTimebar();
+    syncOps();
+    _syncBottomBars();
+
+    const mo = new MutationObserver(() => { syncOps(); save(); });
+    ['simPanel', 'opsPanel', 'legendPanel', 'simTimelapseBar', 'aisTimebar'].forEach(id => {
+      const p = el(id); if (p) mo.observe(p, { attributes: true, attributeFilter: ['class'] });
+    });
+  })();
+
   window.addEventListener('resize', _syncBottomBars);
   setTimeout(_syncBottomBars, 0);
 })();
