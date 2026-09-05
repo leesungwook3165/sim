@@ -2062,6 +2062,21 @@ const _routeLabelScopes = [
 ];
 
 // ════════════════════════════════════════════════════
+// ── 선형 모형(산타모니카·그레이스)은 지도가 충분히 확대됐을 때만 보인다 ──
+// 72m급 선체를 축소된 지도에 그리면 점 하나로 뭉개지고 그 자리 항구 POI만 가린다.
+// 선체 형태가 실제로 분간되는 배율부터 나타나게 한다.
+const SHIP_MODEL_MIN_ZOOM = 15; // 이 미만에서는 숨김 (72m 선체가 약 15px 이하로 뭉개짐)
+const _shipModelLayers = [];
+function _applyShipModelZoom() {
+  const show = map.getZoom() >= SHIP_MODEL_MIN_ZOOM;
+  _shipModelLayers.forEach(l => {
+    if (show && !map.hasLayer(l)) l.addTo(map);
+    else if (!show && map.hasLayer(l)) map.removeLayer(l);
+  });
+}
+map.on("zoomend", _applyShipModelZoom);
+
+// ════════════════════════════════════════════════════
 //  산타모니카호 선형 모형 — 드래그·회전 가능
 //  기준 [34.655738,129.469349], 안벽 방향 ~225°, 72.67m × 21m
 // ════════════════════════════════════════════════════
@@ -2147,6 +2162,10 @@ const _routeLabelScopes = [
     }),
     zIndexOffset: 60
   }).addTo(map);
+
+  // 지도가 충분히 확대됐을 때만 보이도록 줌 게이트에 등록
+  _shipModelLayers.push(smHull, smLabel, smRotHandle);
+  _applyShipModelZoom();
 
   // ── 인터랙션 상태 ──
   let _mode = null; // 'drag' | 'rotate'
@@ -2289,6 +2308,10 @@ const _routeLabelScopes = [
     }),
     zIndexOffset: 60
   }).addTo(map);
+
+  // 지도가 충분히 확대됐을 때만 보이도록 줌 게이트에 등록
+  _shipModelLayers.push(grHull, grLabel, grRotHandle);
+  _applyShipModelZoom();
 
   let _mode = null;
   let _lastLL = null, _lastAngle = null;
