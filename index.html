@@ -981,8 +981,10 @@
     .ais-tb-subunit.ais-tb-leg.sel { background: rgba(255,190,60,0.25); color: #ffdd99; }
     .ais-tb-subsep { flex-shrink: 0; width: 1px; height: 60%; background: rgba(80,160,255,0.25); margin: 0 6px; }
     /* 속도 변화 그래프 (재생 위치 동기화) */
+    /* 속도 그래프는 타임바에서 남는 높이를 전부 차지한다 — 타임바를 위로 끌어올리면
+       늘어난 공간이 모두 그래프로 간다(다른 행은 flex-shrink:0으로 고정). */
     .ais-tb-chart-row {
-      height: 54px; flex-shrink: 0; position: relative;
+      flex: 1 1 auto; min-height: 110px; position: relative;
       background: rgba(0,0,0,0.12);
       border-bottom: 1px solid rgba(80,160,255,0.12);
     }
@@ -6629,14 +6631,46 @@ function _aisDrawSpeedChart(pts, cursor) {
   const totalMs = Math.max(1, t1 - t0);
   const maxSpd = Math.max(5, ...pts.map(p => p.speed)); // 최소 5kts 스케일 확보
 
-  const padL = 4, padR = 34, padT = 6, padB = 4;
+  // 그래프가 커지면 속도·시각 눈금을 함께 그린다 (작을 때는 공간이 없어 생략)
+  const roomy = H >= 90;
+  const padL = roomy ? 34 : 4, padR = 34, padT = roomy ? 12 : 6, padB = roomy ? 16 : 4;
   const plotW = W - padL - padR, plotH = H - padT - padB;
   const xAt = ts => padL + ((new Date(ts).getTime() - t0) / totalMs) * plotW;
   const yAt = spd => padT + plotH - Math.min(1, spd / maxSpd) * plotH;
 
-  // 중간 기준선
-  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-  ctx.beginPath(); ctx.moveTo(padL, padT + plotH / 2); ctx.lineTo(padL + plotW, padT + plotH / 2); ctx.stroke();
+  ctx.font = '9px sans-serif';
+  if (roomy) {
+    // ── 속도 눈금(가로선) — 5·10·20kt 등 보기 좋은 간격으로 ──
+    const rawStep = maxSpd / 4;
+    const step = [5, 10, 20, 25, 50].find(v => v >= rawStep) || 50;
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (let v = 0; v <= maxSpd; v += step) {
+      const y = yAt(v);
+      ctx.strokeStyle = v === 0 ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.07)';
+      ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + plotW, y); ctx.stroke();
+      ctx.fillStyle = '#5a7a99';
+      ctx.fillText(v + 'kt', padL - 4, y);
+    }
+    // ── 시각 눈금(세로선) — 구간 길이에 따라 1·3·6시간 간격 ──
+    const hours = totalMs / 3600000;
+    const hStep = hours <= 4 ? 1 : hours <= 12 ? 3 : 6;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    const d0 = new Date(t0); d0.setUTCMinutes(0, 0, 0);
+    for (let t = d0.getTime(); t <= t1; t += hStep * 3600000) {
+      if (t < t0) continue;
+      const x = padL + ((t - t0) / totalMs) * plotW;
+      ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+      ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, padT + plotH); ctx.stroke();
+      const hh = new Date(t).getUTCHours();
+      let h12 = hh % 12; if (h12 === 0) h12 = 12;
+      ctx.fillStyle = '#5a7a99';
+      ctx.fillText((hh < 12 ? '오전' : '오후') + ' ' + h12 + '시', x, padT + plotH + 3);
+    }
+    ctx.textAlign = 'start';
+  } else {
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.beginPath(); ctx.moveTo(padL, padT + plotH / 2); ctx.lineTo(padL + plotW, padT + plotH / 2); ctx.stroke();
+  }
 
   // 속도 영역(그라데이션 채우기) + 라인
   ctx.beginPath();
@@ -6650,16 +6684,21 @@ function _aisDrawSpeedChart(pts, cursor) {
   ctx.fillStyle = grad;
   ctx.fill();
 
-  ctx.beginPath();
-  pts.forEach((p, i) => {
-    const x = xAt(p.ts), y = yAt(p.speed);
-    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-  });
-  ctx.strokeStyle = '#66ccff'; ctx.lineWidth = 1.3; ctx.stroke();
+  // 라인은 구간별 속도 색(지도 항적과 같은 기준)으로 이어 그린다
+  ctx.lineWidth = roomy ? 2 : 1.3;
+  for (let i = 1; i < pts.length; i++) {
+    ctx.beginPath();
+    ctx.moveTo(xAt(pts[i - 1].ts), yAt(pts[i - 1].speed));
+    ctx.lineTo(xAt(pts[i].ts), yAt(pts[i].speed));
+    ctx.strokeStyle = _aisSpeedColor((pts[i - 1].speed + pts[i].speed) / 2);
+    ctx.stroke();
+  }
 
-  // 최고속도 눈금 라벨
-  ctx.fillStyle = '#7799bb'; ctx.font = '9px sans-serif'; ctx.textBaseline = 'top';
-  ctx.fillText(`최고 ${maxSpd.toFixed(0)}kt`, padL, padT);
+  // 좁을 때는 눈금 대신 최고속도만 표시 (넓을 때는 위 눈금축이 대신한다)
+  if (!roomy) {
+    ctx.fillStyle = '#7799bb'; ctx.textBaseline = 'top'; ctx.textAlign = 'start';
+    ctx.fillText(`최고 ${maxSpd.toFixed(0)}kt`, padL, padT);
+  }
 
   // 현재 재생 위치 — 세로선 + 점 + 실시간 속도 숫자
   if (cursor && cursor.tsMs != null) {
@@ -6685,14 +6724,33 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
 
   const g = L.layerGroup();
   // 왕복이면 복항편을 점선으로 구분해서 그린다 (같은 항로를 겹쳐 지나가므로).
+  // 항적의 어느 지점을 클릭해도 그 구간의 AIS 값이 보이도록, 각 구간마다
+  //  ① 눈에 보이는 색 선 ② 그 위에 투명하고 두꺼운 클릭용 선(팝업 부착)
+  // 두 개를 겹쳐 그린다. 마커는 25개 지점에만 있어서 회항점 같은 변곡점을 눌러도
+  // 잡히지 않았는데, 이렇게 하면 선 위 어디를 눌러도 값이 뜬다.
   const legs = _aisSplitLegs(pts);
   for (let i = 1; i < pts.length; i++) {
     const a = pts[i - 1], b = pts[i];
     const isBack = legs && i > legs.turnIdx;
-    L.polyline([[a.lat, a.lon], [b.lat, b.lon]], {
+    const latlngs = [[a.lat, a.lon], [b.lat, b.lon]];
+    L.polyline(latlngs, {
       color: _aisSpeedColor((a.speed + b.speed) / 2), weight: isBack ? 4 : 3,
-      opacity: isBack ? 0.75 : 0.9, dashArray: isBack ? '5 7' : null
+      opacity: isBack ? 0.75 : 0.9, dashArray: isBack ? '5 7' : null, interactive: false
     }).addTo(g);
+
+    const segKm = _simDist([a.lat, a.lon], [b.lat, b.lon]);
+    const segMin = (new Date(b.ts) - new Date(a.ts)) / 60000;
+    const avgKts = segMin > 0 ? (segKm / 1.852) / (segMin / 60) : 0;
+    const nearPort = _nearestPortName(b.lat, b.lon, AIS_CALL_BUFFER_KM);
+    L.polyline(latlngs, { color: '#000', weight: 14, opacity: 0, interactive: true })
+      .bindPopup(
+        `<b>${_AIS_VESSELS[key].label}</b>${isBack ? ' <span style="color:#ffaa66">· 복항편</span>' : ''}<br>` +
+        `${_aisFmtClock(a.ts)} → ${_aisFmtClock(b.ts)} UTC (${segMin.toFixed(0)}분)<br>` +
+        `속도 <b>${a.speed.toFixed(1)} → ${b.speed.toFixed(1)} knot</b> · 방향 ${b.course.toFixed(0)}°<br>` +
+        `구간 ${segKm.toFixed(1)}km · 구간평균 ${avgKts.toFixed(1)} knot` +
+        (nearPort ? `<br>⚓ ${nearPort} 부근` : ''),
+        { className: 'custom-popup', maxWidth: 260 }
+      ).addTo(g);
   }
 
   // 회항 지점 표시
@@ -7292,7 +7350,8 @@ function _aisSetStatus(msg) {
   });
   document.addEventListener('mousemove', e => {
     if (!dragging) return;
-    const newH = Math.max(76, Math.min(300, startH - (e.clientY - startY)));
+    const maxH = Math.max(300, Math.round(window.innerHeight * 0.8)); // 바닥부터 화면 80%까지
+    const newH = Math.max(76, Math.min(maxH, startH - (e.clientY - startY)));
     bar.style.height = newH + 'px';
     if (_aisLastChartPts) _aisDrawSpeedChart(_aisLastChartPts, _aisLastChartIdx);
   });
