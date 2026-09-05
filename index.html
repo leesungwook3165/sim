@@ -1075,6 +1075,12 @@
     .ais-tb-subunit.ais-tb-leg { color: #ffcc66; font-weight: 700; }
     .ais-tb-subunit.ais-tb-leg.sel { background: rgba(255,190,60,0.25); color: #ffdd99; }
     .ais-corr-raw { color: #b98cf0; font-weight: 600; margin-left: 3px; }
+    .ais-tb-voy {
+      flex-shrink: 0; font-size: 10px; color: #9ad8c8; font-weight: 700;
+      white-space: nowrap; padding: 0 2px; font-variant-numeric: tabular-nums;
+      cursor: help;
+    }
+    .ais-tb-voy .voy-alt { color: #7f9bb3; font-weight: 600; }
     .ais-tb-daysum {
       flex-shrink: 0; font-size: 10px; color: #9fd8ff; font-weight: 700;
       white-space: nowrap; padding: 0 4px; font-variant-numeric: tabular-nums;
@@ -1529,6 +1535,8 @@
       <span style="color:#557799;font-size:10px">~</span>
       <input type="date" id="aisRangeTo" onchange="onAisRangeChange()" title="조회 종료일">
       <span class="ais-tb-timespan" id="aisTbTimespan">선박 선택 후 로드</span>
+      <!-- 항차(항구 정박 사이 구간) 기준 요약 — 날짜 경계와 무관하다 -->
+      <span class="ais-tb-voy" id="aisTbVoy" title="항구 정박과 정박 사이를 한 항차로 세어, 날짜를 넘나드는 항해도 온전히 잡는다"></span>
     </div>
     <!-- 인터벌 탭 -->
     <span class="ais-tb-crumb" id="aisTbCrumb"></span>
@@ -6443,6 +6451,7 @@ const _AIS_VESSELS = {
   seonghee:    { label:'성희호',               file:'seonghee_track-data-2012-01-01,2027-01-01.csv',    color:'#cc88ff' },
   hamayuu:     { label:'하마유호',              file:'hamayuu_track-data-2012-01-01,2026-12-31.csv',     color:'#55ffdd' },
   panstarmiracle:{ label:'팬스타 미라클호',      sub:'팬스타·부산↔오사카', file:'panstarmiracle_track-data-2025-03-01,2026-09-01.csv', color:'#33ccaa' },
+  tsushimalink:{ label:'팬스타 쓰시마링크호',  sub:'팬스타·부산↔쓰시마', file:'tushimalink_track-data-2023-01-01,2027-01-01.csv', color:'#8899ff' },
   santamonica: { label:'산타모니카호',          sub:'제주항로·중고매입 후보', file:'santamonica_track-data-2026-06-17,2026-08-06.csv', color:'#ffcc44' },
   eldorado:    { label:'엘도라도 익스프레스호', file:'eldorado_track-data-2026-06-17,2026-08-06.csv',    color:'#88ff55' },
 };
@@ -6695,7 +6704,9 @@ const AIS_TIME_BASE_Q = 0.10;                       // 기준 배율로 쓸 분�
 const AIS_TIME_DEV_LO = 0.85, AIS_TIME_DEV_HI = 1.20; // 기준 배율 대비 허용 범위
 const AIS_TERMINAL_CLUSTER_KM = 12; // 시작·끝 지점을 이 거리 이내면 같은 터미널로 묶음
 const AIS_TERMINAL_MIN_HITS   = 3;  // 최소 이 횟수 이상 반복 등장해야 터미널로 인정
-const AIS_TERMINAL_NAME_KM    = 10; // 터미널 중심이 항구에서 이 거리 안일 때만 그 항구 이름을 붙인다
+const AIS_TERMINAL_NAME_KM    = 15; // 터미널 중심이 항구에서 이 거리 안일 때만 그 항구 이름을 붙인다
+//   10km에서는 느슨하게 뭉친 군집(부산 11.1km·히타카츠 13.8km)이 이름을 못 받았고,
+//   25km에서는 항로 중간 해상이 '추자도', 쓰시마 북쪽 22km가 '히타카츠'로 잘못 붙었다.
 
 // ── 선박별 터미널(항구) 지점 자동 도출 ──
 // 등록된 ports 배열에 없는 항구를 오가는 선박도 있으므로(예: 산타모니카호는 부산·대마도가
@@ -6829,6 +6840,115 @@ function _aisDayStats(pts) {
 }
 
 // 선박 로드 직후 1회 호출 — 날짜별 통계·왕복여부·편도환산거리·정상여부를 계산해 캐시에 저장.
+// ══════════════════════════════════════════════════════════════
+//  항차(voyage) 단위 분석
+// ══════════════════════════════════════════════════════════════
+// "하루 = 한 항차"로 보던 것이 실제와 안 맞는 배가 많다.
+//   비틀호       하루에 항차가 여러 개
+//   성희·하마유   하루에 편도 하나 (왕복이 아니라 왕복 판정이 안 됨)
+//   미라클호      항차 하나가 달력일 이틀에 걸침 (편도 18.5시간·694km)
+// 그래서 날짜 경계를 무시하고 "항구 정박과 정박 사이"를 한 항차로 잘라 따로 집계한다.
+// 원본 데이터도, 기존 날짜별 통계도 건드리지 않고 나란히 둔다.
+
+const AIS_VOY_MIN_KM = 20;   // 이보다 적게 움직인 구간은 항차로 보지 않는다(부두 이동 등)
+const AIS_VOY_MAX_H  = 72;   // 이보다 오래 걸린 구간은 AIS 공백으로 보고 제외
+
+function _aisBuildVoyages(key, data) {
+  const terms = data.terminals || [];
+  if (!terms.length) return [];
+  // 날짜별로 나뉜 포인트를 시간순 한 줄로 잇는다 — 항차는 날짜를 넘나든다
+  const all = [];
+  data.dates.forEach(d => { const p = data.index[d]; if (p) for (let i = 0; i < p.length; i++) all.push(p[i]); });
+  if (all.length < 4) return [];
+  const tsMs = all.map(p => new Date(p.ts).getTime());
+
+  // 항구 인근 정박만 항차의 경계로 삼는다 (해상 표류·대기는 경계가 아니다)
+  const gates = [];
+  _detectAisStops(all).forEach(st => {
+    const t = _aisTerminalAt(terms, st.lat, st.lon);
+    if (t) gates.push({ st, t });
+  });
+
+  // 시각 → 배열 위치 (이분 탐색)
+  const at = ms => {
+    let lo = 0, hi = all.length - 1;
+    while (lo < hi) { const mid = (lo + hi) >> 1; if (tsMs[mid] < ms) lo = mid + 1; else hi = mid; }
+    return lo;
+  };
+
+  const voyages = [];
+  for (let i = 1; i < gates.length; i++) {
+    const A = gates[i - 1], B = gates[i];
+    const t0 = new Date(A.st.endTs).getTime(), t1 = new Date(B.st.startTs).getTime();
+    const hours = (t1 - t0) / 3600000;
+    if (hours <= 0 || hours > AIS_VOY_MAX_H) continue;
+    const i0 = at(t0), i1 = at(t1);
+    if (i1 - i0 < 2) continue;
+    let rawKm = 0, corrKm = 0, nCorr = 0;
+    for (let k = i0 + 1; k <= i1; k++) {
+      const a = all[k - 1], b = all[k];
+      rawKm += _simDist([a.lat, a.lon], [b.lat, b.lon]);
+      const seg = _aisSegKm(key, a, b);
+      corrKm += seg.km;
+      if (seg.corrected) nCorr++;
+    }
+    if (rawKm < AIS_VOY_MIN_KM) continue;
+    const min = (t1 - t0) / 60000;
+    voyages.push({
+      from: _aisTerminalLabel(A.t), to: _aisTerminalLabel(B.t),
+      departTs: A.st.endTs, arriveTs: B.st.startTs,
+      dateFrom: A.st.endTs.slice(0, 10), dateTo: B.st.startTs.slice(0, 10),
+      i0, i1, rawKm, corrKm, nCorr, min,
+      avgKts: _aisAvgKts(corrKm, min),
+      dockBeforeMin: A.st.durMin, dockAfterMin: B.st.durMin
+    });
+  }
+  data.voyPts = all;
+  return voyages;
+}
+
+// 항차 요약을 타임바 머리에 적는다 — 주항로의 편도거리·소요시간·평균속력.
+// 날짜별 통계("하루 = 한 항차" 가정)가 안 맞는 배들이 있어 이 값을 나란히 둔다.
+function _aisRenderVoySummary(key) {
+  const el = document.getElementById('aisTbVoy');
+  if (!el) return;
+  const data = _aisCache[key];
+  const main = data && data.voyMain;
+  if (!main || !data.voyages.length) { el.textContent = ''; el.removeAttribute('data-on'); return; }
+  const dur = m => Math.floor(m / 60) + 'h' + String(Math.round(m % 60)).padStart(2, '0') + 'm';
+  // 같은 구간의 반대 방향이 있으면 둘을 묶어 왕복으로 보여준다
+  const back = data.voyRoutes.find(r => r !== main && r.from === main.to && r.to === main.from);
+  const label = back ? (main.from + ' ↔ ' + main.to) : main.pair;
+  const n = main.n + (back ? back.n : 0);
+  const km = back ? (main.km + back.km) / 2 : main.km;
+  const min = back ? (main.min + back.min) / 2 : main.min;
+  const spans = data.voyages.filter(v => v.dateFrom !== v.dateTo).length;
+  el.innerHTML = '⚓ 항차 ' + data.voyages.length + '회 · ' + label + ' 편도 ' +
+    km.toFixed(0) + 'km / ' + dur(min) + ' / ' + _aisAvgKts(km, min).toFixed(1) + 'kt ×' + n +
+    (spans ? '<span class="voy-alt"> · 날짜 넘김 ' + spans + '회</span>' : '');
+  el.setAttribute('data-on', '1');
+}
+
+// 항차를 항로(출발항→도착항)별로 묶어 대표값을 낸다
+function _aisVoyageRoutes(voyages) {
+  const byPair = new Map();
+  voyages.forEach(v => {
+    const k = (v.from || '?') + ' → ' + (v.to || '?');
+    if (!byPair.has(k)) byPair.set(k, { pair: k, from: v.from, to: v.to, list: [] });
+    byPair.get(k).list.push(v);
+  });
+  const med = (arr, pick) => {
+    const a = arr.map(pick).sort((x, y) => x - y);
+    return a.length ? a[Math.floor(a.length / 2)] : 0;
+  };
+  return [...byPair.values()].map(g => ({
+    pair: g.pair, from: g.from, to: g.to, n: g.list.length,
+    km: med(g.list, v => v.corrKm),
+    min: med(g.list, v => v.min),
+    kts: med(g.list, v => v.avgKts)
+  })).sort((a, b) => b.n - a.n);
+}
+
 // 기대 편도거리는 그 선박 데이터에서 자동 산출하므로(하드코딩 없음) 새 항로도 그대로 적용된다.
 function _aisAnalyzeVessel(key, data) {
   const terminals = _aisFindTerminals(data);
@@ -6920,6 +7040,10 @@ function _aisAnalyzeVessel(key, data) {
   data.callPorts = Object.entries(callTally).sort((a, b) => b[1] - a[1]).map(([name, days]) => ({ name, days }));
   data.expectedDist = expected;
   data.timeRatioBase = baseRatio; // 그 선박의 깨끗한 항해시간 배율(이론 대비)
+  // 날짜와 무관한 "항차" 집계 — 하루에 안 맞는 배(미라클·부관훼리·비틀)도 제대로 나온다
+  data.voyages = _aisBuildVoyages(key, data);
+  data.voyRoutes = _aisVoyageRoutes(data.voyages);
+  data.voyMain = data.voyRoutes[0] || null;
   data.refDays = data.dates.filter(d => dayQuality[d].isRef);
   // 기준일들에서 뽑은 편도·왕복 기준값 (거리 판정과 화면 표시에 함께 쓴다)
   const refRound = data.refDays.map(d => dayQuality[d].totalDist).sort((a, b) => a - b);
@@ -8143,6 +8267,7 @@ async function onAisVesselChange() {
       `(${data.dates.length}일 · ★기준일 ${data.refDays.length}일` +
       (data.refOneWayKm ? ` · 편도 ${data.refOneWayKm.toFixed(0)}km` : '') +
       ` · ⚠고칠 날 ${landDays}일 · ✏고친 날 ${corrDays}일)`;
+    _aisRenderVoySummary(key);
     // 캘린더 입력란을 이 선박의 전체 기간으로 초기화 (필터는 전체 기간 = 필터 없음 상태로 리셋)
     const fromEl = document.getElementById('aisRangeFrom');
     const toEl   = document.getElementById('aisRangeTo');
