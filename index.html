@@ -1042,6 +1042,15 @@
     }
     .ais-tb-empty { font-size: 10px; color: #667788; padding: 0 10px; align-self: center; }
     .ais-tb-unit.refday { color: #ffd75e; font-weight: 700; }
+    .ais-tb-unit.bestday { box-shadow: inset 0 0 0 1px #7dffb0; }  /* 사람이 표시한 최적일 */
+    .ais-best-btn {
+      background: rgba(10,20,50,0.8); color: #9ff0c4;
+      border: 1px solid rgba(125,255,176,0.35); border-radius: 4px;
+      padding: 2px 6px; font-size: 10px; cursor: pointer; margin-left: 5px; white-space: nowrap;
+    }
+    .ais-best-btn:hover:not(:disabled) { border-color: rgba(125,255,176,0.8); color: #fff; }
+    .ais-best-btn.on { background: rgba(125,255,176,0.22); color: #fff; }
+    .ais-best-btn:disabled { opacity: 0.4; cursor: default; }
     .ais-tb-unit.landday { box-shadow: inset 0 -2px 0 #ff4444; }   /* 고칠 날 */
     .ais-tb-unit.corrday { box-shadow: inset 0 -2px 0 #c07bff; }   /* 고친 날 */
     .ais-tb-unit.landday.corrday { box-shadow: inset 0 -2px 0 #ff4444, inset 0 -4px 0 #c07bff; }
@@ -1597,6 +1606,12 @@
       <span class="ais-tb-refchk" title="항구 출입 가속·감속(정박→저속→중속→순항)이 왕복 양쪽 모두 온전히 기록된 날">
         <input type="checkbox" id="aisRefOnly" onchange="onAisRefOnlyChange()"> ★기준일만
       </span>
+    </label>
+    <label class="ais-tb-normal" id="aisBestWrap" title="눈으로 확인해 &quot;이 날이 제일 깨끗하다&quot;고 표시해 둔 날만 봅니다. ★기준일은 규칙으로 자동 판정한 것이고, ◎최적일은 사람이 직접 고른 것입니다.">
+      <span class="ais-tb-refchk" style="color:#7dffb0">
+        <input type="checkbox" id="aisBestOnly" onchange="onAisWorkFilterChange()"> ◎ 최적일만
+      </span>
+      <button id="aisBestBtn" class="ais-best-btn" onclick="_aisBestToggle()" title="지금 고른 날짜를 최적일로 표시하거나 해제합니다">◎ 최적일 표시</button>
     </label>
     <label class="ais-tb-normal" id="aisWorkWrap" title="보정을 저장해둔 날만 / 아직 육지를 지나는 구간이 남은 날만 추려봅니다. 둘 다 켜면 &quot;보정했는데 아직 남은 날&quot;이 나옵니다.">
       <input type="checkbox" id="aisCorrOnly" onchange="onAisWorkFilterChange()"> ✏ 보정일만
@@ -6528,6 +6543,67 @@ let _aisSubLegSel = null;  // 왕복일 때 선택된 구간 (null=왕복 전체
 let _aisRangeFrom = null, _aisRangeTo = null; // 캘린더로 지정한 조회 기간 필터 ('YYYY-MM-DD', null=제한 없음)
 let _aisNormalOnly = true; // '일' 탭에서만 적용되는 정상 항로 필터 (기본 on)
 let _aisRefOnly = false;   // ★기준일(항구 출입 가속·감속이 온전히 기록된 날)만 보기
+// ── ◎ 최적일 — 사람이 직접 표시해 둔 "이 날 데이터가 제일 깨끗하다"는 기록 ──
+// ★기준일은 규칙으로 자동 판정한 것이라 놓치거나 잘못 잡는 날이 있다. 눈으로 확인한
+// 날을 따로 표시해 두면 기준값을 잡을 때 그쪽을 먼저 볼 수 있다. 메모도 함께 남긴다.
+const AIS_BEST_KEY = 'hanjil_ais_bestdays';
+const AIS_BEST_SEEDED = 'hanjil_ais_bestdays_seeded';
+const _AIS_BEST_SEED = {
+  queenbeetle:  { '2024-08-07': '출입항 가속·감속이 왕복 양쪽 모두 온전' },
+  tsushimalink: { '2023-02-27': '출항~도착~회항까지 가장 깔끔',
+                  '2023-03-18': '깔끔한 편',
+                  '2023-03-19': '깔끔한 편',
+                  '2026-07-20': '히타카츠 경유 사례' },
+  santamonica:  { '2026-06-28': '' }
+};
+let _aisBest = {};
+(function _aisBestLoad() {
+  try { _aisBest = JSON.parse(localStorage.getItem(AIS_BEST_KEY) || '{}') || {}; } catch (e) { _aisBest = {}; }
+  // 처음 한 번만 기본값을 넣는다 — 나중에 지운 것이 되살아나지 않도록 플래그를 남긴다
+  try {
+    if (!localStorage.getItem(AIS_BEST_SEEDED)) {
+      Object.entries(_AIS_BEST_SEED).forEach(([k, days]) => {
+        _aisBest[k] = Object.assign({}, days, _aisBest[k] || {});
+      });
+      localStorage.setItem(AIS_BEST_SEEDED, '1');
+      localStorage.setItem(AIS_BEST_KEY, JSON.stringify(_aisBest));
+    }
+  } catch (e) {}
+})();
+function _aisBestSave() {
+  try { localStorage.setItem(AIS_BEST_KEY, JSON.stringify(_aisBest)); } catch (e) {}
+}
+function _aisBestHas(key, date) { return !!(_aisBest[key] && _aisBest[key][date] !== undefined); }
+function _aisBestNote(key, date) { return (_aisBest[key] || {})[date] || ''; }
+function _aisBestCount(key) { return Object.keys(_aisBest[key] || {}).length; }
+function _aisBestToggle() {
+  const key = document.getElementById('aisVesselSel').value;
+  const dt = _aisSelDay;
+  if (!dt) { _aisSetStatus('◎ 먼저 날짜를 고르세요'); return; }
+  if (_aisBestHas(key, dt)) {
+    delete _aisBest[key][dt];
+    _aisSetStatus('◎ 최적일 표시를 지웠습니다 — ' + dt);
+  } else {
+    const note = window.prompt('◎ 최적일로 표시합니다. 메모를 남기시겠어요? (비워도 됩니다)', '');
+    _aisBest[key] = _aisBest[key] || {};
+    _aisBest[key][dt] = note == null ? '' : note;
+    _aisSetStatus('◎ 최적일로 표시했습니다 — ' + dt + (note ? ' · ' + note : ''));
+  }
+  _aisBestSave();
+  _aisBestBtnUpdate();
+  _aisTbRenderTl(key);
+}
+function _aisBestBtnUpdate() {
+  const btn = document.getElementById('aisBestBtn');
+  if (!btn) return;
+  const key = document.getElementById('aisVesselSel').value;
+  const on = _aisSelDay && _aisBestHas(key, _aisSelDay);
+  btn.textContent = on ? '◎ 최적일 해제' : '◎ 최적일 표시';
+  btn.classList.toggle('on', !!on);
+  btn.disabled = !_aisSelDay;
+}
+
+let _aisBestOnly = false;  // ◎ 사람이 표시한 최적일만 보기
 let _aisCorrOnly = false;  // ✏ 보정한 날만 보기
 let _aisLandOnly = false;  // ⚠ 육지 관통이 남은 날(고칠 날)만 보기
 let _aisCallFilter = 'all'; // 특정 항구에 기항한 날만 보기 ('all' 또는 항구명)
@@ -8034,6 +8110,7 @@ function _aisEmptyReason(key) {
     const short = _aisCallFilter.replace(/(국제여객터미널|국제터미널|여객선터미널|항)$/, "");
     parts.push("⚓" + short + " 기항 " + cnt(x => (d.dayQuality[x].calls || []).some(c => c.name === _aisCallFilter)) + "일");
   }
+  if (_aisBestOnly) parts.push("◎최적일 " + cnt(x => _aisBestHas(key, x)) + "일");
   if (_aisCorrOnly) parts.push("✏보정일 " + cnt(x => _aisCorrCount(key, x) > 0) + "일");
   if (_aisLandOnly) parts.push("⚠고칠 날 " + cnt(x => (d.dayQuality[x].landSegs || 0) > 0) + "일");
   if (_aisRefOnly) parts.push("★기준일 " + cnt(x => d.dayQuality[x].isRef) + "일");
@@ -8052,10 +8129,13 @@ function _aisAllDays(key) {
     dates = dates.filter(x => (d.dayQuality[x].calls || []).some(c => c.name === _aisCallFilter));
   }
   // 작업 목록 필터 — 각각 독립이라 둘 다 켜면 "보정했는데 아직 관통이 남은 날"이 나온다
+  if (_aisBestOnly) dates = dates.filter(x => _aisBestHas(key, x));
   if (_aisCorrOnly) dates = dates.filter(x => _aisCorrCount(key, x) > 0);
   if (_aisLandOnly) dates = dates.filter(x => (d.dayQuality[x].landSegs || 0) > 0);
-  if (_aisRefOnly)    return dates.filter(x => d.dayQuality[x].isRef);
-  if (_aisNormalOnly) return dates.filter(x => d.dayQuality[x].isNormal);
+  // 사람이 ◎최적일로 표시한 날은 자동 판정으로 숨기지 않는다.
+  // 눈으로 확인해 골라둔 날인데 "편도거리 과소" 같은 규칙에 걸려 사라지면 표시한 의미가 없다.
+  if (_aisRefOnly)    return dates.filter(x => d.dayQuality[x].isRef    || _aisBestHas(key, x));
+  if (_aisNormalOnly) return dates.filter(x => d.dayQuality[x].isNormal || _aisBestHas(key, x));
   return dates;
 }
 function _aisYears(key)        { return [...new Set(_aisAllDays(key).map(x => x.slice(0, 4)))].sort(); }
@@ -8133,9 +8213,12 @@ function _aisTbRenderTl(key) {
          + (q.isRef ? ' · ★기준일(가속 ' + q.ramps.up + '회/감속 ' + q.ramps.down + '회)' : '')
          + (q.isNormal ? '' : ' · 제외: ' + q.reasons.join(', ')))
       : dt;
-    const marks = (nCorr ? '✏' : '') + (nLand ? '⚠' : '');
-    const workTitle = (nCorr ? ' · ✏보정 ' + nCorr + '구간' : '') + (nLand ? ' · ⚠육지관통 ' + nLand + '구간' : '');
-    return `<button class="ais-tb-unit${dt === _aisSelDay ? ' sel' : ''}${abnormal ? ' abnormal' : ''}${isRef ? ' refday' : ''}${nLand ? ' landday' : ''}${nCorr ? ' corrday' : ''}" onclick="_aisPickDay('${dt}')" title="${title}${workTitle}">${isRef ? '★' : ''}${marks}${+dt.slice(8, 10)}일</button>`;
+    const isBest = _aisBestHas(key, dt);         // 사람이 직접 표시한 최적일
+    const marks = (isBest ? '◎' : '') + (nCorr ? '✏' : '') + (nLand ? '⚠' : '');
+    const bestNote = isBest ? (_aisBestNote(key, dt) || '표시해 둔 날') : '';
+    const workTitle = (isBest ? ' · ◎최적일: ' + bestNote : '')
+      + (nCorr ? ' · ✏보정 ' + nCorr + '구간' : '') + (nLand ? ' · ⚠육지관통 ' + nLand + '구간' : '');
+    return `<button class="ais-tb-unit${dt === _aisSelDay ? ' sel' : ''}${abnormal ? ' abnormal' : ''}${isRef ? ' refday' : ''}${isBest ? ' bestday' : ''}${nLand ? ' landday' : ''}${nCorr ? ' corrday' : ''}" onclick="_aisPickDay('${dt}')" title="${title}${workTitle}">${isRef ? '★' : ''}${marks}${+dt.slice(8, 10)}일</button>`;
   }).join('') : '<span class="ais-tb-empty">이 달에는 조건에 맞는 날짜가 없습니다</span>';
 
   _aisRenderCrumb();
@@ -8174,6 +8257,7 @@ function _aisPickDay(dt) {
   const key = document.getElementById('aisVesselSel').value;
   onAisStop();
   _aisCorrClearDraft();
+  setTimeout(_aisBestBtnUpdate, 0); // 선택이 반영된 뒤 버튼 문구를 맞춘다
   _aisSelYear = dt.slice(0, 4); _aisSelMonth = dt.slice(0, 7); _aisSelDay = dt;
   _aisSubHourSel = null; _aisSubLegSel = null; _aisViewLevel = 'day';
   _aisTbRenderTl(key); _aisTlApply();
@@ -8469,6 +8553,7 @@ async function onAisVesselChange() {
     _aisRenderVoySummary(key);
     _aisVesselLabelUpdate();
     _aisRenderPins();
+    _aisBestBtnUpdate();
     // 캘린더 입력란을 이 선박의 전체 기간으로 초기화 (필터는 전체 기간 = 필터 없음 상태로 리셋)
     const fromEl = document.getElementById('aisRangeFrom');
     const toEl   = document.getElementById('aisRangeTo');
@@ -8725,6 +8810,7 @@ function onAisShowRawChange() {
 
 // '✏ 보정일만' / '⚠ 고칠 날만' 체크박스
 function onAisWorkFilterChange() {
+  _aisBestOnly = document.getElementById('aisBestOnly').checked;
   _aisCorrOnly = document.getElementById('aisCorrOnly').checked;
   _aisLandOnly = document.getElementById('aisLandOnly').checked;
   const key = document.getElementById('aisVesselSel').value;
