@@ -1075,6 +1075,50 @@
     .ais-tb-subunit.ais-tb-leg { color: #ffcc66; font-weight: 700; }
     .ais-tb-subunit.ais-tb-leg.sel { background: rgba(255,190,60,0.25); color: #ffdd99; }
     .ais-corr-raw { color: #b98cf0; font-weight: 600; margin-left: 3px; }
+    /* ── 선박 다중 선택 ── */
+    .ais-vsel { position: relative; }
+    .ais-vsel > button {
+      background: rgba(10,20,50,0.8); color: #c8dcf0;
+      border: 1px solid rgba(80,160,255,0.25); border-radius: 4px;
+      padding: 3px 8px; font-size: 11px; cursor: pointer; white-space: nowrap;
+    }
+    .ais-vsel > button:hover { border-color: rgba(120,200,255,0.6); color: #fff; }
+    .ais-vsel-menu {
+      display: none; position: absolute; bottom: calc(100% + 6px); left: 0;
+      z-index: 1200; min-width: 232px; padding: 5px;
+      background: rgba(8,20,45,0.97); backdrop-filter: blur(8px);
+      border: 1px solid rgba(80,160,255,0.4); border-radius: 8px;
+      box-shadow: 0 -6px 22px rgba(0,0,0,0.5);
+    }
+    .ais-vsel-menu.on { display: block; }
+    .ais-vsel-menu label {
+      display: flex; align-items: center; gap: 7px;
+      padding: 4px 6px; border-radius: 5px; font-size: 11px; color: #dbe9f7; cursor: pointer;
+    }
+    .ais-vsel-menu label:hover { background: rgba(126,207,255,0.14); }
+    .ais-vsel-menu input { accent-color: #4aa3ff; margin: 0; cursor: pointer; }
+    .ais-vsel-swatch { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+    .ais-vsel-menu .vsel-main { margin-left: auto; font-size: 9px; color: #7ecfff; font-weight: 700; }
+    .ais-vsel-menu .vsel-hint {
+      border-top: 1px solid rgba(80,160,255,0.22); margin-top: 4px; padding: 5px 6px 2px;
+      font-size: 9.5px; color: #8fa8bf; line-height: 1.45;
+    }
+    /* ── 고정해서 겹친 항적 ── */
+    .ais-pin-btn {
+      background: rgba(10,20,50,0.8); color: #c8dcf0;
+      border: 1px solid rgba(80,160,255,0.25); border-radius: 4px;
+      padding: 3px 7px; font-size: 10.5px; cursor: pointer; white-space: nowrap;
+    }
+    .ais-pin-btn:hover { border-color: rgba(120,200,255,0.6); color: #fff; }
+    .ais-pin-row { display: flex; gap: 4px; align-items: center; flex-wrap: nowrap; overflow-x: auto; max-width: 340px; }
+    .ais-pin-chip {
+      display: inline-flex; align-items: center; gap: 4px; flex: none;
+      padding: 2px 5px; border-radius: 10px; font-size: 9.5px; font-weight: 700;
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(160,190,220,0.3); color: #dbe9f7;
+      white-space: nowrap; font-variant-numeric: tabular-nums;
+    }
+    .ais-pin-chip .x { cursor: pointer; color: #ff8899; font-weight: 900; }
+    .ais-pin-chip .x:hover { color: #ff3355; }
     .ais-tb-voy {
       flex-shrink: 0; font-size: 10px; color: #9ad8c8; font-weight: 700;
       white-space: nowrap; padding: 0 2px; font-variant-numeric: tabular-nums;
@@ -1529,8 +1573,15 @@
     </div>
     <!-- 선박 선택 + 기간 -->
     <div class="ais-tb-vessel">
-      <!-- 항목은 _AIS_VESSELS 등록부에서 자동으로 채운다 -->
-      <select id="aisVesselSel" onchange="onAisVesselChange()"></select>
+      <!-- 기준 선박. 기존 코드가 .value로 읽으므로 그대로 두고 화면에서만 감춘다 -->
+      <select id="aisVesselSel" onchange="onAisVesselChange()" style="display:none"></select>
+      <!-- 여러 척을 골라 같은 날짜로 겹쳐 보는 메뉴 -->
+      <div class="ais-vsel">
+        <button id="aisVesselBtn" onclick="_aisVesselMenuToggle(event)" title="선박 선택 (여러 척을 고르면 같은 날짜로 겹쳐 그립니다)">선박 선택 ▾</button>
+        <div id="aisVesselMenu" class="ais-vsel-menu"></div>
+      </div>
+      <button id="aisPinBtn" class="ais-pin-btn" onclick="_aisPinAdd()" title="지금 보고 있는 선박·기간을 그대로 고정해 겹칩니다 (다른 날짜로 옮겨도 남아 있습니다)">📌 겹치기</button>
+      <span id="aisPinRow" class="ais-pin-row"></span>
       <input type="date" id="aisRangeFrom" onchange="onAisRangeChange()" title="조회 시작일">
       <span style="color:#557799;font-size:10px">~</span>
       <input type="date" id="aisRangeTo" onchange="onAisRangeChange()" title="조회 종료일">
@@ -6907,6 +6958,153 @@ function _aisBuildVoyages(key, data) {
   return voyages;
 }
 
+// ══════════════════════════════════════════════════════════════
+//  선박·기간 겹쳐 보기
+// ══════════════════════════════════════════════════════════════
+// 두 갈래로 겹친다.
+//  ① 선박 다중 선택 — 지금 보고 있는 기간(년/월/일)을 고른 배들에 똑같이 적용해 겹친다.
+//  ② 📌 고정      — 지금의 선박·기간 조합을 그대로 얼려 둔다. 다른 날짜로 옮겨도 남는다.
+// 기준 선박(aisVesselSel)은 그대로 두고 그 위에 얹기만 하므로 기존 동작은 바뀌지 않는다.
+let _aisOverlayKeys = [];  // 기준 선박 외에 함께 그릴 선박
+let _aisPins = [];         // [{ key, prefix, label }]
+let _aisOverlayGroup = null;
+
+function _aisVesselMenuToggle(ev) {
+  if (ev) ev.stopPropagation();
+  const m = document.getElementById('aisVesselMenu');
+  if (!m) return;
+  const willOpen = !m.classList.contains('on');
+  m.classList.toggle('on', willOpen);
+  if (willOpen) _aisVesselMenuBuild();
+}
+document.addEventListener('click', e => {
+  const m = document.getElementById('aisVesselMenu');
+  if (m && m.classList.contains('on') && !m.contains(e.target)) m.classList.remove('on');
+});
+
+function _aisVesselMenuBuild() {
+  const m = document.getElementById('aisVesselMenu');
+  if (!m) return;
+  const primary = document.getElementById('aisVesselSel').value;
+  m.innerHTML = Object.entries(_AIS_VESSELS).map(([k, v]) => {
+    const on = k === primary || _aisOverlayKeys.includes(k);
+    return '<label>' +
+      '<input type="checkbox" ' + (on ? 'checked' : '') + ' onchange="_aisVesselToggle(\'' + k + '\', this.checked)">' +
+      '<span class="ais-vsel-swatch" style="background:' + (v.color || '#888') + '"></span>' +
+      '<span>' + v.label + '</span>' +
+      (k === primary ? '<span class="vsel-main">기준</span>' : '') +
+      '</label>';
+  }).join('') +
+  '<div class="vsel-hint">맨 위로 체크한 배가 기준이 됩니다. 나머지는 같은 기간으로 겹쳐 그립니다.</div>';
+}
+
+function _aisVesselLabelUpdate() {
+  const btn = document.getElementById('aisVesselBtn');
+  if (!btn) return;
+  const primary = document.getElementById('aisVesselSel').value;
+  const v = _AIS_VESSELS[primary];
+  btn.textContent = (v ? v.label : '선박 선택') +
+    (_aisOverlayKeys.length ? ' +' + _aisOverlayKeys.length + '척' : '') + ' ▾';
+}
+
+async function _aisVesselToggle(key, on) {
+  const sel = document.getElementById('aisVesselSel');
+  const primary = sel.value;
+  if (on) {
+    if (key !== primary && !_aisOverlayKeys.includes(key)) _aisOverlayKeys.push(key);
+  } else {
+    _aisOverlayKeys = _aisOverlayKeys.filter(k => k !== key);
+    if (key === primary) {
+      // 기준을 껐으면 겹쳐둔 배 중 하나를 기준으로 올린다
+      if (!_aisOverlayKeys.length) { _aisVesselMenuBuild(); return; } // 마지막 한 척은 남긴다
+      const next = _aisOverlayKeys.shift();
+      sel.value = next;
+      _aisVesselMenuBuild(); _aisVesselLabelUpdate();
+      await onAisVesselChange();
+      return;
+    }
+  }
+  _aisVesselMenuBuild();
+  _aisVesselLabelUpdate();
+  await _aisDrawOverlays();
+}
+
+// 지금 보고 있는 기간을 '2024' / '2024-08' / '2024-08-07' / '' 로 돌려준다
+function _aisScopePrefix() {
+  if (_aisViewLevel === 'day' && _aisSelDay) return _aisSelDay;
+  if (_aisViewLevel === 'month' && _aisSelMonth) return _aisSelMonth;
+  if (_aisViewLevel === 'year' && _aisSelYear) return _aisSelYear;
+  return '';
+}
+
+function _aisPinAdd() {
+  const key = document.getElementById('aisVesselSel').value;
+  const prefix = _aisScopePrefix();
+  if (_aisPins.some(p => p.key === key && p.prefix === prefix)) {
+    _aisSetStatus('이미 겹쳐둔 조합입니다');
+    return;
+  }
+  _aisPins.push({ key, prefix, label: (_AIS_VESSELS[key] || {}).label || key });
+  _aisRenderPins();
+  _aisDrawOverlays();
+}
+
+function _aisPinRemove(i) {
+  _aisPins.splice(i, 1);
+  _aisRenderPins();
+  _aisDrawOverlays();
+}
+
+function _aisRenderPins() {
+  const row = document.getElementById('aisPinRow');
+  if (!row) return;
+  row.innerHTML = _aisPins.map((p, i) => {
+    const c = (_AIS_VESSELS[p.key] || {}).color || '#888';
+    return '<span class="ais-pin-chip" title="고정해 겹친 항적">' +
+      '<span class="ais-vsel-swatch" style="background:' + c + '"></span>' +
+      p.label + ' ' + (p.prefix || '전체') +
+      '<span class="x" onclick="_aisPinRemove(' + i + ')">×</span></span>';
+  }).join('');
+}
+
+// 겹쳐 그리기 — 기준 선박 위에 얹는 별도 레이어라 기존 렌더를 건드리지 않는다
+async function _aisDrawOverlays() {
+  if (_aisOverlayGroup) { map.removeLayer(_aisOverlayGroup); _aisOverlayGroup = null; }
+  const jobs = [];
+  const prefix = _aisScopePrefix();
+  _aisOverlayKeys.forEach(k => jobs.push({ key: k, prefix, pinned: false }));
+  _aisPins.forEach(p => jobs.push({ key: p.key, prefix: p.prefix, pinned: true }));
+  if (!jobs.length) return;
+
+  const g = L.layerGroup();
+  const renderer = L.canvas({ padding: 0.5 });
+  for (const job of jobs) {
+    const data = _aisCache[job.key] || await _loadAisVessel(job.key);
+    if (!data) continue;
+    const days = data.dates.filter(d => d.startsWith(job.prefix || ''));
+    if (!days.length) continue;
+    // 날짜가 많으면 점을 솎아 낸다 (집계 뷰와 같은 예산 방식)
+    const perDay = Math.max(4, Math.min(40, Math.floor(AIS_AGG_PT_BUDGET / 2 / Math.max(1, days.length))));
+    const lines = [];
+    days.forEach(d => {
+      const pts = data.index[d];
+      if (!pts || pts.length < 2) return;
+      const step = Math.ceil(pts.length / perDay);
+      const thin = step > 1 ? pts.filter((_, i) => i % step === 0 || i === pts.length - 1) : pts;
+      lines.push(thin.map(p => [p.lat, p.lon]));
+    });
+    if (!lines.length) continue;
+    const color = (_AIS_VESSELS[job.key] || {}).color || '#88aaff';
+    L.polyline(lines, {
+      color, weight: job.pinned ? 3 : 2, opacity: job.pinned ? 0.9 : 0.7,
+      dashArray: job.pinned ? null : '5 4',
+      renderer, interactive: false
+    }).addTo(g);
+  }
+  g.addTo(map);
+  _aisOverlayGroup = g;
+}
+
 // 항차 요약을 타임바 머리에 적는다 — 주항로의 편도거리·소요시간·평균속력.
 // 날짜별 통계("하루 = 한 항차" 가정)가 안 맞는 배들이 있어 이 값을 나란히 둔다.
 function _aisRenderVoySummary(key) {
@@ -8230,6 +8428,7 @@ function _aisTlApply() {
     if (chartRow) chartRow.style.display = 'none';
   }
   _aisRenderCrumb();
+  _aisDrawOverlays(); // 기간이 바뀌면 겹쳐둔 항적도 따라 바뀐다(고정한 것은 그대로)
 }
 
 // ── 스텝 이동 (⏮⏭) — 지금 보고 있는 단계의 목록에서 앞뒤로 ──
@@ -8268,6 +8467,8 @@ async function onAisVesselChange() {
       (data.refOneWayKm ? ` · 편도 ${data.refOneWayKm.toFixed(0)}km` : '') +
       ` · ⚠고칠 날 ${landDays}일 · ✏고친 날 ${corrDays}일)`;
     _aisRenderVoySummary(key);
+    _aisVesselLabelUpdate();
+    _aisRenderPins();
     // 캘린더 입력란을 이 선박의 전체 기간으로 초기화 (필터는 전체 기간 = 필터 없음 상태로 리셋)
     const fromEl = document.getElementById('aisRangeFrom');
     const toEl   = document.getElementById('aisRangeTo');
@@ -8895,6 +9096,8 @@ function _aisHoverShipHide() {
         if (tb.classList.contains('visible')) {
           tb.classList.remove('visible');
           onAisStop();
+          // 겹쳐둔 항적도 함께 걷는다 (지도에 남아 시뮬레이션 화면을 가리지 않도록)
+          if (_aisOverlayGroup) { map.removeLayer(_aisOverlayGroup); _aisOverlayGroup = null; }
           // AIS를 닫으면 가려뒀던 구상·참고 항로선과 시뮬레이션 시점을 원래대로 되돌린다
           if (_aisPrevScope != null) {
             setSimPlayScope(_aisPrevScope);
@@ -8915,6 +9118,8 @@ function _aisHoverShipHide() {
           _syncBottomBars();
           if (!_aisCache[document.getElementById('aisVesselSel').value]) {
             onAisVesselChange();
+          } else {
+            _aisVesselLabelUpdate(); _aisRenderPins(); _aisDrawOverlays();
           }
         }
       });
