@@ -841,6 +841,11 @@
       user-select: none;
     }
     #aisTimebar.visible { display: flex; }
+    /* 최소화 — 타임랩스와 같은 방식으로 접되, 조작행은 남겨 계속 쓸 수 있게 한다 */
+    #aisTimebar.ais-minimized .ais-tb-tl-row,
+    #aisTimebar.ais-minimized .ais-tb-subtl-row,
+    #aisTimebar.ais-minimized .ais-tb-chart-row { display: none !important; }
+    #aisTimebar.ais-minimized { height: auto !important; }
     .ais-tb-resizer {
       height: 5px; cursor: ns-resize;
       background: transparent;
@@ -849,7 +854,7 @@
     /* 상단 컨트롤 행 — 좁은 화면에서 요소가 잘려 안 보이지 않도록 가로 스크롤 허용 */
     .ais-tb-top {
       display: flex; align-items: center; gap: 0;
-      height: 38px; padding: 0 8px;
+      height: 38px; padding: 0 34px 0 8px;
       border-bottom: 1px solid rgba(80,160,255,0.12);
       flex-shrink: 0;
       overflow-x: auto; overflow-y: hidden;
@@ -1407,6 +1412,7 @@
 
 <!-- AIS 타임바 (GFW 스타일, 하단 고정) -->
 <div id="aisTimebar">
+  <button id="aisMinBtn" onclick="toggleAisTimebar()" title="AIS 타임바 최소화 / 복원" style="position:absolute;top:5px;right:10px;z-index:3;background:transparent;border:none;color:#aac8e8;font-size:14px;line-height:1;padding:2px 6px;cursor:pointer;border-radius:4px;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#aac8e8'">─</button>
   <div class="ais-tb-resizer" id="aisTbResizer" title="드래그하여 높이 조절"></div>
   <div class="ais-tb-top">
     <!-- 재생 컨트롤 -->
@@ -7337,6 +7343,44 @@ function _aisSetStatus(msg) {
   if (el) el.textContent = msg;
 }
 
+// ── AIS 타임바 최소화/복원 (타임랩스의 toggleTimelapse와 같은 동작) ──
+function toggleAisTimebar() {
+  const bar = document.getElementById('aisTimebar');
+  const btn = document.getElementById('aisMinBtn');
+  if (!bar) return;
+  if (bar.classList.contains('ais-minimized')) {
+    bar.classList.remove('ais-minimized');
+    if (_aisPrevHeight) bar.style.height = _aisPrevHeight + 'px';
+    if (btn) { btn.textContent = '─'; btn.title = 'AIS 타임바 최소화'; }
+    if (_aisLastChartPts) setTimeout(() => _aisDrawSpeedChart(_aisLastChartPts, _aisLastChartIdx), 30);
+  } else {
+    _aisPrevHeight = bar.offsetHeight;
+    bar.classList.add('ais-minimized');
+    bar.style.height = '';
+    if (btn) { btn.textContent = '□'; btn.title = 'AIS 타임바 복원'; }
+  }
+  _syncBottomBars();
+}
+let _aisPrevHeight = 0;
+
+// ── 하단 두 바(타임랩스 · AIS 타임바)가 서로 가리지 않도록 위아래로 쌓는다 ──
+// 둘 다 bottom:0 고정이라 AIS 바가 타임랩스를 덮고 있었다. AIS 바를 타임랩스 높이만큼
+// 띄워 올려서, 접거나 높이를 바꿔도 겹치지 않게 한다.
+function _syncBottomBars() {
+  const tl  = document.getElementById('simTimelapseBar');
+  const ais = document.getElementById('aisTimebar');
+  if (!ais) return;
+  const tlShown = tl && getComputedStyle(tl).display !== 'none' && tl.offsetHeight > 0;
+  ais.style.bottom = tlShown ? tl.offsetHeight + 'px' : '0px';
+}
+(function() {
+  const tl = document.getElementById('simTimelapseBar');
+  // 타임랩스가 접히거나 드래그로 높이가 바뀌면 AIS 바 위치도 따라 조정
+  if (tl && typeof ResizeObserver !== 'undefined') new ResizeObserver(_syncBottomBars).observe(tl);
+  window.addEventListener('resize', _syncBottomBars);
+  setTimeout(_syncBottomBars, 0);
+})();
+
 // ── 타임바 리사이즈 (상단 드래그) ──
 (function() {
   const bar = document.getElementById('aisTimebar');
@@ -7403,8 +7447,10 @@ function _aisSetStatus(msg) {
         if (tb.classList.contains('visible')) {
           tb.classList.remove('visible');
           onAisStop();
+          _syncBottomBars();
         } else {
           tb.classList.add('visible');
+          _syncBottomBars();
           if (!_aisCache[document.getElementById('aisVesselSel').value]) {
             onAisVesselChange();
           }
