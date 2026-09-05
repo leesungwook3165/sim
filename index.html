@@ -3883,11 +3883,15 @@ function _rebuildSimTimelapse() {
     groups.push({ id: gid, content: `🟢 투입가능 선석(${label})` });
     _simPortFreeGaps(pid, 15).forEach(g => {
       items.push({
-        id: availSeq++, group: gid, content:'투입가능',
+        id: availSeq++, group: gid,
+        // 막대 위에 시간대를 바로 적어 hover 없이도 읽히게 한다 (좁으면 vis가 잘라낸다)
+        content: `투입가능 ${_minToHM(_baseMin + g.start)}~${_minToHM(_baseMin + g.end)}`,
         start: _simTimeAt(g.start), end: _simTimeAt(g.end),
         className: 'sim-seg-avail',
         style: 'background-color:#22dd66;border-color:rgba(0,0,0,0.4);color:#06301a;',
-        title: `<b>${label} 투입가능 선석</b><br>${_minToHM(_baseMin + g.start)} ~ ${_minToHM(_baseMin + g.end)} (${_fmtMin(g.end - g.start)} 비어있음)`
+        title: `<b>🟢 ${label} 투입가능 선석</b><br>` +
+               `${_simClockLabel(g.start)} → ${_simClockLabel(g.end)}<br>` +
+               `비어있는 시간 <b>${_simDurLabel(g.end - g.start)}</b>`
       });
     });
   });
@@ -4246,6 +4250,20 @@ let simLastReal=null, simSpeedFactor=300, simRAF=null;
 function _fmtMin(m) {
   const h=Math.floor(m/60), mm=Math.floor(m%60).toString().padStart(2,'0');
   return `${h}:${mm}`;
+}
+
+// 타임랩스 기준시각(_baseMin) 기준 min분 뒤를 "HH:MM"으로, 자정을 넘겼으면 "(+N일)"을 붙인다.
+// _minToHM은 1440분으로 나머지 연산을 하므로 그것만 쓰면 다음날 03:00이 03:00으로만 보인다.
+function _simClockLabel(min) {
+  const abs = _baseMin + min;
+  const day = Math.floor(abs / 1440);
+  return _minToHM(abs) + (day > 0 ? ` (+${day}일)` : '');
+}
+// 분 → "4시간 25분" — 지속시간을 시각(04:25)과 헷갈리지 않게 적는다
+function _simDurLabel(min) {
+  const m = Math.max(0, Math.round(min));
+  const h = Math.floor(m / 60), mm = m % 60;
+  return h ? (mm ? `${h}시간 ${mm}분` : `${h}시간`) : `${mm}분`;
 }
 
 function _simTick(realNow) {
