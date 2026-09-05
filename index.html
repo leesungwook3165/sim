@@ -1556,6 +1556,7 @@
 <script src="https://unpkg.com/intro.js/minified/intro.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-timeline/8.5.4/vis-timeline-graph2d.min.js"></script>
 <script src="bus_route_embed.js"></script>
+<script src="tsushima_land.js"></script>
 <script>
 // ════════════════════════════════════════════════════
 //  레이어 정의
@@ -6852,6 +6853,23 @@ function _aisSnapSegment(a, b) {
   return { path, name: best.r.name, straight, snapped: _routeLen(path) };
 }
 
+// ── 육지 관통 구간 감지 ──
+// 핑이 벌어진 구간을 직선으로 이으면 섬을 가로지른다. 어느 구간이 그런지 눈으로
+// 찾기 어려우므로, 쓰시마 육지 격자(tsushima_land.js)를 지나는 구간을 자동으로 표시한다.
+// ※ 현재 마스크는 쓰시마만 덮는다 — 한국·규슈 연안은 해안선 데이터가 있어야 한다.
+function _aisSegCrossesLand(a, b) {
+  if (typeof _isLandTsushima !== 'function') return 0;
+  const d = _simDist([a.lat, a.lon], [b.lat, b.lon]);
+  if (d < 0.5) return 0;
+  const n = Math.min(400, Math.max(2, Math.ceil(d / 0.2))); // 약 200m 간격으로 검사
+  let hit = 0;
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    if (_isLandTsushima(a.lat + (b.lat - a.lat) * t, a.lon + (b.lon - a.lon) * t)) hit++;
+  }
+  return d * hit / (n + 1); // 육지를 지나는 대략적인 거리(km)
+}
+
 // ── 시간축 보간 ──
 // AIS 핑은 항해 중 6~9분, 정박 중 70분 넘게 벌어진다. 포인트를 하나씩 밟으면
 // 그 사이를 순간이동하므로, 실제 시각 기준으로 두 포인트 사이를 보간해 부드럽게 움직인다.
@@ -7019,7 +7037,7 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
   // 두 개를 겹쳐 그린다. 마커는 25개 지점에만 있어서 회항점 같은 변곡점을 눌러도
   // 잡히지 않았는데, 이렇게 하면 선 위 어디를 눌러도 값이 뜬다.
   const legs = _aisSplitLegs(pts);
-  let snapCount = 0, corrCount = 0;
+  let snapCount = 0, corrCount = 0, landCount = 0;
   for (let i = 1; i < pts.length; i++) {
     const a = pts[i - 1], b = pts[i];
     const isBack = legs && i > legs.turnIdx;
@@ -7032,6 +7050,16 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
     const latlngs = corr ? corr.path : (snap ? snap.path : [[a.lat, a.lon], [b.lat, b.lon]]);
     if (snap) snapCount++;
     if (corr) corrCount++;
+    // 지금 그리는 경로가 육지를 지나면 빨간 경고선을 겹쳐 보정 대상임을 알린다
+    let landKm = 0;
+    for (let k = 1; k < latlngs.length; k++) {
+      landKm += _aisSegCrossesLand({ lat: latlngs[k - 1][0], lon: latlngs[k - 1][1] },
+                                   { lat: latlngs[k][0], lon: latlngs[k][1] });
+    }
+    if (landKm > 0.3) {
+      landCount++;
+      L.polyline(latlngs, { color: '#ff2b2b', weight: 8, opacity: 0.3, interactive: false }).addTo(g);
+    }
     // 원본 대조 — 보정·보간으로 모양이 바뀐 구간은 원본 직선을 회색으로 깔아
     // 무엇이 어떻게 달라졌는지 눈으로 바로 비교할 수 있게 한다 (편집 중에는 항상 켠다).
     if ((_aisShowRaw || _aisCorrEdit) && (corr || snap)) {
@@ -7158,7 +7186,8 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
   const maxSpd = Math.max(...pts.map(p => p.speed));
   const stopNote = stops.length ? ` · 정박 ${stops.length}건(${stops.map(s => Math.round(s.durMin)).join(',')}분)` : '';
   const snapNote = (snapCount ? ` · 🧭보간 ${snapCount}구간` : '')
-    + (corrCount ? ` · ✏보정 ${corrCount}구간` : '');
+    + (corrCount ? ` · ✏보정 ${corrCount}구간` : '')
+    + (landCount ? ` · ⚠육지관통 ${landCount}구간(빨간선)` : '');
   _aisSetStatus(`${_AIS_VESSELS[key].label} · ${labelStr} · ${pts.length}포인트 · 최고 ${maxSpd.toFixed(1)} knot${stopNote}${snapNote}${extraNote ? ' · ' + extraNote : ''}`);
 
   // 이 구간의 속도 변화 그래프(정적) — 재생 중에는 _playAisPoints가 재생 위치를 얹어 다시 그린다.
@@ -7537,6 +7566,7 @@ function _aisPickMonth(mo) {
 function _aisPickDay(dt) {
   const key = document.getElementById('aisVesselSel').value;
   onAisStop();
+  _aisCorrClearDraft();
   _aisSelYear = dt.slice(0, 4); _aisSelMonth = dt.slice(0, 7); _aisSelDay = dt;
   _aisSubHourSel = null; _aisSubLegSel = null; _aisViewLevel = 'day';
   _aisTbRenderTl(key); _aisTlApply();
@@ -7738,11 +7768,106 @@ function onAisNormalOnlyChange() {
   _aisTlApply();
 }
 
+// ── 구간을 직접 당겨서 다듬는 편집기 ──
+// 자동 보간은 기준 항로가 없는 구간을 못 고치고 우회가 과할 때도 있어서, 내가 그린
+// 항로를 눈으로 보며 꼭짓점을 조금씩 끌어 맞추는 방식을 기본으로 둔다.
+// 양 끝점은 실측 AIS 지점이라 고정하고(보정이 원본과 이어져야 한다), 중간만 움직인다.
+let _aisCorrDraft = null; // { a, b, path, layers }
+
+function _aisCorrClearDraft() {
+  if (!_aisCorrDraft) return;
+  (_aisCorrDraft.layers || []).forEach(l => map.removeLayer(l));
+  _aisCorrDraft = null;
+}
+
+function _aisCorrStartDraft(a, b) {
+  _aisCorrClearDraft();
+  const key = document.getElementById('aisVesselSel').value;
+  const prev = _aisCorrGet(key, a.ts.slice(0, 10), a.ts);
+  // 이미 보정해둔 게 있으면 그걸 이어서 다듬는다
+  const path = prev ? prev.path.map(p => [p[0], p[1]]) : [[a.lat, a.lon], [b.lat, b.lon]];
+  _aisCorrDraft = { a, b, path, layers: [] };
+  _aisCorrRenderDraft();
+}
+
+function _aisCorrHandleIcon(size, fill, border) {
+  return L.divIcon({
+    className: '', iconSize: [size, size], iconAnchor: [size / 2, size / 2],
+    html: '<div style="width:' + size + 'px;height:' + size + 'px;border-radius:50%;background:' + fill +
+          ';border:2px solid ' + border + ';box-shadow:0 0 4px rgba(0,0,0,0.8)"></div>'
+  });
+}
+
+function _aisCorrRenderDraft() {
+  const d = _aisCorrDraft;
+  if (!d) return;
+  d.layers.forEach(l => map.removeLayer(l));
+  d.layers = [];
+
+  const line = L.polyline(d.path, { color: '#c07bff', weight: 4, opacity: 0.95, interactive: false }).addTo(map);
+  d.layers.push(line);
+
+  // 꼭짓점 핸들 — 양 끝(실측 지점)은 회색 고정, 중간은 끌어서 이동/우클릭으로 삭제
+  d.path.forEach((p, i) => {
+    const isEnd = i === 0 || i === d.path.length - 1;
+    const mk = L.marker(p, {
+      draggable: !isEnd, zIndexOffset: 1300,
+      icon: _aisCorrHandleIcon(isEnd ? 11 : 13, isEnd ? '#889' : '#fff', '#c07bff')
+    }).addTo(map);
+    if (isEnd) {
+      mk.bindTooltip(i === 0 ? '실측 지점 (고정)' : '실측 지점 (고정)', { className: 'ais-poi-label' });
+    } else {
+      mk.on('drag', e => { d.path[i] = [e.latlng.lat, e.latlng.lng]; line.setLatLngs(d.path); });
+      mk.on('dragend', () => { _aisCorrCommitDraft(); _aisCorrRenderDraft(); });
+      mk.on('contextmenu', () => { d.path.splice(i, 1); _aisCorrCommitDraft(); _aisCorrRenderDraft(); });
+      mk.bindTooltip('끌어서 이동 · 우클릭으로 삭제', { className: 'ais-poi-label' });
+    }
+    d.layers.push(mk);
+  });
+
+  // 중간 핸들 — 끌면 그 자리에 새 꼭짓점이 생긴다 (조금씩 당겨 다듬는 용도)
+  for (let i = 1; i < d.path.length; i++) {
+    const mid = [(d.path[i - 1][0] + d.path[i][0]) / 2, (d.path[i - 1][1] + d.path[i][1]) / 2];
+    const at = i;
+    const mk = L.marker(mid, {
+      draggable: true, zIndexOffset: 1290,
+      icon: _aisCorrHandleIcon(10, 'rgba(192,123,255,0.5)', '#ffffff')
+    }).addTo(map);
+    let added = false;
+    mk.on('dragstart', () => { d.path.splice(at, 0, mid); added = true; });
+    mk.on('drag', e => { if (added) { d.path[at] = [e.latlng.lat, e.latlng.lng]; line.setLatLngs(d.path); } });
+    mk.on('dragend', () => { _aisCorrCommitDraft(); _aisCorrRenderDraft(); });
+    mk.bindTooltip('여기를 끌면 꼭짓점이 생깁니다', { className: 'ais-poi-label' });
+    d.layers.push(mk);
+  }
+}
+
+// 당길 때마다 바로 저장한다 — 원본은 그대로 두고 보정분만 갱신
+function _aisCorrCommitDraft() {
+  const d = _aisCorrDraft;
+  if (!d) return;
+  const key = document.getElementById('aisVesselSel').value;
+  const A = [d.a.lat, d.a.lon], B = [d.b.lat, d.b.lon];
+  const srcKm = _simDist(A, B), corrKm = _routeLen(d.path);
+  _aisCorrSet(key, d.a.ts.slice(0, 10), d.a.ts, {
+    path: d.path.map(p => [p[0], p[1]]),
+    srcDate: d.a.ts.slice(0, 10),
+    srcFromTs: d.a.ts, srcToTs: d.b.ts,
+    srcKm, corrKm,
+    routeName: '직접 당겨서 보정 (꼭짓점 ' + Math.max(0, d.path.length - 2) + '개)',
+    savedAt: new Date().toISOString()
+  });
+  _aisSetStatus('✏ 저장됨 — ' + d.a.ts.slice(0, 10) + ' ' + _aisFmtClock(d.a.ts) + ' 구간 · ' +
+    '직선 ' + srcKm.toFixed(1) + 'km → 보정 ' + corrKm.toFixed(1) + 'km · 계속 당겨서 다듬을 수 있습니다');
+}
+
 // 편집 모드에서 보정할 구간을 고른다
 function _aisCorrPick(a, b) {
   _aisCorrSel = { a, b };
+  _aisCorrStartDraft(a, b); // 흰 꼭짓점을 끌어 직접 다듬는다
   _aisSetStatus(`✏ 구간 선택: ${_aisFmtClock(a.ts)} → ${_aisFmtClock(b.ts)} ` +
-    `(직선 ${_simDist([a.lat, a.lon], [b.lat, b.lon]).toFixed(1)}km) — 청록색 안내선을 클릭하면 그 경로로 보정합니다`);
+    `(직선 ${_simDist([a.lat, a.lon], [b.lat, b.lon]).toFixed(1)}km) — ` +
+    `보라 선의 점을 끌어 다듬으세요(끌 때마다 저장). 청록 안내선을 클릭하면 그 경로로 한 번에 맞춥니다`);
   _aisTlApply();
 }
 
@@ -7764,16 +7889,17 @@ function _aisCorrApply(route) {
     routeName: route.name,
     savedAt: new Date().toISOString()
   });
-  _aisCorrSel = null;
+  _aisCorrStartDraft(a, b); // 맞춘 결과를 그대로 이어서 손으로 다듬을 수 있게 한다
   _aisTlApply();
   _aisSetStatus(`✏ 보정 저장됨 — ${a.ts.slice(0, 10)} ${_aisFmtClock(a.ts)} 구간 (${route.name}) · ` +
-    `안내선은 숨겼습니다. 다른 구간을 클릭하면 다시 나타납니다`);
+    `이어서 점을 끌어 다듬을 수 있습니다`);
 }
 
 // '✏ 보정 편집' 체크박스
 function onAisCorrEditChange() {
   _aisCorrEdit = document.getElementById('aisCorrEdit').checked;
   _aisCorrSel = null;
+  _aisCorrClearDraft();
   if (_aisCorrEdit) {
     const guides = _aisRefRoutes().filter(r => r.user).length;
     _aisSetStatus(guides
@@ -7803,6 +7929,7 @@ function onAisSnapChange() {
     if (raw) raw.checked = false;
     if (edit) edit.checked = false;
     _aisShowRaw = false; _aisCorrEdit = false; _aisCorrSel = null;
+    _aisCorrClearDraft();
   }
   _aisTlApply();
 }
