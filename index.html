@@ -352,6 +352,20 @@
       margin: 2px 2px 2px 0;
       color: #7ecfff;
     }
+    /* 항구 팝업 — 배 한 척이 한 줄, 이름과 시간을 양끝으로 */
+    .pt-role { font-size: 10px; font-weight: 600; opacity: 0.85; }
+    .pt-list { font-size: 11px; line-height: 1.5; }
+    .pt-row { display: flex; gap: 10px; justify-content: space-between; padding: 1px 0; }
+    .pt-name { color: #cce0f0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pt-val { color: #9fd8ff; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .pt-soon { font-size: 9px; color: #ffb066; border: 1px solid #ffb06655; border-radius: 3px; padding: 0 3px; }
+    .pt-more { margin-top: 5px; }
+    .pt-more > summary { font-size: 10.5px; color: #7ecfff; cursor: pointer; list-style: none; opacity: 0.8; }
+    .pt-more > summary:hover { opacity: 1; }
+    .pt-more > summary::-webkit-details-marker { display: none; }
+    .pt-more > summary::before { content: '▸ '; }
+    .pt-more[open] > summary::before { content: '▾ '; }
+    .pt-desc { font-size: 11px; line-height: 1.55; color: #b9cfe2; margin: 4px 0 5px; }
     .popup-coords { font-size: 11px; color: #88aabb; margin-top: 5px; font-family: monospace; }
 
     /* 거리 측정 레이블 */
@@ -1862,11 +1876,14 @@ ports.forEach(p => {
     // 이미 다 준비돼 있으므로, 이 항구를 오가는 배들의 편도·왕복 소요시간을 매번 최신값으로 보여준다.
     .bindPopup(() => {
       const timingLines = _portTimingLines(p.id);
+      // 기본은 이름 · 역할 · 소요시간만. 설명·태그·좌표는 필요할 때만 펼친다.
       const timingHtml = timingLines.length
-        ? `<div style="margin-top:6px;padding-top:6px;border-top:1px dashed rgba(255,255,255,0.25);font-size:11px;line-height:1.7">
-             <b style="color:#7ecfff">⏱ 편도 · 왕복 소요시간</b><br>${timingLines.join('<br>')}
-           </div>` : '';
-      return `<div class="popup-title">${p.name}</div><div class="popup-body"><b style="color:${p.color}">${p.role}</b><br/>${p.desc}<br/><br/>${tags}${timingHtml}<div class="popup-coords">📍 ${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}</div></div>`;
+        ? `<div class="pt-list">${timingLines.join('')}</div>` : '';
+      return `<div class="popup-title">${p.name} <span class="pt-role" style="color:${p.color}">${p.role}</span></div>`
+        + `<div class="popup-body">${timingHtml}`
+        + `<details class="pt-more"><summary>자세히</summary>`
+        + `<div class="pt-desc">${p.desc}</div>${tags}`
+        + `<div class="popup-coords">📍 ${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}</div></details></div>`;
     }, { className: 'custom-popup', maxWidth: 300 })
     .bindTooltip(p.lineName
       ? `${p.name}<br><span style="font-size:9.5px;opacity:.75">${p.lineName}</span>`
@@ -3842,29 +3859,28 @@ function _customShipTouchesPort(s, portId) {
 // — 그래서 가는 편·오는 편의 시간이 서로 다르면(예: 미라클호 18h vs 17h) 두 줄이 다 나온다.
 function _portTimingLines(portId) {
   const lines = [];
-  const add = (label, outMin, waitMin, retMin) => {
-    let s = `<b>${label}</b><br>&nbsp;&nbsp;출항: ${_fmtMin(outMin)}`;
-    if (waitMin != null) s += ` · 대기: ${_fmtMin(waitMin)}`;
-    if (retMin != null)  s += ` · 귀항: ${_fmtMin(retMin)}`;
-    if (waitMin != null && retMin != null) {
-      s += `<br>&nbsp;&nbsp;통합(왕복+대기)시간: ${_fmtMin(outMin + waitMin + retMin)}`;
-    }
-    lines.push(s);
+  // 한 배 = 한 줄. 이 팝업이 곧 그 항구이므로 항로("A항→B항")는 적지 않고 배 이름만 남긴다.
+  const add = (name, outMin, waitMin, retMin) => {
+    const t = [_fmtMin(outMin)];
+    if (waitMin != null) t.push('대기 ' + _fmtMin(waitMin));
+    if (waitMin != null && retMin != null) t.push('왕복 ' + _fmtMin(outMin + waitMin + retMin));
+    lines.push('<div class="pt-row"><span class="pt-name">' + name + '</span>'
+      + '<span class="pt-val">' + t.join(' · ') + '</span></div>');
   };
   if (_activeSimTab === 1) {
     // 히타카츠는 경유지일 뿐 산타모니카호의 복귀 항로(하카타→부산 직항)가 다시 들르지 않으므로
     // "귀항" 구간이 없다 — 출항·대기만 보여준다.
-    if (portId === 'hitakatsu') add('🚢 산타모니카(경유) 부산→히타카츠', _hitaArrMin, SIM_STOP_MIN, null);
+    if (portId === 'hitakatsu') add('산타모니카 (경유)', _hitaArrMin, SIM_STOP_MIN, null);
     if (portId === 'hakata') {
-      add('🚢 산타모니카(경유) 부산→하카타(히타카츠 경유)', _totalMinSM, simSMTurnMin, _totalMinSMret - _totalMinSM - simSMTurnMin);
+      add('산타모니카 (히타카츠 경유)', _totalMinSM, simSMTurnMin, _totalMinSMret - _totalMinSM - simSMTurnMin);
     }
   } else {
     if (portId === 'hakata') {
-      add('🚢 산타모니카(직항) 부산→하카타', _totalMinSM2, simSMTurnMin, _totalMinSM2ret - _totalMinSM2 - simSMTurnMin);
+      add('산타모니카 (직항)', _totalMinSM2, simSMTurnMin, _totalMinSM2ret - _totalMinSM2 - simSMTurnMin);
     }
   }
   if (portId === 'hakata') {
-    add('🚢 퀸비틀 부산→하카타', _totalMinQB, simQBTurnMin, _totalMinQBret - _totalMinQB - simQBTurnMin);
+    add('퀸비틀', _totalMinQB, simQBTurnMin, _totalMinQBret - _totalMinQB - simQBTurnMin);
   }
   customShips.forEach(s => {
     const tl = _customTL[s.id];
@@ -3872,18 +3888,18 @@ function _portTimingLines(portId) {
     const viaPortId  = s.via ? _portIdByName(s.via.name) : null;
     const toPortId   = _portIdByName(s.to.name);
     const fromPortId = _portIdByName(s.from.name);
-    const tag = s.pending ? '🕓' : '⛴';
+    const tag = s.pending ? '<span class="pt-soon">예정</span> ' : '';
     if (viaPortId === portId) {
       const wait = tl.viaDepart - tl.viaArrive;
       const ret = s.roundTrip ? (tl.totalRet - tl.retViaArrive) : null;
-      add(`${tag} ${s.name} ${s.from.name}→${s.via.name}`, tl.viaArrive, wait, ret);
+      add(tag + s.name, tl.viaArrive, wait, ret);
     }
     if (toPortId === portId) {
-      if (s.roundTrip) add(`${tag} ${s.name} ${s.from.name}→${s.to.name}`, tl.totalOut, s.turnMin, tl.totalRet - tl.totalOut - s.turnMin);
-      else add(`${tag} ${s.name} ${s.from.name}→${s.to.name}`, tl.totalOut, null, null);
+      if (s.roundTrip) add(tag + s.name, tl.totalOut, s.turnMin, tl.totalRet - tl.totalOut - s.turnMin);
+      else add(tag + s.name, tl.totalOut, null, null);
     }
     if (!s.roundTrip && fromPortId === portId) {
-      add(`${tag} ${s.name} ${s.from.name}→${s.to.name}`, tl.totalOut, null, null);
+      add(tag + s.name, tl.totalOut, null, null);
     }
   });
   return lines;
