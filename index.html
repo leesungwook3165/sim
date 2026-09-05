@@ -8690,13 +8690,9 @@ async function onAisVesselChange() {
     _aisSubHourSel = null; _aisSubLegSel = null;
     _aisCallFilter = 'all';
     _aisRenderCallFilter(key);
-    // 가장 최근 날짜를 펼친 상태로 시작
-    _aisSelYear = _aisSelMonth = _aisSelDay = null; _aisViewLevel = 'day';
-    const days = _aisAllDays(key);
-    if (days.length) {
-      const last = days[days.length - 1];
-      _aisSelYear = last.slice(0, 4); _aisSelMonth = last.slice(0, 7); _aisSelDay = last;
-    }
+    // 전체 기간을 먼저 보여준다 — 항적 전체의 모양을 본 뒤 연도→월→일로 내려가는 흐름.
+    // (예전에는 가장 최근 하루를 펼쳐 놓아, 전체를 보려면 매번 "전체"를 눌러야 했다)
+    _aisSelYear = _aisSelMonth = _aisSelDay = null; _aisViewLevel = 'all';
     _aisTbRenderTl(key);
     _aisTlApply();
   }
