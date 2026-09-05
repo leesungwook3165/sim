@@ -6446,9 +6446,20 @@ function _aisFmtDateClock(ts) {
 // UTC 시(hour) 문자열("13")을 현지 시로 바꾼다 — 시간대 버튼·라벨용
 function _aisLocalHour(utcHH) { return (parseInt(utcHH, 10) + 9) % 24; }
 
+// ── 진행방향 화살표 아이콘 (course 각도로 회전) ──
+function _aisArrowIcon(hdg, color) {
+  return L.divIcon({
+    html: `<div style="width:22px;height:22px;transform:rotate(${hdg}deg)">
+      <svg width="22" height="22" viewBox="0 0 14 14">
+        <polygon points="7,1 12,12 7,9 2,12" fill="${color}" stroke="#0a1832" stroke-width="0.6"/>
+      </svg>
+    </div>`,
+    className: '', iconSize: [22, 22], iconAnchor: [11, 11]
+  });
+}
+
 function _clearAisLayer() {
   if (_aisLayerGroup.g) { map.removeLayer(_aisLayerGroup.g); _aisLayerGroup.g = null; }
-  _aisArrowState = null; // 줌 핸들러가 사라진 레이어를 계속 다시 그리지 않도록
   _aisHoverShipHide();
   // 집계 뷰를 벗어나면 마우스 핸들러와 인덱스를 반드시 놓아준다 (안 그러면 계속 계산한다)
   if (_aisAgg) {
@@ -6458,76 +6469,28 @@ function _clearAisLayer() {
   }
 }
 
-// ── 속도가 바뀌는 지점마다 진행방향 화살표를 찍는다 ──
-// CSV의 속도 값이 직전 포인트와 다른 지점을 전부 후보로 삼는다. 하루 포인트가 수백 개라
-// divIcon 마커로 찍으면 DOM이 그만큼 늘어 지도가 느려지므로, 화살표는 캔버스에 그린
-// 꺾은선(갈매기 모양)으로 만들고 속도대 색깔별로 묶어 레이어를 4개만 쓴다.
-//
-// 글리프 크기는 화면 픽셀 기준으로 고정한다(줌이 바뀌면 다시 그린다). 그 덕에
-// 겹침 판정도 화면 기준이 되어, 확대하면 화살표가 더 촘촘히 드러나고 축소하면
-// 겹치는 것만 자연히 솎아진다 — 정박 중 한자리에 몰린 포인트가 뭉치지 않는다.
-const AIS_ARROW_PX = 7;        // 화살표 반지름(화면 픽셀)
-const AIS_ARROW_GAP_PX = 16;   // 이보다 가까우면 겹친다고 보고 건너뛴다
-
-function _aisSpeedChangeIdx(pts) {
-  const out = [];
+// 실제 "이동거리" 기준으로 인덱스를 고르게 골라준다 — 포인트 개수 기준으로 고르면
+// 정박 중처럼 한 자리에 포인트가 몰린 구간에 화살표가 쏠리고, 정작 이동 중인 구간엔
+// 화살표가 안 보이는 문제가 생긴다. 처음/끝은 항상 포함.
+function _aisPickEvenIndices(pts, count) {
+  const idxSet = new Set([0, pts.length - 1]);
+  if (pts.length <= 2 || count <= 0) return idxSet;
+  const dists = [0];
+  let cum = 0;
   for (let i = 1; i < pts.length; i++) {
-    if (pts[i].speed !== pts[i - 1].speed) out.push(i);
+    cum += _simDist([pts[i - 1].lat, pts[i - 1].lon], [pts[i].lat, pts[i].lon]);
+    dists.push(cum);
   }
-  return out;
+  if (cum <= 0) return idxSet;
+  const step = cum / count;
+  let next = step, j = 1;
+  while (next < cum && j < pts.length) {
+    while (j < pts.length && dists[j] < next) j++;
+    if (j < pts.length) idxSet.add(j);
+    next += step;
+  }
+  return idxSet;
 }
-
-// 화면 1픽셀이 몇 미터인지 (웹 메르카토르)
-function _aisMetersPerPx(lat) {
-  return 156543.03392 * Math.cos(lat * Math.PI / 180) / Math.pow(2, map.getZoom());
-}
-
-// 속도대 색깔별로 갈매기 모양 꺾은선 묶음을 만든다
-function _aisArrowChevrons(pts, idxs) {
-  const byColor = {};
-  const mpp = _aisMetersPerPx(pts[Math.floor(pts.length / 2)].lat);
-  const rM = AIS_ARROW_PX * mpp;          // 글리프 반지름(m)
-  const gapKm = AIS_ARROW_GAP_PX * mpp / 1000;
-  let lastLat = null, lastLon = null;
-  idxs.forEach(i => {
-    const p = pts[i];
-    // 이미 찍은 화살표와 화면상 너무 가까우면 건너뛴다 (겹쳐도 못 읽으므로)
-    if (lastLat != null && _simDist([lastLat, lastLon], [p.lat, p.lon]) < gapKm) return;
-    lastLat = p.lat; lastLon = p.lon;
-    const dLat = rM / 111320;
-    const dLon = rM / (111320 * Math.max(0.2, Math.cos(p.lat * Math.PI / 180)));
-    const at = (angDeg, scale) => {
-      const a = angDeg * Math.PI / 180;
-      return [p.lat + Math.cos(a) * dLat * scale, p.lon + Math.sin(a) * dLon * scale];
-    };
-    const tip = at(p.course, 1);
-    // 꼬리 두 갈래 — 진행방향에서 ±140° 벌린다
-    const w1 = at(p.course + 140, 1);
-    const w2 = at(p.course - 140, 1);
-    const col = _aisSpeedColor(p.speed);
-    (byColor[col] = byColor[col] || []).push([w1, tip, w2]);
-  });
-  return byColor;
-}
-
-// 줌이 바뀌면 화면 기준 크기를 유지하려고 다시 그린다
-let _aisArrowState = null; // { pts, group }
-function _aisArrowsRebuild() {
-  const st = _aisArrowState;
-  if (!st || !map.hasLayer(st.group)) return;
-  st.group.clearLayers();
-  const idxs = _aisSpeedChangeIdx(st.pts);
-  const byColor = _aisArrowChevrons(st.pts, idxs);
-  const renderer = L.canvas({ padding: 0.5 });
-  Object.keys(byColor).forEach(col => {
-    L.polyline(byColor[col], {
-      color: col, weight: 2, opacity: 0.95, interactive: false,
-      lineCap: 'round', lineJoin: 'round', renderer
-    }).addTo(st.group);
-  });
-  st.drawn = Object.values(byColor).reduce((a, b) => a + b.length, 0);
-}
-map.on('zoomend', _aisArrowsRebuild);
 
 // ── 실측 정박/경유 POI 자동 감지 ──
 // 속도가 AIS_STOP_SPEED_KTS(kts) 이하로 AIS_STOP_MIN_MIN(분) 이상 지속되는 구간을
@@ -7218,21 +7181,20 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
     ).addTo(g);
   }
 
-  // 진행방향 화살표는 CSV에서 속도가 바뀌는 지점마다 전부 찍는다.
-  // 항적 위 어디를 눌러도 값이 뜨도록 투명한 클릭용 선을 이미 깔아뒀으므로,
-  // 화살표 자체는 클릭 대상이 아니어도 된다 → 가벼운 캔버스 글리프로 그린다.
-  const arrowGroup = L.layerGroup().addTo(g);
-  _aisArrowState = { pts, group: arrowGroup, drawn: 0 };
-  _aisArrowsRebuild();
-
-  // 출항/도착만 큰 원으로 표시한다
+  // 중간 지점은 진행방향(course)을 알 수 있는 화살표 아이콘으로, 출항/도착은 큰 원으로 표시.
+  // 포인트 개수가 아니라 실제 이동거리 기준으로 골라서, 정박 구간에 화살표가 몰리지
+  // 않고 항로를 따라 고르게(중간중간) 배치되도록 한다.
+  const arrowIdx = _aisPickEvenIndices(pts, 25);
   pts.forEach((p, i) => {
     const isEnd = i === 0 || i === pts.length - 1;
-    if (!isEnd) return;
-    const mk = L.circleMarker([p.lat, p.lon], {
-      radius: 6, color: i === 0 ? '#00ff88' : '#ff4466',
-      fillColor: i === 0 ? '#00ff88' : '#ff4466', fillOpacity: 0.9, weight: 1
-    });
+    if (!isEnd && !arrowIdx.has(i)) return;
+    const col = _aisSpeedColor(p.speed);
+    const mk = isEnd
+      ? L.circleMarker([p.lat, p.lon], {
+          radius: 6, color: i === 0 ? '#00ff88' : '#ff4466',
+          fillColor: i === 0 ? '#00ff88' : '#ff4466', fillOpacity: 0.9, weight: 1
+        })
+      : L.marker([p.lat, p.lon], { icon: _aisArrowIcon(p.course, col) });
     mk.bindPopup(
       `<b>${_AIS_VESSELS[key].label}</b><br>` +
       `${_aisFmtDateClock(p.ts)} KST<br>` +
@@ -7291,7 +7253,6 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
   });
 
   g.addTo(map);
-  _aisArrowsRebuild(); // 레이어가 지도에 올라간 뒤 화면 크기 기준으로 화살표를 그린다
   _aisLayerGroup.g = g;
 
   const maxSpd = Math.max(...pts.map(p => p.speed));
