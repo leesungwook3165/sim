@@ -6877,28 +6877,53 @@ function _renderAisHour(key, hourKey) {
 }
 
 // ── 기간(월·연도) 전체 렌더링 ──
+// ── 기간 집계 렌더링 (월·연도·전체) ──
+// 하루를 폴리라인 하나로 그린다. 예전에는 구간마다 하나씩 그려서(카멜리아 전체 = 29만 개)
+// 연도·전체 보기가 사실상 불가능했다. 하루 1개면 전체 기간도 수천 개 수준이라 열린다.
+// 대신 구간별 속도색은 포기하고, 그 날이 ★기준일인지로 색을 나눈다.
+// 각 선에 hover하면 밝게 강조되고, 클릭하면 언제 항적인지 상세가 뜬다.
 function _renderAisPeriod(key, prefix) {
   _clearAisLayer();
   const chartRow = document.getElementById('aisTbChartRow');
-  if (chartRow) chartRow.style.display = 'none'; // 월/년 집계 뷰에는 속도 그래프를 표시하지 않음
+  if (chartRow) chartRow.style.display = 'none'; // 집계 뷰에는 속도 그래프를 표시하지 않음
   const data = _aisCache[key]; if (!data) return;
-  const days = _aisFilterDates(data.dates).filter(d => d.startsWith(prefix));
-  if (!days.length) { _aisSetStatus(prefix + ': 데이터 없음'); return; }
+  const days = _aisAllDays(key).filter(d => d.startsWith(prefix || ''));
+  const scopeLabel = prefix || '전체 기간';
+  if (!days.length) { _aisSetStatus(scopeLabel + ': 조건에 맞는 데이터 없음'); return; }
   const g = L.layerGroup();
   let totalPts = 0;
+  // 수천 개 선을 SVG로 그리면 브라우저가 버거우므로 집계 뷰는 캔버스로 렌더링한다
+  // (마우스 hover·클릭 이벤트는 캔버스에서도 그대로 동작한다).
+  const renderer = L.canvas({ padding: 0.5 });
+  const baseColor = d => (data.dayQuality[d] && data.dayQuality[d].isRef) ? '#ffd75e' : '#44aaff';
   days.forEach(day => {
-    const pts = data.index[day]; if (!pts) return;
+    const pts = data.index[day]; if (!pts || pts.length < 2) return;
     totalPts += pts.length;
-    for (let i = 1; i < pts.length; i++) {
-      const a = pts[i - 1], b = pts[i];
-      L.polyline([[a.lat, a.lon], [b.lat, b.lon]], {
-        color: _aisSpeedColor((a.speed + b.speed) / 2), weight: 2, opacity: 0.55
-      }).addTo(g);
-    }
+    const q = data.dayQuality[day] || {};
+    const color = baseColor(day);
+    const line = L.polyline(pts.map(p => [p.lat, p.lon]), {
+      color, weight: 2, opacity: 0.5, smoothFactor: 2, renderer
+    });
+    const callTxt = (q.calls || []).length
+      ? '<br>⚓ ' + q.calls.map(c => c.name.replace(/(국제여객터미널|국제터미널|여객선터미널|항)$/, '') + ' ' + Math.round(c.durMin) + '분').join(', ')
+      : '';
+    line.bindTooltip(`${day}${q.isRef ? ' ★' : ''}`, { sticky: true, className: 'ais-poi-label' });
+    line.bindPopup(
+      `<b>${_AIS_VESSELS[key].label}</b> · ${day}${q.isRef ? ' <span style="color:#ffd75e">★기준일</span>' : ''}<br>` +
+      `${q.origin || ''} · ${(q.totalDist || 0).toFixed(0)}km${callTxt}<br>` +
+      `<a href="#" onclick="_aisPickDay('${day}');return false;" style="color:#7ecfff">▶ 이 날짜만 자세히 보기</a>`,
+      { className: 'custom-popup', maxWidth: 260 }
+    );
+    // hover 강조 — 겹쳐 그려진 항적 중 어느 것을 가리키는지 눈으로 구분되게
+    line.on('mouseover', () => { line.setStyle({ color: '#ffffff', weight: 4, opacity: 1 }); line.bringToFront(); });
+    line.on('mouseout',  () => { line.setStyle({ color, weight: 2, opacity: 0.5 }); });
+    line.addTo(g);
   });
   g.addTo(map);
   _aisLayerGroup.g = g;
-  _aisSetStatus(`${_AIS_VESSELS[key].label} · ${prefix} · ${days.length}일 · ${totalPts}포인트`);
+  const refN = days.filter(d => data.dayQuality[d] && data.dayQuality[d].isRef).length;
+  const heavy = days.length > 1500 ? ' · 많아서 느리면 필터로 좁히세요' : '';
+  _aisSetStatus(`${_AIS_VESSELS[key].label} · ${scopeLabel} · ${days.length}일(★${refN}) · ${totalPts}포인트 · 선에 마우스를 올리면 날짜 표시${heavy}`);
 }
 
 // ── 캘린더로 지정한 조회 기간(_aisRangeFrom~_aisRangeTo) 필터 ──
@@ -6941,6 +6966,7 @@ function _aisDays(key, month)  { return month ? _aisAllDays(key).filter(x => x.s
 function _aisNormalizeSel(key) {
   const years = _aisYears(key);
   if (!years.length) { _aisSelYear = _aisSelMonth = _aisSelDay = null; return; }
+  if (_aisViewLevel === 'all') return; // 전체 보기에서는 하위 선택을 비워둔다
   if (!years.includes(_aisSelYear)) { _aisSelYear = years[years.length - 1]; _aisSelMonth = _aisSelDay = null; }
   const months = _aisMonths(key, _aisSelYear);
   if (_aisSelMonth && !months.includes(_aisSelMonth)) { _aisSelMonth = months[months.length - 1] || null; _aisSelDay = null; }
@@ -6955,6 +6981,7 @@ function _aisRenderCrumb() {
   const el = document.getElementById('aisTbCrumb');
   if (!el) return;
   const parts = [];
+  if (_aisViewLevel === 'all') { el.textContent = '📍 전체 기간'; return; }
   if (_aisSelYear)  parts.push(_aisSelYear);
   if (_aisSelMonth) parts.push(+_aisSelMonth.slice(5, 7) + '월');
   if (_aisSelDay)   parts.push(+_aisSelDay.slice(8, 10) + '일');
@@ -6975,8 +7002,9 @@ function _aisTbRenderTl(key) {
   _aisNormalizeSel(key);
 
   const years = _aisYears(key);
+  const allBtn = `<button class="ais-tb-unit${_aisViewLevel === 'all' ? ' sel' : ''}" onclick="_aisPickAll()" title="전체 기간의 항적을 한 번에 겹쳐 보기">전체</button>`;
   rowY.innerHTML = years.length
-    ? years.map(y => {
+    ? allBtn + years.map(y => {
         const nDays = _aisAllDays(key).filter(x => x.startsWith(y)).length;
         return `<button class="ais-tb-unit${y === _aisSelYear ? ' sel' : ''}" onclick="_aisPickYear('${y}')" title="${y}년 · ${nDays}일">${y}</button>`;
       }).join('')
@@ -7016,6 +7044,14 @@ function _aisTbRenderTl(key) {
 }
 
 // ── 단계별 선택 ──
+// 전체 기간을 한 번에 겹쳐 보기
+function _aisPickAll() {
+  const key = document.getElementById('aisVesselSel').value;
+  onAisStop();
+  _aisSelYear = null; _aisSelMonth = null; _aisSelDay = null;
+  _aisSubHourSel = null; _aisSubLegSel = null; _aisViewLevel = 'all';
+  _aisTbRenderTl(key); _aisTlApply();
+}
 function _aisPickYear(y) {
   const key = document.getElementById('aisVesselSel').value;
   onAisStop();
@@ -7099,7 +7135,9 @@ function _aisTlApply() {
   const subWrap = document.getElementById('aisTbSubTlRow');
   const chartRow = document.getElementById('aisTbChartRow');
   const hideSub = () => { if (subWrap) subWrap.style.display = 'none'; };
-  if (_aisViewLevel === 'day' && _aisSelDay) {
+  if (_aisViewLevel === 'all') {
+    _renderAisPeriod(key, ''); hideSub();
+  } else if (_aisViewLevel === 'day' && _aisSelDay) {
     _renderAisDay(key, _aisSelDay);
     _aisRenderSubHours(key, _aisSelDay); // 그 날의 구간·시간대를 아래 행에 펼친다
   } else if (_aisViewLevel === 'month' && _aisSelMonth) {
@@ -7269,8 +7307,13 @@ function _playAisPoints(key, item, renderFn, getPts) {
   if (!pts || pts.length < 2) { _aisSetStatus(item + ': 재생할 데이터 없음'); return; }
   onAisStop(true);
   renderFn(key, item);
-  const icon = L.divIcon({ html: '<div style="font-size:20px;line-height:1;filter:drop-shadow(0 0 4px #0af)">🚢</div>', className: '', iconSize: [22, 22], iconAnchor: [11, 11] });
-  const marker = L.marker([pts[0].lat, pts[0].lon], { icon, zIndexOffset: 1200 }).addTo(map);
+  // 재생 마커는 시뮬레이션 배와 같은 화살표 모양으로 — 진행방향으로 회전하고
+  // 선박명과 실시간 속도를 라벨로 함께 보여준다.
+  const vColor = _AIS_VESSELS[key].color || '#66ccff';
+  const marker = L.marker([pts[0].lat, pts[0].lon], {
+    icon: _makeShipIcon(pts[0].course || 0, vColor, '#0a1832', `${_AIS_VESSELS[key].label}<br>${pts[0].speed.toFixed(1)} knot`),
+    zIndexOffset: 1200
+  }).addTo(map);
   const tsMs = pts.map(p => new Date(p.ts).getTime());
   const spanMs = Math.max(1, tsMs[tsMs.length - 1] - tsMs[0]);
   _aisPlay.marker = marker; _aisPlay.pts = pts; _aisPlay.simMs = 0;
@@ -7287,24 +7330,32 @@ function _playAisPoints(key, item, renderFn, getPts) {
     lastReal = now;
     if (_aisPlay.simMs >= spanMs) {
       if (_aisPlay.loop) { _aisPlay.simMs = 0; }
-      else { _aisPlay.simMs = spanMs; _aisPlayRenderAt(pts, tsMs); onAisStop(); return; }
+      else { _aisPlay.simMs = spanMs; _aisPlayRenderAt(pts, tsMs, key, true); onAisStop(); return; }
     }
-    const cur = _aisPlayRenderAt(pts, tsMs);
-    // 그래프는 매 프레임까지 다시 그릴 필요가 없어 약 15fps로 제한
-    if (now - lastChart > 66) { _aisDrawSpeedChart(pts, cur); lastChart = now; }
+    // 그래프와 마커 아이콘은 매 프레임까지 갱신할 필요가 없어 약 15fps로 제한
+    const tick = now - lastChart > 66;
+    const cur = _aisPlayRenderAt(pts, tsMs, key, tick);
+    if (tick) { _aisDrawSpeedChart(pts, cur); lastChart = now; }
     _aisPlay.raf = requestAnimationFrame(frame);
   }
   _aisPlay.frameFn = frame;
-  _aisPlayRenderAt(pts, tsMs);
+  _aisPlayRenderAt(pts, tsMs, key, true);
   _aisDrawSpeedChart(pts, _aisInterpAt(pts, tsMs, tsMs[0]));
   lastReal = null;
   _aisPlay.raf = requestAnimationFrame(frame);
 }
 
 // 현재 가상시각(_aisPlay.simMs)에 해당하는 위치로 마커·정보 표시를 갱신
-function _aisPlayRenderAt(pts, tsMs) {
+function _aisPlayRenderAt(pts, tsMs, key, redrawIcon) {
   const cur = _aisInterpAt(pts, tsMs, tsMs[0] + _aisPlay.simMs);
-  if (_aisPlay.marker) _aisPlay.marker.setLatLng([cur.lat, cur.lon]);
+  if (_aisPlay.marker) {
+    _aisPlay.marker.setLatLng([cur.lat, cur.lon]);
+    // 아이콘(회전·속도 라벨)은 매 프레임 새로 만들면 무거우므로 간헐적으로만 갱신
+    if (redrawIcon && key && _AIS_VESSELS[key]) {
+      _aisPlay.marker.setIcon(_makeShipIcon(cur.course, _AIS_VESSELS[key].color || '#66ccff', '#0a1832',
+        `${_AIS_VESSELS[key].label}<br>${cur.speed.toFixed(1)} knot`));
+    }
+  }
   const el = document.getElementById('aisPlayInfo');
   if (el) {
     const iso = new Date(cur.tsMs).toISOString();
