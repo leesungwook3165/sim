@@ -601,6 +601,9 @@
     .sim-tab-content { display: none; }
     .sim-tab-content.active { display: block; }
 
+    /* AIS 타임바가 열려 있으면 지도 버튼에 표시를 남긴다 */
+    #aisMapBtn.on { background: rgba(80,160,255,0.35) !important; box-shadow: inset 0 0 0 1px #7ecfff; }
+
     /* ── 보정 편집 안내 (편집 모드일 때만 보인다) ── */
     #aisCorrHelp {
       position: fixed;
@@ -1585,6 +1588,7 @@
 <div id="aisVesselMenu" class="ais-vsel-menu"></div>
 
 <div id="aisTimebar">
+  <button id="aisCloseBtn" onclick="toggleAisPanel(false)" title="AIS 타임바 닫기 (지도 왼쪽 📡 버튼으로 다시 엽니다)" style="position:absolute;top:5px;right:34px;z-index:3;background:transparent;border:none;color:#aac8e8;font-size:13px;line-height:1;padding:2px 6px;cursor:pointer;border-radius:4px;" onmouseover="this.style.color='#ff8899'" onmouseout="this.style.color='#aac8e8'">✕</button>
   <button id="aisMinBtn" onclick="toggleAisTimebar()" title="AIS 타임바 최소화 / 복원" style="position:absolute;top:5px;right:10px;z-index:3;background:transparent;border:none;color:#aac8e8;font-size:14px;line-height:1;padding:2px 6px;cursor:pointer;border-radius:4px;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#aac8e8'">─</button>
   <div class="ais-tb-resizer" id="aisTbResizer" title="드래그하여 높이 조절"></div>
   <div class="ais-tb-top">
@@ -6825,6 +6829,59 @@ function _aisLoadViaWorker(key, url) {
   });
 }
 
+// ── AIS 타임바 열기/닫기 ──
+// 지도 왼쪽 📡 버튼과 타임바 오른쪽 ✕ 버튼이 같은 함수를 쓴다.
+// (닫을 때 되돌릴 것이 여러 개라 로직이 한 곳에 있어야 어긋나지 않는다)
+function _aisPanelIsOpen() {
+  const tb = document.getElementById('aisTimebar');
+  return !!(tb && tb.classList.contains('visible'));
+}
+
+function toggleAisPanel(force) {
+  const tb = document.getElementById('aisTimebar');
+  if (!tb) return;
+  const open = (force == null) ? !_aisPanelIsOpen() : !!force;
+  const btn = document.getElementById('aisCloseBtn');
+  if (!open) {
+    tb.classList.remove('visible');
+    onAisStop();
+    // 겹쳐둔 항적도 함께 걷는다 (지도에 남아 시뮬레이션 화면을 가리지 않도록)
+    if (_aisOverlayGroup) { map.removeLayer(_aisOverlayGroup); _aisOverlayGroup = null; }
+    _clearAisLayer();
+    const vm = document.getElementById('aisVesselMenu');
+    if (vm) vm.classList.remove('on'); // 메뉴는 body에 있어 따로 남을 수 있다
+    const help = document.getElementById('aisCorrHelp');
+    if (help) help.classList.remove('on');
+    // AIS를 닫으면 가려뒀던 구상·참고 항로선과 시뮬레이션 시점을 원래대로 되돌린다
+    if (_aisPrevScope != null) {
+      setSimPlayScope(_aisPrevScope);
+      simSimMin = _aisPrevSimMin; // setSimPlayScope가 시점을 리셋하므로 다시 되돌린다
+      _simRenderFrame();
+      _aisPrevScope = null;
+    }
+    _syncBottomBars();
+  } else {
+    tb.classList.add('visible');
+    // 실적 항로를 보는 동안은 시뮬레이션 재생을 멈추고 구상·참고 항로선을 감춘다
+    // (겹쳐 그려지면 실측 항적을 알아보기 어렵다). 닫을 때 그대로 복원.
+    if (typeof simRunning !== 'undefined' && simRunning) simPause();
+    if (simPlayScope !== 'none') {
+      _aisPrevScope = simPlayScope; _aisPrevSimMin = simSimMin;
+      setSimPlayScope('none');
+    }
+    _syncBottomBars();
+    if (!_aisCache[document.getElementById('aisVesselSel').value]) {
+      onAisVesselChange();
+    } else {
+      _aisVesselLabelUpdate(); _aisRenderPins(); _aisDrawOverlays();
+      if (!_aisNoVessel) _aisTlApply();
+    }
+  }
+  // 지도 버튼도 지금 상태를 보여준다
+  const mapBtn = document.getElementById('aisMapBtn');
+  if (mapBtn) mapBtn.classList.toggle('on', open);
+}
+
 // ── CSV 로드 (lazy, 캐시) ──
 async function _loadAisVessel(key) {
   if (_aisCache[key]) return _aisCache[key];
@@ -9428,43 +9485,13 @@ function _aisHoverShipHide() {
     onAdd() {
       const c = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
       const btn = L.DomUtil.create('a', '', c);
-      btn.href = '#'; btn.title = 'AIS 실적 항로 타임바';
+      btn.href = '#'; btn.id = 'aisMapBtn';
+      btn.title = 'AIS 실적 항로 타임바 켜기/끄기';
       btn.innerHTML = '📡';
       btn.style.cssText = 'font-size:16px;line-height:30px;width:30px;height:30px;display:block;text-align:center;text-decoration:none';
       L.DomEvent.on(btn, 'click', e => {
         L.DomEvent.stopPropagation(e); L.DomEvent.preventDefault(e);
-        const tb = document.getElementById('aisTimebar');
-        if (tb.classList.contains('visible')) {
-          tb.classList.remove('visible');
-          onAisStop();
-          // 겹쳐둔 항적도 함께 걷는다 (지도에 남아 시뮬레이션 화면을 가리지 않도록)
-          if (_aisOverlayGroup) { map.removeLayer(_aisOverlayGroup); _aisOverlayGroup = null; }
-          const vm = document.getElementById('aisVesselMenu');
-          if (vm) vm.classList.remove('on'); // 메뉴는 body에 있어 따로 남을 수 있다
-          // AIS를 닫으면 가려뒀던 구상·참고 항로선과 시뮬레이션 시점을 원래대로 되돌린다
-          if (_aisPrevScope != null) {
-            setSimPlayScope(_aisPrevScope);
-            simSimMin = _aisPrevSimMin; // setSimPlayScope가 시점을 리셋하므로 다시 되돌린다
-            _simRenderFrame();
-            _aisPrevScope = null;
-          }
-          _syncBottomBars();
-        } else {
-          tb.classList.add('visible');
-          // 실적 항로를 보는 동안은 시뮬레이션 재생을 멈추고 구상·참고 항로선을 감춘다
-          // (겹쳐 그려지면 실측 항적을 알아보기 어렵다). 닫을 때 그대로 복원.
-          if (typeof simRunning !== 'undefined' && simRunning) simPause();
-          if (simPlayScope !== 'none') {
-            _aisPrevScope = simPlayScope; _aisPrevSimMin = simSimMin;
-            setSimPlayScope('none');
-          }
-          _syncBottomBars();
-          if (!_aisCache[document.getElementById('aisVesselSel').value]) {
-            onAisVesselChange();
-          } else {
-            _aisVesselLabelUpdate(); _aisRenderPins(); _aisDrawOverlays();
-          }
-        }
+        toggleAisPanel();
       });
       return c;
     }
