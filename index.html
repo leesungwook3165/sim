@@ -961,6 +961,9 @@
     }
     .ais-tb-empty { font-size: 10px; color: #667788; padding: 0 10px; align-self: center; }
     .ais-tb-unit.refday { color: #ffd75e; font-weight: 700; }
+    .ais-tb-unit.landday { box-shadow: inset 0 -2px 0 #ff4444; }   /* 고칠 날 */
+    .ais-tb-unit.corrday { box-shadow: inset 0 -2px 0 #c07bff; }   /* 고친 날 */
+    .ais-tb-unit.landday.corrday { box-shadow: inset 0 -2px 0 #ff4444, inset 0 -4px 0 #c07bff; }
     .ais-tb-unit.refday.sel { background: rgba(255,190,60,0.3); color: #fff0c0; border-bottom-color: #ffd75e; }
     .ais-tb-refchk { display: inline-flex; align-items: center; gap: 3px; margin-left: 8px; color: #ffd75e; }
     .ais-tb-unit.abnormal { opacity: 0.4; }
@@ -1456,15 +1459,19 @@
         <input type="checkbox" id="aisRefOnly" onchange="onAisRefOnlyChange()"> ★기준일만
       </span>
     </label>
-    <!-- 항로 보간(부모) — 켜야 아래 두 항목이 나타난다. 기본은 꺼짐(원본 그대로 표시) -->
-    <label class="ais-tb-normal" id="aisSnapWrap" title="AIS 핑이 벌어져 직선이 육지를 관통하는 구간을, 미리 그려둔 항로(직접 그린 선 포함)를 따라 우회시켜 그립니다. 켜면 원본 대조·보정 편집이 함께 나타납니다.">
-      <input type="checkbox" id="aisSnapOn" onchange="onAisSnapChange()"> 🧭 항로 보간
+    <label class="ais-tb-normal" id="aisWorkWrap" title="고쳐야 할 날(육지 관통이 남은 날)과 이미 고친 날을 바로 추려봅니다.">
+      🛠 작업
+      <select id="aisWorkFilter" onchange="onAisWorkFilterChange()">
+        <option value="all">전체</option>
+        <option value="land">⚠ 육지관통 남은 날</option>
+        <option value="corr">✏ 보정한 날</option>
+      </select>
     </label>
-    <label class="ais-tb-normal ais-tb-sub" id="aisRawWrap" style="display:none" title="보정·보간으로 모양이 바뀐 구간의 원본 직선을 회색 점선으로 함께 표시합니다 (보정 편집 중에는 항상 켜집니다).">
-      <input type="checkbox" id="aisShowRaw" onchange="onAisShowRawChange()"> 🆚 원본 대조
-    </label>
-    <label class="ais-tb-normal ais-tb-sub" id="aisCorrWrap" style="display:none" title="원본 AIS는 그대로 두고, 내가 그린 항로로 특정 구간만 보정해 따로 저장합니다. 보정 기록에는 원본 일자·시각이 함께 남습니다.">
+    <label class="ais-tb-normal" id="aisCorrWrap" title="원본 AIS는 그대로 두고, 구간을 직접 끌어 보정해 따로 저장합니다. 보정 기록에는 원본 일자·시각이 함께 남습니다.">
       <input type="checkbox" id="aisCorrEdit" onchange="onAisCorrEditChange()"> ✏ 보정 편집
+    </label>
+    <label class="ais-tb-normal" id="aisRawWrap" title="보정으로 모양이 바뀐 구간의 원본 직선을 회색 점선으로 함께 표시합니다 (보정 편집 중에는 항상 켜집니다).">
+      <input type="checkbox" id="aisShowRaw" onchange="onAisShowRawChange()"> 🆚 원본 대조
     </label>
     <label class="ais-tb-normal" id="aisCallFilterWrap" title="그 항구에 실제로 배를 댄(정박한) 날만 — 옆을 지나간 날은 제외">
       ⚓ 기항지
@@ -6331,6 +6338,7 @@ let _aisSubLegSel = null;  // 왕복일 때 선택된 구간 (null=왕복 전체
 let _aisRangeFrom = null, _aisRangeTo = null; // 캘린더로 지정한 조회 기간 필터 ('YYYY-MM-DD', null=제한 없음)
 let _aisNormalOnly = true; // '일' 탭에서만 적용되는 정상 항로 필터 (기본 on)
 let _aisRefOnly = false;   // ★기준일(항구 출입 가속·감속이 온전히 기록된 날)만 보기
+let _aisWorkFilter = 'all'; // 작업 목록 — 'land'=육지관통 남은 날, 'corr'=보정한 날
 let _aisCallFilter = 'all'; // 특정 항구에 기항한 날만 보기 ('all' 또는 항구명)
 let _aisLastChartPts = null, _aisLastChartIdx = null; // 창 크기·타임바 높이 변경 시 그래프 재그리기용
 let _aisChartGeom = null; // 그래프 좌표계 (마우스 x → 시각 환산용)
@@ -6389,6 +6397,7 @@ async function _loadAisVessel(key) {
     if (!pts.length) throw new Error('데이터 없음');
     _aisCache[key] = _buildAisIndex(pts);
     _aisAnalyzeVessel(key, _aisCache[key]);
+    _aisComputeLand(key); // 어느 날에 육지 관통이 남았는지 미리 세어둔다
     _aisSetStatus('');
     return _aisCache[key];
   } catch (e) {
@@ -6746,6 +6755,7 @@ function _aisCorrSet(key, date, i, rec) {
   if (!_aisCorr[key][date]) _aisCorr[key][date] = {};
   _aisCorr[key][date][i] = rec;
   _aisCorrSave();
+  _aisComputeLand(key, date); // 고친 만큼 육지관통 수를 다시 센다
 }
 function _aisCorrDelete(date, segKey) {
   const key = document.getElementById('aisVesselSel').value;
@@ -6753,6 +6763,7 @@ function _aisCorrDelete(date, segKey) {
     delete _aisCorr[key][date][segKey];
     if (!Object.keys(_aisCorr[key][date]).length) delete _aisCorr[key][date];
     _aisCorrSave();
+    _aisComputeLand(key, date);
   }
   _aisTlApply();
   return false;
@@ -6765,11 +6776,6 @@ _aisCorrLoad();
 //  이으면 섬·방파제를 관통한다. 그런 긴 구간은 미리 그려둔 항로(구상 항로·참고 항로,
 //  그리고 사용자가 지도에 직접 그린 선) 중 가장 잘 맞는 것을 찾아 그 경로를 따라가게 한다.
 // ════════════════════════════════════════════════════
-const AIS_SNAP_MIN_SEG_KM = 8;   // 이보다 긴 구간만 보간 대상 (짧은 구간은 직선이어도 무해)
-const AIS_SNAP_MAX_OFF_KM = 10;  // 양 끝점이 기준 항로에서 이보다 멀면 다른 항로로 간주해 포기
-const AIS_SNAP_MAX_DETOUR = 1.6; // 보간 경로가 직선의 이 배를 넘으면 과한 우회로 보고 포기
-let _aisSnapOn = false;          // 항로 보간 사용 여부 (기본 꺼짐 — 원본 그대로 표시)
-
 // 보간 기준이 되는 항로 목록. 사용자가 지도에 직접 그린 선(leaflet.draw)도 함께 후보로 쓴다.
 function _aisRefRoutes() {
   const list = [
@@ -6832,25 +6838,29 @@ function _routeLen(pts) {
   return d;
 }
 
-// 끊긴 구간 하나를 기준 항로에 맞춰 보간한다. 마땅한 항로가 없으면 null(직선 유지).
-function _aisSnapSegment(a, b) {
-  const A = [a.lat, a.lon], B = [b.lat, b.lon];
-  const straight = _simDist(A, B);
-  if (straight < AIS_SNAP_MIN_SEG_KM) return null;
-  let best = null;
-  _aisRefRoutes().forEach(r => {
-    if (!r.pts || r.pts.length < 2) return;
-    const p1 = _projectOnRoute(A, r.pts), p2 = _projectOnRoute(B, r.pts);
-    if (p1.dist > AIS_SNAP_MAX_OFF_KM || p2.dist > AIS_SNAP_MAX_OFF_KM) return;
-    // 사용자가 직접 그린 항로를 우선한다
-    const err = (p1.dist + p2.dist) * (r.user ? 0.5 : 1);
-    if (!best || err < best.err) best = { err, r, p1, p2 };
+// 날짜별로 "아직 육지를 지나는 구간"이 몇 개인지 미리 세어둔다.
+// 보정을 해두면 그 경로로 다시 재므로, 고칠수록 숫자가 줄어 작업 목록이 된다.
+// 마스크 경계 밖 구간은 즉시 걸러지므로 전체 선박이 10ms 안팎이면 끝난다.
+function _aisComputeLand(key, onlyDate) {
+  const data = _aisCache[key];
+  if (!data || !data.dayQuality) return;
+  const dates = onlyDate ? [onlyDate] : data.dates;
+  dates.forEach(d => {
+    const pts = data.index[d], q = data.dayQuality[d];
+    if (!pts || !q) return;
+    let segs = 0, km = 0;
+    for (let i = 1; i < pts.length; i++) {
+      const corr = _aisCorrGet(key, d, pts[i - 1].ts);
+      const path = corr ? corr.path : [[pts[i - 1].lat, pts[i - 1].lon], [pts[i].lat, pts[i].lon]];
+      let c = 0;
+      for (let k = 1; k < path.length; k++) {
+        c += _aisSegCrossesLand({ lat: path[k - 1][0], lon: path[k - 1][1] },
+                                { lat: path[k][0], lon: path[k][1] });
+      }
+      if (c > 0.3) { segs++; km += c; }
+    }
+    q.landSegs = segs; q.landKm = km;
   });
-  if (!best) return null;
-  const mid = _routeSlice(best.r.pts, best.p1, best.p2);
-  const path = [A, ...mid, B];
-  if (_routeLen(path) > straight * AIS_SNAP_MAX_DETOUR) return null; // 과한 우회는 포기
-  return { path, name: best.r.name, straight, snapped: _routeLen(path) };
 }
 
 // ── 육지 관통 구간 감지 ──
@@ -7037,18 +7047,15 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
   // 두 개를 겹쳐 그린다. 마커는 25개 지점에만 있어서 회항점 같은 변곡점을 눌러도
   // 잡히지 않았는데, 이렇게 하면 선 위 어디를 눌러도 값이 뜬다.
   const legs = _aisSplitLegs(pts);
-  let snapCount = 0, corrCount = 0, landCount = 0;
+  let corrCount = 0, landCount = 0;
   for (let i = 1; i < pts.length; i++) {
     const a = pts[i - 1], b = pts[i];
     const isBack = legs && i > legs.turnIdx;
-    // 우선순위: ① 사람이 직접 만든 보정 ② 자동 보간 ③ 원본 직선
-    // 보정·보간은 실측이 아니므로 선 모양으로 구분한다.
+    // 사람이 직접 만든 보정이 있으면 그 경로로, 없으면 원본 직선 그대로 그린다.
     // 보정 키는 구간 번호가 아니라 원본 포인트의 시각을 쓴다 — 하루 전체·출항편·시간
     // 뷰마다 pts 배열이 잘려 번호가 달라지기 때문이다.
     const corr = _aisCorrGet(key, a.ts.slice(0, 10), a.ts);
-    const snap = (!corr && _aisSnapOn && !_aisCorrEdit) ? _aisSnapSegment(a, b) : null;
-    const latlngs = corr ? corr.path : (snap ? snap.path : [[a.lat, a.lon], [b.lat, b.lon]]);
-    if (snap) snapCount++;
+    const latlngs = corr ? corr.path : [[a.lat, a.lon], [b.lat, b.lon]];
     if (corr) corrCount++;
     // 지금 그리는 경로가 육지를 지나면 빨간 경고선을 겹쳐 보정 대상임을 알린다
     let landKm = 0;
@@ -7062,7 +7069,7 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
     }
     // 원본 대조 — 보정·보간으로 모양이 바뀐 구간은 원본 직선을 회색으로 깔아
     // 무엇이 어떻게 달라졌는지 눈으로 바로 비교할 수 있게 한다 (편집 중에는 항상 켠다).
-    if ((_aisShowRaw || _aisCorrEdit) && (corr || snap)) {
+    if ((_aisShowRaw || _aisCorrEdit) && corr) {
       L.polyline([[a.lat, a.lon], [b.lat, b.lon]], {
         color: "#8899aa", weight: 1.5, opacity: 0.65, dashArray: "3 4", interactive: false
       }).addTo(g);
@@ -7070,8 +7077,8 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
     L.polyline(latlngs, {
       color: corr ? '#c07bff' : _aisSpeedColor((a.speed + b.speed) / 2),
       weight: corr ? 4 : (isBack ? 4 : 3),
-      opacity: corr ? 0.95 : (snap ? 0.85 : (isBack ? 0.75 : 0.9)),
-      dashArray: corr ? null : (snap ? '2 6' : (isBack ? '5 7' : null)), interactive: false
+      opacity: corr ? 0.95 : (isBack ? 0.75 : 0.9),
+      dashArray: corr ? null : (isBack ? '5 7' : null), interactive: false
     }).addTo(g);
 
     const segKm = _simDist([a.lat, a.lon], [b.lat, b.lon]);
@@ -7089,7 +7096,6 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
         `${_aisFmtClock(a.ts)} → ${_aisFmtClock(b.ts)} KST (${segMin.toFixed(0)}분)<br>` +
         `속도 <b>${a.speed.toFixed(1)} → ${b.speed.toFixed(1)} knot</b> · 방향 ${b.course.toFixed(0)}°<br>` +
         `구간 ${segKm.toFixed(1)}km · 구간평균 ${avgKts.toFixed(1)} knot` +
-        (snap ? `<br><span style="color:#88ddff">🧭 보간: ${snap.name} 따라 ${snap.snapped.toFixed(1)}km (직선 ${snap.straight.toFixed(1)}km)</span>` : '') +
         (corr ? `<br><span style="color:#c07bff">✏ 수동 보정됨 — ${corr.routeName}` +
                 `<br>원본 ${corr.srcDate} ${_aisFmtClock(corr.srcFromTs)}→${_aisFmtClock(corr.srcToTs)}` +
                 ` (직선 ${corr.srcKm.toFixed(1)}km → 보정 ${corr.corrKm.toFixed(1)}km)` +
@@ -7149,9 +7155,15 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
   // 안내선은 "구간을 고른 동안"에만 띄운다 — 보정을 끝내면(선택 해제) 다시 사라져
   // 보정 결과를 가리지 않는다.
   if (_aisCorrEdit && _aisCorrSel) {
-    _aisRefRoutes().filter(r => r.user).forEach(r => {
-      L.polyline(r.pts, { color: '#66ffee', weight: 3, opacity: 0.9, dashArray: '6 5' })
-        .bindTooltip('✏ ' + r.name + ' — 클릭하면 선택한 구간을 이 경로로 보정', { sticky: true, className: 'ais-poi-label' })
+    // 내가 그린 선뿐 아니라 시뮬레이션용 구상·참고 항로도 함께 띄운다.
+    // (AIS를 열면 지도에서 감춰지므로 보정할 때만 다시 보이게 하는 것)
+    // 내가 그린 선은 밝은 청록 굵은 선, 기본 제공 항로는 옅은 초록 가는 선.
+    _aisRefRoutes().forEach(r => {
+      L.polyline(r.pts, r.user
+        ? { color: '#66ffee', weight: 3, opacity: 0.95, dashArray: '6 5' }
+        : { color: '#7fd6a8', weight: 2, opacity: 0.5,  dashArray: '4 6' })
+        .bindTooltip((r.user ? '✏ ' : '🧭 ') + r.name + ' — 클릭하면 선택한 구간을 이 경로로 보정',
+          { sticky: true, className: 'ais-poi-label' })
         .on('click', () => _aisCorrApply(r))
         .addTo(g);
     });
@@ -7185,8 +7197,7 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
 
   const maxSpd = Math.max(...pts.map(p => p.speed));
   const stopNote = stops.length ? ` · 정박 ${stops.length}건(${stops.map(s => Math.round(s.durMin)).join(',')}분)` : '';
-  const snapNote = (snapCount ? ` · 🧭보간 ${snapCount}구간` : '')
-    + (corrCount ? ` · ✏보정 ${corrCount}구간` : '')
+  const snapNote = (corrCount ? ` · ✏보정 ${corrCount}구간` : '')
     + (landCount ? ` · ⚠육지관통 ${landCount}구간(빨간선)` : '');
   _aisSetStatus(`${_AIS_VESSELS[key].label} · ${labelStr} · ${pts.length}포인트 · 최고 ${maxSpd.toFixed(1)} knot${stopNote}${snapNote}${extraNote ? ' · ' + extraNote : ''}`);
 
@@ -7451,6 +7462,9 @@ function _aisAllDays(key) {
   if (_aisCallFilter !== 'all') {
     dates = dates.filter(x => (d.dayQuality[x].calls || []).some(c => c.name === _aisCallFilter));
   }
+  // 작업 목록 필터 — 고칠 날(⚠)과 이미 고친 날(✏)을 바로 추려본다
+  if (_aisWorkFilter === 'land') dates = dates.filter(x => (d.dayQuality[x].landSegs || 0) > 0);
+  else if (_aisWorkFilter === 'corr') dates = dates.filter(x => _aisCorrCount(key, x) > 0);
   if (_aisRefOnly)    return dates.filter(x => d.dayQuality[x].isRef);
   if (_aisNormalOnly) return dates.filter(x => d.dayQuality[x].isNormal);
   return dates;
@@ -7520,6 +7534,8 @@ function _aisTbRenderTl(key) {
     const q = d && d.dayQuality && d.dayQuality[dt];
     const abnormal = !_aisNormalOnly && !_aisRefOnly && q && !q.isNormal;
     const isRef = !!(q && q.isRef);
+    const nCorr = _aisCorrCount(key, dt);        // 이 날 보정한 구간 수
+    const nLand = (q && q.landSegs) || 0;         // 아직 육지를 지나는 구간 수
     const callTxt = q && q.calls && q.calls.length
       ? ' · ⚓' + q.calls.map(c => c.name.replace(/(국제여객터미널|국제터미널|여객선터미널|항)$/, '') + Math.round(c.durMin) + '분').join(',')
       : '';
@@ -7528,7 +7544,9 @@ function _aisTbRenderTl(key) {
          + (q.isRef ? ' · ★기준일(가속 ' + q.ramps.up + '회/감속 ' + q.ramps.down + '회)' : '')
          + (q.isNormal ? '' : ' · 제외: ' + q.reasons.join(', ')))
       : dt;
-    return `<button class="ais-tb-unit${dt === _aisSelDay ? ' sel' : ''}${abnormal ? ' abnormal' : ''}${isRef ? ' refday' : ''}" onclick="_aisPickDay('${dt}')" title="${title}">${isRef ? '★' : ''}${+dt.slice(8, 10)}일</button>`;
+    const marks = (nCorr ? '✏' : '') + (nLand ? '⚠' : '');
+    const workTitle = (nCorr ? ' · ✏보정 ' + nCorr + '구간' : '') + (nLand ? ' · ⚠육지관통 ' + nLand + '구간' : '');
+    return `<button class="ais-tb-unit${dt === _aisSelDay ? ' sel' : ''}${abnormal ? ' abnormal' : ''}${isRef ? ' refday' : ''}${nLand ? ' landday' : ''}${nCorr ? ' corrday' : ''}" onclick="_aisPickDay('${dt}')" title="${title}${workTitle}">${isRef ? '★' : ''}${marks}${+dt.slice(8, 10)}일</button>`;
   }).join('') : '<span class="ais-tb-empty">이 달에는 조건에 맞는 날짜가 없습니다</span>';
 
   _aisRenderCrumb();
@@ -7731,9 +7749,12 @@ async function onAisVesselChange() {
   const data = await _loadAisVessel(key);
   if (data) {
     // 전체기간은 이제 옆의 캘린더 두 개(아래)가 그대로 보여주므로, 여기엔 데이터 일수만 짧게 표시
+    const landDays = data.dates.filter(d => (data.dayQuality[d].landSegs || 0) > 0).length;
+    const corrDays = Object.keys((_aisCorr[key] || {})).length ? Object.keys(_aisCorr[key]).length : 0;
     document.getElementById('aisTbTimespan').textContent =
       `(${data.dates.length}일 · ★기준일 ${data.refDays.length}일` +
-      (data.refOneWayKm ? ` · 편도 ${data.refOneWayKm.toFixed(0)}km / 왕복 ${(data.refRoundKm || 0).toFixed(0)}km` : '') + ')';
+      (data.refOneWayKm ? ` · 편도 ${data.refOneWayKm.toFixed(0)}km` : '') +
+      ` · ⚠고칠 날 ${landDays}일 · ✏고친 날 ${corrDays}일)`;
     // 캘린더 입력란을 이 선박의 전체 기간으로 초기화 (필터는 전체 기간 = 필터 없음 상태로 리셋)
     const fromEl = document.getElementById('aisRangeFrom');
     const toEl   = document.getElementById('aisRangeTo');
@@ -7901,9 +7922,9 @@ function onAisCorrEditChange() {
   _aisCorrSel = null;
   _aisCorrClearDraft();
   if (_aisCorrEdit) {
-    const guides = _aisRefRoutes().filter(r => r.user).length;
+    const all = _aisRefRoutes(), guides = all.length, mine = all.filter(r => r.user).length;
     _aisSetStatus(guides
-      ? `✏ 보정 편집: 고칠 구간을 클릭하세요 — 그때 내가 그린 항로 ${guides}개가 안내선으로 나타납니다`
+      ? `✏ 보정 편집: 고칠 구간을 클릭하세요 — 안내선 ${guides}개(내가 그린 ${mine} + 구상·참고 ${guides - mine})가 나타납니다`
       : '✏ 보정 편집: 먼저 지도 그리기 도구로 항로를 그려주세요 (그 선이 안내선이 됩니다)');
   }
   _aisTlApply();
@@ -7915,22 +7936,12 @@ function onAisShowRawChange() {
   _aisTlApply();
 }
 
-// '🧭 항로 보간' 체크박스
-function onAisSnapChange() {
-  _aisSnapOn = document.getElementById('aisSnapOn').checked;
-  // 하위 항목(원본 대조·보정 편집)은 보간을 켰을 때만 보이게 한다.
-  // 끄면 하위 상태도 함께 정리한다 — 숨겨진 채 편집 모드가 켜져 있으면 혼란스럽다.
-  ['aisRawWrap', 'aisCorrWrap'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = _aisSnapOn ? 'flex' : 'none';
-  });
-  if (!_aisSnapOn) {
-    const raw = document.getElementById('aisShowRaw'), edit = document.getElementById('aisCorrEdit');
-    if (raw) raw.checked = false;
-    if (edit) edit.checked = false;
-    _aisShowRaw = false; _aisCorrEdit = false; _aisCorrSel = null;
-    _aisCorrClearDraft();
-  }
+// '🛠 작업' 드롭다운 — 고칠 날 / 고친 날 추리기
+function onAisWorkFilterChange() {
+  _aisWorkFilter = document.getElementById('aisWorkFilter').value;
+  const key = document.getElementById('aisVesselSel').value;
+  if (!_aisCache[key]) return;
+  _aisTbRenderTl(key);
   _aisTlApply();
 }
 
