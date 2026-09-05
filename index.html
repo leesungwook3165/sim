@@ -1439,6 +1439,10 @@
         <input type="checkbox" id="aisRefOnly" onchange="onAisRefOnlyChange()"> ★기준일만
       </span>
     </label>
+    <label class="ais-tb-normal" id="aisCallFilterWrap" title="그 항구에 실제로 배를 댄(정박한) 날만 — 옆을 지나간 날은 제외">
+      ⚓ 기항지
+      <select id="aisCallFilter" onchange="onAisCallFilterChange()"><option value="all">전체</option></select>
+    </label>
     <!-- 우측: 상태 + 재생정보 + 범례 -->
     <div class="ais-tb-right">
       <span id="aisPlayInfo">—</span>
@@ -6207,6 +6211,7 @@ let _aisSubLegSel = null;  // 왕복일 때 선택된 구간 (null=왕복 전체
 let _aisRangeFrom = null, _aisRangeTo = null; // 캘린더로 지정한 조회 기간 필터 ('YYYY-MM-DD', null=제한 없음)
 let _aisNormalOnly = true; // '일' 탭에서만 적용되는 정상 항로 필터 (기본 on)
 let _aisRefOnly = false;   // ★기준일(항구 출입 가속·감속이 온전히 기록된 날)만 보기
+let _aisCallFilter = 'all'; // 특정 항구에 기항한 날만 보기 ('all' 또는 항구명)
 let _aisLastChartPts = null, _aisLastChartIdx = null; // 창 크기·타임바 높이 변경 시 그래프 재그리기용
 let _aisTbSpeeds = [10, 60, 300, 1000];
 let _aisTbSpdIdx = 1; // default 60×
@@ -6477,6 +6482,24 @@ function _aisCountRamps(pts, cruise) {
   return { up, down };
 }
 
+// ── 그 날 실제로 "기항"한 항구 목록 ──
+// 단순히 근처를 지나간 것(통과)과 실제로 배를 댄 것(기항)을 가르기 위해, 정박 감지
+// (_detectAisStops: AIS_STOP_SPEED_KTS 이하로 AIS_STOP_MIN_MIN 이상 머문 구간)가
+// 항구 버퍼 안에서 일어났을 때만 기항으로 인정한다. 부산↔하카타 직항이 쓰시마 옆을
+// 스쳐 지나가는 것과, 히타카츠에 실제로 댄 것이 이걸로 갈린다.
+const AIS_CALL_BUFFER_KM = 8; // 정박 지점이 항구에서 이 거리 이내면 그 항구에 기항한 것으로 판정
+function _aisPortCalls(pts) {
+  const calls = [];
+  _detectAisStops(pts).forEach(st => {
+    const name = _nearestPortName(st.lat, st.lon, AIS_CALL_BUFFER_KM);
+    if (!name) return;
+    const hit = calls.find(c => c.name === name);
+    if (hit) { hit.count++; hit.durMin += st.durMin; }
+    else calls.push({ name, count: 1, durMin: st.durMin });
+  });
+  return calls;
+}
+
 // 하루치 포인트의 총 이동거리 · 최대 순간이동속도(구간별 implied speed) 계산
 function _aisDayStats(pts) {
   let totalDist = 0, maxJumpKts = 0;
@@ -6506,11 +6529,12 @@ function _aisAnalyzeVessel(key, data) {
     const endT   = _aisTerminalAt(terminals, pts[pts.length - 1].lat, pts[pts.length - 1].lon);
     const isRound = !!(startT && endT && _simDist([startT.lat, startT.lon], [endT.lat, endT.lon]) <= AIS_PORT_BUFFER_KM);
     const ramps = _aisCountRamps(pts, cruise);
+    const calls = _aisPortCalls(pts);
     // ★기준일 — 항구 출입 가속·감속이 왕복 양쪽 모두 온전히 기록된 날.
     // 거리 조건을 넣지 않는다(기대거리를 이 날들로부터 산출하므로 순환 참조 방지).
     const isRef = !!(isRound && startT && endT && ramps.up >= 2 && ramps.down >= 2
       && stats.n >= AIS_MIN_POINTS_NORMAL && stats.maxJumpKts <= AIS_MAX_PLAUSIBLE_KTS);
-    pre[d] = { stats, startT, endT, isRound, ramps, isRef,
+    pre[d] = { stats, startT, endT, isRound, ramps, isRef, calls,
                onewayDist: isRound ? stats.totalDist / 2 : stats.totalDist };
   });
 
@@ -6522,7 +6546,7 @@ function _aisAnalyzeVessel(key, data) {
 
   const dayQuality = {};
   data.dates.forEach(d => {
-    const { stats, startT, endT, isRound, onewayDist, ramps, isRef } = pre[d];
+    const { stats, startT, endT, isRound, onewayDist, ramps, isRef, calls } = pre[d];
     const reasons = [];
     if (stats.n < AIS_MIN_POINTS_NORMAL) reasons.push('포인트 부족');
     if (stats.maxJumpKts > AIS_MAX_PLAUSIBLE_KTS) reasons.push('비정상 순간이동(GPS 공백 의심)');
@@ -6538,13 +6562,17 @@ function _aisAnalyzeVessel(key, data) {
       ? `${startLabel}발${isRound ? ' 왕복' : (endLabel ? ' → ' + endLabel : '')}`
       : (data.index[d][0].lon < 129.3 ? '부산 인근발' : '일본 인근발');
     dayQuality[d] = Object.assign(
-      { isNormal: reasons.length === 0, reasons, isRound, onewayDist, origin, ramps, isRef,
+      { isNormal: reasons.length === 0, reasons, isRound, onewayDist, origin, ramps, isRef, calls,
         startPort: startLabel, endPort: endLabel },
       stats
     );
   });
   data.terminals = terminals;
   data.cruiseKts = cruise;
+  // 이 선박이 실제로 기항한 적 있는 항구 목록 (드롭다운 선택지로 쓴다)
+  const callTally = {};
+  data.dates.forEach(d => (dayQuality[d].calls || []).forEach(c => { callTally[c.name] = (callTally[c.name] || 0) + 1; }));
+  data.callPorts = Object.entries(callTally).sort((a, b) => b[1] - a[1]).map(([name, days]) => ({ name, days }));
   data.expectedDist = expected;
   data.refDays = data.dates.filter(d => dayQuality[d].isRef);
   // 기준일들에서 뽑은 편도·왕복 기준값 (거리 판정과 화면 표시에 함께 쓴다)
@@ -6748,7 +6776,10 @@ function _renderAisDay(key, dateStr) {
   const data = _aisCache[key];
   if (!data) return;
   const q = data.dayQuality && data.dayQuality[dateStr];
-  const extra = q ? `${q.origin}${q.isNormal ? '' : ' · ⚠비정상(' + q.reasons.join(', ') + ')'}` : '';
+  const callTxt = q && q.calls && q.calls.length
+    ? ' · ⚓기항 ' + q.calls.map(c => c.name.replace(/(국제여객터미널|국제터미널|여객선터미널|항)$/, '') + ' ' + Math.round(c.durMin) + '분').join(', ')
+    : '';
+  const extra = q ? `${q.origin}${callTxt}${q.isNormal ? '' : ' · ⚠비정상(' + q.reasons.join(', ') + ')'}` : '';
   const all = data.index[dateStr];
   let shown = all, suffix = '';
   if (_aisSubLegSel) {
@@ -6819,10 +6850,14 @@ function onAisRangeChange() {
 // 일자 목록에만 '정상 항로만'·'★기준일만' 필터가 걸리고, 년·월 목록은 그 결과를 접어 만든다.
 function _aisAllDays(key) {
   const d = _aisCache[key]; if (!d) return [];
-  const dates = _aisFilterDates(d.dates);
+  let dates = _aisFilterDates(d.dates);
   if (!d.dayQuality) return dates;
-  if (_aisRefOnly)    return dates.filter(x => d.dayQuality[x] && d.dayQuality[x].isRef);
-  if (_aisNormalOnly) return dates.filter(x => d.dayQuality[x] && d.dayQuality[x].isNormal);
+  // 기항지 필터는 다른 필터와 함께 걸린다 (예: 히타카츠 기항 + ★기준일)
+  if (_aisCallFilter !== 'all') {
+    dates = dates.filter(x => (d.dayQuality[x].calls || []).some(c => c.name === _aisCallFilter));
+  }
+  if (_aisRefOnly)    return dates.filter(x => d.dayQuality[x].isRef);
+  if (_aisNormalOnly) return dates.filter(x => d.dayQuality[x].isNormal);
   return dates;
 }
 function _aisYears(key)        { return [...new Set(_aisAllDays(key).map(x => x.slice(0, 4)))].sort(); }
@@ -6887,8 +6922,11 @@ function _aisTbRenderTl(key) {
     const q = d && d.dayQuality && d.dayQuality[dt];
     const abnormal = !_aisNormalOnly && !_aisRefOnly && q && !q.isNormal;
     const isRef = !!(q && q.isRef);
+    const callTxt = q && q.calls && q.calls.length
+      ? ' · ⚓' + q.calls.map(c => c.name.replace(/(국제여객터미널|국제터미널|여객선터미널|항)$/, '') + Math.round(c.durMin) + '분').join(',')
+      : '';
     const title = q
-      ? (dt + ' · ' + q.origin + ' · ' + q.totalDist.toFixed(0) + 'km'
+      ? (dt + ' · ' + q.origin + ' · ' + q.totalDist.toFixed(0) + 'km' + callTxt
          + (q.isRef ? ' · ★기준일(가속 ' + q.ramps.up + '회/감속 ' + q.ramps.down + '회)' : '')
          + (q.isNormal ? '' : ' · 제외: ' + q.reasons.join(', ')))
       : dt;
@@ -7046,6 +7084,8 @@ async function onAisVesselChange() {
     }
     _aisRangeFrom = null; _aisRangeTo = null;
     _aisSubHourSel = null; _aisSubLegSel = null;
+    _aisCallFilter = 'all';
+    _aisRenderCallFilter(key);
     // 가장 최근 날짜를 펼친 상태로 시작
     _aisSelYear = _aisSelMonth = _aisSelDay = null; _aisViewLevel = 'day';
     const days = _aisAllDays(key);
@@ -7065,6 +7105,28 @@ function onAisNormalOnlyChange() {
   if (!_aisCache[key]) return;
   _aisTbRenderTl(key);
   _aisTlApply();
+}
+
+// '⚓ 기항지' 드롭다운 — 그 항구에 실제 정박한 날만 추려낸다
+function onAisCallFilterChange() {
+  _aisCallFilter = document.getElementById('aisCallFilter').value;
+  const key = document.getElementById('aisVesselSel').value;
+  if (!_aisCache[key]) return;
+  _aisTbRenderTl(key);
+  _aisTlApply();
+}
+
+// 선박이 바뀌면 그 선박이 실제 기항한 항구들로 드롭다운을 채운다
+function _aisRenderCallFilter(key) {
+  const sel = document.getElementById('aisCallFilter');
+  const data = _aisCache[key];
+  if (!sel || !data) return;
+  const opts = ['<option value="all">전체</option>'].concat(
+    (data.callPorts || []).map(p =>
+      `<option value="${p.name}"${p.name === _aisCallFilter ? ' selected' : ''}>${p.name.replace(/(국제여객터미널|국제터미널|여객선터미널|항)$/, '')} (${p.days}일)</option>`)
+  );
+  sel.innerHTML = opts.join('');
+  if (!(data.callPorts || []).some(p => p.name === _aisCallFilter)) { _aisCallFilter = 'all'; sel.value = 'all'; }
 }
 
 // '★기준일만' 체크박스 — 기준일은 그 자체로 정상 항로이므로 켜면 정상 필터보다 우선한다
