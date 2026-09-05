@@ -6766,7 +6766,16 @@ const _aisLoading = {};
 // 줌 프레임을 먹었다("불러올수록 느려진다"). 다시 고르면 다시 읽는다 — 파싱이
 // 빨라져서(5배) 감당된다. 보정(_aisCorr)은 별도 저장소라 그대로 남는다.
 function _aisEvictOthers(keep) {
-  Object.keys(_aisCache).forEach(k => { if (k !== keep) delete _aisCache[k]; });
+  const dropping = Object.keys(_aisCache).filter(k => k !== keep);
+  if (!dropping.length) return;
+  // 캐시에서 지우는 것만으로는 안 풀린다. 여러 전역이 그 배의 포인트 배열을 그대로
+  // 붙들고 있어서(그래프·재생·집계 인덱스·보정 편집) 힙이 계속 쌓였다.
+  // 실측: 카멜리아(292k) 134MB → 하마유(287k)로 바꾸면 233MB. 참조를 같이 놓아준다.
+  _clearAisLayer();                 // 지도 레이어와 집계 인덱스(_aisAgg)를 놓는다
+  _aisLastChartPts = null; _aisLastChartIdx = null; _aisChartGeom = null;
+  _aisPlay.pts = null; _aisPlay.tsMs = null; _aisPlay.frameFn = null; _aisPlay.marker = null;
+  _aisCorrClearDraft();
+  dropping.forEach(k => { delete _aisCache[k]; });
 }
 
 async function _loadAisVessel(key) {
@@ -6799,8 +6808,10 @@ async function _loadAisVesselInner(key) {
     const selNow = document.getElementById('aisVesselSel');
     if (selNow && selNow.value !== key) { _aisSetStatus(''); return null; }
     _aisCache[key] = data;                      // 이제서야 공개
-    _aisComputeLand(key); // 어느 날에 육지 관통이 남았는지 미리 세어둔다
     _aisSetStatus('');
+    // 육지 관통 검사는 날짜 버튼의 ⚠ 표시와 '고칠 날만' 필터에만 쓰인다.
+    // 지도를 띄우는 길목에서 546ms를 잡아먹을 이유가 없어 뒤로 미룬다.
+    _aisComputeLandDeferred(key);
     return data;
   } catch (e) {
     _aisSetStatus('⚠ 로드 실패: ' + e.message);
@@ -7040,12 +7051,29 @@ function _aisTerminalLabel(t) {
 // 온전히 기록된 이상적인 데이터다. 다만 순항속도는 선종마다 달라(퀸비틀 37kt 고속선,
 // 카멜리아 21.6kt 카페리) 고정 임계로는 판정할 수 없으므로, 그 선박 자신의 속도분포
 // 90퍼센타일을 순항속도로 잡고 밴드를 상대적으로 나눈다. 새 선박도 자동 적용된다.
+// 30만 개 속도를 일반 배열에 담아 정렬하면 100ms 가까이 한 덩어리로 잡힌다.
+// 90번째 백분위는 표본만으로도 사실상 같은 값이 나오므로, 많으면 고르게 솎아
+// 타입배열에 담아 정렬한다(수치 정렬이라 비교 함수도 필요 없다).
+const AIS_CRUISE_SAMPLE_MAX = 40000;
 function _aisCruiseSpeed(data) {
-  const sp = [];
-  data.dates.forEach(d => (data.index[d] || []).forEach(p => { if (p.speed > 0) sp.push(p.speed); }));
-  if (!sp.length) return 0;
-  sp.sort((a, b) => a - b);
-  return sp[Math.floor(sp.length * 0.90)]; // 이상치(AIS 오류값)에 흔들리지 않도록 백분위 사용
+  let n = 0;
+  data.dates.forEach(d => { const a = data.index[d]; if (a) n += a.length; });
+  if (!n) return 0;
+  const step = Math.max(1, Math.ceil(n / AIS_CRUISE_SAMPLE_MAX));
+  const buf = new Float64Array(Math.ceil(n / step) + 1);
+  let k = 0, seen = 0;
+  for (const d of data.dates) {
+    const arr = data.index[d];
+    if (!arr) continue;
+    for (let i = 0; i < arr.length; i++, seen++) {
+      if (seen % step) continue;
+      const v = arr[i].speed;
+      if (v > 0) buf[k++] = v;
+    }
+  }
+  if (!k) return 0;
+  const sp = buf.subarray(0, k).slice().sort();   // Float64Array.sort는 수치 정렬
+  return sp[Math.floor(k * 0.90)]; // 이상치(AIS 오류값)에 흔들리지 않도록 백분위 사용
 }
 // 0=정박, 1=저속, 2=중속, 3=순항
 function _aisSpeedBand(v, cruise) {
@@ -7213,9 +7241,12 @@ async function _aisBuildVoyages(key, data, onStep) {
   // 실제로 배가 멈춘 자리를 모아 항구를 찾고(날짜 경계가 만드는 허상 제거),
   // 거기에 등록된 항구를 더해 항차의 경계 후보로 삼는다.
   data.stopPorts = _aisFindPortsFromStops(all);
+  await _aisYield();
   const gatePorts = _aisGatePorts(data);
   // 오래 선 정박이든 잠깐 들른 것이든 "붙었고 느려졌다"로 기항을 잡는다
-  const gates = _aisFindCalls(all, gatePorts).map(c => ({
+  const calls = _aisFindCalls(all, gatePorts);
+  await _aisYield();
+  const gates = calls.map(c => ({
     st: { startTs: c.startTs, endTs: c.endTs, durMin: c.durMin, lat: c.port.lat, lon: c.port.lon },
     t: c.port
   }));
@@ -7353,6 +7384,7 @@ async function _aisAnalyzeVessel(key, data, onStep) {
   step('항구 찾는 중');
   const terminals = _aisFindTerminals(data);
   const cruise = _aisCruiseSpeed(data);
+  data.cruiseKts = cruise; // 항차 계산이 이 값을 참조한다(없으면 매번 다시 구한다)
   await _aisYield();
 
   // 1차: 하루치 통계 + 왕복 여부 → "편도 환산 거리"
@@ -7589,6 +7621,37 @@ function _routeLen(pts) {
 // 날짜별로 "아직 육지를 지나는 구간"이 몇 개인지 미리 세어둔다.
 // 보정을 해두면 그 경로로 다시 재므로, 고칠수록 숫자가 줄어 작업 목록이 된다.
 // 마스크 경계 밖 구간은 즉시 걸러지므로 전체 선박이 10ms 안팎이면 끝난다.
+// 한가할 때 조금씩 계산하고, 끝나면 날짜 버튼을 다시 그려 ⚠ 표시를 반영한다.
+// 중간에 다른 배로 바꾸면 그 자리에서 멈춘다.
+// 한 번에 얼마나 할지는 고정 개수가 아니라 "남은 여유 시간"으로 정한다.
+// 300일씩 묶어 돌렸더니 그 덩어리가 그대로 긴 동기 블록이 되어, 백그라운드로 옮겼는데도
+// 그동안 줌·드래그가 밀렸다(실측: 로드 직후 휠 줌 928ms → 검사 끝난 뒤 0ms).
+const AIS_LAND_SLICE_MS = 5;  // 한 번에 이 시간을 넘기지 않는다
+const AIS_LAND_MIN_STEP = 1;  // 하루가 무거우면 최소 개수가 시간 제한을 무력화한다 — 1일로 둔다
+let _aisLandTimer = null;
+function _aisComputeLandDeferred(key) {
+  if (_aisLandTimer) { clearTimeout(_aisLandTimer); _aisLandTimer = null; }
+  const data = _aisCache[key];
+  if (!data || !data.dayQuality) return;
+  const dates = data.dates.slice();
+  let i = 0;
+  const idle = window.requestIdleCallback || (cb => setTimeout(() => cb({ timeRemaining: () => 8 }), 24));
+  const step = (deadline) => {
+    if (_aisCache[key] !== data) return;   // 다른 배로 바뀌었으면 중단
+    const t0 = performance.now();
+    let done = 0;
+    while (i < dates.length) {
+      _aisComputeLand(key, dates[i]); i++; done++;
+      if (done >= AIS_LAND_MIN_STEP && performance.now() - t0 >= AIS_LAND_SLICE_MS) break;
+    }
+    if (i < dates.length) { idle(step); return; }
+    // 다 세었으면 ⚠ 표시를 반영해 날짜 목록만 다시 그린다
+    const cur = document.getElementById('aisVesselSel');
+    if (cur && cur.value === key) _aisTbRenderTl(key);
+  };
+  idle(step);
+}
+
 function _aisComputeLand(key, onlyDate) {
   const data = _aisCache[key];
   if (!data || !data.dayQuality) return;
@@ -8083,8 +8146,9 @@ function _aisAggPick(latlng) {
 const AIS_AGG_HOVER_MAX_DAYS = 400; // 이보다 많으면 hover 식별을 끈다(겹쳐 있어 의미도 적고 무겁다)
 // 캔버스는 지도를 끌거나 확대할 때마다 등록된 점을 전부 다시 투영·묘사한다.
 // 그래서 하루 몇 점이 아니라 "화면 전체에 그릴 점 수"를 예산으로 잡고 날짜 수로 나눈다.
-// (카멜리아 전체 기간은 하루 20점이면 88,621점이 되는데, 그 축척에서는 형태 차이가 없다)
-const AIS_AGG_PT_BUDGET = 40000;
+// 실측(카멜리아 전체 4,335일): 42,064점일 때 휠 줌 한 번이 페인트까지 1.7초.
+// 전체 기간은 항로가 한 줄기 띠로 보이는 축척이라 점을 줄여도 형태가 달라지지 않는다.
+const AIS_AGG_PT_BUDGET = 18000;
 function _aisAggOnMove(e) {
   if (!_aisAgg || _aisAgg.days.length > AIS_AGG_HOVER_MAX_DAYS) return;
   if (map.dragging && map.dragging.moving()) return; // 지도를 끄는 중에는 계산하지 않는다
@@ -8151,16 +8215,18 @@ function _renderAisPeriod(key, prefix) {
     const sp = pts.map(p => p.speed).filter(v => v > 0.5).sort((a, b) => a - b);
     return _aisSpeedColor(sp.length ? sp[Math.floor(sp.length * 0.75)] : 0);
   };
+  let drawnPts = 0;          // 실제 캔버스에 등록한 점 수 — 이게 줌·팬 비용을 좌우한다
   const buckets = new Map(); // "색|굵기|투명도" -> [[latlng...], ...]
   const bucketPush = (color, wt, op, line) => {
     const k = color + '|' + wt + '|' + op;
     if (!buckets.has(k)) buckets.set(k, { color, wt, op, lines: [] });
     buckets.get(k).lines.push(line);
+    drawnPts += line.length;
   };
   days.forEach(day => {
     const pts = data.index[day];
     if (!pts || pts.length < 2) return;
-    totalPts += pts.length;
+    totalPts += pts.length;   // 원본 점 수(참고용)
     const q = data.dayQuality[day] || {};
     const wt = q.isRef ? 3 : 2, op = q.isRef ? 0.75 : 0.45;
 
@@ -8225,7 +8291,11 @@ function _renderAisPeriod(key, prefix) {
     ? ' · 날짜 식별은 클릭(hover는 날짜가 많아 꺼짐)'
     : ' · 선에 마우스를 올리면 날짜';
   const heavy = days.length > 1500 ? ' · 많아서 느리면 필터로 좁히세요' : '';
-  _aisSetStatus(`${_AIS_VESSELS[key].label} · ${scopeLabel} · ${days.length}일(★${refN}) · ${totalPts}포인트 · ${colorNote}${hoverNote}${heavy}`);
+  // 점 수는 "실제로 그린 것 / 원본"을 함께 보여준다 — 줌·팬이 무거운 이유가 드러난다
+  const ptNote = drawnPts < totalPts
+    ? `${drawnPts.toLocaleString()}점(원본 ${totalPts.toLocaleString()} 중)`
+    : `${totalPts.toLocaleString()}포인트`;
+  _aisSetStatus(`${_AIS_VESSELS[key].label} · ${scopeLabel} · ${days.length}일(★${refN}) · ${ptNote} · ${colorNote}${hoverNote}${heavy}`);
 }
 
 // ── 캘린더로 지정한 조회 기간(_aisRangeFrom~_aisRangeTo) 필터 ──
