@@ -7384,7 +7384,7 @@ async function _aisDrawOverlays() {
   if (!jobs.length) return;
 
   const g = L.layerGroup();
-  const renderer = L.canvas({ padding: 0.5 });
+  const renderer = L.canvas({ padding: 0.2 });
   for (const job of jobs) {
     const data = _aisCache[job.key] || await _loadAisVessel(job.key);
     if (!data) continue;
@@ -7934,6 +7934,10 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
   if (!pts || !pts.length) { _aisSetStatus(labelStr + ': 데이터 없음'); return; }
 
   const g = L.layerGroup();
+  // 항적은 캔버스에 그린다. 기본값(SVG)으로 두면 구간마다 <path> 두 개(표시선·클릭선)가
+  // DOM에 쌓여, 확대·축소할 때마다 브라우저가 그 전부를 다시 투영하고 다시 그린다.
+  // 캔버스는 요소 하나라 줌이 훨씬 가볍고, 팝업·클릭 판정은 그대로 동작한다.
+  const dayRenderer = L.canvas({ padding: 0.3 });
   // 왕복이면 복항편을 점선으로 구분해서 그린다 (같은 항로를 겹쳐 지나가므로).
   // 항적의 어느 지점을 클릭해도 그 구간의 AIS 값이 보이도록, 각 구간마다
   //  ① 눈에 보이는 색 선 ② 그 위에 투명하고 두꺼운 클릭용 선(팝업 부착)
@@ -7958,20 +7962,20 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
     }
     if (landKm > 0.3) {
       landCount++;
-      L.polyline(latlngs, { color: '#ff2b2b', weight: 8, opacity: 0.3, interactive: false }).addTo(g);
+      L.polyline(latlngs, { color: '#ff2b2b', weight: 8, opacity: 0.3, interactive: false, renderer: dayRenderer }).addTo(g);
     }
     // 원본 대조 — 보정·보간으로 모양이 바뀐 구간은 원본 직선을 회색으로 깔아
     // 무엇이 어떻게 달라졌는지 눈으로 바로 비교할 수 있게 한다 (편집 중에는 항상 켠다).
     if ((_aisShowRaw || _aisCorrEdit) && corr) {
       L.polyline([[a.lat, a.lon], [b.lat, b.lon]], {
-        color: "#8899aa", weight: 1.5, opacity: 0.65, dashArray: "3 4", interactive: false
+        color: "#8899aa", weight: 1.5, opacity: 0.65, dashArray: "3 4", interactive: false, renderer: dayRenderer
       }).addTo(g);
     }
     L.polyline(latlngs, {
       color: corr ? '#c07bff' : _aisSpeedColor((a.speed + b.speed) / 2),
       weight: corr ? 4 : (isBack ? 4 : 3),
       opacity: corr ? 0.95 : (isBack ? 0.75 : 0.9),
-      dashArray: corr ? null : (isBack ? '5 7' : null), interactive: false
+      dashArray: corr ? null : (isBack ? '5 7' : null), interactive: false, renderer: dayRenderer
     }).addTo(g);
 
     const segRawKm = _simDist([a.lat, a.lon], [b.lat, b.lon]);
@@ -7979,7 +7983,7 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
     const segMin = (b.tsMs - a.tsMs) / 60000;
     const avgKts = _aisAvgKts(segKm, segMin);
     const nearPort = _nearestPortName(b.lat, b.lon, AIS_CALL_BUFFER_KM);
-    const hit = L.polyline(latlngs, { color: '#000', weight: 14, opacity: 0, interactive: true });
+    const hit = L.polyline(latlngs, { color: '#000', weight: 14, opacity: 0, interactive: true, renderer: dayRenderer });
     if (_aisCorrEdit) {
       // 편집 모드 — 팝업 대신 이 구간을 보정 대상으로 고른다
       const segA = a, segB = b;
@@ -8181,7 +8185,9 @@ const AIS_AGG_HOVER_MAX_DAYS = 400; // 이보다 많으면 hover 식별을 끈�
 // 캔버스는 지도를 끌거나 확대할 때마다 등록된 점을 전부 다시 투영·묘사한다.
 // 그래서 하루 몇 점이 아니라 "화면 전체에 그릴 점 수"를 예산으로 잡고 날짜 수로 나눈다.
 // (카멜리아 전체 기간은 하루 20점이면 88,621점이 되는데, 그 축척에서는 형태 차이가 없다)
-const AIS_AGG_PT_BUDGET = 40000;
+// 캔버스는 확대·축소할 때마다 등록된 점을 전부 다시 투영·묘사한다. 예산이 크면 그만큼
+// 줌이 무거워진다. 축소된 지도에서는 형태 차이가 없으므로 넉넉히 솎아낸다.
+const AIS_AGG_PT_BUDGET = 22000;
 function _aisAggOnMove(e) {
   if (!_aisAgg || _aisAgg.days.length > AIS_AGG_HOVER_MAX_DAYS) return;
   if (map.dragging && map.dragging.moving()) return; // 지도를 끄는 중에는 계산하지 않는다
@@ -8231,7 +8237,9 @@ function _renderAisPeriod(key, prefix) {
   const g = L.layerGroup();
   let totalPts = 0;
   // 수천 개 선을 SVG로 그리면 브라우저가 버거우므로 집계 뷰는 캔버스로 렌더링한다.
-  const renderer = L.canvas({ padding: 0.5 });
+  // 여백(padding)은 화면 밖까지 미리 그려두는 비율이다. 0.5면 화면의 2배를 그리게 되므로
+  // 줌 비용이 그만큼 커진다 — 0.2로 줄이면 그리는 면적이 절반 아래로 떨어진다.
+  const renderer = L.canvas({ padding: 0.2 });
   const grid = new Map(), idxDays = [];
   const wantHover = days.length <= AIS_AGG_HOVER_MAX_DAYS;
   // 색은 항상 지도 범례와 같은 속도색(_aisSpeedColor)을 쓴다.
