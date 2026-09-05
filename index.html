@@ -2867,10 +2867,22 @@ function kmlToGeojson(kmlStr) {
 // ════════════════════════════════════════════════════
 let lastClickLL = null;
 
-map.on('mousemove', e => {
-  document.getElementById('mouseLat').textContent = e.latlng.lat.toFixed(6) + '° N';
-  document.getElementById('mouseLng').textContent = e.latlng.lng.toFixed(6) + '° E';
-});
+// 마우스를 움직이면 초당 100번 넘게 불린다. 그때마다 DOM에 쓰면 지도를 끄는 내내
+// 글자 배치를 다시 계산하게 되므로, 좌표는 프레임당 한 번만 갱신한다.
+(function() {
+  let pending = null, raf = 0, elLat = null, elLng = null;
+  map.on('mousemove', e => {
+    pending = e.latlng;
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      raf = 0;
+      if (!elLat) { elLat = document.getElementById('mouseLat'); elLng = document.getElementById('mouseLng'); }
+      if (!elLat || !elLng) return;
+      elLat.textContent = pending.lat.toFixed(6) + '° N';
+      elLng.textContent = pending.lng.toFixed(6) + '° E';
+    });
+  });
+})();
 
 // 좌표 확인·복사는 우클릭으로 — 좌클릭은 POI·항로선 팝업 등 다른 지도 상호작용에 그대로 쓰인다.
 map.on('contextmenu', e => {
@@ -6411,26 +6423,49 @@ let _aisTbSpeeds = [10, 60, 300, 1000];
 let _aisTbSpdIdx = 1; // default 60×
 
 // ── CSV 파서 ──
+// 한 줄을 따옴표까지 제대로 보고 자른다 (열 수가 안 맞는 줄에만 쓰는 대비책)
+function _parseAisCsvLine(line) {
+  const parts = [], buf = [];
+  let inQ = false;
+  for (const c of line) {
+    if (c === '"') { inQ = !inQ; }
+    else if (c === ',' && !inQ) { parts.push(buf.join('')); buf.length = 0; }
+    else buf.push(c);
+  }
+  parts.push(buf.join(''));
+  return parts;
+}
+
+// 30만 행짜리 파일을 문자 하나씩 훑으면 카멜리아 기준 1.3초가 걸린다. 이 CSV들은
+// 따옴표 안에 쉼표가 없으므로(전 파일 확인) split(',')으로 자르면 5배 빠르다.
+// 혹시 쉼표가 든 값이 들어와 열 수가 어긋나면 그 줄만 위의 정식 파서로 다시 자른다.
 function _parseAisCsv(text) {
   const lines = text.split('\n');
   const hdrs = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
+  const iLat = hdrs.indexOf('lat'), iLon = hdrs.indexOf('lon'),
+        iSpd = hdrs.indexOf('speed'), iCrs = hdrs.indexOf('course'),
+        iTs  = hdrs.indexOf('timestamp');
+  if (iLat < 0 || iLon < 0 || iTs < 0) return [];
+  const need = Math.max(iLat, iLon, iSpd, iCrs, iTs) + 1;
+  const nCol = hdrs.length;
+  // 값에 붙은 따옴표만 떼어낸다 (timestamp·seg_id가 따옴표로 감싸여 있다)
+  const unq = v => v.charCodeAt(0) === 34 ? v.slice(1, -1) : v;
   const pts = [];
   for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-    const parts = [], buf = [];
-    let inQ = false;
-    for (const c of line) {
-      if (c === '"') { inQ = !inQ; }
-      else if (c === ',' && !inQ) { parts.push(buf.join('')); buf.length = 0; }
-      else buf.push(c);
+    const line = lines[i];
+    if (line.length < 10) continue;
+    let p = line.split(',');
+    if (p.length !== nCol) {
+      p = _parseAisCsvLine(line.trim());
+      if (p.length < need) continue;
     }
-    parts.push(buf.join(''));
-    if (parts.length < 4) continue;
-    const r = {};
-    hdrs.forEach((h, j) => r[h] = (parts[j] || '').trim());
-    if (!r.timestamp) continue;
-    pts.push({ lat: +r.lat, lon: +r.lon, speed: +r.speed, course: +r.course, ts: r.timestamp });
+    const ts = p[iTs];
+    if (!ts) continue;
+    pts.push({
+      lat: +p[iLat], lon: +p[iLon],
+      speed: +p[iSpd], course: +p[iCrs],
+      ts: unq(ts)
+    });
   }
   return pts;
 }
