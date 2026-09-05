@@ -824,13 +824,52 @@
       box-shadow: 0 2px 6px rgba(0,0,0,0.5);
     }
 
-    /* 레이어 컨트롤 밝은 스타일 */
+    /* ── 레이어 컨트롤 (지도 우상단) ── 다른 패널과 같은 어두운 톤으로 맞춘다 */
     .leaflet-control-layers {
-      border-radius: 6px !important;
-      box-shadow: 0 1px 5px rgba(0,0,0,0.25) !important;
+      background: rgba(10,25,50,0.92) !important;
+      color: #e8f4ff;
+      border: 1px solid rgba(80,160,255,0.28) !important;
+      border-radius: 10px !important;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.45) !important;
+      backdrop-filter: blur(8px);
+      overflow: hidden;
     }
+    .leaflet-control-layers-expanded { padding: 0 !important; }
+    .leaflet-control-layers-list { margin: 0; padding: 8px 10px 9px; }
+    /* Leaflet은 구역 제목을 만들어주지 않으므로 CSS로 붙인다 */
+    .leaflet-control-layers-base::before,
+    .leaflet-control-layers-overlays::before {
+      display: block; margin: 2px 2px 5px;
+      font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em;
+      color: #7ecfff; opacity: 0.7;
+    }
+    .leaflet-control-layers-base::before     { content: '지도 배경'; }
+    .leaflet-control-layers-overlays::before { content: '표시할 레이어'; }
+    .leaflet-control-layers label {
+      display: block; margin: 0; border-radius: 6px;
+      transition: background 0.12s;
+    }
+    .leaflet-control-layers label:hover { background: rgba(126,207,255,0.14); }
+    /* 켜져 있는 항목은 은은하게 표시 */
+    .leaflet-control-layers label:has(input:checked) { background: rgba(74,163,255,0.16); }
+    .leaflet-control-layers label > span {
+      display: flex; align-items: center; gap: 7px;
+      padding: 5px 7px; font-size: 11.5px; line-height: 1.35; cursor: pointer;
+      white-space: nowrap;
+    }
+    .leaflet-control-layers-selector {
+      margin: 0 !important; flex: none;
+      width: 13px; height: 13px; accent-color: #4aa3ff; cursor: pointer;
+    }
+    .leaflet-control-layers-separator {
+      margin: 7px 0 !important;
+      border-top: 1px solid rgba(80,160,255,0.22) !important;
+    }
+    /* 접힌 상태(작은 화면)의 토글 버튼도 같은 톤으로 */
     .leaflet-control-layers-toggle {
-      background-color: #fff !important;
+      background-color: rgba(10,25,50,0.92) !important;
+      border: 1px solid rgba(80,160,255,0.28) !important;
+      border-radius: 8px !important;
     }
     /* ── AIS 타임바 (GFW 스타일, 하단 고정) ── */
     #aisTimebar {
@@ -1583,15 +1622,27 @@ const map = L.map('map', {
   layers: [satellite, labels]
 });
 
-// 미라클 통합 레이어 — POI 마커 + 관광버스 노선을 하나의 토글로 관리
+// 미라클 버스 레이어 — 관광버스 노선 + 정류장·렌터카·공항 POI를 한 토글로 관리
 const _busRouteLayerGroup = L.layerGroup();
 let _busRouteLoaded = false;
 // ※ _miracleLayer(POI)는 아래에서 선언된 뒤 addLayer로 합친다
 
+// 호텔은 위치도 성격도 달라서(카미소=히타카츠, 대아=이즈하라) 각각 따로 켜고 끈다.
+// 레이어 컨트롤이 아래 POI 정의보다 먼저 만들어지므로 여기서 미리 선언해 둔다.
+const _hotelLayers = {
+  kamiso:     L.layerGroup(),
+  daea_hotel: L.layerGroup()
+};
+
 // 레이어 컨트롤
 L.control.layers(
   { '🛰 위성영상 (ESRI)': satellite, '🗺 일반지도 (OSM)': osm },
-  { '지명 레이블': labels, '🚌 미라클투어리조트 + 대아호텔 POI 표시/숨기기': _busRouteLayerGroup },
+  {
+    '지명 레이블': labels,
+    '🚌 미라클투어 버스노선': _busRouteLayerGroup,
+    '🏨 카미소호텔 · 히타카츠': _hotelLayers.kamiso,
+    '🏨 대아호텔 · 이즈하라': _hotelLayers.daea_hotel
+  },
   { position: 'topright', collapsed: false }
 ).addTo(map);
 
@@ -1738,7 +1789,8 @@ _miraclePois.forEach(p => {
     mk.on('mouseover', function() { this.setStyle({ fillOpacity:1, weight:3 }); });
     mk.on('mouseout',  function() { this.setStyle({ fillOpacity:0.9, weight:2 }); });
   }
-  _miracleLayer.addLayer(mk);
+  // 호텔은 자기 레이어로, 나머지(정류장·렌터카·공항)는 버스 레이어로 보낸다
+  (_hotelLayers[p.id] || _miracleLayer).addLayer(mk);
 });
 // 쓰시마 공항 터널 POI (SVG 터널 아치 아이콘)
 (function() {
@@ -1763,7 +1815,8 @@ _miraclePois.forEach(p => {
     .addTo(_miracleLayer);
 })();
 
-// POI 마커(_miracleLayer)를 통합 레이어에 포함 — 체크박스 하나로 같이 켜고 끔
+// 정류장·렌터카·공항 POI는 버스 레이어에 포함 — 노선과 함께 켜고 끈다
+// (호텔은 _hotelLayers로 따로 빠져 있어 각자 토글된다)
 _busRouteLayerGroup.addLayer(_miracleLayer);
 
 // ── 미리 계산된 버스 노선 GeoJSON 로드 (miracle_bus_route.geojson)
