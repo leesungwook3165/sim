@@ -990,6 +990,10 @@
     .ais-tb-subunit.sel { background: rgba(255,80,220,0.25); color: #ffaaee; }
     .ais-tb-subunit.ais-tb-leg { color: #ffcc66; font-weight: 700; }
     .ais-tb-subunit.ais-tb-leg.sel { background: rgba(255,190,60,0.25); color: #ffdd99; }
+    .ais-tb-daysum {
+      flex-shrink: 0; font-size: 10px; color: #9fd8ff; font-weight: 700;
+      white-space: nowrap; padding: 0 4px; font-variant-numeric: tabular-nums;
+    }
     .ais-tb-subsep { flex-shrink: 0; width: 1px; height: 60%; background: rgba(80,160,255,0.25); margin: 0 6px; }
     /* 속도 변화 그래프 (재생 위치 동기화) */
     /* 속도 그래프 — 기존 54px에서 조금 키운 고정 높이 (눈금축이 들어갈 정도) */
@@ -6311,6 +6315,7 @@ let _aisNormalOnly = true; // '일' 탭에서만 적용되는 정상 항로 필�
 let _aisRefOnly = false;   // ★기준일(항구 출입 가속·감속이 온전히 기록된 날)만 보기
 let _aisCallFilter = 'all'; // 특정 항구에 기항한 날만 보기 ('all' 또는 항구명)
 let _aisLastChartPts = null, _aisLastChartIdx = null; // 창 크기·타임바 높이 변경 시 그래프 재그리기용
+let _aisChartGeom = null; // 그래프 좌표계 (마우스 x → 시각 환산용)
 let _aisTbSpeeds = [10, 60, 300, 1000];
 let _aisTbSpdIdx = 1; // default 60×
 
@@ -6932,13 +6937,30 @@ function _aisDrawSpeedChart(pts, cursor) {
     ctx.stroke();
   }
 
+  // 변곡점(속도대가 바뀌는 지점) — 마우스로 짚기 쉽게 점으로 찍어둔다
+  let prevBand = null;
+  pts.forEach(p => {
+    const band = _aisSpeedColor(p.speed);
+    if (prevBand !== null && band !== prevBand) {
+      ctx.beginPath();
+      ctx.arc(xAt(p.ts), yAt(p.speed), 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = band;
+      ctx.fill();
+      ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.stroke();
+    }
+    prevBand = band;
+  });
+
+  // 그래프 좌표계를 저장해둔다 — 마우스 위치를 시각으로 되돌릴 때 쓴다
+  _aisChartGeom = { t0, totalMs, padL, plotW, plotH, padT };
+
   // 좁을 때는 눈금 대신 최고속도만 표시 (넓을 때는 위 눈금축이 대신한다)
   if (!roomy) {
     ctx.fillStyle = '#7799bb'; ctx.textBaseline = 'top'; ctx.textAlign = 'start';
     ctx.fillText(`최고 ${maxSpd.toFixed(0)}kt`, padL, padT);
   }
 
-  // 현재 재생 위치 — 세로선 + 점 + 실시간 속도 숫자
+  // 재생 위치 또는 마우스가 가리키는 지점 — 세로선 + 점 + 속도 숫자
   if (cursor && cursor.tsMs != null) {
     const p = { speed: cursor.speed };
     const x = padL + Math.max(0, Math.min(1, (cursor.tsMs - t0) / totalMs)) * plotW;
@@ -6948,9 +6970,14 @@ function _aisDrawSpeedChart(pts, cursor) {
     ctx.beginPath(); ctx.arc(x, y, 3.5, 0, Math.PI * 2);
     ctx.fillStyle = _aisSpeedColor(p.speed); ctx.fill();
     ctx.lineWidth = 1; ctx.strokeStyle = '#fff'; ctx.stroke();
-    ctx.fillStyle = '#ffe6f7'; ctx.font = 'bold 10px sans-serif'; ctx.textBaseline = 'middle';
-    ctx.textAlign = 'left';
-    ctx.fillText(`${p.speed.toFixed(1)}kt`, Math.min(x + 6, W - padR + 2), padT + 8);
+    ctx.fillStyle = cursor.hover ? '#c8f0ff' : '#ffe6f7';
+    ctx.font = 'bold 10px sans-serif'; ctx.textBaseline = 'middle';
+    ctx.textAlign = x > W / 2 ? 'right' : 'left';
+    // hover일 때는 시각도 함께 — "오전 9:12 · 36.0kt"
+    const lbl = cursor.hover
+      ? `${_aisFmtClock(new Date(cursor.tsMs).toISOString())} · ${p.speed.toFixed(1)}kt`
+      : `${p.speed.toFixed(1)}kt`;
+    ctx.fillText(lbl, x + (x > W / 2 ? -6 : 6), padT + 8);
     ctx.textAlign = 'start';
   }
 }
@@ -7488,6 +7515,42 @@ function _aisPickDay(dt) {
   _aisTbRenderTl(key); _aisTlApply();
 }
 
+// 그 날의 이동거리와 편도·왕복 소요시간을 계산한다.
+// 왕복이면 회항 지점을 기준으로 출항편/복항편 시간을 나누고, 편도면 전체 시간을 쓴다.
+function _aisDaySummary(key, dateStr) {
+  const data = _aisCache[key];
+  const pts = data && data.index[dateStr];
+  if (!pts || pts.length < 2) return null;
+  const q = data.dayQuality[dateStr] || {};
+  const ms = t => new Date(t).getTime();
+  const legs = _aisSplitLegs(pts);
+  const stops = _detectAisStops(pts);
+  // 하루치 데이터는 대개 정박한 채로 시작해 정박한 채로 끝난다(00:00Z~23:59Z).
+  // 그래서 첫·마지막 핑을 그대로 쓰면 정박 시간이 항해 시간에 섞인다.
+  // 실제 "항해 시간"은 출항(첫 정박이 끝나는 시각)부터 도착(마지막 정박이 시작되는 시각)까지다.
+  const first = pts[0], last = pts[pts.length - 1];
+  const headStop = stops.find(st => Math.abs(ms(st.startTs) - ms(first.ts)) < 60000);
+  const tailStop = [...stops].reverse().find(st => Math.abs(ms(st.endTs) - ms(last.ts)) < 60000);
+  const departTs = headStop ? headStop.endTs : first.ts;   // 실제 출항 시각
+  const arriveTs = tailStop ? tailStop.startTs : last.ts;  // 실제 도착 시각
+  const out = {
+    totalKm: q.totalDist || 0, onewayKm: q.onewayDist || 0, isRound: !!q.isRound,
+    departTs, arriveTs, spanMin: (ms(arriveTs) - ms(departTs)) / 60000
+  };
+  if (legs) {
+    const turnPt = pts[legs.turnIdx];
+    // 회항 지점 부근의 정박 = 반대편 항구에서 머문 시간
+    const turnStop = stops.find(st => _simDist([st.lat, st.lon], [turnPt.lat, turnPt.lon]) <= AIS_PORT_BUFFER_KM);
+    const turnIn  = turnStop ? ms(turnStop.startTs) : ms(turnPt.ts);
+    const turnOut = turnStop ? ms(turnStop.endTs)   : ms(turnPt.ts);
+    out.outMin  = (turnIn - ms(departTs)) / 60000;   // 출항 → 반대편 도착
+    out.backMin = (ms(arriveTs) - turnOut) / 60000;  // 반대편 출발 → 복귀 도착
+    out.turnStopMin = turnStop ? turnStop.durMin : 0;
+    out.sailMin = out.outMin + out.backMin;          // 정박 뺀 순수 항해시간
+  }
+  return out;
+}
+
 // ── 선택한 날짜의 구간·시간대 세부 행 ('일' 탭에서 날짜를 고르면 자동으로 나타남) ──
 // 왕복일이면 출항편/복항편 버튼을 앞에 붙여, 겹쳐 보이는 두 구간을 따로 볼 수 있게 한다.
 function _aisRenderSubHours(key, dateStr) {
@@ -7500,6 +7563,22 @@ function _aisRenderSubHours(key, dateStr) {
   if (!hours.length) { wrap.style.display = 'none'; return; }
   wrap.style.display = 'flex';
 
+  // 그 날의 거리·소요시간 요약을 세부 행 맨 앞에 붙인다
+  const sum = _aisDaySummary(key, dateStr);
+  let sumHtml = '';
+  if (sum) {
+    const parts = ['📏 ' + sum.totalKm.toFixed(0) + 'km'];
+    if (sum.isRound && sum.outMin != null) {
+      parts.push('편도 ' + sum.onewayKm.toFixed(0) + 'km');
+      parts.push('🕐 출항편 ' + _simDurLabel(sum.outMin) + ' / 복항편 ' + _simDurLabel(sum.backMin));
+      if (sum.turnStopMin > 0) parts.push('회항정박 ' + _simDurLabel(sum.turnStopMin));
+      parts.push('항해합계 ' + _simDurLabel(sum.sailMin));
+    } else {
+      parts.push('🕐 편도 ' + _simDurLabel(sum.spanMin));
+    }
+    sumHtml = '<span class="ais-tb-daysum">' + parts.join(' · ') + '</span><span class="ais-tb-subsep"></span>';
+  }
+
   const legs = pts ? _aisSplitLegs(pts) : null;
   let legHtml = '';
   if (legs) {
@@ -7511,7 +7590,7 @@ function _aisRenderSubHours(key, dateStr) {
       `<span class="ais-tb-subsep"></span>`;
   }
 
-  sub.innerHTML = legHtml +
+  sub.innerHTML = sumHtml + legHtml +
     `<button class="ais-tb-subunit${_aisSubHourSel == null && (!legs || _aisSubLegSel == null) ? ' sel' : ''}" onclick="_aisSubHourClick(null)">🕐 ${legs ? '전체' : '하루 전체'}</button>` +
     hours.map(hh => {
       const h = parseInt(hh, 10);
@@ -7919,6 +7998,33 @@ function _syncBottomBars() {
   if (tl && typeof ResizeObserver !== 'undefined') new ResizeObserver(_syncBottomBars).observe(tl);
   window.addEventListener('resize', _syncBottomBars);
   setTimeout(_syncBottomBars, 0);
+})();
+
+// ── 속도 그래프 위에서 마우스를 움직이면 그 시점의 속도를 보여준다 ──
+// 변곡점(속도대가 바뀌는 지점)에는 점이 찍혀 있어 짚기 쉽다.
+(function() {
+  const canvas = document.getElementById('aisSpeedCanvas');
+  if (!canvas) return;
+  let last = 0;
+  canvas.addEventListener('mousemove', e => {
+    if (!_aisChartGeom || !_aisLastChartPts || _aisLastChartPts.length < 2) return;
+    const now = Date.now();
+    if (now - last < 33) return; // 30fps로 제한
+    last = now;
+    const g = _aisChartGeom;
+    const r = canvas.getBoundingClientRect();
+    const frac = (e.clientX - r.left - g.padL) / g.plotW;
+    if (frac < 0 || frac > 1) return;
+    const tsMs = g.t0 + frac * g.totalMs;
+    const arr = _aisLastChartPts.map(p => new Date(p.ts).getTime());
+    const cur = _aisInterpAt(_aisLastChartPts, arr, tsMs);
+    _aisDrawSpeedChart(_aisLastChartPts, { tsMs, speed: cur.speed, hover: true });
+  });
+  canvas.addEventListener('mouseleave', () => {
+    // 재생 중이면 재생 위치로, 아니면 커서 없이 되돌린다
+    if (_aisLastChartPts) _aisDrawSpeedChart(_aisLastChartPts, _aisPlay.raf ? _aisLastChartIdx : null);
+  });
+  canvas.style.cursor = 'crosshair';
 })();
 
 // ── 타임바 리사이즈 (상단 드래그) ──
