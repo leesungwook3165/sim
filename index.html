@@ -6449,6 +6449,7 @@ function _aisLocalHour(utcHH) { return (parseInt(utcHH, 10) + 9) % 24; }
 function _clearAisLayer() {
   if (_aisLayerGroup.g) { map.removeLayer(_aisLayerGroup.g); _aisLayerGroup.g = null; }
   _aisArrowState = null; // 줌 핸들러가 사라진 레이어를 계속 다시 그리지 않도록
+  _aisHoverShipHide();
   // 집계 뷰를 벗어나면 마우스 핸들러와 인덱스를 반드시 놓아준다 (안 그러면 계속 계산한다)
   if (_aisAgg) {
     map.off('mousemove', _aisAggOnMove).off('click', _aisAggOnClick);
@@ -8338,12 +8339,42 @@ function _syncBottomBars() {
   setTimeout(_syncBottomBars, 0);
 })();
 
+// ── 그래프에 마우스를 올리면 그 시각의 배 위치를 지도에 함께 보여준다 ──
+// 그래프의 x는 시각이므로, 그 시각을 항적에 보간해 넣으면 "그때 배가 어디 있었는지"가 나온다.
+// 재생 마커와 헷갈리지 않도록 옅게 그리고, 지도 카메라는 움직이지 않는다.
+let _aisHoverMarker = null, _aisHoverIconAt = 0;
+
+function _aisHoverShipShow(key, cur) {
+  const v = _AIS_VESSELS[key];
+  if (!v) return;
+  const at = [cur.lat, cur.lon];
+  if (!_aisHoverMarker) {
+    _aisHoverMarker = L.marker(at, { zIndexOffset: 1150, opacity: 0.85, interactive: false }).addTo(map);
+    _aisHoverIconAt = 0;
+  } else {
+    _aisHoverMarker.setLatLng(at);
+  }
+  // 아이콘은 만들 때마다 DOM을 새로 그리므로 위치보다 뜸하게 갱신한다
+  const now = Date.now();
+  if (now - _aisHoverIconAt > 120) {
+    _aisHoverIconAt = now;
+    _aisHoverMarker.setIcon(_makeShipIcon(
+      cur.course, v.color || '#66ccff', '#0a1832',
+      `${v.label}<br>${_aisFmtClock(new Date(cur.tsMs).toISOString())} · ${cur.speed.toFixed(1)} knot`
+    ));
+  }
+}
+
+function _aisHoverShipHide() {
+  if (_aisHoverMarker) { map.removeLayer(_aisHoverMarker); _aisHoverMarker = null; }
+}
+
 // ── 속도 그래프 위에서 마우스를 움직이면 그 시점의 속도를 보여준다 ──
 // 변곡점(속도대가 바뀌는 지점)에는 점이 찍혀 있어 짚기 쉽다.
 (function() {
   const canvas = document.getElementById('aisSpeedCanvas');
   if (!canvas) return;
-  let last = 0;
+  let last = 0, tsCache = null, tsCacheFor = null;
   canvas.addEventListener('mousemove', e => {
     if (!_aisChartGeom || !_aisLastChartPts || _aisLastChartPts.length < 2) return;
     const now = Date.now();
@@ -8352,15 +8383,21 @@ function _syncBottomBars() {
     const g = _aisChartGeom;
     const r = canvas.getBoundingClientRect();
     const frac = (e.clientX - r.left - g.padL) / g.plotW;
-    if (frac < 0 || frac > 1) return;
+    if (frac < 0 || frac > 1) { _aisHoverShipHide(); return; }
     const tsMs = g.t0 + frac * g.totalMs;
-    const arr = _aisLastChartPts.map(p => new Date(p.ts).getTime());
-    const cur = _aisInterpAt(_aisLastChartPts, arr, tsMs);
+    // 시각 배열은 항적이 바뀔 때만 다시 만든다 (매 프레임 map()을 돌 필요가 없다)
+    if (tsCacheFor !== _aisLastChartPts) {
+      tsCache = _aisLastChartPts.map(p => new Date(p.ts).getTime());
+      tsCacheFor = _aisLastChartPts;
+    }
+    const cur = _aisInterpAt(_aisLastChartPts, tsCache, tsMs);
     _aisDrawSpeedChart(_aisLastChartPts, { tsMs, speed: cur.speed, hover: true });
+    _aisHoverShipShow(document.getElementById('aisVesselSel').value, cur);
   });
   canvas.addEventListener('mouseleave', () => {
     // 재생 중이면 재생 위치로, 아니면 커서 없이 되돌린다
     if (_aisLastChartPts) _aisDrawSpeedChart(_aisLastChartPts, _aisPlay.raf ? _aisLastChartIdx : null);
+    _aisHoverShipHide();
   });
   canvas.style.cursor = 'crosshair';
 })();
