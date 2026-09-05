@@ -6962,6 +6962,10 @@ const AIS_MIN_MOVING_KM     = 20;  // 이보다 적게 움직인 날은 "운항�
 // 그래서 중앙값이 아니라 분포의 아래쪽(하위 10%)을 그 선박의 "깨끗한 리듬"으로 삼고,
 // 거기서 크게 벗어나지 않는 날만 ★기준일로 인정한다.
 const AIS_REF_MIN_DAYS = 5;                         // 기대거리를 기준일로 정하려면 최소 이만큼은 있어야 한다
+// 출항·도착 시각을 감싸는 핑 간격이 이보다 넓으면 그 항차의 시각은 못 믿는다.
+// (접안 중 핑 간격이 70분대라 도착 쪽은 원래 넓다 — 그래서 출항보다 느슨하게 본다)
+const AIS_GAP_OK_DEPART = 20;   // 분
+const AIS_GAP_OK_ARRIVE = 90;   // 분
 const AIS_TIME_BASE_Q = 0.10;                       // 기준 배율로 쓸 분위수
 const AIS_TIME_DEV_LO = 0.85, AIS_TIME_DEV_HI = 1.20; // 기준 배율 대비 허용 범위
 const AIS_TERMINAL_CLUSTER_KM = 12; // 시작·끝 지점을 이 거리 이내면 같은 터미널로 묶음
@@ -7285,8 +7289,12 @@ async function _aisBuildVoyages(key, data, onStep) {
     const cruise = data.cruiseKts || 0;
     const ramps = _aisCountRamps(all, cruise, i0, i1);
     const idealMin = cruise > 0 ? (corrKm / (cruise * 1.852)) * 60 : null;
+    // 출항·도착을 감싸는 핑 간격 = 그 시각의 오차 폭
+    const gapDep = (i0 + 1 < all.length) ? (tsMs[i0 + 1] - t0) / 60000 : 0;
+    const gapArr = (i1 - 1 >= 0) ? (t1 - tsMs[i1 - 1]) / 60000 : 0;
     voyages.push({
       ramps, timeRatio: (idealMin && min > 0) ? min / idealMin : null,
+      departGapMin: gapDep, arriveGapMin: gapArr,
       from: _aisTerminalLabel(A.t), to: _aisTerminalLabel(B.t),
       departTs: A.st.endTs, arriveTs: B.st.startTs,
       dateFrom: A.st.endTs.slice(0, 10), dateTo: B.st.startTs.slice(0, 10),
@@ -7312,7 +7320,8 @@ function _aisMarkRefVoyages(data) {
   const onMain = v => (v.from === main.from && v.to === main.to)
                    || (v.from === main.to && v.to === main.from);
   const cand = voys.filter(v => onMain(v) && v.timeRatio != null
-    && v.ramps && v.ramps.up >= 1 && v.ramps.down >= 1);
+    && v.ramps && v.ramps.up >= 1 && v.ramps.down >= 1
+    && v.departGapMin <= AIS_GAP_OK_DEPART && v.arriveGapMin <= AIS_GAP_OK_ARRIVE);
   const ratios = cand.map(v => v.timeRatio).sort((a, b) => a - b);
   const base = ratios.length ? ratios[Math.floor(ratios.length * AIS_TIME_BASE_Q)] : null;
   voys.forEach(v => { v.isRef = false; });
@@ -8558,8 +8567,24 @@ function _aisVoyageTimes(pts, terminals) {
   if (ms(arriveTs) < departMs) arriveTs = pts[last].ts;   // 그래도 뒤집혔으면 마지막 핑
   if (ms(arriveTs) < departMs) arriveTs = departTs;       // 하루가 통째로 정박인 날
 
+  // ── 이 시각이 얼마나 믿을 만한가 ──
+  // AIS는 일정 간격으로 오는 게 아니다. 배가 움직이기 시작하면 핑이 촘촘해져 출항 시각은
+  // 대체로 정확하지만(중앙 1~18분), 접안하면 간격이 70분대로 벌어져 도착 시각은 그만큼
+  // 뒤로 밀릴 수 있다. AIS가 며칠 끊긴 구간은 아예 의미가 없다.
+  // 그래서 "그 순간을 감싸는 핑 간격"을 오차 폭으로 함께 돌려준다.
+  const gapAfter = (t) => {           // 출항: 이 핑 다음 핑까지가 실제 출항이 있을 수 있는 구간
+    const at = ms(t);
+    for (let i = 0; i < pts.length; i++) if (ms(pts[i].ts) > at) return (ms(pts[i].ts) - at) / 60000;
+    return 0;
+  };
+  const gapBefore = (t) => {          // 도착: 직전 핑부터 이 핑까지
+    const at = ms(t);
+    for (let i = pts.length - 1; i >= 0; i--) if (ms(pts[i].ts) < at) return (at - ms(pts[i].ts)) / 60000;
+    return 0;
+  };
   const out = {
     departTs, arriveTs, spanMin: (ms(arriveTs) - ms(departTs)) / 60000,
+    departGapMin: gapAfter(departTs), arriveGapMin: gapBefore(arriveTs),
     startPort: _aisTerminalLabel(startPort), endPort: _aisTerminalLabel(endPort),
     departKm: sNear ? sNear.minKm : null, arriveKm: eNear ? eNear.minKm : null,
     byStop: !!(sStop && eStop), isRound: !!legs, turnIdx
