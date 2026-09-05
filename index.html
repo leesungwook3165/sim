@@ -495,6 +495,9 @@
       margin-top: 52px;
     }
     /* ── 시뮬레이션 패널 ── */
+    /* 하단 바(타임랩스·AIS)가 차지한 높이만큼 패널 최대 높이를 줄여 뒤로 숨지 않게 한다 */
+    #simPanel { max-height: calc(100vh - 80px - var(--bottom-bars, 0px)); }
+    #opsPanel { max-height: calc(100vh - 75px - var(--bottom-bars, 0px)); }
     #simPanel {
       position: fixed;
       top: 65px; left: 1115px; right: auto; bottom: auto;
@@ -3814,19 +3817,26 @@ function _rebuildSimTimelapse() {
     const keepIds = new Set(groups.map(g => g.id));
     items = items.filter(it => keepIds.has(it.group));
   }
-  // 맨 아래 "투입가능 선석" 행 — 필터와 무관하게 항상 붙는다. "전체"일 땐 모든 배가 공통으로
-  // 거치는 부산을 기준으로 보여준다.
-  const availPortId = simTimelapsePortFilter === 'all' ? 'busan' : simTimelapsePortFilter;
-  const availLabel = (BERTH_PORT_ROWS.find(r => r.id === availPortId) || {}).label || availPortId;
-  groups.push({ id:'avail', content:`🟢 투입가능 선석(${availLabel})` });
+  // 맨 아래 "투입가능 선석" 행 — 필터와 무관하게 항상 붙는다.
+  // 항구 필터가 '전체'면 실제로 배가 드나드는 항구를 모두 한 행씩 보여준다
+  // (예전에는 '전체'인데도 부산항 하나만 나와서 필터 값과 어긋나 보였다).
+  let availPortIds = simTimelapsePortFilter === 'all'
+    ? BERTH_PORT_ROWS.map(r => r.id).filter(id => _simPortOccupiedIntervals(id).length > 0)
+    : [simTimelapsePortFilter];
+  if (!availPortIds.length) availPortIds = ['busan']; // 아무 배도 안 보이면 기준 항구만
   let availSeq = 900000;
-  _simPortFreeGaps(availPortId, 15).forEach(g => {
-    items.push({
-      id: availSeq++, group:'avail', content:'투입가능',
-      start: _simTimeAt(g.start), end: _simTimeAt(g.end),
-      className: 'sim-seg-avail',
-      style: 'background-color:#22dd66;border-color:rgba(0,0,0,0.4);color:#06301a;',
-      title: `<b>${availLabel} 투입가능 선석</b><br>${_minToHM(_baseMin + g.start)} ~ ${_minToHM(_baseMin + g.end)} (${_fmtMin(g.end - g.start)} 비어있음)`
+  availPortIds.forEach(pid => {
+    const label = (BERTH_PORT_ROWS.find(r => r.id === pid) || {}).label || pid;
+    const gid = 'avail_' + pid;
+    groups.push({ id: gid, content: `🟢 투입가능 선석(${label})` });
+    _simPortFreeGaps(pid, 15).forEach(g => {
+      items.push({
+        id: availSeq++, group: gid, content:'투입가능',
+        start: _simTimeAt(g.start), end: _simTimeAt(g.end),
+        className: 'sim-seg-avail',
+        style: 'background-color:#22dd66;border-color:rgba(0,0,0,0.4);color:#06301a;',
+        title: `<b>${label} 투입가능 선석</b><br>${_minToHM(_baseMin + g.start)} ~ ${_minToHM(_baseMin + g.end)} (${_fmtMin(g.end - g.start)} 비어있음)`
+      });
     });
   });
   // 사용자가 마우스로 끌어서 바꾼 행 순서(_simTimelapseGroupOrder)가 있으면 그 순서를 그대로
@@ -7362,6 +7372,7 @@ function toggleAisTimebar() {
   _syncBottomBars();
 }
 let _aisPrevHeight = 0;
+let _aisPrevScope = null, _aisPrevSimMin = 0; // AIS를 열기 직전의 항로 표시 범위·시뮬레이션 시점 (닫을 때 복원)
 
 // ── 하단 두 바(타임랩스 · AIS 타임바)가 서로 가리지 않도록 위아래로 쌓는다 ──
 // 둘 다 bottom:0 고정이라 AIS 바가 타임랩스를 덮고 있었다. AIS 바를 타임랩스 높이만큼
@@ -7371,7 +7382,13 @@ function _syncBottomBars() {
   const ais = document.getElementById('aisTimebar');
   if (!ais) return;
   const tlShown = tl && getComputedStyle(tl).display !== 'none' && tl.offsetHeight > 0;
-  ais.style.bottom = tlShown ? tl.offsetHeight + 'px' : '0px';
+  const tlH = tlShown ? tl.offsetHeight : 0;
+  ais.style.bottom = tlH + 'px';
+  // 떠 있는 패널(운항 시뮬레이션·운항 관리)이 하단 바 뒤로 숨지 않도록, 두 바가 차지하는
+  // 높이를 CSS 변수로 알려 패널 최대 높이를 그만큼 줄인다.
+  const aisShown = ais.classList.contains('visible');
+  const total = tlH + (aisShown ? ais.offsetHeight : 0);
+  document.documentElement.style.setProperty('--bottom-bars', total + 'px');
 }
 (function() {
   const tl = document.getElementById('simTimelapseBar');
@@ -7447,9 +7464,23 @@ function _syncBottomBars() {
         if (tb.classList.contains('visible')) {
           tb.classList.remove('visible');
           onAisStop();
+          // AIS를 닫으면 가려뒀던 구상·참고 항로선과 시뮬레이션 시점을 원래대로 되돌린다
+          if (_aisPrevScope != null) {
+            setSimPlayScope(_aisPrevScope);
+            simSimMin = _aisPrevSimMin; // setSimPlayScope가 시점을 리셋하므로 다시 되돌린다
+            _simRenderFrame();
+            _aisPrevScope = null;
+          }
           _syncBottomBars();
         } else {
           tb.classList.add('visible');
+          // 실적 항로를 보는 동안은 시뮬레이션 재생을 멈추고 구상·참고 항로선을 감춘다
+          // (겹쳐 그려지면 실측 항적을 알아보기 어렵다). 닫을 때 그대로 복원.
+          if (typeof simRunning !== 'undefined' && simRunning) simPause();
+          if (simPlayScope !== 'none') {
+            _aisPrevScope = simPlayScope; _aisPrevSimMin = simSimMin;
+            setSimPlayScope('none');
+          }
           _syncBottomBars();
           if (!_aisCache[document.getElementById('aisVesselSel').value]) {
             onAisVesselChange();
