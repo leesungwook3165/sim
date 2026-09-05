@@ -2636,14 +2636,29 @@ const drawControl = new L.Control.Draw({
 });
 map.addControl(drawControl);
 
-// 그린 도형 → drawnItems 에 추가
+// 그린 도형 → drawnItems 에 추가 (+ 브라우저에 저장)
+// 저장해두지 않으면 새로고침할 때 사라져, 항로 보정의 안내선으로 다시 쓸 수 없다.
+const DRAW_SHAPES_KEY = 'hanjil_drawn_shapes';
+function _saveDrawnShapes() {
+  try { localStorage.setItem(DRAW_SHAPES_KEY, JSON.stringify(drawnItems.toGeoJSON())); } catch (e) {}
+}
+function _loadDrawnShapes() {
+  try {
+    const raw = localStorage.getItem(DRAW_SHAPES_KEY);
+    if (!raw) return;
+    L.geoJSON(JSON.parse(raw), { style: { color: '#00ccff', weight: 3 } })
+      .eachLayer(l => drawnItems.addLayer(l));
+  } catch (e) {}
+}
 map.on(L.Draw.Event.CREATED, e => {
   drawnItems.addLayer(e.layer);
   updateShapeCount();
+  _saveDrawnShapes();
 });
-map.on(L.Draw.Event.DELETED, updateShapeCount);
-map.on(L.Draw.Event.EDITED, updateShapeCount);
+map.on(L.Draw.Event.DELETED, () => { updateShapeCount(); _saveDrawnShapes(); });
+map.on(L.Draw.Event.EDITED, () => { updateShapeCount(); _saveDrawnShapes(); });
 
+_loadDrawnShapes(); // 저장해둔 도형 복원
 function updateShapeCount() {
   const n = drawnItems.getLayers().length;
   document.getElementById('shapeCount').textContent = `그려진 도형: ${n}개`;
@@ -2662,6 +2677,7 @@ function clearAllShapes() {
   if (!confirm('그려진 도형을 모두 삭제할까요?')) return;
   drawnItems.clearLayers();
   updateShapeCount();
+  _saveDrawnShapes();
 }
 
 // ════════════════════════════════════════════════════
@@ -7102,7 +7118,9 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
 
   // ── 보정 편집 모드 — 내가 그린 항로를 안내선으로 함께 띄운다 ──
   // 편집 중에만 임시로 보이며, 안내선을 클릭하면 선택한 구간이 그 경로로 보정된다.
-  if (_aisCorrEdit) {
+  // 안내선은 "구간을 고른 동안"에만 띄운다 — 보정을 끝내면(선택 해제) 다시 사라져
+  // 보정 결과를 가리지 않는다.
+  if (_aisCorrEdit && _aisCorrSel) {
     _aisRefRoutes().filter(r => r.user).forEach(r => {
       L.polyline(r.pts, { color: '#66ffee', weight: 3, opacity: 0.9, dashArray: '6 5' })
         .bindTooltip('✏ ' + r.name + ' — 클릭하면 선택한 구간을 이 경로로 보정', { sticky: true, className: 'ais-poi-label' })
@@ -7748,7 +7766,8 @@ function _aisCorrApply(route) {
   });
   _aisCorrSel = null;
   _aisTlApply();
-  _aisSetStatus(`✏ 보정 저장됨 — ${a.ts.slice(0,10)} ${_aisFmtClock(a.ts)} 구간 (${route.name})`);
+  _aisSetStatus(`✏ 보정 저장됨 — ${a.ts.slice(0, 10)} ${_aisFmtClock(a.ts)} 구간 (${route.name}) · ` +
+    `안내선은 숨겼습니다. 다른 구간을 클릭하면 다시 나타납니다`);
 }
 
 // '✏ 보정 편집' 체크박스
@@ -7758,7 +7777,7 @@ function onAisCorrEditChange() {
   if (_aisCorrEdit) {
     const guides = _aisRefRoutes().filter(r => r.user).length;
     _aisSetStatus(guides
-      ? '✏ 보정 편집: 항적에서 고칠 구간을 클릭한 뒤, 청록색 안내선을 클릭하세요'
+      ? `✏ 보정 편집: 고칠 구간을 클릭하세요 — 그때 내가 그린 항로 ${guides}개가 안내선으로 나타납니다`
       : '✏ 보정 편집: 먼저 지도 그리기 도구로 항로를 그려주세요 (그 선이 안내선이 됩니다)');
   }
   _aisTlApply();
