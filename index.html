@@ -6657,10 +6657,13 @@ function _parseAisCsv(text) {
     }
     const ts = p[iTs];
     if (!ts) continue;
+    const tsStr = unq(ts);
+    // 시각을 숫자로도 담아 둔다. 코드 곳곳에서 new Date(p.ts)로 문자열을 다시 파싱하는데,
+    // 전 포인트를 한 번 훑을 때마다 81ms가 든다(카멜리아 29만 행 측정). 숫자 필드면 1ms다.
     pts.push({
       lat: +p[iLat], lon: +p[iLon],
       speed: +p[iSpd], course: +p[iCrs],
-      ts: unq(ts)
+      ts: tsStr, tsMs: Date.parse(tsStr)
     });
   }
   return pts;
@@ -6733,20 +6736,22 @@ self.onmessage = async function(e) {
     const n = flat.length;
     const lat = new Float64Array(n), lon = new Float64Array(n);
     const spd = new Float32Array(n), crs = new Float32Array(n);
+    const tms = new Float64Array(n);
     const ts = new Array(n);
     for (let i = 0; i < n; i++) {
       lat[i] = flat[i].lat; lon[i] = flat[i].lon;
-      spd[i] = flat[i].speed; crs[i] = flat[i].course; ts[i] = flat[i].ts;
+      spd[i] = flat[i].speed; crs[i] = flat[i].course;
+      ts[i] = flat[i].ts; tms[i] = flat[i].tsMs;
     }
     self.postMessage({
-      ok: true, key: key, n: n, lat: lat, lon: lon, spd: spd, crs: crs,
+      ok: true, key: key, n: n, lat: lat, lon: lon, spd: spd, crs: crs, tms: tms,
       tsJoined: ts.join('\\n'), dates: data.dates, dayOff: dayOff,
       minDate: data.minDate, maxDate: data.maxDate,
       dayQuality: data.dayQuality, terminals: data.terminals, cruiseKts: data.cruiseKts,
       expectedDist: data.expectedDist, refDays: data.refDays, refOneWayKm: data.refOneWayKm,
       refRoundKm: data.refRoundKm, callPorts: data.callPorts, timeRatioBase: data.timeRatioBase,
       voyages: data.voyages, voyRoutes: data.voyRoutes, voyMain: data.voyMain
-    }, [lat.buffer, lon.buffer, spd.buffer, crs.buffer, dayOff.buffer]);
+    }, [lat.buffer, lon.buffer, spd.buffer, crs.buffer, tms.buffer, dayOff.buffer]);
   } catch (err) {
     self.postMessage({ ok: false, key: key, error: String((err && err.message) || err) });
   }
@@ -6767,7 +6772,8 @@ function _aisWorkerRebuild(msg) {
   const tsArr = msg.tsJoined.length ? msg.tsJoined.split('\n') : [];
   const flat = new Array(msg.n);
   for (let i = 0; i < msg.n; i++) {
-    flat[i] = { lat: msg.lat[i], lon: msg.lon[i], speed: msg.spd[i], course: msg.crs[i], ts: tsArr[i] };
+    flat[i] = { lat: msg.lat[i], lon: msg.lon[i], speed: msg.spd[i], course: msg.crs[i],
+                ts: tsArr[i], tsMs: msg.tms ? msg.tms[i] : Date.parse(tsArr[i]) };
   }
   const index = {};
   msg.dates.forEach((d, i) => {
@@ -6924,7 +6930,7 @@ function _detectAisStops(pts, speedThresh, minDurMin) {
     if (pts[i].speed <= speedThresh) {
       let j = i;
       while (j + 1 < pts.length && pts[j + 1].speed <= speedThresh) j++;
-      const durMin = (new Date(pts[j].ts) - new Date(pts[i].ts)) / 60000;
+      const durMin = (pts[j].tsMs - pts[i].tsMs) / 60000;
       if (durMin >= minDurMin) {
         let sLat = 0, sLon = 0;
         for (let k = i; k <= j; k++) { sLat += pts[k].lat; sLon += pts[k].lon; }
@@ -7098,7 +7104,7 @@ function _aisDayStats(pts) {
   for (let i = 1; i < pts.length; i++) {
     const d = _simDist([pts[i - 1].lat, pts[i - 1].lon], [pts[i].lat, pts[i].lon]);
     totalDist += d;
-    const dtH = Math.max((new Date(pts[i].ts) - new Date(pts[i - 1].ts)) / 3600000, 1 / 3600);
+    const dtH = Math.max((pts[i].tsMs - pts[i - 1].tsMs) / 3600000, 1 / 3600);
     const impliedKts = (d / 1.852) / dtH;
     if (impliedKts > maxJumpKts) maxJumpKts = impliedKts;
   }
@@ -7126,7 +7132,7 @@ function _aisBuildVoyages(key, data) {
   const all = [];
   data.dates.forEach(d => { const p = data.index[d]; if (p) for (let i = 0; i < p.length; i++) all.push(p[i]); });
   if (all.length < 4) return [];
-  const tsMs = all.map(p => new Date(p.ts).getTime());
+  const tsMs = all.map(p => p.tsMs);
 
   // 항구 인근 정박만 항차의 경계로 삼는다 (해상 표류·대기는 경계가 아니다)
   const gates = [];
@@ -7721,8 +7727,8 @@ function _aisDrawSpeedChart(pts, cursor) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, W, H);
 
-  const t0 = new Date(pts[0].ts).getTime();
-  const t1 = new Date(pts[pts.length - 1].ts).getTime();
+  const t0 = pts[0].tsMs;
+  const t1 = pts[pts.length - 1].tsMs;
   const totalMs = Math.max(1, t1 - t0);
   const maxSpd = Math.max(5, ...pts.map(p => p.speed)); // 최소 5kts 스케일 확보
 
@@ -7730,7 +7736,7 @@ function _aisDrawSpeedChart(pts, cursor) {
   const roomy = H >= 90;
   const padL = roomy ? 34 : 4, padR = 34, padT = roomy ? 12 : 6, padB = roomy ? 16 : 4;
   const plotW = W - padL - padR, plotH = H - padT - padB;
-  const xAt = ts => padL + ((new Date(ts).getTime() - t0) / totalMs) * plotW;
+  const xAt = ms => padL + ((ms - t0) / totalMs) * plotW; // 숫자 시각을 그대로 받는다
   const yAt = spd => padT + plotH - Math.min(1, spd / maxSpd) * plotH;
 
   ctx.font = '9px sans-serif';
@@ -7769,9 +7775,9 @@ function _aisDrawSpeedChart(pts, cursor) {
 
   // 속도 영역(그라데이션 채우기) + 라인
   ctx.beginPath();
-  ctx.moveTo(xAt(pts[0].ts), padT + plotH);
-  pts.forEach(p => ctx.lineTo(xAt(p.ts), yAt(p.speed)));
-  ctx.lineTo(xAt(pts[pts.length - 1].ts), padT + plotH);
+  ctx.moveTo(xAt(pts[0].tsMs), padT + plotH);
+  pts.forEach(p => ctx.lineTo(xAt(p.tsMs), yAt(p.speed)));
+  ctx.lineTo(xAt(pts[pts.length - 1].tsMs), padT + plotH);
   ctx.closePath();
   const grad = ctx.createLinearGradient(0, padT, 0, padT + plotH);
   grad.addColorStop(0, 'rgba(80,200,255,0.45)');
@@ -7783,8 +7789,8 @@ function _aisDrawSpeedChart(pts, cursor) {
   ctx.lineWidth = roomy ? 2 : 1.3;
   for (let i = 1; i < pts.length; i++) {
     ctx.beginPath();
-    ctx.moveTo(xAt(pts[i - 1].ts), yAt(pts[i - 1].speed));
-    ctx.lineTo(xAt(pts[i].ts), yAt(pts[i].speed));
+    ctx.moveTo(xAt(pts[i - 1].tsMs), yAt(pts[i - 1].speed));
+    ctx.lineTo(xAt(pts[i].tsMs), yAt(pts[i].speed));
     ctx.strokeStyle = _aisSpeedColor((pts[i - 1].speed + pts[i].speed) / 2);
     ctx.stroke();
   }
@@ -7795,7 +7801,7 @@ function _aisDrawSpeedChart(pts, cursor) {
     const band = _aisSpeedColor(p.speed);
     if (prevBand !== null && band !== prevBand) {
       ctx.beginPath();
-      ctx.arc(xAt(p.ts), yAt(p.speed), 2.5, 0, Math.PI * 2);
+      ctx.arc(xAt(p.tsMs), yAt(p.speed), 2.5, 0, Math.PI * 2);
       ctx.fillStyle = band;
       ctx.fill();
       ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.stroke();
@@ -7882,7 +7888,7 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
 
     const segRawKm = _simDist([a.lat, a.lon], [b.lat, b.lon]);
     const segKm = corr ? _routeLen(corr.path) : segRawKm; // 보정했으면 그 경로 길이
-    const segMin = (new Date(b.ts) - new Date(a.ts)) / 60000;
+    const segMin = (b.tsMs - a.tsMs) / 60000;
     const avgKts = _aisAvgKts(segKm, segMin);
     const nearPort = _nearestPortName(b.lat, b.lon, AIS_CALL_BUFFER_KM);
     const hit = L.polyline(latlngs, { color: '#000', weight: 14, opacity: 0, interactive: true });
@@ -9066,7 +9072,7 @@ function _playAisPoints(key, item, renderFn, getPts) {
     icon: _makeShipIcon(pts[0].course || 0, vColor, '#0a1832', `${_AIS_VESSELS[key].label}<br>${pts[0].speed.toFixed(1)} knot`),
     zIndexOffset: 1200
   }).addTo(map);
-  const tsMs = pts.map(p => new Date(p.ts).getTime());
+  const tsMs = pts.map(p => p.tsMs);
   const spanMs = Math.max(1, tsMs[tsMs.length - 1] - tsMs[0]);
   _aisPlay.marker = marker; _aisPlay.pts = pts; _aisPlay.simMs = 0;
   _aisPlay.tsMs = tsMs; _aisPlay.spanMs = spanMs;
@@ -9251,7 +9257,7 @@ function _aisHoverShipHide() {
     const tsMs = g.t0 + frac * g.totalMs;
     // 시각 배열은 항적이 바뀔 때만 다시 만든다 (매 프레임 map()을 돌 필요가 없다)
     if (tsCacheFor !== _aisLastChartPts) {
-      tsCache = _aisLastChartPts.map(p => new Date(p.ts).getTime());
+      tsCache = _aisLastChartPts.map(p => p.tsMs);
       tsCacheFor = _aisLastChartPts;
     }
     const vkey = document.getElementById('aisVesselSel').value;
