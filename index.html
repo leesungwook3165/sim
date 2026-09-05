@@ -6558,10 +6558,17 @@ async function _loadAisVessel(key) {
   try {
     const r = await fetch(v.file + '?_=' + Date.now());
     if (!r.ok) throw new Error('HTTP ' + r.status);
-    const pts = _parseAisCsv(await r.text());
+    const text = await r.text();
+    _aisSetStatus(v.label + ' 읽는 중…');
+    await _aisYield();
+    const pts = _parseAisCsv(text);
     if (!pts.length) throw new Error('데이터 없음');
+    await _aisYield();
     _aisCache[key] = _buildAisIndex(pts);
-    _aisAnalyzeVessel(key, _aisCache[key]);
+    await _aisYield();
+    await _aisAnalyzeVessel(key, _aisCache[key],
+      msg => _aisSetStatus(v.label + ' ' + msg + '…'));
+    await _aisYield();
     _aisComputeLand(key); // 어느 날에 육지 관통이 남았는지 미리 세어둔다
     _aisSetStatus('');
     return _aisCache[key];
@@ -6822,9 +6829,15 @@ function _aisSpeedBand(v, cruise) {
 // 요구하면 정상적인 출입항도 놓친다. 그래서 정박(0)·순항(3) 지점만 기준점으로 잡고,
 // 그 사이에 중간 속도 단계가 실제로 기록돼 있는지만 본다 — 기록이 성겨 정박에서
 // 순항으로 곧장 튀는(중간 단계가 통째로 빠진) 날은 걸러진다.
-function _aisCountRamps(pts, cruise) {
+// from~to 구간만 볼 수 있게 했다 — 항차마다 pts.slice()를 뜨면 8천 번 넘게
+// 배열을 복사하게 되고, 그게 로딩이 굳는 시간의 큰 부분이었다.
+function _aisCountRamps(pts, cruise, from, to) {
+  const i0 = from || 0, i1 = (to == null ? pts.length - 1 : to);
   const seq = [];
-  pts.forEach(p => { const b = _aisSpeedBand(p.speed, cruise); if (!seq.length || seq[seq.length - 1] !== b) seq.push(b); });
+  for (let i = i0; i <= i1; i++) {
+    const b = _aisSpeedBand(pts[i].speed, cruise);
+    if (!seq.length || seq[seq.length - 1] !== b) seq.push(b);
+  }
   const anchors = [];
   seq.forEach((b, i) => { if (b === 0 || b === 3) anchors.push({ b, i }); });
   let up = 0, down = 0;
@@ -6956,7 +6969,9 @@ function _aisGatePorts(data) {
   return list;
 }
 
-function _aisBuildVoyages(key, data) {
+const AIS_VOY_CHUNK = 1500; // 이만큼 항차를 만들 때마다 숨을 돌린다
+
+async function _aisBuildVoyages(key, data, onStep) {
   const terms = data.terminals || [];
   if (!terms.length) return [];
   // 날짜별로 나뉜 포인트를 시간순 한 줄로 잇는다 — 항차는 날짜를 넘나든다
@@ -6984,6 +6999,10 @@ function _aisBuildVoyages(key, data) {
 
   const voyages = [];
   for (let i = 1; i < gates.length; i++) {
+    if (i % AIS_VOY_CHUNK === 0) {
+      if (onStep) onStep('항차 ' + i + '/' + gates.length);
+      await _aisYield();
+    }
     const A = gates[i - 1], B = gates[i];
     const t0 = new Date(A.st.endTs).getTime(), t1 = new Date(B.st.startTs).getTime();
     const hours = (t1 - t0) / 3600000;
@@ -7002,8 +7021,8 @@ function _aisBuildVoyages(key, data) {
     const min = (t1 - t0) / 60000;
     // 이 항차 안에서 항구 출입 가감속이 온전히 기록됐는지, 그리고 실제 소요시간이
     // 이론값(거리÷순항속도) 대비 몇 배인지 — ★기준 항차를 가릴 때 쓴다
-    const ramps = _aisCountRamps(all.slice(i0, i1 + 1), data.cruiseKts || _aisCruiseSpeed(data));
     const cruise = data.cruiseKts || 0;
+    const ramps = _aisCountRamps(all, cruise, i0, i1);
     const idealMin = cruise > 0 ? (corrKm / (cruise * 1.852)) * 60 : null;
     voyages.push({
       ramps, timeRatio: (idealMin && min > 0) ? min / idealMin : null,
@@ -7093,14 +7112,29 @@ function _aisVoyageRoutes(voyages) {
 }
 
 // 기대 편도거리는 그 선박 데이터에서 자동 산출하므로(하드코딩 없음) 새 항로도 그대로 적용된다.
-function _aisAnalyzeVessel(key, data) {
+// 브라우저에 숨 돌릴 틈을 준다. 이걸 안 하면 30만 행짜리 배를 고를 때 1~4초 동안
+// 지도가 통째로 굳는다(줌·드래그가 아예 안 먹는다). async라도 안쪽이 전부 동기면
+// 아무 소용이 없어서, 실제로 제어권을 넘겨줘야 한다.
+function _aisYield() { return new Promise(r => setTimeout(r, 0)); }
+
+const AIS_ANALYZE_CHUNK = 400; // 이만큼 날짜를 처리할 때마다 한 번 숨을 돌린다
+
+async function _aisAnalyzeVessel(key, data, onStep) {
+  const step = (msg) => { if (onStep) onStep(msg); };
+  step('항구 찾는 중');
   const terminals = _aisFindTerminals(data);
   const cruise = _aisCruiseSpeed(data);
+  await _aisYield();
 
   // 1차: 하루치 통계 + 왕복 여부 → "편도 환산 거리"
   // (시작·끝이 같은 터미널이면 왕복으로 보고 총거리를 절반으로 환산해 편도 기준으로 비교)
   const pre = {};
-  data.dates.forEach(d => {
+  let _chunk = 0;
+  for (const d of data.dates) {
+    if (++_chunk % AIS_ANALYZE_CHUNK === 0) {
+      step('날짜 분석 ' + _chunk + '/' + data.dates.length);
+      await _aisYield();
+    }
     const pts = data.index[d];
     const stats = _aisDayStats(pts);
     const startT = _aisTerminalAt(terminals, pts[0].lat, pts[0].lon);
@@ -7122,7 +7156,8 @@ function _aisAnalyzeVessel(key, data) {
     pre[d] = { stats, startT, endT, isRound, ramps, shapeOk, isRef: false, calls, voy, timeRatio,
                onewayDist: (isRound && legs && legs.outKm > 0) ? legs.outKm
                          : (isRound ? stats.totalDist / 2 : stats.totalDist) };
-  });
+  }
+  await _aisYield();
 
   // 2차: ★기준일 = 형태 조건을 통과하면서, 실제 운항 타임라인이 그 선박의 통상 리듬과 같은 날.
   // 정박이 시간에 섞였거나 AIS 공백으로 늘어진 날은 배율이 커져 여기서 걸러진다.
@@ -7151,6 +7186,7 @@ function _aisAnalyzeVessel(key, data) {
                  : (moving.length ? moving[Math.floor(moving.length / 2)] : null);
 
   const dayQuality = {};
+  step('품질 판정 중');
   data.dates.forEach(d => {
     const { stats, startT, endT, isRound, onewayDist, ramps, isRef, calls, voy, timeRatio } = pre[d];
     const reasons = [];
@@ -7184,7 +7220,9 @@ function _aisAnalyzeVessel(key, data) {
   data.expectedDist = expected;
   data.timeRatioBase = baseRatio; // 그 선박의 깨끗한 항해시간 배율(이론 대비)
   // 날짜와 무관한 "항차" 집계 — 하루에 안 맞는 배(미라클·부관훼리·비틀)도 제대로 나온다
-  data.voyages = _aisBuildVoyages(key, data);
+  await _aisYield();
+  step('항차 집계 중');
+  data.voyages = await _aisBuildVoyages(key, data, onStep);
   data.voyRoutes = _aisVoyageRoutes(data.voyages);
   // 주항로는 출발항과 도착항이 다른 것을 우선한다 — 반대편 기항이 안 잡혀
   // "A → A"로 묶인 왕복이 1위가 되면 편도거리가 왕복거리로 나온다(엘도라도 423km).
