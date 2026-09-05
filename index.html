@@ -7000,7 +7000,13 @@ function _aisBuildVoyages(key, data) {
     }
     if (rawKm < AIS_VOY_MIN_KM) continue;
     const min = (t1 - t0) / 60000;
+    // 이 항차 안에서 항구 출입 가감속이 온전히 기록됐는지, 그리고 실제 소요시간이
+    // 이론값(거리÷순항속도) 대비 몇 배인지 — ★기준 항차를 가릴 때 쓴다
+    const ramps = _aisCountRamps(all.slice(i0, i1 + 1), data.cruiseKts || _aisCruiseSpeed(data));
+    const cruise = data.cruiseKts || 0;
+    const idealMin = cruise > 0 ? (corrKm / (cruise * 1.852)) * 60 : null;
     voyages.push({
+      ramps, timeRatio: (idealMin && min > 0) ? min / idealMin : null,
       from: _aisTerminalLabel(A.t), to: _aisTerminalLabel(B.t),
       departTs: A.st.endTs, arriveTs: B.st.startTs,
       dateFrom: A.st.endTs.slice(0, 10), dateTo: B.st.startTs.slice(0, 10),
@@ -7011,6 +7017,35 @@ function _aisBuildVoyages(key, data) {
   }
   data.voyPts = all;
   return voyages;
+}
+
+// ── ★기준 항차 ──
+// 날짜 기준 ★기준일은 "하루 = 한 항차"를 전제해서, 편도 야간선(성희·하마유)이나
+// 이틀에 걸치는 배(미라클)에서는 거의 잡히지 않았다. 항차 단위로 같은 판정을 한다.
+//   ① 주항로(가장 잦은 구간, 반대 방향 포함)일 것
+//   ② 양쪽 항구 출입 가감속이 기록돼 있을 것
+//   ③ 실제 소요시간이 그 선박의 "깨끗한 배율"에서 크게 안 벗어날 것
+// 오염(정박 섞임·AIS 공백)은 시간을 늘리기만 하므로 기준 배율은 하위 10% 분위수를 쓴다.
+function _aisMarkRefVoyages(data) {
+  const voys = data.voyages || [];
+  const main = data.voyMain;
+  if (!voys.length || !main) { data.refVoyages = []; return; }
+  const onMain = v => (v.from === main.from && v.to === main.to)
+                   || (v.from === main.to && v.to === main.from);
+  const cand = voys.filter(v => onMain(v) && v.timeRatio != null
+    && v.ramps && v.ramps.up >= 1 && v.ramps.down >= 1);
+  const ratios = cand.map(v => v.timeRatio).sort((a, b) => a - b);
+  const base = ratios.length ? ratios[Math.floor(ratios.length * AIS_TIME_BASE_Q)] : null;
+  voys.forEach(v => { v.isRef = false; });
+  if (base != null) {
+    cand.forEach(v => {
+      v.isRef = v.timeRatio >= base * AIS_TIME_DEV_LO && v.timeRatio <= base * AIS_TIME_DEV_HI;
+    });
+  }
+  data.voyRatioBase = base;
+  data.refVoyages = voys.filter(v => v.isRef);
+  const km = data.refVoyages.map(v => v.corrKm).sort((a, b) => a - b);
+  data.voyOneWayKm = km.length ? km[Math.floor(km.length / 2)] : main.km;
 }
 
 // 항차 요약을 타임바 머리에 적는다 — 주항로의 편도거리·소요시간·평균속력.
@@ -7029,8 +7064,10 @@ function _aisRenderVoySummary(key) {
   const km = back ? (main.km + back.km) / 2 : main.km;
   const min = back ? (main.min + back.min) / 2 : main.min;
   const spans = data.voyages.filter(v => v.dateFrom !== v.dateTo).length;
+  const nRef = (data.refVoyages || []).length;
   el.innerHTML = '⚓ 항차 ' + data.voyages.length + '회 · ' + label + ' 편도 ' +
     km.toFixed(0) + 'km / ' + dur(min) + ' / ' + _aisAvgKts(km, min).toFixed(1) + 'kt ×' + n +
+    (nRef ? ' · ★기준 항차 ' + nRef + '회' : '') +
     (spans ? '<span class="voy-alt"> · 날짜 넘김 ' + spans + '회</span>' : '');
   el.setAttribute('data-on', '1');
 }
@@ -7149,7 +7186,19 @@ function _aisAnalyzeVessel(key, data) {
   // 날짜와 무관한 "항차" 집계 — 하루에 안 맞는 배(미라클·부관훼리·비틀)도 제대로 나온다
   data.voyages = _aisBuildVoyages(key, data);
   data.voyRoutes = _aisVoyageRoutes(data.voyages);
-  data.voyMain = data.voyRoutes[0] || null;
+  // 주항로는 출발항과 도착항이 다른 것을 우선한다 — 반대편 기항이 안 잡혀
+  // "A → A"로 묶인 왕복이 1위가 되면 편도거리가 왕복거리로 나온다(엘도라도 423km).
+  data.voyMain = data.voyRoutes.find(r => r.from && r.to && r.from !== r.to) || data.voyRoutes[0] || null;
+  _aisMarkRefVoyages(data);
+  // ★기준 항차가 출항한 날에도 ★를 붙인다 — 날짜 기준으로는 안 잡히던 배들
+  // (미라클 0일, 성희·하마유 2일)이 이걸로 제대로 표시된다.
+  const refVoyDays = new Set();
+  (data.refVoyages || []).forEach(v => refVoyDays.add(v.dateFrom));
+  data.dates.forEach(d => {
+    dayQuality[d].isRefVoy = refVoyDays.has(d);
+    dayQuality[d].isRef = dayQuality[d].isRef || dayQuality[d].isRefVoy;
+  });
+  data.refDays = data.dates.filter(d => dayQuality[d].isRef);
   data.refDays = data.dates.filter(d => dayQuality[d].isRef);
   // 기준일들에서 뽑은 편도·왕복 기준값 (거리 판정과 화면 표시에 함께 쓴다)
   const refRound = data.refDays.map(d => dayQuality[d].totalDist).sort((a, b) => a - b);
