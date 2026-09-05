@@ -981,10 +981,9 @@
     .ais-tb-subunit.ais-tb-leg.sel { background: rgba(255,190,60,0.25); color: #ffdd99; }
     .ais-tb-subsep { flex-shrink: 0; width: 1px; height: 60%; background: rgba(80,160,255,0.25); margin: 0 6px; }
     /* 속도 변화 그래프 (재생 위치 동기화) */
-    /* 속도 그래프는 타임바에서 남는 높이를 전부 차지한다 — 타임바를 위로 끌어올리면
-       늘어난 공간이 모두 그래프로 간다(다른 행은 flex-shrink:0으로 고정). */
+    /* 속도 그래프 — 기존 54px에서 조금 키운 고정 높이 (눈금축이 들어갈 정도) */
     .ais-tb-chart-row {
-      flex: 1 1 auto; min-height: 110px; position: relative;
+      height: 96px; flex-shrink: 0; position: relative;
       background: rgba(0,0,0,0.12);
       border-bottom: 1px solid rgba(80,160,255,0.12);
     }
@@ -7350,8 +7349,7 @@ function _aisSetStatus(msg) {
   });
   document.addEventListener('mousemove', e => {
     if (!dragging) return;
-    const maxH = Math.max(300, Math.round(window.innerHeight * 0.8)); // 바닥부터 화면 80%까지
-    const newH = Math.max(76, Math.min(maxH, startH - (e.clientY - startY)));
+    const newH = Math.max(76, Math.min(300, startH - (e.clientY - startY)));
     bar.style.height = newH + 'px';
     if (_aisLastChartPts) _aisDrawSpeedChart(_aisLastChartPts, _aisLastChartIdx);
   });
