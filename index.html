@@ -1093,8 +1093,8 @@
     }
     .ais-vsel > button:hover { border-color: rgba(120,200,255,0.6); color: #fff; }
     .ais-vsel-menu {
-      display: none; position: absolute; bottom: calc(100% + 6px); left: 0;
-      z-index: 1200; min-width: 232px; padding: 5px;
+      display: none; position: fixed;
+      z-index: 1200; min-width: 232px; max-height: 60vh; overflow-y: auto; padding: 5px;
       background: rgba(8,20,45,0.97); backdrop-filter: blur(8px);
       border: 1px solid rgba(80,160,255,0.4); border-radius: 8px;
       box-shadow: 0 -6px 22px rgba(0,0,0,0.5);
@@ -1568,6 +1568,10 @@
 <!-- 보정 편집 조작 안내 — 편집 모드에서만 보인다 -->
 <div id="aisCorrHelp"></div>
 
+<!-- 선박 다중 선택 메뉴 — 타임바 조작행이 overflow:hidden이라 그 안에 두면 잘린다.
+     body에 두고 버튼의 화면 좌표에 맞춰 띄운다. -->
+<div id="aisVesselMenu" class="ais-vsel-menu"></div>
+
 <div id="aisTimebar">
   <button id="aisMinBtn" onclick="toggleAisTimebar()" title="AIS 타임바 최소화 / 복원" style="position:absolute;top:5px;right:10px;z-index:3;background:transparent;border:none;color:#aac8e8;font-size:14px;line-height:1;padding:2px 6px;cursor:pointer;border-radius:4px;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#aac8e8'">─</button>
   <div class="ais-tb-resizer" id="aisTbResizer" title="드래그하여 높이 조절"></div>
@@ -1587,7 +1591,6 @@
       <!-- 여러 척을 골라 같은 날짜로 겹쳐 보는 메뉴 -->
       <div class="ais-vsel">
         <button id="aisVesselBtn" onclick="_aisVesselMenuToggle(event)" title="선박 선택 (여러 척을 고르면 같은 날짜로 겹쳐 그립니다)">선박 선택 ▾</button>
-        <div id="aisVesselMenu" class="ais-vsel-menu"></div>
       </div>
       <button id="aisPinBtn" class="ais-pin-btn" onclick="_aisPinAdd()" title="지금 보고 있는 선박·기간을 그대로 고정해 겹칩니다 (다른 날짜로 옮겨도 남아 있습니다)">📌 겹치기</button>
       <span id="aisPinRow" class="ais-pin-row"></span>
@@ -6529,6 +6532,7 @@ const _AIS_VESSELS = {
   sel.innerHTML = Object.entries(_AIS_VESSELS).map(([k, v]) =>
     '<option value="' + k + '">' + v.label + (v.sub ? ' (' + v.sub + ')' : '') + '</option>'
   ).join('');
+  _aisVesselLabelUpdate(); // 버튼에 기본 선박 이름을 바로 띄운다
 })();
 
 const _aisCache = {};
@@ -7051,11 +7055,23 @@ function _aisVesselMenuToggle(ev) {
   if (!m) return;
   const willOpen = !m.classList.contains('on');
   m.classList.toggle('on', willOpen);
-  if (willOpen) _aisVesselMenuBuild();
+  if (willOpen) {
+    _aisVesselMenuBuild();
+    // 버튼 바로 위에 띄운다 (타임바가 화면 아래에 붙어 있으므로 위로 연다)
+    const btn = document.getElementById('aisVesselBtn');
+    if (btn) {
+      const r = btn.getBoundingClientRect();
+      m.style.left = Math.max(6, Math.min(r.left, window.innerWidth - 244)) + 'px';
+      m.style.bottom = (window.innerHeight - r.top + 6) + 'px';
+    }
+  }
 }
 document.addEventListener('click', e => {
   const m = document.getElementById('aisVesselMenu');
-  if (m && m.classList.contains('on') && !m.contains(e.target)) m.classList.remove('on');
+  const btn = document.getElementById('aisVesselBtn');
+  if (!m || !m.classList.contains('on')) return;
+  if (m.contains(e.target) || (btn && btn.contains(e.target))) return;
+  m.classList.remove('on');
 });
 
 function _aisVesselMenuBuild() {
@@ -9184,6 +9200,8 @@ function _aisHoverShipHide() {
           onAisStop();
           // 겹쳐둔 항적도 함께 걷는다 (지도에 남아 시뮬레이션 화면을 가리지 않도록)
           if (_aisOverlayGroup) { map.removeLayer(_aisOverlayGroup); _aisOverlayGroup = null; }
+          const vm = document.getElementById('aisVesselMenu');
+          if (vm) vm.classList.remove('on'); // 메뉴는 body에 있어 따로 남을 수 있다
           // AIS를 닫으면 가려뒀던 구상·참고 항로선과 시뮬레이션 시점을 원래대로 되돌린다
           if (_aisPrevScope != null) {
             setSimPlayScope(_aisPrevScope);
