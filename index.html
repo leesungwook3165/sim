@@ -28,75 +28,6 @@
       gap: 16px;
       justify-content: space-between;
     }
-    .hdr-btn {
-      background: rgba(255,255,255,0.08); color: #dbe9f7;
-      border: 1px solid rgba(160,190,220,0.3); border-radius: 6px;
-      padding: 4px 9px; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap;
-    }
-    .hdr-btn:hover { background: rgba(255,255,255,0.18); color: #fff; }
-    .hdr-btn.on { background: rgba(80,160,255,0.3); border-color: rgba(120,200,255,0.7); color: #fff; }
-    #viewMenu {
-      display: none; position: fixed; z-index: 1300;
-      min-width: 214px; padding: 6px;
-      background: rgba(8,20,45,0.97); backdrop-filter: blur(8px);
-      border: 1px solid rgba(80,160,255,0.4); border-radius: 9px;
-      box-shadow: 0 8px 26px rgba(0,0,0,0.5); color: #dbe9f7; font-size: 11.5px;
-    }
-    #viewMenu.on { display: block; }
-    #viewMenu label {
-      display: flex; align-items: center; gap: 8px;
-      padding: 5px 7px; border-radius: 6px; cursor: pointer;
-    }
-    #viewMenu label:hover { background: rgba(126,207,255,0.14); }
-    #viewMenu input { accent-color: #4aa3ff; margin: 0; cursor: pointer; }
-    #viewMenu .vm-hint {
-      border-top: 1px solid rgba(80,160,255,0.22); margin-top: 5px; padding: 6px 7px 2px;
-      font-size: 9.5px; color: #8fa8bf; line-height: 1.5;
-    }
-    /* ── 시작 안내 ── */
-    #guideBack {
-      display: none; position: fixed; inset: 0; z-index: 2000;
-      background: rgba(4,10,22,0.72); backdrop-filter: blur(3px);
-      align-items: center; justify-content: center; padding: 20px;
-    }
-    #guideBack.on { display: flex; }
-    #guideCard {
-      max-width: 520px; width: 100%; max-height: 86vh; overflow-y: auto;
-      background: linear-gradient(180deg, rgba(14,30,60,0.98), rgba(8,18,40,0.99));
-      border: 1px solid rgba(100,180,255,0.45); border-radius: 14px;
-      box-shadow: 0 18px 50px rgba(0,0,0,0.6);
-      padding: 22px 24px 18px; color: #e8f4ff;
-    }
-    #guideCard h2 { margin: 0 0 6px; font-size: 18px; color: #9fd8ff; }
-    .guide-lead { margin: 0 0 14px; font-size: 12px; line-height: 1.6; color: #c3d9ee; }
-    .guide-steps { margin: 0; padding: 0; list-style: none; counter-reset: g; }
-    .guide-steps li {
-      counter-increment: g; position: relative;
-      padding: 9px 0 9px 34px; border-top: 1px solid rgba(80,160,255,0.18);
-    }
-    .guide-steps li::before {
-      content: counter(g); position: absolute; left: 0; top: 10px;
-      width: 21px; height: 21px; border-radius: 50%;
-      background: rgba(80,160,255,0.28); border: 1px solid rgba(120,200,255,0.6);
-      color: #cfe9ff; font-size: 11px; font-weight: 700;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .guide-steps li b { display: block; font-size: 12.5px; color: #fff; margin-bottom: 3px; }
-    .guide-steps li span { font-size: 11.5px; line-height: 1.65; color: #b9d2e8; }
-    .guide-tip {
-      margin: 14px 0 0; padding: 9px 11px; border-radius: 8px;
-      background: rgba(80,160,255,0.12); border: 1px solid rgba(80,160,255,0.28);
-      font-size: 11px; line-height: 1.6; color: #c3d9ee;
-    }
-    .guide-btns { display: flex; justify-content: flex-end; margin-top: 14px; }
-    .guide-btns button {
-      background: rgba(80,160,255,0.35); color: #fff;
-      border: 1px solid rgba(120,200,255,0.7); border-radius: 8px;
-      padding: 7px 20px; font-size: 12px; font-weight: 700; cursor: pointer;
-    }
-    .guide-btns button:hover { background: rgba(80,160,255,0.55); }
-    #simTimelapseBar.hidden { display: none; }
-
     .header-tabs {
       display: flex;
       align-items: center;
@@ -1299,8 +1230,6 @@
       <div class="subtitle">시월드고속훼리 산타모니카호 · 부산 ↔ 히타카츠(쓰시마) ↔ 하카타 경유 구상</div>
     </div>
     <div class="header-tabs">
-      <button class="hdr-btn" id="viewMenuBtn" onclick="_viewMenuToggle(event)" title="화면에 띄울 패널을 고릅니다">☰ 보기 ▾</button>
-      <button class="hdr-btn" onclick="_guideOpen()" title="이 도구를 쓰는 법">?</button>
       <a class="header-tab" href="대마도 항로 손익분기 시뮬레이터.html" target="_blank">대마도 손익분석</a>
       <div class="header-tab-wrap">
         <span class="header-tab disabled">하카타 손익분석</span>
@@ -1310,32 +1239,6 @@
   </div>
 </div>
 <input type="file" id="fileInput" accept=".geojson,.json,.kml" style="display:none" onchange="loadFile(event)">
-
-<!-- 화면에 띄울 패널 고르기 — 한 번에 다 떠 있으면 처음 쓰는 사람이 어디를 볼지 모른다 -->
-<div id="viewMenu"></div>
-
-<!-- 처음 열었을 때 한 번 뜨는 안내 (헤더의 ? 로 다시 볼 수 있다) -->
-<div id="guideBack" onclick="if(event.target===this)_guideClose()">
-  <div id="guideCard">
-    <h2>한일고속선 진입 시나리오</h2>
-    <p class="guide-lead">부산 ↔ 히타카츠(쓰시마) ↔ 하카타 항로를 검토하는 도구입니다.
-      크게 세 가지를 할 수 있습니다.</p>
-    <ol class="guide-steps">
-      <li><b>🎛 시뮬레이션</b>
-        <span>오른쪽 패널에서 선박·속도·운항 조건을 바꾸면 지도의 배가 그대로 움직입니다.
-        아래 <b>타임랩스</b>에서 하루 운항을 시간축으로 훑어볼 수 있습니다.</span></li>
-      <li><b>📡 실적 항로 (AIS)</b>
-        <span>지도 왼쪽 <b>📡</b> 버튼. 실제 배들이 지난 길을 연·월·일로 좁혀 가며 봅니다.
-        9척 · 2012~2026년 자료입니다.</span></li>
-      <li><b>✏ 항로 보정</b>
-        <span>AIS 신호가 끊겨 육지를 가로지르는 구간을 직접 끌어 고칩니다.
-        원본은 그대로 두고 보정분만 따로 저장합니다.</span></li>
-    </ol>
-    <p class="guide-tip">화면이 복잡하면 헤더의 <b>☰ 보기</b>에서 패널을 껐다 켤 수 있습니다.
-      이 안내는 헤더의 <b>?</b> 로 다시 열립니다.</p>
-    <div class="guide-btns"><button onclick="_guideClose()">시작하기</button></div>
-  </div>
-</div>
 
 <div id="measureInfo"></div>
 
@@ -9720,95 +9623,6 @@ function _aisHoverShipHide() {
     }
   });
   new AisCtrl().addTo(map);
-})();
-
-// ══════════════════════════════════════════════════════════════
-//  화면 정리 — 패널 켜고 끄기 + 처음 쓰는 사람 안내
-// ══════════════════════════════════════════════════════════════
-// 패널이 한꺼번에 떠 있으면 어디를 봐야 할지 알기 어렵다. 한 곳에서 껐다 켤 수 있게 하고,
-// 처음 열었을 때는 무엇부터 하면 되는지 짧게 알려준다.
-const _VIEW_PANELS = [
-  { id: 'simPanel',        label: '🎛 시뮬레이션 설정' },
-  { id: 'opsPanel',        label: '🚢 선박·선석 스케줄' },
-  { id: 'legendPanel',     label: '🗺 범례' },
-  { id: 'savePanel',       label: '💾 저장 / 불러오기' },
-  { id: 'simTimelapseBar', label: '⏱ 타임랩스 (아래)', inverted: true },
-  { id: 'aisTimebar',      label: '📡 실적 항로 AIS (아래)', ais: true }
-];
-
-function _viewPanelOn(p) {
-  const el = document.getElementById(p.id);
-  if (!el) return false;
-  return p.inverted ? !el.classList.contains('hidden') : el.classList.contains('visible');
-}
-
-function _viewPanelSet(id, on) {
-  const p = _VIEW_PANELS.find(x => x.id === id);
-  const el = document.getElementById(id);
-  if (!p || !el) return;
-  if (p.ais) { toggleAisPanel(on); }
-  else if (p.inverted) { el.classList.toggle('hidden', !on); _syncBottomBars(); }
-  else { el.classList.toggle('visible', on); }
-  _viewMenuBuild();
-}
-
-function _viewMenuBuild() {
-  const m = document.getElementById('viewMenu');
-  if (!m) return;
-  m.innerHTML = _VIEW_PANELS.map(p =>
-    '<label><input type="checkbox" ' + (_viewPanelOn(p) ? 'checked' : '') +
-    ' onchange="_viewPanelSet(\'' + p.id + '\', this.checked)"><span>' + p.label + '</span></label>'
-  ).join('') +
-  '<div class="vm-hint">필요한 것만 띄워 두면 지도가 넓어집니다. 끈 패널은 여기서 다시 켭니다.</div>';
-}
-
-function _viewMenuToggle(ev) {
-  if (ev) ev.stopPropagation();
-  const m = document.getElementById('viewMenu');
-  const btn = document.getElementById('viewMenuBtn');
-  if (!m || !btn) return;
-  const open = !m.classList.contains('on');
-  m.classList.toggle('on', open);
-  btn.classList.toggle('on', open);
-  if (open) {
-    _viewMenuBuild();
-    const r = btn.getBoundingClientRect();
-    m.style.top = (r.bottom + 6) + 'px';
-    m.style.left = Math.max(6, Math.min(r.left, window.innerWidth - 224)) + 'px';
-  }
-}
-
-document.addEventListener('click', e => {
-  const m = document.getElementById('viewMenu');
-  const btn = document.getElementById('viewMenuBtn');
-  if (!m || !m.classList.contains('on')) return;
-  if (m.contains(e.target) || (btn && btn.contains(e.target))) return;
-  m.classList.remove('on');
-  if (btn) btn.classList.remove('on');
-});
-
-// ── 시작 안내 ──
-const GUIDE_SEEN_KEY = 'hanjil_guide_seen';
-function _guideOpen() {
-  const b = document.getElementById('guideBack');
-  if (b) b.classList.add('on');
-}
-function _guideClose() {
-  const b = document.getElementById('guideBack');
-  if (b) b.classList.remove('on');
-  try { localStorage.setItem(GUIDE_SEEN_KEY, '1'); } catch (e) {}
-}
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    const b = document.getElementById('guideBack');
-    if (b && b.classList.contains('on')) _guideClose();
-  }
-});
-// 처음 열었을 때만 자동으로 띄운다
-(function() {
-  let seen = false;
-  try { seen = !!localStorage.getItem(GUIDE_SEEN_KEY); } catch (e) { seen = true; }
-  if (!seen) setTimeout(_guideOpen, 400);
 })();
 
 </script>
