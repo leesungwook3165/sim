@@ -1,6 +1,9 @@
 # AIS 원본 다운로드 묶음 — 여기서 뽑아낸 *_track-data-*.csv 만 저장소에 둔다
 route/
 
+# Claude Code 로컬 설정 — 이 PC 경로가 박혀 있어 공유할 성격이 아니다
+.claude/
+
 # OS·에디터 부산물
 Thumbs.db
 desktop.ini
