@@ -222,7 +222,7 @@
     }
     #simTimelapseEl .vis-custom-time.now .vis-custom-time-marker { display: none; }
     .sim-now-tag {
-      position: fixed; transform: translateX(-50%); z-index: 1007; pointer-events: none;
+      position: fixed; transform: translateX(-50%); z-index: 1012; pointer-events: none;
       background: #22dd66; color: #06301a; font-size: 10px; font-weight: 800;
       padding: 2px 9px; border-radius: 999px; white-space: nowrap;
       box-shadow: 0 2px 6px rgba(0,0,0,0.5), 0 0 6px rgba(51,255,119,0.6);
@@ -231,6 +231,9 @@
       content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
       border: 4px solid transparent; border-top-color: #22dd66;
     }
+    /* 현재 시각이 타임랩스 표시 범위를 벗어났을 때 — 가장자리에 붙이고 색으로 구분 */
+    .sim-now-tag.out { background: #f0a500; color: #2b1a00; }
+    .sim-now-tag.out::after { border-top-color: #f0a500; }
 
     /* 지도 내 커스텀 컨트롤 공통 */
     .map-ctrl-btn {
@@ -3203,23 +3206,49 @@ function _nowSimMin() {
 // 그래서 배지를 body에 직접(position:fixed) 붙이고, 세로선의 실제 화면 좌표를 계산해
 // 매번 그 위치로 옮겨준다 — 잘릴 걱정 없이 항상 보인다.
 function _updateNowTag() {
-  const bar = document.querySelector('#simTimelapseEl .vis-custom-time.now');
-  if (!bar) { const old = document.getElementById('simNowTag'); if (old) old.remove(); return; }
-  // vis-timeline이 자동으로 붙이는 영문 title 툴팁("Time: Saturday, January 1st...")을 없앤다 —
-  // 이제 배지가 항상 보이니 굳이 마우스오버 툴팁이 따로 필요 없다.
-  if (bar.hasAttribute('title')) bar.removeAttribute('title');
-  let tag = document.getElementById('simNowTag');
+  const old = document.getElementById('simNowTag');
+  const wrap = document.getElementById('simTimelapseBar');
+  const cont = document.getElementById('simTimelapseEl');
+  // 타임랩스를 접었거나 숨겼으면 배지도 같이 감춘다 (접힌 바 위에 혼자 떠 있지 않도록)
+  if (!wrap || !cont || wrap.classList.contains('tl-minimized') || getComputedStyle(wrap).display === 'none') {
+    if (old) old.remove();
+    return;
+  }
+  const now = new Date();
+  const hm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  let tag = old;
   if (!tag) {
     tag = document.createElement('div');
     tag.id = 'simNowTag';
     tag.className = 'sim-now-tag';
     document.body.appendChild(tag);
   }
-  const r = bar.getBoundingClientRect();
-  tag.style.left = (r.left + r.width / 2) + 'px';
-  tag.style.top  = (r.top - 22) + 'px';
-  const now = new Date();
-  tag.textContent = `🕐 지금 ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} (한국시간)`;
+  const cr = cont.getBoundingClientRect();
+  const bar = document.querySelector('#simTimelapseEl .vis-custom-time.now');
+  if (bar) {
+    // vis-timeline이 자동으로 붙이는 영문 title 툴팁을 없앤다 (배지가 늘 보이므로 불필요)
+    if (bar.hasAttribute('title')) bar.removeAttribute('title');
+    const r = bar.getBoundingClientRect();
+    // 세로선이 타임랩스 안에 실제로 보이는 경우에만 그 위에 배지를 붙인다
+    if (r.width > 0 && r.left >= cr.left - 1 && r.left <= cr.right + 1) {
+      tag.classList.remove('out');
+      tag.style.left = (r.left + r.width / 2) + 'px';
+      tag.style.top  = (r.top - 22) + 'px';
+      tag.textContent = `🕐 지금 ${hm} (한국시간)`;
+      return;
+    }
+  }
+  // 현재 시각이 타임랩스가 보여주는 시간 범위를 벗어난 경우 —
+  // 예전에는 세로선도 배지도 그냥 사라져 버려서 왜 안 보이는지 알 수 없었다.
+  // 이제는 가장자리에 노란 배지로 붙여 "지금은 이 범위 밖"임을 알려준다.
+  const nowRel = _nowSimMin();
+  const toRight = nowRel > _totalMin / 2;
+  tag.classList.add('out');
+  tag.style.left = (toRight ? cr.right - 10 : cr.left + 10) + 'px';
+  tag.style.top  = (cr.top - 22) + 'px';
+  tag.textContent = toRight
+    ? `🕐 지금 ${hm} — 표시 범위 이후 →`
+    : `← 🕐 지금 ${hm} — 표시 범위 이전`;
 }
 
 // 타임랩스는 SIM_EPOCH(2000-01-01)를 임의 기준일로 쓰기 때문에, vis-timeline이 자체적으로
@@ -6034,6 +6063,8 @@ function toggleTimelapse() {
     bar.style.height = '28px';
     if (btn) { btn.textContent = '□'; btn.title = '타임랩스 복원'; }
   }
+  _updateNowTag();
+  if (typeof _syncBottomBars === 'function') _syncBottomBars();
 }
 
 (function() {
@@ -7440,6 +7471,8 @@ function _syncBottomBars() {
   const aisShown = ais.classList.contains('visible');
   const total = tlH + (aisShown ? ais.offsetHeight : 0);
   document.documentElement.style.setProperty('--bottom-bars', total + 'px');
+  // 바가 접히거나 높이가 바뀌면 "지금" 배지도 따라 움직여야 한다
+  if (typeof _updateNowTag === 'function') _updateNowTag();
 }
 (function() {
   const tl = document.getElementById('simTimelapseBar');
