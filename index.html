@@ -1456,14 +1456,15 @@
         <input type="checkbox" id="aisRefOnly" onchange="onAisRefOnlyChange()"> ★기준일만
       </span>
     </label>
-    <label class="ais-tb-normal" id="aisRawWrap" title="보정·보간으로 모양이 바뀐 구간의 원본 직선을 회색 점선으로 함께 표시합니다 (보정 편집 중에는 항상 켜집니다).">
+    <!-- 항로 보간(부모) — 켜야 아래 두 항목이 나타난다. 기본은 꺼짐(원본 그대로 표시) -->
+    <label class="ais-tb-normal" id="aisSnapWrap" title="AIS 핑이 벌어져 직선이 육지를 관통하는 구간을, 미리 그려둔 항로(직접 그린 선 포함)를 따라 우회시켜 그립니다. 켜면 원본 대조·보정 편집이 함께 나타납니다.">
+      <input type="checkbox" id="aisSnapOn" onchange="onAisSnapChange()"> 🧭 항로 보간
+    </label>
+    <label class="ais-tb-normal ais-tb-sub" id="aisRawWrap" style="display:none" title="보정·보간으로 모양이 바뀐 구간의 원본 직선을 회색 점선으로 함께 표시합니다 (보정 편집 중에는 항상 켜집니다).">
       <input type="checkbox" id="aisShowRaw" onchange="onAisShowRawChange()"> 🆚 원본 대조
     </label>
-    <label class="ais-tb-normal" id="aisCorrWrap" title="원본 AIS는 그대로 두고, 내가 그린 항로로 특정 구간만 보정해 따로 저장합니다. 보정 기록에는 원본 일자·시각이 함께 남습니다.">
+    <label class="ais-tb-normal ais-tb-sub" id="aisCorrWrap" style="display:none" title="원본 AIS는 그대로 두고, 내가 그린 항로로 특정 구간만 보정해 따로 저장합니다. 보정 기록에는 원본 일자·시각이 함께 남습니다.">
       <input type="checkbox" id="aisCorrEdit" onchange="onAisCorrEditChange()"> ✏ 보정 편집
-    </label>
-    <label class="ais-tb-normal" id="aisSnapWrap" title="AIS 핑이 벌어져 직선이 육지를 관통하는 구간을, 미리 그려둔 항로(직접 그린 선 포함)를 따라 우회시켜 그린다. 보간 구간은 점선으로 표시된다.">
-      <input type="checkbox" id="aisSnapOn" checked onchange="onAisSnapChange()"> 🧭 항로 보간
     </label>
     <label class="ais-tb-normal" id="aisCallFilterWrap" title="그 항구에 실제로 배를 댄(정박한) 날만 — 옆을 지나간 날은 제외">
       ⚓ 기항지
@@ -6742,7 +6743,7 @@ _aisCorrLoad();
 const AIS_SNAP_MIN_SEG_KM = 8;   // 이보다 긴 구간만 보간 대상 (짧은 구간은 직선이어도 무해)
 const AIS_SNAP_MAX_OFF_KM = 10;  // 양 끝점이 기준 항로에서 이보다 멀면 다른 항로로 간주해 포기
 const AIS_SNAP_MAX_DETOUR = 1.6; // 보간 경로가 직선의 이 배를 넘으면 과한 우회로 보고 포기
-let _aisSnapOn = true;           // 항로 보간 사용 여부
+let _aisSnapOn = false;          // 항로 보간 사용 여부 (기본 꺼짐 — 원본 그대로 표시)
 
 // 보간 기준이 되는 항로 목록. 사용자가 지도에 직접 그린 선(leaflet.draw)도 함께 후보로 쓴다.
 function _aisRefRoutes() {
@@ -7764,6 +7765,18 @@ function onAisShowRawChange() {
 // '🧭 항로 보간' 체크박스
 function onAisSnapChange() {
   _aisSnapOn = document.getElementById('aisSnapOn').checked;
+  // 하위 항목(원본 대조·보정 편집)은 보간을 켰을 때만 보이게 한다.
+  // 끄면 하위 상태도 함께 정리한다 — 숨겨진 채 편집 모드가 켜져 있으면 혼란스럽다.
+  ['aisRawWrap', 'aisCorrWrap'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = _aisSnapOn ? 'flex' : 'none';
+  });
+  if (!_aisSnapOn) {
+    const raw = document.getElementById('aisShowRaw'), edit = document.getElementById('aisCorrEdit');
+    if (raw) raw.checked = false;
+    if (edit) edit.checked = false;
+    _aisShowRaw = false; _aisCorrEdit = false; _aisCorrSel = null;
+  }
   _aisTlApply();
 }
 
