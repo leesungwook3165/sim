@@ -6677,6 +6677,128 @@ function _buildAisIndex(pts) {
   return { index, dates, minDate: dates[0], maxDate: dates[dates.length - 1] };
 }
 
+// ══════════════════════════════════════════════════════════════
+//  AIS 로드를 워커로 — 파싱·분석이 화면을 붙잡지 않도록
+// ══════════════════════════════════════════════════════════════
+// 카멜리아(29만 행) 기준 메인 스레드에서 파싱 270ms + 분석 755ms가 걸려 그동안 화면이
+// 통째로 멎었다. 이 일을 워커로 넘기고 결과만 받아오면 메인이 하는 일은 45ms로 준다.
+//
+// 코드를 별도 파일로 쪼개지 않고, 이미 있는 함수의 소스를 toString()으로 떠서 워커
+// 소스를 만든다. 같은 코드가 두 벌 존재하지 않으므로 한쪽만 고쳐지는 일이 없다.
+//
+// 좌표·속도는 TypedArray로 넘긴다(복사 없이 소유권만 이전). 시각 문자열은 숫자로 바꿔
+// 보내면 메인에서 되돌리는 데 254ms가 들어(측정) 오히려 손해라, 한 덩이 문자열로 보내
+// split 한 번으로 되살린다.
+function _aisWorkerSource() {
+  const K = {
+    AIS_STOP_SPEED_KTS, AIS_STOP_MIN_MIN, AIS_MAX_PLAUSIBLE_KTS, AIS_MIN_POINTS_NORMAL,
+    AIS_DIST_TOLERANCE_LO, AIS_DIST_TOLERANCE_HI, AIS_PORT_BUFFER_KM, AIS_MIN_MOVING_KM,
+    AIS_REF_MIN_DAYS, AIS_TIME_BASE_Q, AIS_TIME_DEV_LO, AIS_TIME_DEV_HI,
+    AIS_TERMINAL_CLUSTER_KM, AIS_TERMINAL_MIN_HITS, AIS_TERMINAL_NAME_KM,
+    AIS_CALL_BUFFER_KM, AIS_VOY_MIN_KM, AIS_VOY_MAX_H, AIS_NEAR_BAND_KM
+  };
+  const fns = [
+    _parseAisCsvLine, _parseAisCsv, _simDist, _bearing, _routeLen, _buildAisIndex,
+    _detectAisStops, _aisSplitLegs, _aisTerminalAt, _aisTerminalLabel, _nearestPortName,
+    _aisFindTerminals, _aisDayStats, _aisCruiseSpeed, _aisSpeedBand, _aisCountRamps,
+    _aisPortCalls, _aisStopAtPort, _aisNearestApproach, _aisVoyageTimes,
+    _aisSegKm, _aisRangeKm, _aisAvgKts, _aisCorrGet,
+    _aisBuildVoyages, _aisVoyageRoutes, _aisAnalyzeVessel
+  ];
+  // 항구는 이름 짓기에만 쓰이므로 필요한 세 값만 넘긴다
+  const slimPorts = ports.map(p => ({ name: p.name, lat: p.lat, lng: p.lng }));
+  return [
+    Object.entries(K).map(([k, v]) => 'const ' + k + ' = ' + JSON.stringify(v) + ';').join('\n'),
+    'const ports = ' + JSON.stringify(slimPorts) + ';',
+    'let _aisCorr = {};', // 실제 값은 매 요청 메시지로 받는다 (소스는 한 번 만들어 재사용)
+    fns.map(fn => fn.toString()).join('\n'),
+    `
+self.onmessage = async function(e) {
+  const key = e.data.key, url = e.data.url;
+  _aisCorr = e.data.corr || {}; // 보정은 요청마다 최신값을 받는다
+  try {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const pts = _parseAisCsv(await r.text());
+    if (!pts.length) throw new Error('데이터 없음');
+    const data = _buildAisIndex(pts);
+    _aisAnalyzeVessel(key, data);
+    // 날짜별로 나뉜 것을 한 줄로 펴서 TypedArray에 담는다
+    const flat = [], dayOff = new Int32Array(data.dates.length);
+    data.dates.forEach(function(d, i) {
+      dayOff[i] = flat.length;
+      const p = data.index[d];
+      for (let k = 0; k < p.length; k++) flat.push(p[k]);
+    });
+    const n = flat.length;
+    const lat = new Float64Array(n), lon = new Float64Array(n);
+    const spd = new Float32Array(n), crs = new Float32Array(n);
+    const ts = new Array(n);
+    for (let i = 0; i < n; i++) {
+      lat[i] = flat[i].lat; lon[i] = flat[i].lon;
+      spd[i] = flat[i].speed; crs[i] = flat[i].course; ts[i] = flat[i].ts;
+    }
+    self.postMessage({
+      ok: true, key: key, n: n, lat: lat, lon: lon, spd: spd, crs: crs,
+      tsJoined: ts.join('\\n'), dates: data.dates, dayOff: dayOff,
+      minDate: data.minDate, maxDate: data.maxDate,
+      dayQuality: data.dayQuality, terminals: data.terminals, cruiseKts: data.cruiseKts,
+      expectedDist: data.expectedDist, refDays: data.refDays, refOneWayKm: data.refOneWayKm,
+      refRoundKm: data.refRoundKm, callPorts: data.callPorts, timeRatioBase: data.timeRatioBase,
+      voyages: data.voyages, voyRoutes: data.voyRoutes, voyMain: data.voyMain
+    }, [lat.buffer, lon.buffer, spd.buffer, crs.buffer, dayOff.buffer]);
+  } catch (err) {
+    self.postMessage({ ok: false, key: key, error: String((err && err.message) || err) });
+  }
+};`
+  ].join('\n');
+}
+
+let _aisWorkerUrl = null;
+function _aisWorkerMake() {
+  if (!_aisWorkerUrl) {
+    _aisWorkerUrl = URL.createObjectURL(new Blob([_aisWorkerSource()], { type: 'text/javascript' }));
+  }
+  return new Worker(_aisWorkerUrl);
+}
+
+// 워커가 보낸 결과를 원래 쓰던 모양({index, dates, dayQuality, …})으로 되돌린다
+function _aisWorkerRebuild(msg) {
+  const tsArr = msg.tsJoined.length ? msg.tsJoined.split('\n') : [];
+  const flat = new Array(msg.n);
+  for (let i = 0; i < msg.n; i++) {
+    flat[i] = { lat: msg.lat[i], lon: msg.lon[i], speed: msg.spd[i], course: msg.crs[i], ts: tsArr[i] };
+  }
+  const index = {};
+  msg.dates.forEach((d, i) => {
+    const from = msg.dayOff[i];
+    const to = (i + 1 < msg.dates.length) ? msg.dayOff[i + 1] : msg.n;
+    index[d] = flat.slice(from, to);
+  });
+  return {
+    index, dates: msg.dates, minDate: msg.minDate, maxDate: msg.maxDate,
+    dayQuality: msg.dayQuality, terminals: msg.terminals, cruiseKts: msg.cruiseKts,
+    expectedDist: msg.expectedDist, refDays: msg.refDays, refOneWayKm: msg.refOneWayKm,
+    refRoundKm: msg.refRoundKm, callPorts: msg.callPorts, timeRatioBase: msg.timeRatioBase,
+    voyages: msg.voyages, voyRoutes: msg.voyRoutes, voyMain: msg.voyMain, voyPts: flat
+  };
+}
+
+function _aisLoadViaWorker(key, url) {
+  return new Promise((resolve, reject) => {
+    let w;
+    try { w = _aisWorkerMake(); } catch (e) { reject(e); return; }
+    const done = (fn, arg) => { try { w.terminate(); } catch (e) {} fn(arg); };
+    w.onmessage = ev => {
+      const msg = ev.data;
+      if (!msg || !msg.ok) { done(reject, new Error((msg && msg.error) || '워커 오류')); return; }
+      done(resolve, _aisWorkerRebuild(msg));
+    };
+    w.onerror = e => done(reject, new Error(e.message || '워커 실행 실패'));
+    w.postMessage({ key, url, corr: _aisCorr || {} });
+  });
+}
+
 // ── CSV 로드 (lazy, 캐시) ──
 async function _loadAisVessel(key) {
   if (_aisCache[key]) return _aisCache[key];
@@ -6686,13 +6808,24 @@ async function _loadAisVessel(key) {
     _aisSetStatus('⚠ file:// 환경 — python -m http.server 8000 실행 후 localhost:8000 접속 필요');
     return null;
   }
+  const url = v.file + '?_=' + Date.now();
   try {
-    const r = await fetch(v.file + '?_=' + Date.now());
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const pts = _parseAisCsv(await r.text());
-    if (!pts.length) throw new Error('데이터 없음');
-    _aisCache[key] = _buildAisIndex(pts);
-    _aisAnalyzeVessel(key, _aisCache[key]);
+    // 워커로 파싱·분석을 넘긴다. 워커를 못 만드는 환경(구형 브라우저·file://·CSP)에서는
+    // 예전처럼 메인 스레드에서 처리한다.
+    let data = null;
+    if (typeof Worker !== 'undefined') {
+      try { data = await _aisLoadViaWorker(key, url); }
+      catch (e) { console.warn('AIS 워커 실패 — 메인 스레드로 처리합니다:', e.message); }
+    }
+    if (!data) {
+      const r = await fetch(url);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const pts = _parseAisCsv(await r.text());
+      if (!pts.length) throw new Error('데이터 없음');
+      data = _buildAisIndex(pts);
+      _aisAnalyzeVessel(key, data);
+    }
+    _aisCache[key] = data;
     _aisComputeLand(key); // 어느 날에 육지 관통이 남았는지 미리 세어둔다
     _aisSetStatus('');
     return _aisCache[key];
