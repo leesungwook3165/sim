@@ -8167,8 +8167,11 @@ function _aisDrawSpeedChart(pts, cursor) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, W, H);
 
-  const t0 = new Date(pts[0].ts).getTime();
-  const t1 = new Date(pts[pts.length - 1].ts).getTime();
+  // 축 양끝을 정시로 맞춘다. 07시 기준 격자에 눈금이 정확히 떨어지게 하려는 것으로,
+  // 늘어나는 폭은 양쪽 합쳐 최대 1시간이라 그래프가 눌리지 않는다.
+  const HOUR_MS = 3600000;
+  const t0 = Math.floor(new Date(pts[0].ts).getTime() / HOUR_MS) * HOUR_MS;
+  const t1 = Math.ceil(new Date(pts[pts.length - 1].ts).getTime() / HOUR_MS) * HOUR_MS;
   const totalMs = Math.max(1, t1 - t0);
   const maxSpd = Math.max(5, ...pts.map(p => p.speed)); // 최소 5kts 스케일 확보
 
@@ -8193,18 +8196,27 @@ function _aisDrawSpeedChart(pts, cursor) {
       ctx.fillText(v + 'kt', padL - 4, y);
     }
     // ── 시각 눈금(세로선) — 구간 길이에 따라 1·3·6시간 간격 ──
-    const hours = totalMs / 3600000;
+    // 눈금은 시뮬레이션 하루가 시작하는 오전 7시(한국시)에 맞춰 건다. 예전에는 그냥
+    // 정시에 걸어서 6시간 간격일 때 날마다 눈금이 9시·3시처럼 제각각 떨어졌고,
+    // 그래서 날짜를 바꿔 가며 그래프를 견주기가 어려웠다.
+    const hours = totalMs / HOUR_MS;
     const hStep = hours <= 4 ? 1 : hours <= 12 ? 3 : 6;
+    const stepMs = hStep * HOUR_MS;
+    const KST_MS = 9 * HOUR_MS;                       // 표기는 현지시(UTC+9)
+    const anchorMs = DAY_START_MIN * 60000 - KST_MS;  // 07:00 한국시를 UTC 기준으로
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    const d0 = new Date(t0); d0.setUTCMinutes(0, 0, 0);
-    for (let t = d0.getTime(); t <= t1; t += hStep * 3600000) {
+    // t0 이하이면서 07시에서 hStep 간격만큼 떨어진 첫 눈금
+    let tick = Math.floor((t0 - anchorMs) / stepMs) * stepMs + anchorMs;
+    for (let t = tick; t <= t1; t += stepMs) {
       if (t < t0) continue;
       const x = padL + ((t - t0) / totalMs) * plotW;
-      ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-      ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, padT + plotH); ctx.stroke();
       const hh = (new Date(t).getUTCHours() + 9) % 24; // 현지시(UTC+9)로 표기
+      const mm = new Date(t).getUTCMinutes();
+      const isDayStart = hh === DAY_START_MIN / 60 && mm === 0;   // 하루가 바뀌는 07시
+      ctx.strokeStyle = isDayStart ? 'rgba(126,207,255,0.32)' : 'rgba(255,255,255,0.05)';
+      ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, padT + plotH); ctx.stroke();
       let h12 = hh % 12; if (h12 === 0) h12 = 12;
-      ctx.fillStyle = '#5a7a99';
+      ctx.fillStyle = isDayStart ? '#7ecfff' : '#5a7a99';
       ctx.fillText((hh < 12 ? '오전' : '오후') + ' ' + h12 + '시', x, padT + plotH + 3);
     }
     ctx.textAlign = 'start';
