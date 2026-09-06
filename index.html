@@ -7721,6 +7721,32 @@ async function _aisAnalyzeVessel(key, data, onStep) {
   // "A → A"로 묶인 왕복이 1위가 되면 편도거리가 왕복거리로 나온다(엘도라도 423km).
   data.voyMain = data.voyRoutes.find(r => r.from && r.to && r.from !== r.to) || data.voyRoutes[0] || null;
   _aisMarkRefVoyages(data);
+
+  // ── 날짜의 거리 판정을 항차 기준으로 다시 본다 ──
+  // 하루를 자정에서 자른 조각으로 거리를 재면, 항해가 자정을 넘는 배는 그 값이 실제와
+  // 전혀 다르다. 미라클호는 그렇게 산출한 기대편도가 54km(실제 686km)라, 진짜 오사카
+  // 항해 359일이 "편도거리 과다"로 걸러지고 짧고 이상한 날만 남았다.
+  // 화면도 이미 "그 날 출항한 항차"를 그리므로(_aisDayTrack), 판정도 같은 기준으로 맞춘다.
+  if (data.voyOneWayKm > 0) {
+    const byDate = {};
+    (data.voyages || []).forEach(v => { (byDate[v.dateFrom] = byDate[v.dateFrom] || []).push(v); });
+    data.dates.forEach(d => {
+      const q = dayQuality[d];
+      const vs = byDate[d];
+      q.reasons = q.reasons.filter(r => !/편도거리/.test(r));   // 날짜 기준 판정을 걷어낸다
+      if (vs && vs.length) {
+        // 그 날 출항한 항차 중 가장 긴 것을 그 날의 편도로 본다(하루 여러 항차 대비)
+        const one = Math.max.apply(null, vs.map(v => v.corrKm));
+        q.voyOnewayDist = one;
+        if (one < data.voyOneWayKm * AIS_DIST_TOLERANCE_LO) q.reasons.push('편도거리 과소');
+        else if (one > data.voyOneWayKm * AIS_DIST_TOLERANCE_HI) q.reasons.push('편도거리 과다');
+      } else {
+        q.reasons.push('그 날 출항한 항차 없음');
+      }
+      q.isNormal = q.reasons.length === 0;
+    });
+    data.refDays = data.dates.filter(d => dayQuality[d].isRef);
+  }
   // ★기준 항차가 출항한 날에도 ★를 붙인다 — 날짜 기준으로는 안 잡히던 배들
   // (미라클 0일, 성희·하마유 2일)이 이걸로 제대로 표시된다.
   const refVoyDays = new Set();
