@@ -1698,6 +1698,14 @@
     </label>
     <!-- 지금 연 날을 최적일로 지정/해제 ('일' 뷰에서만 보인다) -->
     <button id="aisBestBtn" class="ais-tb-bestbtn" onclick="onAisBestToggle()" style="display:none"></button>
+    <label class="ais-tb-normal" id="aisSchedWrap" title="선사 공시 출항시각(그래프의 노란 세로선)에 맞게 떠난 날만 추립니다. 시간표가 없는 배는 실측 최빈 시각을 씁니다.">
+      <input type="checkbox" id="aisSchedOnly" onchange="onAisSchedFilterChange()"> <i data-ic="clock"></i> 공시시각 ±
+      <select id="aisSchedTol" onchange="onAisSchedFilterChange()">
+        <option value="30">30분</option>
+        <option value="60" selected>60분</option>
+        <option value="90">90분</option>
+      </select>
+    </label>
     <label class="ais-tb-normal" id="aisWorkWrap" title="보정을 저장해둔 날만 / 아직 육지를 지나는 구간이 남은 날만 추려봅니다. 둘 다 켜면 &quot;보정했는데 아직 남은 날&quot;이 나옵니다.">
       <input type="checkbox" id="aisCorrOnly" onchange="onAisWorkFilterChange()"> <i data-ic="pencil"></i> 보정일만
       <span class="ais-tb-refchk" style="color:#ff8888">
@@ -6844,6 +6852,97 @@ function _startOnboardingIntro() {
 // ════════════════════════════════════════════════════
 // 선박을 추가할 때는 여기 한 줄만 넣으면 된다 — 선택 드롭다운도 이 표에서 만들고,
 // 터미널·순항속도·기대거리·기준일은 모두 데이터에서 자동 산출한다(하드코딩 없음).
+// ══════════════════════════════════════════════════════════════
+//  선사 공시 운항 시간표 (한국시)
+// ══════════════════════════════════════════════════════════════
+// AIS 핑은 몇 분에서 한 시간 넘게 벌어져서, 거기서 뽑은 출·도착 시각은 늘 실제보다
+// 이르거나 늦다. 그래서 "선사가 공시한 시각"을 따로 적어 두고 그래프에 세로 기준선으로
+// 세운다 — 어느 항차가 시간표대로 다녔는지 눈으로 바로 견줄 수 있다.
+// 시간표가 확인된 배만 적는다. 없는 배는 ★기준 항차에서 최빈 시각을 뽑아 쓰고
+// '실측 최빈'으로 표시한다(공시가 아님을 분명히 하려는 것).
+const _AIS_OFFICIAL = {
+  camellia: {
+    label: '카멜리아라인 공시',
+    src: 'https://www.camellia-line.co.kr/',
+    marks: [
+      { min: 22 * 60 + 30, kind: 'dep', text: '부산 출항 22:30' },
+      { min:  7 * 60 + 30, kind: 'arr', text: '하카타 도착 07:30' },
+      { min: 12 * 60 + 30, kind: 'dep', text: '하카타 출항 12:30' },
+      { min: 18 * 60 + 30, kind: 'arr', text: '부산 도착 18:30' }
+    ]
+  },
+  // 부관훼리는 성희호(한국적)와 하마유호(일본적)가 홀·짝일로 번갈아 같은 시간표를 쓴다
+  seonghee: {
+    label: '부관훼리 공시',
+    src: 'https://www.pukwan.co.kr/',
+    marks: [
+      { min: 21 * 60,      kind: 'dep', text: '부산 출항 21:00' },
+      { min:  8 * 60,      kind: 'arr', text: '시모노세키 도착 08:00' },
+      { min: 19 * 60 + 45, kind: 'dep', text: '시모노세키 출항 19:45' },
+      { min:  7 * 60 + 45, kind: 'arr', text: '부산 도착 07:45' }
+    ]
+  },
+  hamayuu: {
+    label: '부관훼리 공시',
+    src: 'https://www.pukwan.co.kr/',
+    marks: [
+      { min: 21 * 60,      kind: 'dep', text: '부산 출항 21:00' },
+      { min:  8 * 60,      kind: 'arr', text: '시모노세키 도착 08:00' },
+      { min: 19 * 60 + 45, kind: 'dep', text: '시모노세키 출항 19:45' },
+      { min:  7 * 60 + 45, kind: 'arr', text: '부산 도착 07:45' }
+    ]
+  }
+};
+
+// 시간표가 없는 배는 ★기준 항차의 출·도착 시각에서 최빈값을 뽑는다.
+// 15분 칸으로 모아 보고, 전체의 AIS_SCHED_MIN_SHARE 이상을 차지하는 칸만 남긴다 —
+// 어쩌다 한 번인 시각까지 기준선으로 세우면 그래프만 어지러워진다.
+const AIS_SCHED_BIN_MIN   = 15;
+const AIS_SCHED_MIN_SHARE = 0.15;
+
+function _aisClockMin(ts) {              // ISO(UTC) → 그날 한국시 기준 분
+  const d = new Date(ts);
+  return ((d.getUTCHours() + 9) % 24) * 60 + d.getUTCMinutes();
+}
+function _aisMinToHM(m) {
+  const h = Math.floor(m / 60) % 24, mm = m % 60;
+  return String(h).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+}
+
+// 한 선박의 기준선 목록. 결과는 데이터에 캐시해 둔다(그래프가 매 프레임 다시 그려진다).
+function _aisSchedMarks(key) {
+  const off = _AIS_OFFICIAL[key];
+  if (off) return off.marks.map(m => Object.assign({ official: true }, m));
+
+  const data = _aisCache[key];
+  if (!data) return [];
+  if (data._schedMarks) return data._schedMarks;
+
+  const voys = (data.refVoyages && data.refVoyages.length ? data.refVoyages : data.voyages) || [];
+  const pick = (field, kind) => {
+    const bins = {};
+    voys.forEach(v => {
+      const ts = v[field];
+      if (!ts) return;
+      const b = Math.floor(_aisClockMin(ts) / AIS_SCHED_BIN_MIN);
+      (bins[b] = bins[b] || []).push(_aisClockMin(ts));
+    });
+    const total = Object.values(bins).reduce((a, x) => a + x.length, 0);
+    if (!total) return [];
+    return Object.entries(bins)
+      .filter(([, arr]) => arr.length / total >= AIS_SCHED_MIN_SHARE)
+      .map(([, arr]) => {
+        const m = Math.round(_median(arr));
+        return { min: m, kind, official: false, share: arr.length / total,
+                 text: (kind === 'dep' ? '출항 ' : '도착 ') + _aisMinToHM(m)
+                       + ' (실측 최빈 ' + Math.round(arr.length / total * 100) + '%)' };
+      });
+  };
+  data._schedMarks = pick('departTs', 'dep').concat(pick('arriveTs', 'arr'))
+    .sort((a, b) => a.min - b.min);
+  return data._schedMarks;
+}
+
 const _AIS_VESSELS = {
   beetle:      { label:'비틀호',               sub:'JR규슈',      file:'beetle_track-data-2012-01-01,2027-01-01.csv',      color:'#ff9955' },
   queenbeetle: { label:'퀸비틀',               sub:'JR규슈',      file:'queenbeetle_track-data-2012-01-01,2027-01-01.csv', color:'#44aaff' },
@@ -6923,6 +7022,8 @@ function _aisBestDelete(key, date) {
   _aisBestSave();
 }
 _aisBestLoad();
+let _aisSchedOnly = false; // 공시 출항시각에 맞는 날만 보기
+let _aisSchedTolMin = 60;  // 허용 오차(분)
 let _aisCorrOnly = false;  // ✏ 보정한 날만 보기
 let _aisLandOnly = false;  // ⚠ 육지 관통이 남은 날(고칠 날)만 보기
 let _aisCallFilter = 'all'; // 특정 항구에 기항한 날만 보기 ('all' 또는 항구명)
@@ -8281,6 +8382,7 @@ function _aisDrawSpeedChart(pts, cursor) {
   // 축 양끝을 정시로 맞춘다. 07시 기준 격자에 눈금이 정확히 떨어지게 하려는 것으로,
   // 늘어나는 폭은 양쪽 합쳐 최대 1시간이라 그래프가 눌리지 않는다.
   const HOUR_MS = 3600000;
+  const KST_MS = 9 * HOUR_MS;              // 표기·기준선 모두 한국시(UTC+9)
   const t0 = Math.floor(new Date(pts[0].ts).getTime() / HOUR_MS) * HOUR_MS;
   const t1 = Math.ceil(new Date(pts[pts.length - 1].ts).getTime() / HOUR_MS) * HOUR_MS;
   const totalMs = Math.max(1, t1 - t0);
@@ -8313,7 +8415,6 @@ function _aisDrawSpeedChart(pts, cursor) {
     const hours = totalMs / HOUR_MS;
     const hStep = hours <= 4 ? 1 : hours <= 12 ? 3 : 6;
     const stepMs = hStep * HOUR_MS;
-    const KST_MS = 9 * HOUR_MS;                       // 표기는 현지시(UTC+9)
     const anchorMs = DAY_START_MIN * 60000 - KST_MS;  // 07:00 한국시를 UTC 기준으로
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     // t0 이하이면서 07시에서 hStep 간격만큼 떨어진 첫 눈금
@@ -8334,6 +8435,40 @@ function _aisDrawSpeedChart(pts, cursor) {
   } else {
     ctx.strokeStyle = 'rgba(255,255,255,0.08)';
     ctx.beginPath(); ctx.moveTo(padL, padT + plotH / 2); ctx.lineTo(padL + plotW, padT + plotH / 2); ctx.stroke();
+  }
+
+  // ── 공시 운항시각 기준선 ──
+  // 이 세로선이 "시간표대로면 여기서 떠나고 여기서 닿아야 한다"는 자리다.
+  // AIS 에서 읽은 실제 출·도착이 이 선에서 얼마나 벗어났는지 한눈에 보인다.
+  {
+    const vkey = (document.getElementById('aisVesselSel') || {}).value;
+    const marks = vkey ? _aisSchedMarks(vkey) : [];
+    const dayMs = 86400000;
+    marks.forEach(mk => {
+      // 한국시 자정을 UTC 로 옮긴 뒤, 앞뒤 하루씩 훑어 화면 안에 드는 시각을 모두 찍는다
+      const base = Math.floor((t0 + KST_MS) / dayMs) * dayMs - KST_MS;
+      for (let k = -1; k <= 1; k++) {
+        const t = base + k * dayMs + mk.min * 60000;
+        if (t < t0 || t > t1) continue;
+        const x = padL + ((t - t0) / totalMs) * plotW;
+        const col = mk.kind === 'dep' ? '#ffcc66' : '#66ddaa';
+        ctx.save();
+        ctx.strokeStyle = col;
+        ctx.globalAlpha = mk.official ? 0.75 : 0.4;
+        ctx.lineWidth = 1;
+        if (!mk.official) ctx.setLineDash([3, 3]);   // 공시가 아니라 실측 최빈값
+        ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, padT + plotH); ctx.stroke();
+        ctx.restore();
+        if (roomy) {
+          ctx.save();
+          ctx.fillStyle = col; ctx.globalAlpha = mk.official ? 0.95 : 0.6;
+          ctx.font = '9px sans-serif'; ctx.textBaseline = 'top';
+          ctx.textAlign = x > W - 60 ? 'right' : 'left';
+          ctx.fillText(mk.kind === 'dep' ? '출항' : '도착', x + (x > W - 60 ? -3 : 3), padT + 1);
+          ctx.restore();
+        }
+      }
+    });
   }
 
   // 속도 영역(그라데이션 채우기) + 라인
@@ -8890,6 +9025,7 @@ function _aisAllDays(key) {
   if (_aisCorrOnly) dates = dates.filter(x => _aisCorrCount(key, x) > 0);
   if (_aisLandOnly) dates = dates.filter(x => (d.dayQuality[x].landSegs || 0) > 0);
   if (_aisBestOnly)   dates = dates.filter(x => _aisBestGet(key, x) != null);
+  if (_aisSchedOnly)  dates = dates.filter(x => _aisDayOnSchedule(key, x));
   if (_aisRefOnly)    return dates.filter(x => d.dayQuality[x].isRef);
   if (_aisNormalOnly) return dates.filter(x => d.dayQuality[x].isNormal);
   return dates;
@@ -9620,6 +9756,34 @@ function onAisBestToggle() {
   _aisTbRenderTl(key);
   _aisRenderCrumb();
 }
+// 그날 떠난 항차의 출항 시각이 공시 시각에서 허용 오차 안에 드는가.
+// AIS 는 접안·이안 시점을 정확히 못 집어서 늘 얼마간 어긋난다 — 그 폭을 사용자가 고른다.
+function _aisDayOnSchedule(key, dt) {
+  const data = _aisCache[key];
+  if (!data) return true;
+  const deps = _aisSchedMarks(key).filter(m => m.kind === 'dep');
+  if (!deps.length) return true;                  // 기준으로 삼을 시각이 없으면 거르지 않는다
+  const voys = (data.voyages || []).filter(v => v.dateFrom === dt && v.departTs);
+  if (!voys.length) return false;
+  return voys.some(v => {
+    const c = _aisClockMin(v.departTs);
+    // 자정을 사이에 둔 경우(23:50 과 00:10)도 가까운 것으로 본다
+    return deps.some(m => {
+      const d = Math.abs(c - m.min);
+      return Math.min(d, 1440 - d) <= _aisSchedTolMin;
+    });
+  });
+}
+
+function onAisSchedFilterChange() {
+  _aisSchedOnly = document.getElementById('aisSchedOnly').checked;
+  _aisSchedTolMin = +document.getElementById('aisSchedTol').value || 60;
+  const key = document.getElementById('aisVesselSel').value;
+  if (!_aisCache[key]) return;
+  _aisTbRenderTl(key);
+  _aisTlApply();
+}
+
 function onAisWorkFilterChange() {
   _aisCorrOnly = document.getElementById('aisCorrOnly').checked;
   _aisLandOnly = document.getElementById('aisLandOnly').checked;
