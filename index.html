@@ -6833,15 +6833,21 @@ function _aisWorkerSource() {
     _aisFindTerminals, _aisDayStats, _aisCruiseSpeed, _aisSpeedBand, _aisCountRamps,
     _aisPortCalls, _aisStopAtPort, _aisNearestApproach, _aisVoyageTimes,
     _aisSegKm, _aisRangeKm, _aisAvgKts, _aisCorrGet, _aisYield,
+    _qtile, _median, _ptsLen, _aisSegCrossesLand, _aisComputeLand,
     _aisFindPortsFromStops, _aisFindCalls, _aisGatePorts,
     _aisBuildVoyages, _aisVoyageRoutes, _aisMarkRefVoyages, _aisAnalyzeVessel
   ];
   // 항구는 이름 짓기·기항 판정에만 쓰이므로 필요한 세 값만 넘긴다
   const slimPorts = ports.map(p => ({ name: p.name, lat: p.lat, lng: p.lng }));
+  // 육지 마스크는 별도 파일이라 워커가 직접 읽어야 한다. blob: 문서에서 돌아가므로
+  // 상대 경로가 안 통해 절대 URL로 넣는다.
+  const landUrl = new URL('tsushima_land.js', location.href).href;
   return [
+    'try { importScripts(' + JSON.stringify(landUrl) + '); } catch (e) {}',
     Object.entries(K).map(([k, v]) => 'const ' + k + ' = ' + JSON.stringify(v) + ';').join('\n'),
     'const ports = ' + JSON.stringify(slimPorts) + ';',
     'let _aisCorr = {};', // 실제 값은 매 요청 메시지로 받는다 (소스는 한 번 만들어 재사용)
+    'let _aisCache = {};', // _aisComputeLand가 캐시에서 데이터를 꺼내 쓰므로 자리를 만들어 둔다
     fns.map(fn => fn.toString()).join('\n'),
     // 워커 안에서는 양보할 이유가 없다 — setTimeout 왕복을 없애고 마이크로태스크로만 쉰다
     '_aisYield = function() { return Promise.resolve(); };',
@@ -6862,6 +6868,13 @@ self.onmessage = async function(e) {
     const data = _buildAisIndex(pts);
     await _aisAnalyzeVessel(key, data, m => say(0.55 + 0.4 * Math.min(1, (data.__p = (data.__p || 0) + 0.06)), m));
     delete data.__p;
+    // 육지 관통 검사까지 여기서 마친다 — 마스크가 없으면(불러오기 실패) 건너뛴다
+    if (typeof _isLandTsushima === 'function') {
+      say(0.93, '육지 관통 검사');
+      _aisCache = { [key]: data };   // _aisComputeLand가 캐시에서 꺼내 쓴다
+      _aisComputeLand(key);
+      _aisCache = {};
+    }
     say(0.97, '보내는 중');
     // 날짜별로 나뉜 것을 한 줄로 펴서 TypedArray에 담는다
     const flat = [], dayOff = new Int32Array(data.dates.length);
@@ -6996,7 +7009,9 @@ async function _loadAisVesselInner(key) {
         _aisCache[key] = wdata;
         _aisProgress(-1);
         _aisSetStatus('');
-        _aisComputeLandDeferred(key);
+        // 워커가 육지 검사까지 마쳤으면 다시 셀 필요가 없다
+        const doneLand = wdata.dates.length && wdata.dayQuality[wdata.dates[0]].landSegs !== undefined;
+        if (!doneLand) _aisComputeLandDeferred(key);
         return wdata;
       } catch (e) {
         console.warn('AIS 워커 실패 — 메인 스레드로 처리합니다:', e.message);
@@ -7248,10 +7263,7 @@ function _aisSplitLegs(pts) {
   if (turnIdx < 2 || turnIdx > pts.length - 3 || farDist < AIS_MIN_MOVING_KM) return null;
   // 편도거리는 "총거리÷2"가 아니라 회항 지점까지 실제로 그린 항적 길이로 잡는다.
   // 하루에 왕복을 두 번 이상 한 날(비틀호)에서도 편도값이 부풀지 않는다.
-  let outKm = 0;
-  for (let i = 1; i <= turnIdx; i++) {
-    outKm += _simDist([pts[i - 1].lat, pts[i - 1].lon], [pts[i].lat, pts[i].lon]);
-  }
+  const outKm = _ptsLen(pts, 0, turnIdx);
   return { turnIdx, farDist, outKm, out: pts.slice(0, turnIdx + 1), back: pts.slice(turnIdx) };
 }
 
@@ -7533,8 +7545,8 @@ function _aisMarkRefVoyages(data) {
   const cand = voys.filter(v => onMain(v) && v.timeRatio != null
     && v.ramps && v.ramps.up >= 1 && v.ramps.down >= 1
     && v.departGapMin <= AIS_GAP_OK_DEPART && v.arriveGapMin <= AIS_GAP_OK_ARRIVE);
-  const ratios = cand.map(v => v.timeRatio).sort((a, b) => a - b);
-  const base = ratios.length ? ratios[Math.floor(ratios.length * AIS_TIME_BASE_Q)] : null;
+  const ratios = cand.map(v => v.timeRatio);
+  const base = ratios.length ? _qtile(ratios, AIS_TIME_BASE_Q) : null;
   voys.forEach(v => { v.isRef = false; });
   if (base != null) {
     cand.forEach(v => {
@@ -7543,8 +7555,8 @@ function _aisMarkRefVoyages(data) {
   }
   data.voyRatioBase = base;
   data.refVoyages = voys.filter(v => v.isRef);
-  const km = data.refVoyages.map(v => v.corrKm).sort((a, b) => a - b);
-  data.voyOneWayKm = km.length ? km[Math.floor(km.length / 2)] : main.km;
+  const km = data.refVoyages.map(v => v.corrKm);
+  data.voyOneWayKm = km.length ? _median(km) : main.km;
 }
 
 // 항차 요약을 타임바 머리에 적는다 — 주항로의 편도거리·소요시간·평균속력.
@@ -7646,8 +7658,8 @@ async function _aisAnalyzeVessel(key, data, onStep) {
   // 출항편/복항편 소요시간을 나눌 수 없고, 기준일은 바로 그 값을 쓰기 때문이다.
   const cand = Object.values(pre)
     .filter(x => x.shapeOk && x.timeRatio != null && x.voy.turnStopMin > 0)
-    .map(x => x.timeRatio).sort((a, b) => a - b);
-  const baseRatio = cand.length ? cand[Math.floor(cand.length * AIS_TIME_BASE_Q)] : null;
+    .map(x => x.timeRatio);
+  const baseRatio = cand.length ? _qtile(cand, AIS_TIME_BASE_Q) : null;
   Object.values(pre).forEach(x => {
     x.isRef = !!(x.shapeOk && baseRatio != null && x.timeRatio != null && x.voy.turnStopMin > 0
       && x.timeRatio >= baseRatio * AIS_TIME_DEV_LO
@@ -7720,9 +7732,9 @@ async function _aisAnalyzeVessel(key, data, onStep) {
   data.refDays = data.dates.filter(d => dayQuality[d].isRef);
   data.refDays = data.dates.filter(d => dayQuality[d].isRef);
   // 기준일들에서 뽑은 편도·왕복 기준값 (거리 판정과 화면 표시에 함께 쓴다)
-  const refRound = data.refDays.map(d => dayQuality[d].totalDist).sort((a, b) => a - b);
-  data.refOneWayKm = refDists.length ? refDists[Math.floor(refDists.length / 2)] : null;
-  data.refRoundKm  = refRound.length ? refRound[Math.floor(refRound.length / 2)] : null;
+  const refRound = data.refDays.map(d => dayQuality[d].totalDist);
+  data.refOneWayKm = refDists.length ? _median(refDists) : null;
+  data.refRoundKm  = refRound.length ? _median(refRound) : null;
   data.dayQuality = dayQuality;
 }
 
@@ -7830,6 +7842,29 @@ function _routeSlice(route, p1, p2) {
   }
   out.push(p2.pt);
   return out;
+}
+
+// 오름차순 정렬한 뒤 백분위 값을 집는다. 원본 배열은 건드리지 않는다.
+// (분위수는 이 코드 곳곳에서 "이상치에 안 흔들리는 대푯값"으로 쓰인다)
+function _qtile(arr, p) {
+  if (!arr || !arr.length) return 0;
+  const a = arr.slice().sort((x, y) => x - y);
+  return a[Math.floor(a.length * p)] !== undefined
+    ? a[Math.floor(a.length * p)]
+    : a[a.length - 1];
+}
+function _median(arr) {
+  if (!arr || !arr.length) return 0;
+  const a = arr.slice().sort((x, y) => x - y);
+  return a[Math.floor(a.length / 2)];
+}
+
+// 포인트 배열({lat,lon})의 실제 항적 길이(km). from~to를 주면 그 구간만.
+function _ptsLen(pts, from, to) {
+  const i0 = (from || 0) + 1, i1 = (to == null ? pts.length - 1 : to);
+  let d = 0;
+  for (let i = i0; i <= i1; i++) d += _simDist([pts[i - 1].lat, pts[i - 1].lon], [pts[i].lat, pts[i].lon]);
+  return d;
 }
 
 function _routeLen(pts) {
@@ -8466,8 +8501,8 @@ function _renderAisPeriod(key, prefix) {
   // 어느 쪽이든 점은 전부 쓴다.
   const detailed = days.length <= AIS_AGG_HOVER_MAX_DAYS;
   const dayCruiseColor = pts => {
-    const sp = pts.map(p => p.speed).filter(v => v > 0.5).sort((a, b) => a - b);
-    return _aisSpeedColor(sp.length ? sp[Math.floor(sp.length * 0.75)] : 0);
+    const sp = pts.map(p => p.speed).filter(v => v > 0.5);
+    return _aisSpeedColor(sp.length ? _qtile(sp, 0.75) : 0);
   };
   let drawnPts = 0;          // 실제 캔버스에 등록한 점 수 — 이게 줌·팬 비용을 좌우한다
   const buckets = new Map(); // "색|굵기|투명도" -> [[latlng...], ...]
