@@ -8095,6 +8095,34 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
 // ── 하루 항적 렌더링 ──
 // (부산발/일본발 + 정상·비정상 항로 뱃지는 '일자별' 뷰에서만 상태줄에 표시한다)
 // _aisSubLegSel이 지정돼 있으면 왕복 중 그 구간(출항편/복항편)만 그린다.
+// ── 그 날의 항적 ──
+// 날짜를 UTC 자정에서 자르면 자정을 넘기는 항해가 두 동강 난다. 팬스타 미라클호는
+// 부산 15:30 출항 → 오사카 익일 10시 도착이라 463일 중 345일(75%)이 바다 한가운데서
+// 끊겼다("부산에서 바다까지 116km, 오사카까지 556km 남음").
+// 그래서 "그 날 출항한 항차"를 통째로 돌려준다. 그 날 출항한 항차가 없으면(정박만 한 날,
+// 또는 전날 출항해 이 날 도착한 경우) 예전처럼 달력 하루를 쓴다.
+function _aisDayTrack(key, dateStr) {
+  const data = _aisCache[key];
+  if (!data) return [];
+  const day = data.index[dateStr] || [];
+  const voys = (data.voyages || []).filter(v => v.dateFrom === dateStr);
+  if (!voys.length) return day;
+  const out = [], seen = new Set();
+  voys.forEach(v => {
+    // 항차가 걸친 날짜를 모두 훑는다 (ts는 ISO 문자열이라 사전순 비교로 충분)
+    for (let t = new Date(v.dateFrom + 'T00:00:00Z').getTime(),
+             end = new Date(v.dateTo + 'T00:00:00Z').getTime();
+         t <= end; t += 86400000) {
+      const d = new Date(t).toISOString().slice(0, 10);
+      (data.index[d] || []).forEach(p => {
+        if (p.ts >= v.departTs && p.ts <= v.arriveTs && !seen.has(p.ts)) { seen.add(p.ts); out.push(p); }
+      });
+    }
+  });
+  out.sort((a, b) => (a.ts < b.ts ? -1 : a.ts > b.ts ? 1 : 0));
+  return out.length >= 2 ? out : day;
+}
+
 function _renderAisDay(key, dateStr) {
   const data = _aisCache[key];
   if (!data) return;
@@ -8103,7 +8131,7 @@ function _renderAisDay(key, dateStr) {
     ? ' · ⚓기항 ' + q.calls.map(c => c.name.replace(/(국제여객터미널|국제터미널|여객선터미널|항)$/, '') + ' ' + Math.round(c.durMin) + '분').join(', ')
     : '';
   const extra = q ? `${q.origin}${callTxt}${q.isNormal ? '' : ' · ⚠비정상(' + q.reasons.join(', ') + ')'}` : '';
-  const all = data.index[dateStr];
+  const all = _aisDayTrack(key, dateStr);
   let shown = all, suffix = '';
   if (_aisSubLegSel) {
     const legs = _aisSplitLegs(all);
@@ -8120,7 +8148,7 @@ function _renderAisHour(key, hourKey) {
   const data = _aisCache[key];
   if (!data) return;
   const [dateStr, hh] = hourKey.split('T');
-  const pts = (data.index[dateStr] || []).filter(p => p.ts.slice(11, 13) === hh);
+  const pts = _aisDayTrack(key, dateStr).filter(p => p.ts.slice(11, 13) === hh);
   const h = _aisLocalHour(hh);
   let h12 = h % 12; if (h12 === 0) h12 = 12;
   _renderAisPointSet(key, pts, `${dateStr} ${h < 12 ? '오전' : '오후'} ${h12}시`);
@@ -8656,7 +8684,7 @@ function _aisAvgKts(km, min) { return min > 0 ? (km / 1.852) / (min / 60) : 0; }
 
 function _aisDaySummary(key, dateStr) {
   const data = _aisCache[key];
-  const pts = data && data.index[dateStr];
+  const pts = data && _aisDayTrack(key, dateStr);
   if (!pts || pts.length < 2) return null;
   const q = data.dayQuality[dateStr] || {};
   const v = _aisVoyageTimes(pts, data.terminals);
@@ -8687,7 +8715,7 @@ function _aisRenderSubHours(key, dateStr) {
   const sub  = document.getElementById('aisTbSubTl');
   if (!wrap || !sub) return;
   const d = _aisCache[key];
-  const pts = d && d.index[dateStr];
+  const pts = d && _aisDayTrack(key, dateStr);
   const hours = pts ? [...new Set(pts.map(p => p.ts.slice(11, 13)))].sort() : [];
   if (!hours.length) { wrap.style.display = 'none'; return; }
   wrap.style.display = 'flex';
@@ -9178,12 +9206,12 @@ function onAisPlay() {
     const hourKey = item + 'T' + _aisSubHourSel;
     _playAisPoints(key, hourKey, _renderAisHour, hk => {
       const [dateStr, hh] = hk.split('T');
-      return (_aisCache[key].index[dateStr] || []).filter(p => p.ts.slice(11, 13) === hh);
+      return _aisDayTrack(key, dateStr).filter(p => p.ts.slice(11, 13) === hh);
     });
   } else {
     // 출항편/복항편을 골라둔 상태면 그 구간만 재생
     _playAisPoints(key, item, _renderAisDay, dat => {
-      const all = _aisCache[key].index[dat];
+      const all = _aisDayTrack(key, dat);
       if (!_aisSubLegSel) return all;
       const legs = _aisSplitLegs(all);
       if (!legs) return all;
