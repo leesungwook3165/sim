@@ -3629,13 +3629,23 @@ const _isTimeLikeLabel = txt => /^\d{1,2}:\d{2}$/.test(txt);
 function _relabelWeekdaysPositional(container) {
   const week = _allWeekDays();
   ['vis-major', 'vis-minor'].forEach(cls => {
-    let idx = 0;
+    const nodes = [];
     container.querySelectorAll('.vis-text.' + cls).forEach(el => {
+      // vis-measure는 글자 크기를 재려고 숨겨 둔 요소다. 화면에는 안 보이는데 텍스트가
+      // 있어서 세다 보면 이것이 첫 라벨을 먹고 전체가 한 칸씩 밀린다
+      // (선석 스케줄이 "토일월…"이 아니라 "일월화…"로 시작하던 원인).
+      if (el.classList.contains('vis-measure')) return;
       const txt = el.textContent.trim();
       if (!txt || _isTimeLikeLabel(txt)) return;
-      const label = week[idx % 7];
+      nodes.push(el);
+    });
+    // DOM에 꽂힌 순서는 화면 순서와 다르다 — vis-timeline이 노드를 재사용하기 때문에
+    // 왼쪽 라벨이 DOM 뒤쪽에 있을 수 있다(실측: x=1069인 것이 x=191인 것보다 앞).
+    // 그대로 매기면 "월,일"처럼 거꾸로 붙으므로 화면 x좌표로 줄을 세운 뒤 매긴다.
+    nodes.sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+    nodes.forEach((el, i) => {
+      const label = week[i % 7];
       if (el.textContent !== label) el.textContent = label;
-      idx++;
     });
   });
 }
