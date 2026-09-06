@@ -565,7 +565,13 @@
     }
     #simPanel.visible { display: block; }
     #simPanel.minimized .sim-body { display: none; }
-    #simPanel.minimized { height: auto; max-height: none; }
+    #simPanel.minimized .sim-title { margin-bottom: 0; }
+    #simPanel.minimized {
+      height: auto !important;   /* 끌어서 조절한 인라인 height 를 이겨야 한다 */
+      min-height: 0; max-height: none;
+      overflow: hidden;          /* 접힌 상태에 스크롤바가 남지 않게 */
+      resize: none;              /* 접힌 채로는 크기 조절 손잡이를 숨긴다 */
+    }
     .sim-title {
       font-size: 13px; font-weight: 700; color: #7ecfff;
       margin-bottom: 6px; display: flex; align-items: center; gap: 6px;
