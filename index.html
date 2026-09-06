@@ -487,6 +487,11 @@
       pointer-events: auto;
     }
     #coordClick .cc-copy:hover { background: rgba(80,160,255,0.4); }
+    /* 바깥 사이트로 나가는 버튼은 색을 달리해 복사 버튼과 구분한다 */
+    #coordClick .cc-ext {
+      background: rgba(80,200,140,0.18); border-color: rgba(80,200,140,0.45); color: #9fe8c4;
+    }
+    #coordClick .cc-ext:hover { background: rgba(80,200,140,0.4); color: #fff; }
     #coordClick .cc-close {
       float: right;
       cursor: pointer;
@@ -1757,7 +1762,7 @@
   <span>마우스</span>
   <span class="coord-val" id="mouseLat">—</span>
   <span class="coord-val" id="mouseLng">—</span>
-  <span style="color:#556677; font-size:11px">우클릭하면 좌표 복사</span>
+  <span style="color:#556677; font-size:11px">우클릭하면 좌표 복사 · 로드뷰</span>
 </div>
 
 <!-- 우클릭 좌표 팝업 -->
@@ -1768,6 +1773,10 @@
   <div>
     <span class="cc-copy" onclick="copyCoord('dd')">복사 (DD)</span>
     <span class="cc-copy" onclick="copyCoord('dms')">복사 (DMS)</span>
+  </div>
+  <div>
+    <span class="cc-copy cc-ext" onclick="openAtCoord('pano')" title="구글 스트리트뷰를 새 창으로 엽니다">로드뷰 ↗</span>
+    <span class="cc-copy cc-ext" onclick="openAtCoord('map')" title="구글지도를 새 창으로 엽니다">구글지도 ↗</span>
   </div>
 </div>
 
@@ -3187,22 +3196,51 @@ map.on('contextmenu', e => {
   const lng = e.latlng.lng.toFixed(6);
   document.getElementById('clickCoordVal').textContent = `${lat}, ${lng}`;
 
-  // 화면 픽셀 위치 계산
-  const pt = map.latLngToContainerPoint(e.latlng);
+  // 팝업을 누른 자리에 붙인다.
+  // 예전에는 지도 컨테이너 좌표에 헤더 높이를 더했는데, #map 은 화면 맨 위(top:0)부터
+  // 깔려 있어 헤더만큼(데스크톱 59px·모바일 105px) 아래로 밀려 떴다. 컨테이너의 실제
+  // 화면 위치를 재서 쓰고, 상자 크기도 하드코딩(220×100) 대신 실측해 버튼이 늘어도 맞춘다.
   const box = document.getElementById('coordClick');
   box.style.display = 'block';
-
-  // 팝업이 화면 밖으로 나가지 않게
-  const bw = 220, bh = 100;
-  const mw = map.getSize().x, mh = map.getSize().y;
-  const headerH = document.getElementById('header').offsetHeight;
-  let left = pt.x + 12;
-  let top  = pt.y + 12 + headerH;
-  if (left + bw > mw) left = pt.x - bw - 8;
-  if (top  + bh > mh + headerH) top = pt.y - bh + headerH;
-  box.style.left = left + 'px';
-  box.style.top  = top  + 'px';
+  _placeCoordBox(box, map.latLngToContainerPoint(e.latlng));
 });
+
+// 지도 밖 — 하단 바·패널 위 — 에서 우클릭하면 좌표 팝업을 닫는다. 예전에는 지도 이벤트가
+// 나지 않아 팝업이 옛 자리에 그대로 남았고, 그래서 방금 누른 곳과 동떨어진 데 뜬 것처럼 보였다.
+document.addEventListener('contextmenu', ev => {
+  const box = document.getElementById('coordClick');
+  if (!box || box.style.display === 'none') return;
+  const t = ev.target;
+  if (!t || !t.closest) return;
+  if (t.closest('#coordClick') || t.closest('#map')) return;  // 팝업 자체·지도 위는 그대로 둔다
+  box.style.display = 'none';
+}, true);
+
+// 지도 위 컨테이너 좌표 pt 옆에 상자를 놓는다. 화면 밖으로 나가면 반대쪽으로 접는다.
+function _placeCoordBox(box, pt) {
+  const r  = map.getContainer().getBoundingClientRect();
+  const sx = window.scrollX || 0, sy = window.scrollY || 0;   // #coordClick 은 position:absolute
+  const bw = box.offsetWidth, bh = box.offsetHeight;
+  const GAP = 12, EDGE = 6;
+  let left = r.left + pt.x + GAP;
+  let top  = r.top  + pt.y + GAP;
+  if (left + bw > window.innerWidth  - EDGE) left = r.left + pt.x - bw - GAP;
+  if (top  + bh > window.innerHeight - EDGE) top  = r.top  + pt.y - bh - GAP;
+  box.style.left = Math.max(EDGE, left) + sx + 'px';
+  box.style.top  = Math.max(EDGE, top)  + sy + 'px';
+}
+
+// 우클릭한 지점을 구글에서 새 창으로 연다. 좌표만 있으면 되는 공식 URL 형식이라
+// API 키가 필요 없다. 바다처럼 로드뷰가 없는 곳이면 구글이 가장 가까운 파노라마나
+// 안내를 대신 보여 주므로, 지도 보기 버튼을 함께 두었다.
+function openAtCoord(kind) {
+  if (!lastClickLL) return;
+  const q = lastClickLL.lat.toFixed(6) + ',' + lastClickLL.lng.toFixed(6);
+  const url = kind === 'pano'
+    ? 'https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=' + q
+    : 'https://www.google.com/maps/search/?api=1&query=' + q;
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
 
 function toDMS(deg) {
   const d = Math.floor(Math.abs(deg));
