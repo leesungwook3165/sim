@@ -157,7 +157,8 @@
       border-top: 1px solid rgba(100,180,255,0.45);
       backdrop-filter: blur(8px);
       box-shadow: 0 -6px 24px rgba(0,0,0,0.55);
-      padding: 7px 16px 0;
+      /* 아래 27px은 좌표줄 자리 — 그만큼 비워 둔다 */
+      padding: 7px 16px var(--coord-h, 27px);
       overflow-y: auto;
     }
     #simTimelapseHead { display: flex; flex-direction: column; gap: 5px; margin-bottom: 5px; padding-top: 2px; }
@@ -435,10 +436,11 @@
     /* 마우스 좌표 표시 */
     #coordBar {
       position: fixed;
-      /* 화면 맨 아래에 고정. 하단 바 높이만큼 띄워봤더니 바가 열리면 중간에 떠서
-         지도를 가렸다 — 차라리 바닥에 두고 바에 가려지게 둔다. */
+      /* 화면 맨 아래 고정. 바 높이만큼 띄웠더니 중간에 떠서 지도를 가렸고, 그렇다고
+         바 뒤에 두면 아예 안 보인다. 바보다 위에 얹고, 바에는 그만큼 아래 여백을 줘서
+         내용이 가려지지 않게 한다. */
       bottom: 0; left: 0; right: 0;
-      z-index: 1002;
+      z-index: 1012;
       background: rgba(10, 25, 50, 0.82);
       border-top: 1px solid rgba(80,160,255,0.2);
       padding: 4px 14px;
@@ -1020,6 +1022,8 @@
       user-select: none;
     }
     #aisTimebar.visible { display: flex; }
+    /* AIS 바가 맨 아래일 때(타임랩스가 닫힌 경우)도 좌표줄 자리를 비운다 */
+    #aisTimebar.at-bottom { padding-bottom: var(--coord-h, 27px); }
     /* 최소화 — 타임랩스와 같은 방식으로 접되, 조작행은 남겨 계속 쓸 수 있게 한다 */
     #aisTimebar.ais-minimized .ais-tb-tl-row,
     #aisTimebar.ais-minimized .ais-tb-subtl-row,
@@ -9628,6 +9632,7 @@ function _syncBottomBars() {
   const tlShown = tl && getComputedStyle(tl).display !== 'none' && tl.offsetHeight > 0;
   const tlH = tlShown ? tl.offsetHeight : 0;
   ais.style.bottom = tlH + 'px';
+  ais.classList.toggle('at-bottom', tlH === 0);   // 타임랩스가 없으면 AIS가 맨 아래다
   // 떠 있는 패널(운항 시뮬레이션·운항 관리)이 하단 바 뒤로 숨지 않도록, 두 바가 차지하는
   // 높이를 CSS 변수로 알려 패널 최대 높이를 그만큼 줄인다.
   const aisShown = ais.classList.contains('visible');
