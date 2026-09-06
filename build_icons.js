@@ -38,6 +38,31 @@ const NEEDED = {
   skipBack:  'SkipBack',
   skipFwd:   'SkipForward',
   repeat:    'Repeat',
+  search:      'Search',        // 표본 수집·분석 진행중
+  settings:    'Settings',      // 순항속도 설정
+  rocket:      'Rocket',        // 시나리오 2(직항)
+  coins:       'Coins',         // 운항비용
+  fuel:        'Fuel',          // 연료 단가
+  refresh:     'RefreshCw',     // 시세 다시 불러오기
+  link:        'Link',          // 바깥 기사 링크
+  dish:        'SatelliteDish', // 유가 정보 출처
+  crane:       'Construction',  // 선석 스케줄
+  save:        'Save',          // 도형 저장
+  fileText:    'FileText',      // GeoJSON
+  map:         'Map',           // KML·일반지도
+  chart:       'ChartColumn',   // CSV·비교표
+  folderOpen:  'FolderOpen',    // 파일 선택
+  folder:      'Folder',        // 저장된 보정
+  satellite:   'Satellite',     // 위성영상 레이어
+  route:       'Route',         // 국도 382호 레이어
+  globe:       'Globe',         // 좌표계
+  checkCircle: 'CircleCheck',   // 정상·완료
+  xCircle:     'CircleX',       // 실패
+  stop:        'CircleStop',    // 중지
+  circle:      'Circle',        // 전체 범위
+  compass:     'Compass',       // 방위
+  plus:        'Plus',          // 추가
+  rotate:      'RotateCw',      // 되돌리기
   close:     'X',
   minimize:  'Minus'
 };
