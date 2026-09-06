@@ -50,14 +50,15 @@
     }
     /* 아이콘(SVG)은 글자 기준선에 맞춰 살짝 내려 앉힌다 */
     .ui-ic { vertical-align: -0.18em; }
-    .map-ctrl-btn svg { display: block; margin: 0 auto; }
+    .map-ctrl-btn svg { display: block; }
     .sim-title svg { vertical-align: -0.18em; margin-right: 4px; }
 
     /* 헤더로 옮긴 맵툴 버튼 — Leaflet 흰 막대 대신 헤더 탭과 같은 톤, 가로 배치 */
     .header-tools { display: flex; align-items: center; margin-right: 8px; }
     .header-tools .map-ctrl-group { display: flex; gap: 5px; }
     .header-tools .map-ctrl-btn {
-      width: 30px; height: 28px; line-height: 26px; font-size: 14px;
+      width: 30px; height: 28px; font-size: 14px;
+      display: flex; align-items: center; justify-content: center;
       border-radius: 5px; border: 1px solid rgba(80,160,255,0.4);
       background: rgba(30,70,130,0.55); color: #cfe6ff;
       transition: background .15s, border-color .15s;
@@ -253,9 +254,8 @@
 
     /* 지도 내 커스텀 컨트롤 공통 */
     .map-ctrl-btn {
-      display: block;
+      display: flex; align-items: center; justify-content: center;
       width: 30px; height: 30px;
-      line-height: 30px;
       text-align: center;
       background: #fff;
       border: 1px solid #ccc;
@@ -403,7 +403,7 @@
     /* 저장 패널 */
     #savePanel {
       position: fixed;
-      bottom: calc(var(--bottom-bars, 0px) + 42px); left: 12px;
+      bottom: calc(var(--bottom-bars, 0px) + 14px); left: 12px;
       z-index: 1011;
       background: rgba(10, 25, 50, 0.92);
       border: 1px solid rgba(80,160,255,0.35);
@@ -434,9 +434,10 @@
 
     /* 마우스 좌표 표시 */
     #coordBar {
-      position: absolute;
-      /* 타임랩스·AIS 바가 열리면 그 높이만큼 위로 — 뒤에 가려져 안 보이던 것 */
-      bottom: var(--bottom-bars, 0px); left: 0; right: 0;
+      position: fixed;
+      /* 화면 맨 아래에 고정. 하단 바 높이만큼 띄워봤더니 바가 열리면 중간에 떠서
+         지도를 가렸다 — 차라리 바닥에 두고 바에 가려지게 둔다. */
+      bottom: 0; left: 0; right: 0;
       z-index: 1002;
       background: rgba(10, 25, 50, 0.82);
       border-top: 1px solid rgba(80,160,255,0.2);
@@ -643,7 +644,7 @@
     /* ── 보정 편집 안내 (편집 모드일 때만 보인다) ── */
     #aisCorrHelp {
       position: fixed;
-      right: 14px; bottom: calc(var(--bottom-bars, 0px) + 42px); /* 좌하단은 저장 패널, 바로 위 띠는 좌표줄 */
+      right: 14px; bottom: calc(var(--bottom-bars, 0px) + 14px); /* 좌하단은 저장 패널이 쓴다 */
       z-index: 1011; display: none;
       width: 264px;
       background: rgba(8,20,45,0.95);
@@ -1229,6 +1230,9 @@
 
 <div id="measureInfo"></div>
 
+<!-- 떠 있는 패널들 — display:contents라 배치에는 영향이 없고, 개발자도구에서만 묶여 보인다 -->
+<div id="uiPanels" style="display:contents">
+
 <!-- 시뮬레이션 패널 -->
 <div id="simPanel" class="visible">
   <div class="sim-title">
@@ -1562,6 +1566,10 @@
 </div>
 
 <!-- 화면 하단(푸터) 타임랩스 — 시간대별로 각 배가 어느 구간에 있는지 보여주는 재생 헤드 -->
+</div><!-- /#uiPanels -->
+
+<!-- 화면 아래에 깔리는 것들 (타임랩스 · AIS 타임바 · 보정 안내) -->
+<div id="uiBottom" style="display:contents">
 <div id="simTimelapseBar">
   <button id="tlMinBtn" onclick="toggleTimelapse()" title="타임랩스 최소화 / 복원" style="position:absolute;top:6px;right:10px;z-index:2;background:transparent;border:none;color:#aac8e8;font-size:14px;line-height:1;padding:2px 6px;cursor:pointer;border-radius:4px;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#aac8e8'">─</button>
   <div id="simTimelapseResizeHandle" title="드래그해서 높이 조절">
@@ -1710,9 +1718,13 @@
   </div>
 </div>
 
+</div><!-- /#uiBottom -->
+
 <div id="map"></div>
 
 <!-- 하단 마우스 좌표 바 -->
+<!-- 지도 위에 겹치는 보조 UI (좌표 표시 · 저장) -->
+<div id="uiMapOverlay" style="display:contents">
 <div id="coordBar">
   <span>마우스</span>
   <span class="coord-val" id="mouseLat">—</span>
@@ -1750,6 +1762,8 @@
     <button class="save-btn" style="width:100%" onclick="document.getElementById('fileInput').click()">📂 파일 선택</button>
   </div>
 </div>
+
+</div><!-- /#uiMapOverlay -->
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
