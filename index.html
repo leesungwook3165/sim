@@ -5608,6 +5608,56 @@ function _seedDefaultCompetitorShips() {
     try { localStorage.setItem('hanjil_miracle_samehull_v1', '1'); } catch(e) {}
   }
 
+  // 시각표를 확인한 배는 시뮬레이션 출항시각·속력도 거기에 맞춘다.
+  // 카멜리아는 등록할 때 "출항시각·속력 미확인 추정치 — 실제 시각표 확인 필요"로 적어 둔
+  // 자리였다(13:00 · 21노트). 확인한 시각표는 부산 22:30 → 하카타 익일 07:30(9시간)이다.
+  // 속력은 다른 배와 같은 방식으로 "그 배의 항로 거리 ÷ 공시 소요시간"에서 역산한다.
+  let schedFixed = null;
+  try { schedFixed = localStorage.getItem('hanjil_offsched_fix_v1'); } catch(e) {}
+  if (!schedFixed) {
+    const fix = {
+      // 이름: [출항, 도착, 소요시간(분), 출처명, 출처URL]
+      '카멜리아 (뉴카멜리아호)': ['22:30', '07:30', 9 * 60,
+        '카멜리아라인 공시 — 부산 22:30 → 하카타 익일 07:30', 'https://www.camellia-line.co.kr/'],
+      '성희호 (부관훼리)':      ['21:00', '08:00', 11 * 60,
+        '부관훼리 공시 — 부산 21:00 → 시모노세키 익일 08:00 (홀·짝일 교대)', 'https://www.pukwan.co.kr/'],
+      '하마유호 (부관훼리)':    ['19:45', '07:45', 12 * 60,
+        '부관훼리 공시 — 시모노세키 19:45 → 부산 익일 07:45 (홀·짝일 교대)', 'https://www.pukwan.co.kr/']
+    };
+    customShips.forEach(sh => {
+      const v = fix[sh.name];
+      if (!v) return;
+      const dist = _customShipCalc(sh).dist;          // 이 배가 실제로 도는 항로 길이
+      sh.departHM = v[0];
+      if (dist > 0 && v[2] > 0) sh.kts = +(dist / (v[2] / 60) / 1.852).toFixed(1);
+      sh.offDepartHM = v[0]; sh.offArriveHM = v[1]; sh.offConfirmed = true;
+      sh.sourceLabel = v[3]; sh.sourceUrl = v[4];
+    });
+    try { localStorage.setItem('hanjil_offsched_fix_v1', '1'); } catch(e) {}
+  }
+
+  // 시뮬레이션 값과 공시 시각표를 갈라 둔다. 지금까지 한 칸에 섞여 있어서 그 도착시각이
+  // 계산값인지 시각표인지 구분이 안 됐다. 시각표를 확인한 배는 그 값을, 나머지는 등록 당시
+  // 값(속력을 공시 소요시간에서 역산했으니 사실상 시각표에서 온 값)을 옮겨 놓는다.
+  // 배가 다 등록된 뒤에 돌려야 나중 판본에서 새로 들어온 배도 빠지지 않는다.
+  {
+    const off = {
+      '카멜리아 (뉴카멜리아호)': { dep:'22:30', arr:'07:30' }, // 카멜리아라인 공시(부산발)
+      '성희호 (부관훼리)':      { dep:'21:00', arr:'08:00' }, // 부관훼리 공시(부산발)
+      '하마유호 (부관훼리)':    { dep:'19:45', arr:'07:45' }  // 시모노세키발 — 홀·짝일로 방향이 갈린다
+    };
+    customShips.forEach(sh => {
+      if (sh.offDepartHM) return;                 // 사용자가 이미 적어 둔 값은 건드리지 않는다
+      if (off[sh.name]) {
+        sh.offDepartHM = off[sh.name].dep; sh.offArriveHM = off[sh.name].arr; sh.offConfirmed = true;
+      } else {
+        sh.offDepartHM = sh.departHM;
+        sh.offArriveHM = _minToHM(_customShipCalc(sh).arriveMin);
+        sh.offConfirmed = false;
+      }
+    });
+  }
+
   _saveCustomShips();
 }
 
@@ -6190,6 +6240,36 @@ function _customShipCalc(s) {
   return { dist, oneWayMin, departMin, arriveMin, retArriveMin, viaArriveMin, viaDepartMin };
 }
 
+// 시뮬레이션이 낸 시각과 선사가 공시한 시각을 나란히 놓는다.
+//   시뮬레이션 — 출항시각은 사용자가 설정한 값, 도착시각은 설정 속력으로 계산한 값이라
+//                속력을 만지면 함께 움직인다.
+//   공시 시각표 — 선사가 내건 시각. 속력을 바꿔도 그대로다.
+// 둘을 한 칸에 섞어 두면 "이 도착시각이 계산값인지 시각표인지"를 알 수 없어서 갈라 둔다.
+function _shipSchedCompare(s, calc) {
+  const simDep = _minToHM(calc.departMin);
+  const simArr = _minToHM(calc.arriveMin);
+  const offDep = s.offDepartHM || '';
+  const offArr = s.offArriveHM || '';
+  // 자정을 넘겨 도착하는 배가 많아 ±12시간 안쪽의 차이로 접어서 본다
+  const fold = m => (m > 720 ? m - 1440 : m <= -720 ? m + 1440 : m);
+  const diff = (a, b) => (a && b) ? fold(((_hmToMin(a) - _hmToMin(b)) % 1440 + 1440) % 1440) : null;
+  return {
+    simDep, simArr, offDep, offArr,
+    depGap: diff(simDep, offDep),
+    arrGap: diff(simArr, offArr),
+    confirmed: !!s.offConfirmed
+  };
+}
+
+// 차이를 읽기 좋게 — 0분이면 '일치', 아니면 몇 분 빠름/늦음
+function _shipGapLabel(gap) {
+  if (gap == null) return '<span style="color:#667788">시각표 미입력</span>';
+  if (gap === 0)   return '<span style="color:#7ee8c8">시각표와 일치</span>';
+  const big = Math.abs(gap) >= 30;
+  return '<span style="color:' + (big ? '#ffaa66' : '#aac8e8') + '">'
+    + _fmtMin(Math.abs(gap)) + (gap > 0 ? ' 늦음' : ' 빠름') + '</span>';
+}
+
 // 모든 커스텀 선박의 애니메이션 타임라인 재계산 (rebuildSim()에서 호출)
 // via가 설정된 선박은 부산→경유항(대기)→목적항 순으로 두 구간을 이어붙인다.
 // 경유항 구간 좌표는 같은 위치(도착시각·출발시각만 다름)이므로 그 사이는 정박 상태로 보간된다.
@@ -6429,7 +6509,8 @@ function _builtinShipsHtml() {
       </div>` : `<div style="font-size:10px;color:#667788;margin-bottom:5px">※ 산타모니카호와 속력·출항시각·회항 시각·선종·총톤수를 공유 (위 카드에서 함께 수정됨)</div>`}
       <div class="ship-row-calc">
         📏 ${r.dist}km · 편도 ${_fmtMin(r.oneWay)} · 하카타 회항 시각 ${_minToHM(departMin + r.oneWay + r.turnMin)} (대기 ${r.turnMin}분)<br>
-        🕐 출항 ${r.departHM} → 도착 ${arriveClock} · 복귀도착 ${retClock}<br>
+        <span style="color:#7ecfff">시뮬</span> 출항 ${r.departHM} → 도착 ${arriveClock} <span style="color:#667788">(설정 ${r.kts.toFixed(1)}노트로 계산)</span> · 복귀도착 ${retClock}<br>
+        <span style="color:#ffcc66">공시</span> <span style="color:#667788">아직 운항하지 않는 구상 노선이라 시각표가 없다</span><br>
         🚢 ${r.shipType} · ${r.tonnage ? r.tonnage.toLocaleString() + '톤' : '톤수 미상'}
       </div>
     </div>`;
@@ -6474,6 +6555,7 @@ function renderShipMgrList() {
     if (collapsed) return header; // 접힌 그룹 — 이 배(및 같은 그룹의 나머지 배)는 목록에서 숨긴다
     const groupHeader = header;
     const calc = _customShipCalc(s);
+    const cmp  = _shipSchedCompare(s, calc);
     const fromCoords = s.from.mode === 'custom'
       ? `<div class="ship-row-coords">
            <input type="text" placeholder="항구명" value="${s.from.name}" onchange="updateCustomShipPortField('${s.id}','from','name',this.value)">
@@ -6532,11 +6614,19 @@ function renderShipMgrList() {
         <label>속력(kts)
           <input type="number" min="1" max="80" step="0.1" value="${s.kts}" onchange="updateCustomShip('${s.id}','kts',this.value)">
         </label>
-        <label>출항시각
+        <label title="시뮬레이션이 출발하는 시각 — 설정 속력과 함께 도착시각을 만든다">출항시각 (시뮬)
           <input type="time" value="${s.departHM}" onchange="updateCustomShip('${s.id}','departHM',this.value)">
         </label>
         <label>회항 시각
           <input type="time" value="${_minToHM(calc.arriveMin + s.turnMin)}" onchange="updateCustomShipReturnTime('${s.id}',this.value)" ${s.roundTrip?'':'disabled'}>
+        </label>
+        <label title="선사가 공시한 출항시각. 시뮬레이션과 별개로 적어 두고 견준다">공시 출항</label>
+        <label title="선사가 공시한 출항시각. 시뮬레이션과 별개로 적어 두고 견준다" style="margin-top:-14px">
+          <input type="time" value="${s.offDepartHM||''}" onchange="updateCustomShip('${s.id}','offDepartHM',this.value)">
+        </label>
+        <label title="선사가 공시한 도착시각">공시 도착</label>
+        <label title="선사가 공시한 도착시각" style="margin-top:-14px">
+          <input type="time" value="${s.offArriveHM||''}" onchange="updateCustomShip('${s.id}','offArriveHM',this.value)">
         </label>
         <label>수속시간(분)
           <input type="number" min="0" step="5" value="${s.berthMin!=null?s.berthMin:BERTH_DEFAULT_MIN}" onchange="updateCustomShip('${s.id}','berthMin',this.value)" title="선석 스케줄에서 이 배가 각 항구 도착 후 선석을 점유하는 시간 (기본 30분)">
@@ -6562,7 +6652,8 @@ function renderShipMgrList() {
       </div>
       <div class="ship-row-calc">
         📏 ${calc.dist.toFixed(0)}km · 편도 ${_fmtMin(calc.oneWayMin)}<br>
-        🕐 출항 ${_minToHM(calc.departMin)}${s.via ? ` → ${s.via.name} ${_minToHM(calc.viaArriveMin)} (경유대기 ${s.viaStopMin}분)` : ''} → 도착 ${_minToHM(calc.arriveMin)}${s.roundTrip ? ` · 회항 ${_minToHM(calc.arriveMin + s.turnMin)} · 복귀도착 ${_minToHM(calc.retArriveMin)}` : ''}<br>
+        <span style="color:#7ecfff">시뮬</span> 출항 ${cmp.simDep}${s.via ? ` → ${s.via.name} ${_minToHM(calc.viaArriveMin)} (경유대기 ${s.viaStopMin}분)` : ''} → 도착 ${cmp.simArr}${s.roundTrip ? ` · 회항 ${_minToHM(calc.arriveMin + s.turnMin)} · 복귀도착 ${_minToHM(calc.retArriveMin)}` : ''} <span style="color:#667788">(설정 ${s.kts}노트로 계산)</span><br>
+        <span style="color:#ffcc66">공시</span> ${cmp.offDep || '—'} → ${cmp.offArr || '—'} <span style="color:#667788">${cmp.confirmed ? '· 선사 공시 확인' : '· 등록 당시 값'}</span> · 도착 ${_shipGapLabel(cmp.arrGap)}<br>
         🚢 ${s.shipType||'고속선'} · ${s.tonnage ? s.tonnage.toLocaleString() + '톤' : '톤수 미상'}
         ${s.sourceUrl ? `<br>🔗 <a href="${s.sourceUrl}" target="_blank" rel="noopener" style="color:#7ecfff">${s.sourceLabel||'출처 보기'}</a>` : ''}
       </div>
