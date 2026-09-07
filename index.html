@@ -6622,12 +6622,10 @@ function renderShipMgrList() {
         <label>회항 시각
           <input type="time" value="${_minToHM(calc.arriveMin + s.turnMin)}" onchange="updateCustomShipReturnTime('${s.id}',this.value)" ${s.roundTrip?'':'disabled'}>
         </label>
-        <label title="선사가 공시한 출항시각. 시뮬레이션과 별개로 적어 두고 견준다">공시 출항</label>
-        <label title="선사가 공시한 출항시각. 시뮬레이션과 별개로 적어 두고 견준다" style="margin-top:-14px">
+        <label title="선사가 공시한 출항시각. 시뮬레이션과 별개로 적어 두고 견준다">공시 출항
           <input type="time" value="${s.offDepartHM||''}" onchange="updateCustomShip('${s.id}','offDepartHM',this.value)">
         </label>
-        <label title="선사가 공시한 도착시각">공시 도착</label>
-        <label title="선사가 공시한 도착시각" style="margin-top:-14px">
+        <label title="선사가 공시한 도착시각">공시 도착
           <input type="time" value="${s.offArriveHM||''}" onchange="updateCustomShip('${s.id}','offArriveHM',this.value)">
         </label>
         <label>수속시간(분)
