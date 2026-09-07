@@ -8584,14 +8584,13 @@ function _aisDrawSpeedChart(pts, cursor) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, W, H);
 
-  // 왼쪽 축은 항상 한국시 오전 07:00에 고정한다.
-  // 날짜가 바뀌어도 같은 x 위치에 같은 시각이 오므로 날짜별 비교가 쉽다.
   const HOUR_MS = 3600000;
   const KST_MS = 9 * HOUR_MS;              // 표기·기준선 모두 한국시(UTC+9)
-  const DAY_MS  = HOUR_MS * 24;
-  // 07:00 KST ≡ 22:00 UTC 전날 — 이 앵커에서 DAY_MS 배수가 항상 07:00 KST
-  const _07anchor = DAY_START_MIN * 60000 - KST_MS; // -7200000 ms
-  const t0 = Math.floor((new Date(pts[0].ts).getTime() - _07anchor) / DAY_MS) * DAY_MS + _07anchor;
+  // 좌측을 항상 오전 6시(KST)로 고정 — 날짜가 달라도 같은 x 위치에 같은 시각이 오도록
+  const firstMs = new Date(pts[0].ts).getTime();
+  const kstDayStart = Math.floor((firstMs + KST_MS) / (24 * HOUR_MS)) * (24 * HOUR_MS) - KST_MS; // 해당 날 00:00 KST(UTC)
+  const t0Fixed = kstDayStart + 6 * HOUR_MS; // 06:00 KST
+  const t0 = Math.min(t0Fixed, Math.floor(firstMs / HOUR_MS) * HOUR_MS); // 데이터가 6시 이전이면 그 시각부터
   const t1 = Math.ceil(new Date(pts[pts.length - 1].ts).getTime() / HOUR_MS) * HOUR_MS;
   const totalMs = Math.max(1, t1 - t0);
   const maxSpd = Math.max(5, ...pts.map(p => p.speed)); // 최소 5kts 스케일 확보
@@ -10588,20 +10587,22 @@ function _aisBarToggle() {
 }
 
 // ── AIS 토글 버튼을 headerTools에 삽입 ──
-// map-ctrl-group / map-ctrl-btn 구조를 써야 header-tools CSS 가 제대로 걸린다
 (function() {
   const slot = document.getElementById('headerTools');
-  if (!slot) return;
-  const grp = document.createElement('div');
-  grp.className = 'map-ctrl-group';
-  const btn = document.createElement('button');
-  btn.className = 'map-ctrl-btn';
-  btn.title = 'AIS 실적 항로 타임바';
-  btn.type = 'button';
+  const wrap = document.createElement('div');
+  wrap.className = 'leaflet-bar leaflet-control';
+  const btn = document.createElement('a');
+  btn.href = '#'; btn.title = 'AIS 실적 항로 타임바';
   btn.innerHTML = icon('dish', { size: 17 });
-  btn.addEventListener('click', () => _aisBarToggle());
-  grp.appendChild(btn);
-  slot.appendChild(grp);
+  btn.style.cssText = 'font-size:16px;line-height:30px;width:30px;height:30px;display:block;text-align:center;text-decoration:none';
+  btn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); _aisBarToggle(); });
+  wrap.appendChild(btn);
+  if (slot) {
+    slot.appendChild(wrap);
+  } else {
+    const AisCtrl = L.Control.extend({ options:{ position:'topleft' }, onAdd(){ return wrap; } });
+    new AisCtrl().addTo(map);
+  }
 })();
 
 </script>
