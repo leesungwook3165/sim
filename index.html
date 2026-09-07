@@ -7396,14 +7396,15 @@ function _aisWorkerMake() {
 function _aisWorkerRebuild(msg) {
   const tsArr = msg.tsJoined.length ? msg.tsJoined.split('\n') : [];
   const flat = new Array(msg.n);
-  let _maxSpd = 0, _cSum = 0, _cCnt = 0;
+  let _cSum = 0, _cCnt = 0;
   const _cruiseThr = (msg.cruiseKts || 0) * 0.75; // 순항 밴드 기준
   for (let i = 0; i < msg.n; i++) {
     const s = msg.spd[i];
     flat[i] = { lat: msg.lat[i], lon: msg.lon[i], speed: s, course: msg.crs[i], ts: tsArr[i] };
-    if (s > _maxSpd) _maxSpd = s;
     if (_cruiseThr > 0 && s >= _cruiseThr) { _cSum += s; _cCnt++; }
   }
+  // 최고 속도는 부두에서 튄 헛값을 빼고 잰다 (flat 이 다 채워진 뒤라야 앞뒤를 볼 수 있다)
+  const _maxSpd = _aisMaxSpeed(flat);
   const index = {};
   msg.dates.forEach((d, i) => {
     const from = msg.dayOff[i];
@@ -7665,6 +7666,44 @@ function _nearestPortName(lat, lon, maxKm) {
 //  (뚝뚝 끊긴 GPS 공백이 직선으로 이어지며 육지를 관통하거나,
 //   예정 항로보다 훨씬 길거나 짧은 "튀는 날"을 걸러내기 위함)
 // ════════════════════════════════════════════════════
+// AIS 속도 필드는 이따금 말이 안 되는 값을 뱉는다. 카멜리아호는 부산 부두에 대 놓은 채로
+// 97.5노트가 찍혔다 — 그 배 전 구간 291,913행의 중앙값이 14.9, 99.9%가 24노트인데도.
+// 그대로 두면 "최고 97.5kt"로 표시되고 속도 그래프 세로 눈금까지 그 값에 맞춰 늘어나
+// 실제 항해가 바닥에 납작하게 깔린다.
+// 앞뒤 핑 사이를 실제로 지나간 거리로 속도를 되짚어 보고, 배가 그만큼 움직이지 않았으면
+// 그 값은 못 믿는 것으로 본다. 변위가 아니라 "지나간 길이"로 재야 회항하는 지점에서
+// 오판하지 않는다(회항점은 앞뒤 위치가 거의 같아 변위가 0에 가깝다).
+const AIS_SPD_TRUST_RATIO  = 4;   // 적힌 속도가 실제 이동의 이 배를 넘고
+const AIS_SPD_TRUST_MARGIN = 10;  // 그 차이가 이만큼(노트)을 넘으면 헛값으로 본다
+const AIS_SPD_TRUST_MAX_H  = 3;   // 핑이 이보다 벌어진 구간은 판단을 보류한다(그냥 믿는다)
+
+function _aisSpeedTrusted(pts, i) {
+  if (i <= 0 || i >= pts.length - 1) return true;   // 양 끝은 견줄 이웃이 없다
+  const a = pts[i - 1], b = pts[i], c = pts[i + 1];
+  const h = (new Date(c.ts).getTime() - new Date(a.ts).getTime()) / 3600000;
+  if (!(h > 0) || h > AIS_SPD_TRUST_MAX_H) return true;
+  const pathKm = _simDist([a.lat, a.lon], [b.lat, b.lon]) + _simDist([b.lat, b.lon], [c.lat, c.lon]);
+  const impliedKts = pathKm / h / 1.852;
+  return !(b.speed > impliedKts * AIS_SPD_TRUST_RATIO + AIS_SPD_TRUST_MARGIN);
+}
+
+// 헛값을 뺀 최고 속도. 지금 최고치를 넘는 후보가 나왔을 때만 확인하므로 값이 거의 안 든다.
+// 그래프는 재생 중 초당 15번 다시 그려지므로 같은 항적이면 앞서 낸 값을 그대로 쓴다.
+let _aisMaxSpdCache = 0, _aisMaxSpdFor = null;
+function _aisMaxSpeedCached(pts) {
+  if (_aisMaxSpdFor === pts) return _aisMaxSpdCache;
+  _aisMaxSpdFor = pts; _aisMaxSpdCache = _aisMaxSpeed(pts);
+  return _aisMaxSpdCache;
+}
+
+function _aisMaxSpeed(pts) {
+  let m = 0;
+  for (let i = 0; i < pts.length; i++) {
+    if (pts[i].speed > m && _aisSpeedTrusted(pts, i)) m = pts[i].speed;
+  }
+  return m;
+}
+
 const AIS_MAX_PLAUSIBLE_KTS = 70;  // 이보다 빠른 "순간 이동"은 GPS 공백을 직선 보간한 것 — 비정상으로 간주
 const AIS_MIN_POINTS_NORMAL = 20;  // 이보다 포인트가 적으면 항로 형태를 신뢰할 수 없음
 const AIS_DIST_TOLERANCE_LO = 0.6; // 기대 편도거리 대비 이 비율 미만이면 "너무 짧음"
@@ -8585,7 +8624,8 @@ function _aisDrawSpeedChart(pts, cursor) {
   const t0 = Math.min(kstMid + 6 * HOUR_MS,  Math.floor(firstMs / HOUR_MS) * HOUR_MS);
   const t1 = Math.max(kstMid + 22 * HOUR_MS, Math.ceil(lastMs  / HOUR_MS) * HOUR_MS);
   const totalMs = Math.max(1, t1 - t0);
-  const maxSpd = Math.max(5, ...pts.map(p => p.speed)); // 최소 5kts 스케일 확보
+  // 눈금도 헛값을 빼고 잡는다 — 안 그러면 부두에서 튄 한 점 때문에 항해가 납작해진다
+  const maxSpd = Math.max(5, _aisMaxSpeedCached(pts)); // 최소 5kts 스케일 확보
 
   // 그래프가 커지면 속도·시각 눈금을 함께 그린다 (작을 때는 공간이 없어 생략)
   const roomy = H >= 90;
@@ -9058,7 +9098,7 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
   g.addTo(map);
   _aisLayerGroup.g = g;
 
-  const maxSpd = Math.max(...pts.map(p => p.speed));
+  const maxSpd = _aisMaxSpeed(pts);   // 부두에서 튄 헛값 제외
   const stopNote = stops.length ? ` · 정박 ${stops.length}건(${stops.map(s => Math.round(s.durMin)).join(',')}분)` : '';
   const snapNote = (corrCount ? ` · ✏보정 ${corrCount}구간` : '')
     + (landCount ? ` · ⚠육지관통 ${landCount}구간(빨간선)` : '');
