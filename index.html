@@ -8628,9 +8628,13 @@ function _aisDrawSpeedChart(pts, cursor) {
   // ── 공시 운항시각 기준선 ──
   // 이 세로선이 "시간표대로면 여기서 떠나고 여기서 닿아야 한다"는 자리다.
   // AIS 에서 읽은 실제 출·도착이 이 선에서 얼마나 벗어났는지 한눈에 보인다.
+  const _schedLinesMeta = []; // hover·click 판정용 — _aisChartGeom에 포함
   {
     const vkey = (document.getElementById('aisVesselSel') || {}).value;
     const marks = vkey ? _aisSchedMarks(vkey) : [];
+    const _offInfo = (typeof _AIS_OFFICIAL !== 'undefined' && _AIS_OFFICIAL[vkey]) || null;
+    const _src = _offInfo ? _offInfo.src : null;
+    const _srcLabel = _offInfo ? _offInfo.label : null;
     const dayMs = 86400000;
     marks.forEach(mk => {
       // 한국시 자정을 UTC 로 옮긴 뒤, 앞뒤 하루씩 훑어 화면 안에 드는 시각을 모두 찍는다
@@ -8655,6 +8659,7 @@ function _aisDrawSpeedChart(pts, cursor) {
           ctx.fillText(mk.kind === 'dep' ? '출항' : '도착', x + (x > W - 60 ? -3 : 3), padT + 1);
           ctx.restore();
         }
+        _schedLinesMeta.push({ x, mk, col, src: _src, srcLabel: _srcLabel });
       }
     });
   }
@@ -8767,7 +8772,7 @@ function _aisDrawSpeedChart(pts, cursor) {
   });
 
   // 그래프 좌표계를 저장해둔다 — 마우스 위치를 시각으로 되돌릴 때 쓴다
-  _aisChartGeom = { t0, totalMs, padL, plotW, plotH, padT };
+  _aisChartGeom = { t0, totalMs, padL, plotW, plotH, padT, schedLines: _schedLinesMeta };
 
   // 좁을 때는 눈금 대신 최고속도만 표시 (넓을 때는 위 눈금축이 대신한다)
   if (!roomy) {
@@ -8817,6 +8822,34 @@ function _aisDrawSpeedChart(pts, cursor) {
       : `${p.speed.toFixed(1)}kt`;
     ctx.fillText(lbl, x + (x > W / 2 ? -6 : 6), padT + 8);
     ctx.textAlign = 'start';
+
+    // ── 공시 세로선 hover 툴팁 ──
+    if (cursor.hover && cursor.schedLine) {
+      const sl = cursor.schedLine;
+      const tipLines = [sl.mk.text];
+      if (sl.mk.official && sl.srcLabel) tipLines.push(sl.srcLabel);
+      else if (!sl.mk.official && sl.mk.share != null) tipLines.push('실측 최빈 ' + Math.round(sl.mk.share * 100) + '%');
+      if (sl.src) tipLines.push('🔗 클릭하면 공시 사이트 열기');
+
+      ctx.save();
+      ctx.font = '10px sans-serif';
+      const lh = 15, px = 8, py = 5;
+      const bW = Math.max(...tipLines.map(l => ctx.measureText(l).width)) + px * 2;
+      const bH = tipLines.length * lh + py * 2;
+      const bx = Math.max(2, Math.min(sl.x - bW / 2, W - bW - 2));
+      const by = padT + plotH - bH - 6;
+      ctx.fillStyle = 'rgba(8,18,36,0.93)';
+      ctx.fillRect(bx, by, bW, bH);
+      ctx.strokeStyle = sl.col; ctx.lineWidth = 1.2;
+      ctx.strokeRect(bx, by, bW, bH);
+      tipLines.forEach((line, i) => {
+        ctx.fillStyle = i === 0 ? sl.col
+          : (sl.src && i === tipLines.length - 1 ? '#88ccff' : '#8899aa');
+        ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+        ctx.fillText(line, bx + px, by + py + i * lh);
+      });
+      ctx.restore();
+    }
   }
 }
 
@@ -10423,8 +10456,17 @@ function _aisHoverShipHide() {
     last = now;
     const g = _aisChartGeom;
     const r = canvas.getBoundingClientRect();
-    const frac = (e.clientX - r.left - g.padL) / g.plotW;
-    if (frac < 0 || frac > 1) { _aisHoverShipHide(); return; }
+    const mouseX = e.clientX - r.left;
+    const frac = (mouseX - g.padL) / g.plotW;
+    if (frac < 0 || frac > 1) { canvas.style.cursor = 'crosshair'; _aisHoverShipHide(); return; }
+    // 공시 세로선 근접 체크 (10px 이내)
+    let nearSchedLine = null;
+    (g.schedLines || []).forEach(sl => {
+      if (Math.abs(sl.x - mouseX) <= 10)
+        if (!nearSchedLine || Math.abs(sl.x - mouseX) < Math.abs(nearSchedLine.x - mouseX))
+          nearSchedLine = sl;
+    });
+    canvas.style.cursor = (nearSchedLine && nearSchedLine.src) ? 'pointer' : 'crosshair';
     const tsMs = g.t0 + frac * g.totalMs;
     // 시각 배열은 항적이 바뀔 때만 다시 만든다 (매 프레임 map()을 돌 필요가 없다)
     if (tsCacheFor !== _aisLastChartPts) {
@@ -10440,13 +10482,22 @@ function _aisHoverShipHide() {
       if (d < nearDist) { nearDist = d; nearIdx = i; }
       else if (d > nearDist) break; // 정렬된 배열이므로 거리가 커지면 종료
     }
-    _aisDrawSpeedChart(_aisLastChartPts, { tsMs, speed: cur.speed, hover: true, nearPt: _aisLastChartPts[nearIdx] });
+    _aisDrawSpeedChart(_aisLastChartPts, { tsMs, speed: cur.speed, hover: true, nearPt: _aisLastChartPts[nearIdx], schedLine: nearSchedLine });
     _aisHoverShipShow(vkey, cur);
   });
   canvas.addEventListener('mouseleave', () => {
+    canvas.style.cursor = 'crosshair';
     // 재생 중이면 재생 위치로, 아니면 커서 없이 되돌린다
     if (_aisLastChartPts) _aisDrawSpeedChart(_aisLastChartPts, _aisPlay.raf ? _aisLastChartIdx : null);
     _aisHoverShipHide();
+  });
+  canvas.addEventListener('click', e => {
+    if (!_aisChartGeom) return;
+    const r = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - r.left;
+    (_aisChartGeom.schedLines || []).forEach(sl => {
+      if (Math.abs(sl.x - mouseX) <= 10 && sl.src) window.open(sl.src, '_blank', 'noopener');
+    });
   });
   canvas.style.cursor = 'crosshair';
 })();
