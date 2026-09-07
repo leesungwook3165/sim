@@ -8756,23 +8756,26 @@ function _aisDrawSpeedChart(pts, cursor) {
     ctx.fillStyle = _aisSpeedColor(p.speed);
     ctx.fill();
   });
-  // 변곡점(속도대가 바뀌는 지점)은 흰 테두리로 강조
+  // 변곡점(속도대가 바뀌는 지점)은 흰 테두리로 강조 + 위치 수집
+  const _inflectPts = []; // hover 판정용
   let prevBand = null;
   pts.forEach(p => {
     if (hoverNear && p === hoverNear) return;
     const band = _aisSpeedColor(p.speed);
     if (prevBand !== null && band !== prevBand) {
+      const ix = xAt(p.ts), iy = yAt(p.speed);
       ctx.beginPath();
-      ctx.arc(xAt(p.ts), yAt(p.speed), 4.5, 0, Math.PI * 2);
+      ctx.arc(ix, iy, 4.5, 0, Math.PI * 2);
       ctx.fillStyle = band;
       ctx.fill();
       ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.stroke();
+      _inflectPts.push({ x: ix, y: iy, pt: p, col: band });
     }
     prevBand = band;
   });
 
   // 그래프 좌표계를 저장해둔다 — 마우스 위치를 시각으로 되돌릴 때 쓴다
-  _aisChartGeom = { t0, totalMs, padL, plotW, plotH, padT, schedLines: _schedLinesMeta };
+  _aisChartGeom = { t0, totalMs, padL, plotW, plotH, padT, schedLines: _schedLinesMeta, inflectPts: _inflectPts };
 
   // 좁을 때는 눈금 대신 최고속도만 표시 (넓을 때는 위 눈금축이 대신한다)
   if (!roomy) {
@@ -8822,6 +8825,34 @@ function _aisDrawSpeedChart(pts, cursor) {
       : `${p.speed.toFixed(1)}kt`;
     ctx.fillText(lbl, x + (x > W / 2 ? -6 : 6), padT + 8);
     ctx.textAlign = 'start';
+
+    // ── 변곡점 hover 툴팁 (수취 시각 + 속도) ──
+    if (cursor.hover && cursor.nearInflect) {
+      const ip = cursor.nearInflect;
+      const timeStr = _aisFmtClock(new Date(ip.pt.ts).toISOString());
+      const tipLines = [timeStr + ' · ' + ip.pt.speed.toFixed(1) + 'kt', '↑ 속도대 변곡점'];
+      ctx.save();
+      ctx.font = '10px sans-serif';
+      const lh = 15, px = 8, py = 5;
+      const bW = Math.max(...tipLines.map(l => ctx.measureText(l).width)) + px * 2;
+      const bH = tipLines.length * lh + py * 2;
+      const bx = Math.max(2, Math.min(ip.x - bW / 2, W - bW - 2));
+      const by = Math.max(padT + 2, ip.y - bH - 8);
+      ctx.fillStyle = 'rgba(8,18,36,0.93)';
+      ctx.fillRect(bx, by, bW, bH);
+      ctx.strokeStyle = ip.col; ctx.lineWidth = 1.2;
+      ctx.strokeRect(bx, by, bW, bH);
+      tipLines.forEach((line, i) => {
+        ctx.fillStyle = i === 0 ? ip.col : '#8899aa';
+        ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+        ctx.fillText(line, bx + px, by + py + i * lh);
+      });
+      // 변곡점 자체에 밝은 외곽 링 추가
+      ctx.beginPath(); ctx.arc(ip.x, ip.y, 8, 0, Math.PI * 2);
+      ctx.strokeStyle = ip.col; ctx.lineWidth = 2; ctx.globalAlpha = 0.7; ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
 
     // ── 공시 세로선 hover 툴팁 ──
     if (cursor.hover && cursor.schedLine) {
@@ -10466,6 +10497,14 @@ function _aisHoverShipHide() {
         if (!nearSchedLine || Math.abs(sl.x - mouseX) < Math.abs(nearSchedLine.x - mouseX))
           nearSchedLine = sl;
     });
+    // 변곡점 근접 체크 (pixel 거리 12 이내)
+    const mouseY = e.clientY - r.top;
+    let nearInflect = null;
+    (g.inflectPts || []).forEach(ip => {
+      const d = Math.hypot(ip.x - mouseX, ip.y - mouseY);
+      if (d <= 12 && (!nearInflect || d < Math.hypot(nearInflect.x - mouseX, nearInflect.y - mouseY)))
+        nearInflect = ip;
+    });
     canvas.style.cursor = (nearSchedLine && nearSchedLine.src) ? 'pointer' : 'crosshair';
     const tsMs = g.t0 + frac * g.totalMs;
     // 시각 배열은 항적이 바뀔 때만 다시 만든다 (매 프레임 map()을 돌 필요가 없다)
@@ -10482,7 +10521,7 @@ function _aisHoverShipHide() {
       if (d < nearDist) { nearDist = d; nearIdx = i; }
       else if (d > nearDist) break; // 정렬된 배열이므로 거리가 커지면 종료
     }
-    _aisDrawSpeedChart(_aisLastChartPts, { tsMs, speed: cur.speed, hover: true, nearPt: _aisLastChartPts[nearIdx], schedLine: nearSchedLine });
+    _aisDrawSpeedChart(_aisLastChartPts, { tsMs, speed: cur.speed, hover: true, nearPt: _aisLastChartPts[nearIdx], schedLine: nearSchedLine, nearInflect });
     _aisHoverShipShow(vkey, cur);
   });
   canvas.addEventListener('mouseleave', () => {
