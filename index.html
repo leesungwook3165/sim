@@ -9145,7 +9145,8 @@ function _renderAisPeriod(key, prefix) {
   const ptNote = drawnPts < totalPts
     ? `${drawnPts.toLocaleString()}점(원본 ${totalPts.toLocaleString()} 중)`
     : `${totalPts.toLocaleString()}포인트`;
-  _aisSetStatus(`${_AIS_VESSELS[key].label} · ${scopeLabel} · ${days.length}일(★${refN}) · ${ptNote} · ${colorNote}${hoverNote}${heavy}`);
+  const maxKtNote = data.maxSpeedKt ? ` · 최고 ${data.maxSpeedKt.toFixed(1)}kt` : '';
+  _aisSetStatus(`${_AIS_VESSELS[key].label} · ${scopeLabel} · ${days.length}일(★${refN}) · ${ptNote} · ${colorNote}${maxKtNote}${hoverNote}${heavy}`);
 }
 
 // ── 캘린더로 지정한 조회 기간(_aisRangeFrom~_aisRangeTo) 필터 ──
