@@ -10588,22 +10588,20 @@ function _aisBarToggle() {
 }
 
 // ── AIS 토글 버튼을 headerTools에 삽입 ──
+// map-ctrl-group / map-ctrl-btn 구조를 써야 header-tools CSS 가 제대로 걸린다
 (function() {
   const slot = document.getElementById('headerTools');
-  const wrap = document.createElement('div');
-  wrap.className = 'leaflet-bar leaflet-control';
-  const btn = document.createElement('a');
-  btn.href = '#'; btn.title = 'AIS 실적 항로 타임바';
+  if (!slot) return;
+  const grp = document.createElement('div');
+  grp.className = 'map-ctrl-group';
+  const btn = document.createElement('button');
+  btn.className = 'map-ctrl-btn';
+  btn.title = 'AIS 실적 항로 타임바';
+  btn.type = 'button';
   btn.innerHTML = icon('dish', { size: 17 });
-  btn.style.cssText = 'font-size:16px;line-height:30px;width:30px;height:30px;display:block;text-align:center;text-decoration:none';
-  btn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); _aisBarToggle(); });
-  wrap.appendChild(btn);
-  if (slot) {
-    slot.appendChild(wrap);
-  } else {
-    const AisCtrl = L.Control.extend({ options:{ position:'topleft' }, onAdd(){ return wrap; } });
-    new AisCtrl().addTo(map);
-  }
+  btn.addEventListener('click', () => _aisBarToggle());
+  grp.appendChild(btn);
+  slot.appendChild(grp);
 })();
 
 </script>
