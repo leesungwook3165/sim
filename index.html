@@ -1249,6 +1249,41 @@
       display: flex; align-items: center; gap: 10px; font-size: 10px; color: #7799bb;
       padding: 0 12px; border-left: 1px solid rgba(80,160,255,0.2); margin-left: 8px;
     }
+    /* 항구 방문 판정 설정 패널 */
+    #portCfgPanel {
+      position: fixed; top: 62px; right: 58px; z-index: 1011;
+      width: 330px; max-height: calc(100vh - 110px - var(--bottom-bars, 0px));
+      overflow: auto;
+      background: rgba(8,20,45,0.96); border: 1px solid rgba(80,160,255,0.4);
+      border-radius: 10px; padding: 10px 16px; color: #e8f4ff; font-size: 12px;
+      backdrop-filter: blur(6px); box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      display: none;
+    }
+    #portCfgPanel.visible { display: block; }
+    .pcfg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px 10px; }
+    .pcfg-grid label {
+      display: flex; flex-direction: column; gap: 3px;
+      font-size: 10.5px; color: #aac8e8;
+    }
+    .pcfg-grid label > span { display: flex; align-items: center; gap: 4px; color: #7799bb; font-size: 10px; white-space: nowrap; }
+    .pcfg-grid input {
+      width: 100%; min-width: 0; background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(80,160,255,0.35); border-radius: 5px;
+      color: #e8f4ff; font-size: 12px; padding: 3px 6px;
+      font-variant-numeric: tabular-nums;
+    }
+    .pcfg-grid input:focus { outline: none; border-color: rgba(126,207,255,0.8); }
+    .pcfg-btns { display: flex; gap: 6px; margin-top: 10px; }
+    .pcfg-btns .sim-btn { flex: 1; }
+    .pcfg-warn {
+      font-size: 10.5px; color: #ffaa66; line-height: 1.5;
+      margin-top: 7px; min-height: 0;
+    }
+    @media (max-width: 640px) {
+      #portCfgPanel { top: calc(var(--header-h, 78px) + 8px); left: 6px; right: 6px; width: auto;
+                      max-height: calc(100vh - var(--header-h, 78px) - 32px - var(--bottom-bars, 0px)); padding: 8px 10px; }
+    }
+
     .ais-lsw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 3px; }
     #simPanel, #legendPanel, .ops-col, #shipMgrList {
       scrollbar-width: thin;
@@ -1814,6 +1849,52 @@
   </div>
 </div>
 
+<!-- 항구 방문 판정 설정 — 헤더 맨 오른쪽 톱니 버튼으로 연다 -->
+<div id="portCfgPanel">
+  <div class="sim-title">
+    <i data-ic="settings"></i> 항구 방문 판정 기준
+    <div class="sim-title-btns">
+      <button class="sim-title-btn" onclick="portCfgToggle(false)" title="닫기"><i data-ic="close" data-sz="13"></i></button>
+    </div>
+  </div>
+  <div style="font-size:10.5px;color:#88aabb;line-height:1.6;margin-bottom:8px">
+    정박지 옆을 <b>지나간 것</b>과 실제로 <b>들른 것</b>을 가르는 기준입니다.
+    Global Fishing Watch 가 쓰는 값이 기본이고, 항로·선박에 맞게 고칠 수 있습니다.
+  </div>
+  <div class="pcfg-grid">
+    <label title="항구 중심에서 이 거리 안으로 들어오면 항구에 들어온 것으로 봅니다">진입 거리
+      <span><input type="number" id="pcfgEnterKm" min="0.1" max="50" step="0.1"> km</span>
+    </label>
+    <label title="이 거리 밖으로 나가야 떠난 것으로 봅니다. 진입 기준보다 넓게 잡아야 경계에서 들락날락하지 않습니다">이탈 거리
+      <span><input type="number" id="pcfgExitKm" min="0.1" max="50" step="0.1"> km</span>
+    </label>
+    <label title="속도가 이 아래로 떨어지면 정박이 시작된 것으로 봅니다">정박 시작
+      <span><input type="number" id="pcfgStopKts" min="0" max="10" step="0.1"> kt</span>
+    </label>
+    <label title="속도가 이 위로 올라가면 정박이 끝난 것으로 봅니다">정박 종료
+      <span><input type="number" id="pcfgResumeKts" min="0" max="10" step="0.1"> kt</span>
+    </label>
+    <label title="이만큼 머물러야 정박으로 인정합니다. 짧게 스치는 것을 걸러냅니다">최소 정박
+      <span><input type="number" id="pcfgStopMinMin" min="0" max="600" step="1"> 분</span>
+    </label>
+    <label title="항구 안에서 이만큼 신호가 끊기면, AIS 를 끄고 정박한 것으로 보고 방문으로 칩니다">신호 공백
+      <span><input type="number" id="pcfgGapH" min="0" max="72" step="0.5"> 시간</span>
+    </label>
+  </div>
+  <div id="pcfgWarn" class="pcfg-warn"></div>
+  <div class="pcfg-btns">
+    <button class="sim-btn" onclick="portCfgPreset('gfw')" title="Global Fishing Watch 원값 — 진입 3km · 이탈 4km · 정박 0.2/0.5노트 · 20분 · 공백 4시간">GFW 기본</button>
+    <button class="sim-btn" onclick="portCfgPreset('ferry')" title="정기 여객선용 — 접안 중에도 0.3~1노트가 찍히는 배에 맞춰 정박 기준을 2.0/3.0노트로 늦춘 값">여객선</button>
+  </div>
+  <div class="pcfg-btns">
+    <button class="sim-btn primary" onclick="portCfgApply()">적용 · 다시 분석</button>
+  </div>
+  <div style="font-size:10px;color:#667788;margin-top:8px;line-height:1.6">
+    적용하면 지금 고른 선박의 AIS 를 다시 읽어 기항·항차를 새로 셉니다.
+    값은 이 브라우저에 남습니다.
+  </div>
+</div>
+
 <!-- 저장 패널 -->
 <div id="savePanel">
   <h4><i data-ic="save"></i> 도형 저장 / 불러오기</h4>
@@ -1880,7 +1961,15 @@ function _hydrateIcons(root) {
     el.innerHTML = svg;
   });
 }
-document.addEventListener('DOMContentLoaded', () => _hydrateIcons(document));
+document.addEventListener('DOMContentLoaded', () => {
+  _hydrateIcons(document);
+  // 판정 기준 입력칸 — 값이 바뀔 때마다 앞뒤가 맞는지 확인해 알려 준다
+  ['pcfgEnterKm', 'pcfgExitKm', 'pcfgStopKts', 'pcfgResumeKts', 'pcfgStopMinMin', 'pcfgGapH']
+    .forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('input', () => portCfgCheck());
+    });
+});
 
 // HTML 문자열 안의 이모지만 아이콘으로 바꾼다 (이스케이프 없음 — 이미 HTML이다)
 function _icHtml(str) {
@@ -6780,6 +6869,10 @@ const SimControl = L.Control.extend({
       document.getElementById('simPanel').classList.add('visible');
       _startOnboardingIntro();
     });
+    // 맨 오른쪽 — 판정 기준 설정
+    const st = L.DomUtil.create('a', 'map-ctrl-btn', wrap);
+    st.href='#'; st.title='항구 방문 판정 기준 설정'; st.innerHTML=icon('settings', { size: 17 });
+    L.DomEvent.on(st,'click', e => { L.DomEvent.preventDefault(e); portCfgToggle(); });
     return wrap;
   }
 });
@@ -7323,6 +7416,8 @@ function _aisWorkerSource() {
     Object.entries(K).map(([k, v]) => 'const ' + k + ' = ' + JSON.stringify(v) + ';').join('\n'),
     'const ports = ' + JSON.stringify(slimPorts) + ';',
     'let _aisCorr = {};', // 실제 값은 매 요청 메시지로 받는다 (소스는 한 번 만들어 재사용)
+    'const AIS_PORT_CFG_DEFAULT = ' + JSON.stringify(AIS_PORT_CFG_DEFAULT) + ';',
+    'let AIS_PORT_CFG = Object.assign({}, AIS_PORT_CFG_DEFAULT);', // 값도 매 요청으로 받는다
     'let _aisCache = {};', // _aisComputeLand가 캐시에서 데이터를 꺼내 쓰므로 자리를 만들어 둔다
     fns.map(fn => fn.toString()).join('\n'),
     // 워커 안에서는 양보할 이유가 없다 — setTimeout 왕복을 없애고 마이크로태스크로만 쉰다
@@ -7331,6 +7426,7 @@ function _aisWorkerSource() {
 self.onmessage = async function(e) {
   const key = e.data.key, url = e.data.url;
   _aisCorr = e.data.corr || {};
+  if (e.data.portCfg) AIS_PORT_CFG = Object.assign({}, AIS_PORT_CFG_DEFAULT, e.data.portCfg);
   const say = (pct, msg) => self.postMessage({ progress: pct, msg: msg });
   try {
     say(0.05, '내려받는 중');
@@ -7437,7 +7533,7 @@ function _aisLoadViaWorker(key, url, onProgress) {
       done(resolve, _aisWorkerRebuild(msg));
     };
     w.onerror = e => done(reject, new Error(e.message || '워커 실행 실패'));
-    w.postMessage({ key, url, corr: _aisCorr || {} });
+    w.postMessage({ key, url, corr: _aisCorr || {}, portCfg: AIS_PORT_CFG });
   });
 }
 
@@ -7913,9 +8009,61 @@ const AIS_VOY_GATE_KM = 10;  // 정박 지점이 항구에서 이 거리 안이�
 // 짧게 들렀다 나가는 기항(추자도·울릉도 등)은 "2kt 이하 8분 지속"에 안 걸린다.
 // 핑 간격이 몇 분이라 접안했다 떠나도 저속 점이 한두 개만 남기 때문이다.
 // 그래서 "항구에 바짝 붙었고 속도가 확 떨어진 지점"도 기항으로 본다.
-const AIS_CALL_NEAR_KM  = 3;   // 항구 중심에서 이 거리 안
+const AIS_CALL_NEAR_KM  = 3;   // 항구 중심에서 이 거리 안 (항구 자리 찾기에 쓴다)
 const AIS_CALL_SLOW_KTS = 3;   // 이 속도 이하로 떨어졌으면 접안한 것으로 본다
 const AIS_PORT_MIN_HITS = 2;   // 정박이 이만큼 반복된 자리를 항구로 인정
+
+// ── 항구 방문 판정 기준 (Global Fishing Watch 방식) ──
+// 정박지 옆을 지나가는 것과 실제로 들른 것을 가르는 기준이다.
+//   ① 진입 — 항구 중심에서 enterKm 안으로 들어오면 "항구에 들어왔다"
+//   ② 이탈 — exitKm 밖으로 나가야 "떠났다". 들어오는 기준보다 넓게 잡아야
+//            경계에서 들락날락하는 걸 막는다(히스테리시스)
+//   ③ 정박 — 속도가 stopKts 아래로 떨어져 stopMinMin 넘게 머물면 "댔다".
+//            resumeKts 이상으로 올라가면 정박이 끝난 것으로 본다
+//   ④ 공백 — 항구 안에서 gapH 시간 넘게 신호가 끊기면, AIS 를 끄고 정박한
+//            것으로 보고 방문으로 친다
+// 정박이나 공백이 하나라도 있어야 기항으로 인정한다 — 그냥 지나간 것은 뺀다.
+// 값은 설정 패널에서 바꿀 수 있고 localStorage 에 남는다.
+const AIS_PORT_CFG_KEY = 'hanjil_ais_portcfg';
+// GFW 원값은 몇 시간씩 가만히 있는 어선을 겨냥한 기준이다. 정기 여객선은 접안한 채로도
+// 0.3~1.0노트가 계속 찍혀 정박으로 안 잡히는 일이 있어서, 실측으로 맞춰 본 값을 함께 둔다.
+// (엘도라도 울릉도·비너스2 이즈하라처럼 짧게 대는 기항이 GFW 원값에서 빠지면 왕복이
+//  한 항차로 묶여 "편도 거리"가 두 배로 잡힌다.)
+const AIS_PORT_PRESETS = {
+  gfw:    { label: 'GFW 기본',  cfg: { enterKm: 3, exitKm: 4, stopKts: 0.2, resumeKts: 0.5, stopMinMin: 20, gapH: 4 } },
+  ferry:  { label: '여객선',    cfg: { enterKm: 3, exitKm: 4, stopKts: 2.0, resumeKts: 3.0, stopMinMin: 20, gapH: 4 } }
+};
+const AIS_PORT_CFG_DEFAULT = {
+  enterKm:    3,    // 진입 기준 (km)
+  exitKm:     4,    // 이탈 기준 (km)
+  stopKts:    0.2,  // 이 아래로 떨어지면 정박 시작 (노트)
+  resumeKts:  0.5,  // 이 위로 올라가면 정박 종료 (노트)
+  stopMinMin: 20,   // 이만큼 머물러야 정박으로 인정 (분)
+  gapH:       4     // 항구 안에서 이만큼 신호가 끊기면 방문으로 인정 (시간)
+};
+let AIS_PORT_CFG = Object.assign({}, AIS_PORT_CFG_DEFAULT);
+try {
+  const _saved = JSON.parse(localStorage.getItem(AIS_PORT_CFG_KEY) || 'null');
+  if (_saved && typeof _saved === 'object') Object.assign(AIS_PORT_CFG, _saved);
+} catch (e) {}
+
+// 항구 방문 하나를 기존 기항(call) 모양으로 바꾼다.
+// 정박이 있으면 그 처음~끝을, 정박 없이 공백만 있으면 진입~이탈을 기항 구간으로 삼는다.
+// 항차는 "앞 기항의 endTs ~ 다음 기항의 startTs" 로 잘리므로 이 두 시각이 중요하다.
+function _aisVisitToCall(v) {
+  if (v.stops.length) {
+    const a = v.stops[0], b = v.stops[v.stops.length - 1];
+    return { port: v.port, startTs: a.startTs, endTs: b.endTs, i0: a.i0, i1: b.i1,
+             minKm: v.minKm, why: 'stop',
+             durMin: (new Date(b.endTs).getTime() - new Date(a.startTs).getTime()) / 60000 };
+  }
+  if (v.gapMin >= AIS_PORT_CFG.gapH * 60) {
+    return { port: v.port, startTs: v.enterTs, endTs: v.exitTs, i0: v.i0, i1: v.i1,
+             minKm: v.minKm, why: 'gap',
+             durMin: (new Date(v.exitTs).getTime() - new Date(v.enterTs).getTime()) / 60000 };
+  }
+  return null;   // 그냥 지나갔다
+}
 
 // ── 정박을 모아 항구를 찾는다 ──
 // 기존 _aisFindTerminals는 "하루의 시작·끝 지점"을 모으는데, 날짜 경계가 09:00 KST라
@@ -7948,25 +8096,66 @@ function _aisFindPortsFromStops(all) {
 // 오래 선 정박이든 잠깐 들른 것이든, "항구에 붙었고 느려졌다"를 기준으로 한 번에 잡는다.
 // 연속된 점은 한 번의 기항으로 묶는다.
 function _aisFindCalls(all, gatePorts) {
-  const calls = [];
-  let cur = null;
+  const C = AIS_PORT_CFG;
+  const ms = t => new Date(t).getTime();
+  const out = [];
+  let visit = null;      // 지금 머물고 있는 항구 방문
+  let stopFrom = null;   // 정박이 시작된 지점
+
+  // 정박 하나를 닫는다 — 충분히 오래 머물렀을 때만 남긴다
+  const closeStop = (endIdx) => {
+    if (stopFrom === null) return;
+    const dur = (ms(all[endIdx].ts) - ms(all[stopFrom].ts)) / 60000;
+    if (dur >= C.stopMinMin) {
+      visit.stops.push({ i0: stopFrom, i1: endIdx,
+                         startTs: all[stopFrom].ts, endTs: all[endIdx].ts, durMin: dur });
+    }
+    stopFrom = null;
+  };
+  const closeVisit = (endIdx) => {
+    closeStop(endIdx);
+    visit.i1 = endIdx; visit.exitTs = all[endIdx].ts;
+    const c = _aisVisitToCall(visit);
+    if (c) out.push(c);
+    visit = null;
+  };
+
   for (let i = 0; i < all.length; i++) {
     const p = all[i];
-    if (p.speed > AIS_CALL_SLOW_KTS) { if (cur) { calls.push(cur); cur = null; } continue; }
-    let g = null, bd = Infinity;
+    // 가장 가까운 항구까지의 거리
+    let near = null, nd = Infinity;
     for (let k = 0; k < gatePorts.length; k++) {
       const x = gatePorts[k];
       const d = _simDist([x.lat, x.lon], [p.lat, p.lon]);
-      if (d <= AIS_CALL_NEAR_KM && d < bd) { bd = d; g = x; }
+      if (d < nd) { nd = d; near = x; }
     }
-    if (!g) { if (cur) { calls.push(cur); cur = null; } continue; }
-    if (cur && cur.port === g) { cur.endTs = p.ts; cur.i1 = i; if (bd < cur.minKm) cur.minKm = bd; }
-    else { if (cur) calls.push(cur); cur = { port: g, startTs: p.ts, endTs: p.ts, i0: i, i1: i, minKm: bd }; }
+
+    if (!visit) {                                   // ① 밖에 있다 — 진입만 본다
+      if (near && nd <= C.enterKm) {
+        visit = { port: near, enterTs: p.ts, exitTs: p.ts, i0: i, i1: i, minKm: nd, stops: [], gapMin: 0 };
+      }
+      continue;
+    }
+
+    // ④ 항구 안에서의 신호 공백
+    if (i > 0) {
+      const gapMin = (ms(p.ts) - ms(all[i - 1].ts)) / 60000;
+      if (gapMin >= C.gapH * 60 && gapMin > visit.gapMin) visit.gapMin = gapMin;
+    }
+    if (nd < visit.minKm) visit.minKm = nd;
+
+    // ③ 정박 시작·종료
+    if (stopFrom === null) {
+      if (p.speed < C.stopKts) stopFrom = i;
+    } else if (p.speed >= C.resumeKts) {
+      closeStop(i - 1);
+    }
+
+    // ② 이탈
+    if (nd > C.exitKm) closeVisit(i - 1);
   }
-  if (cur) calls.push(cur);
-  return calls.map(c => Object.assign(c, {
-    durMin: (new Date(c.endTs) - new Date(c.startTs)) / 60000
-  }));
+  if (visit) closeVisit(all.length - 1);            // 자료 끝까지 항구 안이면 닫아 준다
+  return out;
 }
 
 // 항차의 경계가 될 수 있는 지점들 — 검출된 터미널 + 등록된 항구.
@@ -9862,6 +10051,87 @@ function _aisTlStep(dir) {
 }
 
 // ── 선박 변경 ──
+// ══════════════════════════════════════════════════════════════
+//  항구 방문 판정 기준 설정 패널
+// ══════════════════════════════════════════════════════════════
+const _PCFG_FIELDS = [
+  ['enterKm',    'pcfgEnterKm',    0.1,  50],
+  ['exitKm',     'pcfgExitKm',     0.1,  50],
+  ['stopKts',    'pcfgStopKts',    0,    10],
+  ['resumeKts',  'pcfgResumeKts',  0,    10],
+  ['stopMinMin', 'pcfgStopMinMin', 0,   600],
+  ['gapH',       'pcfgGapH',       0,    72]
+];
+
+function portCfgToggle(force) {
+  const p = document.getElementById('portCfgPanel');
+  if (!p) return;
+  const on = (force === undefined) ? !p.classList.contains('visible') : !!force;
+  p.classList.toggle('visible', on);
+  if (on) portCfgFill();
+}
+
+// 지금 쓰는 값을 입력칸에 채운다
+function portCfgFill() {
+  _PCFG_FIELDS.forEach(([k, id]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = AIS_PORT_CFG[k];
+  });
+  portCfgCheck();
+}
+
+// 프리셋 값을 입력칸에 넣는다 (적용은 따로 눌러야 한다)
+function portCfgPreset(name) {
+  const pre = AIS_PORT_PRESETS[name];
+  if (!pre) return;
+  _PCFG_FIELDS.forEach(([k, id]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = pre.cfg[k];
+  });
+  portCfgCheck();
+}
+
+// 입력칸에서 값을 읽는다 (범위를 벗어나면 잘라 낸다)
+function _portCfgRead() {
+  const out = {};
+  _PCFG_FIELDS.forEach(([k, id, lo, hi]) => {
+    const el = document.getElementById(id);
+    let v = el ? parseFloat(el.value) : NaN;
+    if (!isFinite(v)) v = AIS_PORT_CFG_DEFAULT[k];
+    out[k] = Math.max(lo, Math.min(hi, v));
+  });
+  return out;
+}
+
+// 서로 앞뒤가 안 맞는 값이면 미리 알려 준다 (막지는 않는다)
+function portCfgCheck() {
+  const c = _portCfgRead();
+  const el = document.getElementById('pcfgWarn');
+  if (!el) return c;
+  const msgs = [];
+  if (c.exitKm <= c.enterKm) msgs.push('이탈 거리가 진입 거리보다 넓어야 경계에서 들락날락하지 않습니다.');
+  if (c.resumeKts <= c.stopKts) msgs.push('정박 종료 속도가 시작 속도보다 높아야 정박이 끝나는 것을 잡습니다.');
+  el.innerHTML = msgs.length ? _icHtml('⚠ ') + msgs.join('<br>') : '';
+  return c;
+}
+
+// 값을 저장하고 지금 고른 선박을 다시 분석한다
+async function portCfgApply() {
+  const c = portCfgCheck();
+  AIS_PORT_CFG = Object.assign({}, AIS_PORT_CFG_DEFAULT, c);
+  try { localStorage.setItem(AIS_PORT_CFG_KEY, JSON.stringify(AIS_PORT_CFG)); } catch (e) {}
+
+  const sel = document.getElementById('aisVesselSel');
+  const key = sel ? sel.value : '';
+  if (!key) { portCfgToggle(false); return; }
+  // 기준이 바뀌면 앞서 분석해 둔 결과는 못 쓴다 — 캐시를 비우고 다시 읽는다
+  onAisStop();
+  _aisEvictOthers('');     // 판정 기준이 바뀌면 앞서 분석해 둔 결과는 못 쓴다
+  _aisSetStatus('판정 기준을 바꿔 다시 분석합니다…');
+  portCfgToggle(false);
+  await onAisVesselChange();
+}
+
 async function onAisVesselChange() {
   const key = document.getElementById('aisVesselSel').value;
   onAisStop();
