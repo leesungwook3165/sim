@@ -8584,11 +8584,14 @@ function _aisDrawSpeedChart(pts, cursor) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, W, H);
 
-  // 축 양끝을 정시로 맞춘다. 07시 기준 격자에 눈금이 정확히 떨어지게 하려는 것으로,
-  // 늘어나는 폭은 양쪽 합쳐 최대 1시간이라 그래프가 눌리지 않는다.
+  // 왼쪽 축은 항상 한국시 오전 07:00에 고정한다.
+  // 날짜가 바뀌어도 같은 x 위치에 같은 시각이 오므로 날짜별 비교가 쉽다.
   const HOUR_MS = 3600000;
   const KST_MS = 9 * HOUR_MS;              // 표기·기준선 모두 한국시(UTC+9)
-  const t0 = Math.floor(new Date(pts[0].ts).getTime() / HOUR_MS) * HOUR_MS;
+  const DAY_MS  = HOUR_MS * 24;
+  // 07:00 KST ≡ 22:00 UTC 전날 — 이 앵커에서 DAY_MS 배수가 항상 07:00 KST
+  const _07anchor = DAY_START_MIN * 60000 - KST_MS; // -7200000 ms
+  const t0 = Math.floor((new Date(pts[0].ts).getTime() - _07anchor) / DAY_MS) * DAY_MS + _07anchor;
   const t1 = Math.ceil(new Date(pts[pts.length - 1].ts).getTime() / HOUR_MS) * HOUR_MS;
   const totalMs = Math.max(1, t1 - t0);
   const maxSpd = Math.max(5, ...pts.map(p => p.speed)); // 최소 5kts 스케일 확보
