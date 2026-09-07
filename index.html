@@ -1759,7 +1759,7 @@
   <!-- 접이식 필터 패널 -->
   <div id="aisFilterPanel">
     <label id="aisNormalOnlyWrap" class="ais-tb-normal">
-      <input type="checkbox" id="aisNormalOnly" checked onchange="onAisNormalOnlyChange()"> 정상 항로만
+      <input type="checkbox" id="aisNormalOnly" onchange="onAisNormalOnlyChange()"> 정상 항로만
       <span class="ais-tb-refchk" title="항구 출입 가속·감속이 왕복 양쪽 모두 온전히 기록된 날">
         <input type="checkbox" id="aisRefOnly" onchange="onAisRefOnlyChange()"> ★기준일만
       </span>
@@ -7226,7 +7226,9 @@ let _aisViewLevel = 'day'; // 지금 지도에 그린 단계 ('year' | 'month' |
 let _aisSubHourSel = null; // '일' 탭에서 날짜를 고르면 그 날의 시간대(HH)가 자동으로 나열됨 — 선택된 시간(null=하루 전체)
 let _aisSubLegSel = null;  // 왕복일 때 선택된 구간 (null=왕복 전체, 'out'=출항편, 'back'=복항편)
 let _aisRangeFrom = null, _aisRangeTo = null; // 캘린더로 지정한 조회 기간 필터 ('YYYY-MM-DD', null=제한 없음)
-let _aisNormalOnly = true; // '일' 탭에서만 적용되는 정상 항로 필터 (기본 on)
+// 처음에는 거르지 않고 전부 보여 준다. 걸러 놓고 시작하면 "왜 이 날짜가 없지" 하고
+// 헤매게 된다 — 비정상으로 본 날도 목록에 두되 다른 색으로 표시한다.
+let _aisNormalOnly = false; // '일' 탭에서만 적용되는 정상 항로 필터 (기본 off)
 let _aisRefOnly = false;   // ★기준일(항구 출입 가속·감속이 온전히 기록된 날)만 보기
 let _aisBestOnly = false;  // ◆ 최적일(직접 고른 날)만 보기
 
@@ -10161,12 +10163,17 @@ async function onAisVesselChange() {
     _aisSubHourSel = null; _aisSubLegSel = null;
     _aisCallFilter = 'all';
     _aisRenderCallFilter(key);
-    // 가장 최근 날짜를 펼친 상태로 시작
+    // 핑이 가장 촘촘한 날을 펼친 상태로 시작한다. 가장 최근 날짜는 신호가 몇 개뿐이라
+    // 항적이 뚝뚝 끊겨 보이는 일이 잦았다 — 그 배를 가장 잘 보여 주는 날부터 연다.
     _aisSelYear = _aisSelMonth = _aisSelDay = null; _aisViewLevel = 'day';
     const days = _aisAllDays(key);
     if (days.length) {
-      const last = days[days.length - 1];
-      _aisSelYear = last.slice(0, 4); _aisSelMonth = last.slice(0, 7); _aisSelDay = last;
+      let pick = days[days.length - 1], best = -1;
+      days.forEach(d => {
+        const n = (data.index[d] || []).length;
+        if (n > best) { best = n; pick = d; }
+      });
+      _aisSelYear = pick.slice(0, 4); _aisSelMonth = pick.slice(0, 7); _aisSelDay = pick;
     }
     _aisTbRenderTl(key);
     _aisTlApply();
