@@ -8675,22 +8675,25 @@ function _aisDrawSpeedChart(pts, cursor) {
   }
 
   // 모든 실측 포인트를 점으로 찍는다 — AIS 수신 빈도와 실제 측정 위치를 확인할 수 있다
+  const hoverNear = cursor && cursor.hover && cursor.nearPt ? cursor.nearPt : null;
   pts.forEach(p => {
+    if (hoverNear && p === hoverNear) return; // hover 대상은 맨 나중에 겹쳐 그린다
     ctx.beginPath();
-    ctx.arc(xAt(p.ts), yAt(p.speed), 2, 0, Math.PI * 2);
+    ctx.arc(xAt(p.ts), yAt(p.speed), 3, 0, Math.PI * 2);
     ctx.fillStyle = _aisSpeedColor(p.speed);
     ctx.fill();
   });
   // 변곡점(속도대가 바뀌는 지점)은 흰 테두리로 강조
   let prevBand = null;
   pts.forEach(p => {
+    if (hoverNear && p === hoverNear) return;
     const band = _aisSpeedColor(p.speed);
     if (prevBand !== null && band !== prevBand) {
       ctx.beginPath();
-      ctx.arc(xAt(p.ts), yAt(p.speed), 3, 0, Math.PI * 2);
+      ctx.arc(xAt(p.ts), yAt(p.speed), 4.5, 0, Math.PI * 2);
       ctx.fillStyle = band;
       ctx.fill();
-      ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.stroke();
+      ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.stroke();
     }
     prevBand = band;
   });
@@ -8710,18 +8713,43 @@ function _aisDrawSpeedChart(pts, cursor) {
     const x = padL + Math.max(0, Math.min(1, (cursor.tsMs - t0) / totalMs)) * plotW;
     const y = yAt(cursor.speed);
     ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, padT + plotH); ctx.stroke();
+
+    // hover 시 가장 가까운 실측 점 강조
+    if (cursor.hover && cursor.nearPt) {
+      const np = cursor.nearPt;
+      const nx = xAt(np.ts), ny = yAt(np.speed);
+      // 외곽 발광 링
+      ctx.beginPath(); ctx.arc(nx, ny, 9, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.18)'; ctx.lineWidth = 4; ctx.stroke();
+      ctx.beginPath(); ctx.arc(nx, ny, 7, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = 2; ctx.stroke();
+      // 내부 점
+      ctx.beginPath(); ctx.arc(nx, ny, 4.5, 0, Math.PI * 2);
+      ctx.fillStyle = _aisSpeedColor(np.speed); ctx.fill();
+      ctx.lineWidth = 1.5; ctx.strokeStyle = '#fff'; ctx.stroke();
+    }
+
+    // 재생 위치 점 (hover 중에는 반투명)
     ctx.beginPath(); ctx.arc(x, y, 3.5, 0, Math.PI * 2);
-    ctx.fillStyle = _aisSpeedColor(p.speed); ctx.fill();
+    ctx.fillStyle = _aisSpeedColor(p.speed);
+    ctx.globalAlpha = cursor.hover ? 0.45 : 1;
+    ctx.fill();
     ctx.lineWidth = 1; ctx.strokeStyle = '#fff'; ctx.stroke();
-    ctx.fillStyle = cursor.hover ? '#c8f0ff' : '#ffe6f7';
+    ctx.globalAlpha = 1;
+
     ctx.font = 'bold 10px sans-serif'; ctx.textBaseline = 'middle';
-    ctx.textAlign = x > W / 2 ? 'right' : 'left';
-    // hover일 때는 시각도 함께 — "오전 9:12 · 36.0kt"
-    const lbl = cursor.hover
-      ? `${_aisFmtClock(new Date(cursor.tsMs).toISOString())} · ${p.speed.toFixed(1)}kt`
-      : `${p.speed.toFixed(1)}kt`;
-    ctx.fillText(lbl, x + (x > W / 2 ? -6 : 6), padT + 8);
+    const labelX = cursor.hover && cursor.nearPt ? xAt(cursor.nearPt.ts) : x;
+    ctx.textAlign = labelX > W / 2 ? 'right' : 'left';
+    ctx.fillStyle = cursor.hover ? '#c8f0ff' : '#ffe6f7';
+    // hover일 때는 가장 가까운 실측 점의 시각·속도를 보여준다
+    const lbl = cursor.hover && cursor.nearPt
+      ? `${_aisFmtClock(new Date(cursor.nearPt.ts).toISOString())} · ${cursor.nearPt.speed.toFixed(1)}kt`
+      : cursor.hover
+        ? `${_aisFmtClock(new Date(cursor.tsMs).toISOString())} · ${p.speed.toFixed(1)}kt`
+        : `${p.speed.toFixed(1)}kt`;
+    ctx.fillText(lbl, labelX + (labelX > W / 2 ? -6 : 6), padT + 8);
     ctx.textAlign = 'start';
   }
 }
@@ -10339,7 +10367,14 @@ function _aisHoverShipHide() {
     }
     const vkey = document.getElementById('aisVesselSel').value;
     const cur = _aisInterpAt(_aisLastChartPts, tsCache, tsMs, vkey);
-    _aisDrawSpeedChart(_aisLastChartPts, { tsMs, speed: cur.speed, hover: true });
+    // 마우스와 가장 가까운 실측 포인트 (시각 거리 기준)
+    let nearIdx = 0, nearDist = Infinity;
+    for (let i = 0; i < tsCache.length; i++) {
+      const d = Math.abs(tsCache[i] - tsMs);
+      if (d < nearDist) { nearDist = d; nearIdx = i; }
+      else if (d > nearDist) break; // 정렬된 배열이므로 거리가 커지면 종료
+    }
+    _aisDrawSpeedChart(_aisLastChartPts, { tsMs, speed: cur.speed, hover: true, nearPt: _aisLastChartPts[nearIdx] });
     _aisHoverShipShow(vkey, cur);
   });
   canvas.addEventListener('mouseleave', () => {
