@@ -7383,10 +7383,13 @@ function _aisWorkerMake() {
 function _aisWorkerRebuild(msg) {
   const tsArr = msg.tsJoined.length ? msg.tsJoined.split('\n') : [];
   const flat = new Array(msg.n);
-  let _maxSpd = 0;
+  let _maxSpd = 0, _cSum = 0, _cCnt = 0;
+  const _cruiseThr = (msg.cruiseKts || 0) * 0.75; // 순항 밴드 기준
   for (let i = 0; i < msg.n; i++) {
-    flat[i] = { lat: msg.lat[i], lon: msg.lon[i], speed: msg.spd[i], course: msg.crs[i], ts: tsArr[i] };
-    if (msg.spd[i] > _maxSpd) _maxSpd = msg.spd[i];
+    const s = msg.spd[i];
+    flat[i] = { lat: msg.lat[i], lon: msg.lon[i], speed: s, course: msg.crs[i], ts: tsArr[i] };
+    if (s > _maxSpd) _maxSpd = s;
+    if (_cruiseThr > 0 && s >= _cruiseThr) { _cSum += s; _cCnt++; }
   }
   const index = {};
   msg.dates.forEach((d, i) => {
@@ -7402,7 +7405,8 @@ function _aisWorkerRebuild(msg) {
     callPorts: msg.callPorts, timeRatioBase: msg.timeRatioBase,
     voyages: msg.voyages, voyRoutes: msg.voyRoutes, voyMain: msg.voyMain,
     refVoyages: msg.refVoyages, voyOneWayKm: msg.voyOneWayKm, voyRatioBase: msg.voyRatioBase,
-    maxSpeedKt: +_maxSpd.toFixed(1)
+    maxSpeedKt: +_maxSpd.toFixed(1),
+    avgCruiseKt: _cCnt ? +(_cSum / _cCnt).toFixed(1) : 0
   };
 }
 
@@ -7489,11 +7493,18 @@ async function _loadAisVesselInner(key) {
     if (!pts.length) throw new Error('데이터 없음');
     await _aisYield();
     const data = _buildAisIndex(pts);
-    data.maxSpeedKt = pts.reduce((m, p) => Math.max(m, p.speed), 0); // 다 만들 때까지 지역 변수로만 든다
+    data.maxSpeedKt = pts.reduce((m, p) => Math.max(m, p.speed), 0);
+    // avgCruiseKt는 cruiseKts 확정 후 계산 (아래 _aisAnalyzeVessel 이후)
     await _aisYield();
     let _pp = 0;
     await _aisAnalyzeVessel(key, data, msg => _aisProgress(0.6 + 0.35 * Math.min(1, (_pp += 0.06)), v.label + ' ' + msg));
     await _aisYield();
+    if (data.cruiseKts) { // _aisAnalyzeVessel 완료 후 cruiseKts 확정됨
+      const thr = data.cruiseKts * 0.75;
+      let cSum = 0, cCnt = 0;
+      pts.forEach(p => { if (p.speed >= thr) { cSum += p.speed; cCnt++; } });
+      data.avgCruiseKt = cCnt ? +(cSum / cCnt).toFixed(1) : 0;
+    }
     // 읽는 사이에 다른 배로 바꿨으면 이 결과는 버린다 — 캐시에 두 배가 상주하지 않게
     const selNow = document.getElementById('aisVesselSel');
     if (selNow && selNow.value !== key) { _aisSetStatus(''); return null; }
@@ -8059,11 +8070,12 @@ function _aisRenderVoySummary(key) {
   const spans = data.voyages.filter(v => v.dateFrom !== v.dateTo).length;
   const nRef = (data.refVoyages || []).length;
   const maxKt = data.maxSpeedKt ? ` · 최고 ${data.maxSpeedKt.toFixed(1)}kt` : '';
+  const avgCr = data.avgCruiseKt ? ` · 순항 평균 ${data.avgCruiseKt.toFixed(1)}kt` : '';
   const fullTxt = '⚓ 항차 ' + data.voyages.length + '회 · ' + label + ' 편도 ' +
-    km.toFixed(0) + 'km / ' + dur(min) + ' / ' + _aisAvgKts(km, min).toFixed(1) + 'kt' + maxKt + ' ×' + n +
+    km.toFixed(0) + 'km / ' + dur(min) + ' / ' + _aisAvgKts(km, min).toFixed(1) + 'kt' + avgCr + maxKt + ' ×' + n +
     (nRef ? ' · ★기준 항차 ' + nRef + '회' : '') +
     (spans ? '<span class="voy-alt"> · 날짜 넘김 ' + spans + '회</span>' : '');
-  const compactTxt = label + ' ' + km.toFixed(0) + 'km / ' + _aisAvgKts(km, min).toFixed(1) + 'kt' + maxKt;
+  const compactTxt = label + ' ' + km.toFixed(0) + 'km / ' + _aisAvgKts(km, min).toFixed(1) + 'kt' + avgCr + maxKt;
   el.dataset.full = fullTxt; el.dataset.compact = compactTxt; el.dataset.expanded = '';
   el.innerHTML = _icHtml(compactTxt);
   el.setAttribute('data-on', '1');
@@ -10350,11 +10362,17 @@ function _aisHoverShipHide() {
   });
   document.addEventListener('mousemove', e => {
     if (!dragging) return;
-    const newH = Math.max(76, Math.min(300, startH - (e.clientY - startY)));
+    const tlH = parseInt(bar.style.bottom) || 0;
+    const maxH = Math.max(76, window.innerHeight - tlH - 40);
+    const newH = Math.max(76, Math.min(maxH, startH - (e.clientY - startY)));
     bar.style.height = newH + 'px';
     if (_aisLastChartPts) _aisDrawSpeedChart(_aisLastChartPts, _aisLastChartIdx);
+    _syncBottomBars();
   });
-  document.addEventListener('mouseup', () => { dragging = false; });
+  document.addEventListener('mouseup', () => {
+    if (dragging) _syncBottomBars();
+    dragging = false;
+  });
   window.addEventListener('resize', () => {
     if (_aisLastChartPts) _aisDrawSpeedChart(_aisLastChartPts, _aisLastChartIdx);
   });
