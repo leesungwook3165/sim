@@ -7204,7 +7204,10 @@ const _AIS_VESSELS = {
   eldorado:    { label:'엘도라도 익스프레스호', file:'eldorado_track-data-2026-06-17,2026-08-06.csv',    color:'#88ff55' },
   umiterashi:  { label:'우미테라시호',           file:'umiterashi_track-data-2021-01-01,2027-01-01.csv',  color:'#ff4d7a' },
   venus2:      { label:'비너스2호',             file:'venus2_track-data-2025-03-01,2026-09-01.csv',      color:'#aa55ff' },
-  panstargrace:{ label:'팬스타 그레이스호',      sub:'팬스타·운항예정', file:'panstargrace_track-data-2025-07-01,2026-09-01.csv', color:'#ffdd55' },
+  // openDay — 처음 열 날짜를 못 박는다. 이 배는 아직 운항 전이라 대부분 부산항에 대 놓은
+  // 날이고, 핑 수로 고르면 정박일(2025-11-28, 96핑)이 뽑힌다. 히타카츠까지 실제로 다녀온
+  // 2026-07-29(89핑 · 146km · 최고 39.7노트)를 먼저 보여 주는 편이 훨씬 쓸모 있다.
+  panstargrace:{ label:'팬스타 그레이스호',      sub:'팬스타·운항예정', file:'panstargrace_track-data-2025-07-01,2026-09-01.csv', color:'#ffdd55', openDay:'2026-07-29' },
 };
 
 // 드롭다운은 등록부에서 만든다 — 선박을 추가해도 HTML을 따로 고칠 필요가 없다
@@ -10173,6 +10176,9 @@ async function onAisVesselChange() {
         const n = (data.index[d] || []).length;
         if (n > best) { best = n; pick = d; }
       });
+      // 등록부에 열 날짜를 못 박아 둔 배는 그 날을 쓴다 (목록에 있을 때만)
+      const want = (_AIS_VESSELS[key] || {}).openDay;
+      if (want && days.includes(want)) pick = want;
       _aisSelYear = pick.slice(0, 4); _aisSelMonth = pick.slice(0, 7); _aisSelDay = pick;
     }
     _aisTbRenderTl(key);
