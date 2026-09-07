@@ -1568,6 +1568,10 @@
       <div style="font-size:10px;color:#88aabb;margin-bottom:8px">타 선사 배편을 등록해 출항시각·소요시간을 비교하고 선석 겹침 여부를 검토하세요. 항구는 목록에서 고르거나 "직접 입력"으로 좌표를 넣을 수 있습니다.</div>
       <div id="shipMgrList"></div>
       <button class="sim-btn primary" style="width:100%;margin-top:2px" onclick="addCustomShip()">+ 선박 추가</button>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <button class="sim-btn" style="flex:1" onclick="exportCustomShips()" title="선박 목록을 JSON 파일로 내보냅니다"><i data-ic="save"></i> 내보내기</button>
+        <button class="sim-btn" style="flex:1" onclick="importCustomShips()" title="저장된 JSON 파일을 불러와 현재 목록을 교체합니다"><i data-ic="folderOpen"></i> 불러오기</button>
+      </div>
     </div>
     <div class="ops-col ops-col-right">
       <div style="font-size:10px;color:#88aabb;margin:0 0 8px">항구별로 요일·시간대별 어떤 선박이 정박(수속) 중인지 보여줍니다. 드래그로 이동, 휠로 확대/축소할 수 있습니다. 겹치는 구간은 빨간 테두리로 표시됩니다.</div>
@@ -5309,6 +5313,37 @@ function _loadCustomShips() {
 function _saveCustomShips() {
   try { localStorage.setItem('hanjil_customShips', JSON.stringify(customShips)); } catch(e) {}
 }
+function exportCustomShips() {
+  const json = JSON.stringify(customShips, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'ship_schedule_' + new Date().toISOString().slice(0, 10) + '.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+function importCustomShips() {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = '.json,application/json';
+  inp.onchange = e => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const arr = JSON.parse(ev.target.result);
+        if (!Array.isArray(arr)) throw new Error('배열 형식이 아닙니다');
+        if (customShips.length && !confirm(`기존 ${customShips.length}척을 지우고 불러온 ${arr.length}척으로 교체하겠습니까?`)) return;
+        customShips = arr;
+        _shipIdSeq = 1;
+        arr.forEach(s => { const n = parseInt(String(s.id).replace(/\D/g,''), 10); if (n >= _shipIdSeq) _shipIdSeq = n + 1; });
+        _saveCustomShips(); _refreshOpenPanels(); rebuildSim();
+      } catch(err) { alert('파일 오류: ' + err.message); }
+    };
+    reader.readAsText(file, 'utf-8');
+  };
+  inp.click();
+}
 
 // 팬스타·스타라인·대아고속해운의 대마도 정기 여객선 스케줄을 최초 1회 등록한다.
 // (사용자가 지운 뒤에는 재등록하지 않도록 hanjil_seeded / hanjil_seeded_v2 플래그로 표시)
@@ -8627,16 +8662,23 @@ function _aisDrawSpeedChart(pts, cursor) {
     ctx.stroke();
   }
 
-  // 변곡점(속도대가 바뀌는 지점) — 마우스로 짚기 쉽게 점으로 찍어둔다
+  // 모든 실측 포인트를 점으로 찍는다 — AIS 수신 빈도와 실제 측정 위치를 확인할 수 있다
+  pts.forEach(p => {
+    ctx.beginPath();
+    ctx.arc(xAt(p.ts), yAt(p.speed), 2, 0, Math.PI * 2);
+    ctx.fillStyle = _aisSpeedColor(p.speed);
+    ctx.fill();
+  });
+  // 변곡점(속도대가 바뀌는 지점)은 흰 테두리로 강조
   let prevBand = null;
   pts.forEach(p => {
     const band = _aisSpeedColor(p.speed);
     if (prevBand !== null && band !== prevBand) {
       ctx.beginPath();
-      ctx.arc(xAt(p.ts), yAt(p.speed), 2.5, 0, Math.PI * 2);
+      ctx.arc(xAt(p.ts), yAt(p.speed), 3, 0, Math.PI * 2);
       ctx.fillStyle = band;
       ctx.fill();
-      ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.stroke();
+      ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.stroke();
     }
     prevBand = band;
   });
