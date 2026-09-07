@@ -8658,9 +8658,9 @@ function _aisDrawSpeedChart(pts, cursor) {
     const _vk = (document.getElementById('aisVesselSel') || {}).value;
     const _adat = _vk && _aisCache[_vk];
     const _kmRef = _adat ? (_adat.voyOneWayKm || _adat.refOneWayKm || 0) : 0;
-    const _offMarks = (_vk ? _aisSchedMarks(_vk) : []).filter(m => m.official);
-    const _offDeps = _offMarks.filter(m => m.kind === 'dep');
-    const _offArrs = _offMarks.filter(m => m.kind === 'arr');
+    const _allMarks = _vk ? _aisSchedMarks(_vk) : [];
+    const _offDeps = _allMarks.filter(m => m.kind === 'dep');
+    const _offArrs = _allMarks.filter(m => m.kind === 'arr');
     const _dayMs = 86400000;
 
     _offDeps.forEach(dep => {
@@ -8679,12 +8679,12 @@ function _aisDrawSpeedChart(pts, cursor) {
         const bx2 = padL + Math.min(1, (arrT - t0) / totalMs) * plotW;
         if (bx2 <= bx1) continue;
 
-        // 배경 밴드 (amber)
-        ctx.fillStyle = 'rgba(255,200,60,0.09)';
+        // 배경 밴드 (공식=진한 amber, 통계=옅은 amber)
+        ctx.fillStyle = dep.official ? 'rgba(255,200,60,0.11)' : 'rgba(255,200,60,0.06)';
         ctx.fillRect(bx1, padT, bx2 - bx1, plotH);
         // 밴드 경계선
         ctx.save();
-        ctx.strokeStyle = 'rgba(255,200,60,0.3)';
+        ctx.strokeStyle = dep.official ? 'rgba(255,200,60,0.4)' : 'rgba(255,200,60,0.2)';
         ctx.lineWidth = 1; ctx.setLineDash([2, 2]);
         ctx.beginPath(); ctx.moveTo(bx1, padT); ctx.lineTo(bx1, padT + plotH); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(bx2, padT); ctx.lineTo(bx2, padT + plotH); ctx.stroke();
@@ -8801,16 +8801,14 @@ function _aisDrawSpeedChart(pts, cursor) {
     ctx.globalAlpha = 1;
 
     ctx.font = 'bold 10px sans-serif'; ctx.textBaseline = 'middle';
-    const labelX = cursor.hover && cursor.nearPt ? xAt(cursor.nearPt.ts) : x;
-    ctx.textAlign = labelX > W / 2 ? 'right' : 'left';
+    ctx.textAlign = x > W / 2 ? 'right' : 'left';
     ctx.fillStyle = cursor.hover ? '#c8f0ff' : '#ffe6f7';
-    // hover일 때는 가장 가까운 실측 점의 시각·속도를 보여준다
-    const lbl = cursor.hover && cursor.nearPt
-      ? `${_aisFmtClock(new Date(cursor.nearPt.ts).toISOString())} · ${cursor.nearPt.speed.toFixed(1)}kt`
-      : cursor.hover
-        ? `${_aisFmtClock(new Date(cursor.tsMs).toISOString())} · ${p.speed.toFixed(1)}kt`
-        : `${p.speed.toFixed(1)}kt`;
-    ctx.fillText(lbl, labelX + (labelX > W / 2 ? -6 : 6), padT + 8);
+    // hover: 커서 위치 인터폴레이션 속도 + 가장 가까운 실측 점 시각을 병기
+    const lbl = cursor.hover
+      ? `${_aisFmtClock(new Date(cursor.tsMs).toISOString())} · ${p.speed.toFixed(1)}kt` +
+        (cursor.nearPt ? ` (실측 ${cursor.nearPt.speed.toFixed(1)}kt)` : '')
+      : `${p.speed.toFixed(1)}kt`;
+    ctx.fillText(lbl, x + (x > W / 2 ? -6 : 6), padT + 8);
     ctx.textAlign = 'start';
   }
 }
