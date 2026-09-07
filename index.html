@@ -8652,6 +8652,67 @@ function _aisDrawSpeedChart(pts, cursor) {
     });
   }
 
+  // ── 공시 운항 구간 배경 밴드 + 기대 속도 점선 ──
+  // 배경에 먼저 그려야 실측 곡선이 위에 겹쳐 보인다
+  {
+    const _vk = (document.getElementById('aisVesselSel') || {}).value;
+    const _adat = _vk && _aisCache[_vk];
+    const _kmRef = _adat ? (_adat.voyOneWayKm || _adat.refOneWayKm || 0) : 0;
+    const _offMarks = (_vk ? _aisSchedMarks(_vk) : []).filter(m => m.official);
+    const _offDeps = _offMarks.filter(m => m.kind === 'dep');
+    const _offArrs = _offMarks.filter(m => m.kind === 'arr');
+    const _dayMs = 86400000;
+
+    _offDeps.forEach(dep => {
+      // 같은 날 dep 이후 첫 arr, 없으면 날짜 넘김(arr.min < dep.min)
+      const arr = _offArrs.find(a => a.min > dep.min) || _offArrs[0];
+      if (!arr) return;
+      const durMin = arr.min > dep.min ? arr.min - dep.min : 1440 - dep.min + arr.min;
+      const expKts = _kmRef > 0 ? (_kmRef / 1.852) / (durMin / 60) : 0;
+
+      const _base = Math.floor((t0 + KST_MS) / _dayMs) * _dayMs - KST_MS;
+      for (let k = -1; k <= 2; k++) {
+        const depT = _base + k * _dayMs + dep.min * 60000;
+        const arrT = depT + durMin * 60000;
+        if (arrT < t0 || depT > t1) continue;
+        const bx1 = padL + Math.max(0, (depT - t0) / totalMs) * plotW;
+        const bx2 = padL + Math.min(1, (arrT - t0) / totalMs) * plotW;
+        if (bx2 <= bx1) continue;
+
+        // 배경 밴드 (amber)
+        ctx.fillStyle = 'rgba(255,200,60,0.09)';
+        ctx.fillRect(bx1, padT, bx2 - bx1, plotH);
+        // 밴드 경계선
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255,200,60,0.3)';
+        ctx.lineWidth = 1; ctx.setLineDash([2, 2]);
+        ctx.beginPath(); ctx.moveTo(bx1, padT); ctx.lineTo(bx1, padT + plotH); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(bx2, padT); ctx.lineTo(bx2, padT + plotH); ctx.stroke();
+        ctx.restore();
+
+        // 기대 속도 점선
+        if (expKts > 0) {
+          const ey = yAt(expKts);
+          if (ey >= padT && ey <= padT + plotH) {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255,200,60,0.65)';
+            ctx.lineWidth = 1.2; ctx.setLineDash([6, 3]);
+            ctx.beginPath(); ctx.moveTo(bx1, ey); ctx.lineTo(bx2, ey); ctx.stroke();
+            ctx.restore();
+            if (roomy) {
+              ctx.save();
+              ctx.font = '9px sans-serif';
+              ctx.fillStyle = 'rgba(255,210,80,0.9)';
+              ctx.textBaseline = 'bottom'; ctx.textAlign = 'left';
+              ctx.fillText('공시 ' + expKts.toFixed(1) + 'kt', bx1 + 3, ey - 2);
+              ctx.restore();
+            }
+          }
+        }
+      }
+    });
+  }
+
   // 속도 영역(그라데이션 채우기) + 라인
   ctx.beginPath();
   ctx.moveTo(xAt(pts[0].ts), padT + plotH);
