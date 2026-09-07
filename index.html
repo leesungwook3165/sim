@@ -5312,8 +5312,8 @@ function _loadCustomShips() {
 }
 function _saveCustomShips() {
   try { localStorage.setItem('hanjil_customShips', JSON.stringify(customShips)); } catch(e) {}
-  // aisKey 연결이 바뀌었을 수 있으므로 통계 마크 캐시를 초기화한다
-  Object.values(_aisCache).forEach(d => { delete d._schedMarks; });
+  // aisKey 연결이 바뀌었을 수 있으므로 통계 마크 캐시를 초기화한다 (_aisCache는 이후 선언)
+  if (typeof _aisCache !== 'undefined') Object.values(_aisCache).forEach(d => { delete d._schedMarks; });
 }
 function exportCustomShips() {
   const json = JSON.stringify(customShips, null, 2);
