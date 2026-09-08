@@ -6041,6 +6041,30 @@ function _drawCompetitorRoutes() {
          ※ 투입 예정 선박: 광양비츠호 (3만톤급)<br>
          ⚠ 구상 항로 — 스케줄·운항 시각 미확정
        </div>`, { className:'custom-popup', maxWidth:280 });
+  // 엘도라도 익스프레스호 항로 (포항여객선터미널 ↔ 울릉도 도동항)
+  _scopeLines.eldoradoRef = L.polyline(_eldoradoWP, { color:'#88ff55', weight:2, opacity:0.7, dashArray:'6 7' })
+    .addTo(map)
+    .bindTooltip('⚡ 엘도라도 익스프레스호 (포항 ↔ 울릉도)', { sticky:true, className:'custom-popup' })
+    .bindPopup(
+      `<div class="popup-title" style="color:#88ff55">포항 ↔ 울릉도 도동항 (엘도라도 익스프레스호)</div>
+       <div class="popup-body">
+         포항여객선터미널 출항 → 동해 → 울릉도 도동항<br>
+         편도 약 217km · 117해리<br><br>
+         ⚡ 엘도라도 익스프레스호 · 대저페리<br>
+         순항 43.9노트 · 편도 약 2시간 30분
+       </div>`, { className:'custom-popup', maxWidth:260 });
+  // 코리아프라이드호 항로 (인천 연안부두 ↔ 백령도 용기포신항)
+  _scopeLines.koreaPrideRef = L.polyline(_koreaPrideWP, { color:'#55ccff', weight:2, opacity:0.7, dashArray:'6 7' })
+    .addTo(map)
+    .bindTooltip('⚡ 코리아프라이드호 (인천 ↔ 백령도)', { sticky:true, className:'custom-popup' })
+    .bindPopup(
+      `<div class="popup-title" style="color:#55ccff">인천 연안부두 ↔ 백령도 용기포신항 (코리아프라이드호)</div>
+       <div class="popup-body">
+         인천 연안부두여객터미널 출항 → 경기만 → 서해 → 백령도 용기포신항<br>
+         편도 약 218km · 118해리<br><br>
+         ⚡ 코리아프라이드호 · 쌍동 쾌속선<br>
+         순항 약 35~39노트 · 편도 약 4~5시간
+       </div>`, { className:'custom-popup', maxWidth:270 });
 }
 
 // ════════════════════════════════════════════════════
