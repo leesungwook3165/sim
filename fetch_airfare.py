@@ -23,12 +23,12 @@ HEADERS = {
     "User-Agent":    "Mozilla/5.0 (compatible; GitHubActions)",
 }
 
-# 시도할 엔드포인트 패턴 (확인되는 순서대로)
+# 시도할 엔드포인트 패턴 (v3 우선)
 ENDPOINTS = [
-    "https://api.myrealtrip.com/v1/flights",
-    "https://api.myrealtrip.com/v2/flights",
-    "https://partner.myrealtrip.com/v1/flights",
-    "https://api.myrealtrip.com/flights",
+    "https://api.myrealtrip.com/v3/flights",
+    "https://api.myrealtrip.com/v3/flights/search",
+    "https://partner.myrealtrip.com/v3/flights",
+    "https://api.myrealtrip.com/v3/flights/offers",
 ]
 
 def try_get(date_str):
@@ -59,7 +59,7 @@ def try_post(date_str):
         "passengers": {"adults": ADULTS, "children": 0},
         "cabinClass": "ECONOMY", "currency": "KRW",
     }
-    url = "https://api.myrealtrip.com/v1/flights/search"
+    url = "https://api.myrealtrip.com/v3/flights/search"
     try:
         r = requests.post(url, headers=HEADERS, json=body, timeout=15)
         if r.ok:

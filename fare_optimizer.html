@@ -407,10 +407,10 @@ const BASE_URLS = [
 let _activeBase = BASE_URLS[0];
 
 const ENDPOINTS = [
-  { method:'GET',  path:'/v1/flights',               desc:'항공 검색 v1' },
-  { method:'POST', path:'/v1/flights/search',         desc:'항공 검색 POST' },
-  { method:'GET',  path:'/v2/flights',               desc:'항공 검색 v2' },
-  { method:'GET',  path:'/flights',                  desc:'항공 검색 (버전 없음)' },
+  { method:'GET',  path:'/v3/flights',               desc:'항공 검색 v3' },
+  { method:'POST', path:'/v3/flights/search',         desc:'항공 검색 v3 POST' },
+  { method:'GET',  path:'/v3/flights/search',         desc:'항공 검색 v3 GET search' },
+  { method:'GET',  path:'/v3/flights/offers',         desc:'항공 검색 v3 offers' },
   { method:'GET',  path:'/v1/products',              desc:'상품 목록' },
   { method:'GET',  path:'/v1/availability',          desc:'가용성 조회' },
   { method:'GET',  path:'/health',                   desc:'서버 상태' },
@@ -863,7 +863,7 @@ function updateRatioLabel(v) {
 initDates();
 renderEndpoints();
 // 탐색기 기본 URL
-document.getElementById('explorerUrl').value = BASE_URLS[0] + '/v1/flights';
+document.getElementById('explorerUrl').value = BASE_URLS[0] + '/v3/flights';
 setStatus('', 'API 미연결');
 </script>
 </body>
