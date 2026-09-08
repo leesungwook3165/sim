@@ -1375,13 +1375,13 @@
   <!-- 탭 버튼 + 콘텐츠 — 투입고려(core) 범위에서만 표시 -->
   <div id="simScenariosSection">
   <div class="sim-tabs">
-    <button class="sim-tab-btn active" id="tabBtn1" onclick="switchSimTab(1)"><i data-ic="ship"></i> 시나리오 1<br><span style="font-size:9px;font-weight:400;color:inherit">경유 vs 직항 비교</span></button>
-    <button class="sim-tab-btn" id="tabBtn2" onclick="switchSimTab(2)"><i data-ic="rocket"></i> 시나리오 2<br><span style="font-size:9px;font-weight:400;color:inherit">하카타 직항 왕복</span></button>
+    <button class="sim-tab-btn active" id="tabBtn1" onclick="switchSimTab(2)"><i data-ic="rocket"></i> 시나리오 2<br><span style="font-size:9px;font-weight:400;color:inherit">하카타 직항 왕복</span></button>
+    <button class="sim-tab-btn" id="tabBtn2" onclick="switchSimTab(1)"><i data-ic="ship"></i> 시나리오 1<br><span style="font-size:9px;font-weight:400;color:inherit">대마도 경유</span></button>
     <button class="sim-tab-btn" id="tabBtn3" onclick="switchSimTab(3)"><i data-ic="coins"></i> 운항비용<br><span style="font-size:9px;font-weight:400;color:inherit">연료비 비교</span></button>
   </div>
 
   <!-- ══ 탭 1: 경유 vs 직항 비교 ══ -->
-  <div id="simTabContent1" class="sim-tab-content active">
+  <div id="simTabContent1" class="sim-tab-content">
 
     <!-- 산타모니카 (경유) -->
     <div style="border:1px solid rgba(255,200,0,0.3);border-radius:7px;padding:7px 10px;margin-bottom:7px">
@@ -1430,7 +1430,7 @@
   </div><!-- /.simTabContent1 -->
 
   <!-- ══ 탭 2: 하카타 직항 왕복 ══ -->
-  <div id="simTabContent2" class="sim-tab-content">
+  <div id="simTabContent2" class="sim-tab-content active">
 
     <div style="border:1px solid rgba(68,255,221,0.3);border-radius:7px;padding:7px 10px;margin-bottom:7px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
@@ -3787,7 +3787,7 @@ let _hitaArrMin, _totalMinSM, _totalMinQB, _totalMinSMret, _totalMinQBret, _tota
 // 시나리오 2: SM 하카타 직항
 let _tlSM2, _tlSM2ret, _totalMinSM2, _totalMinSM2ret;
 let sim2Marker = null;
-let _activeSimTab = 1;
+let _activeSimTab = 2;
 
 // ── 재생 범위(어떤 배를 움직여서 보여줄지) ──
 // 'core'=투입고려(퀸비틀·산타모니카), 'custom'=타선사선박(기존 운항 중인 등록 선박),
@@ -5235,8 +5235,8 @@ function switchSimTab(n) {
     simReset();
     _activeSimTab = n;
   }
-  document.getElementById('tabBtn1').classList.toggle('active', n === 1);
-  document.getElementById('tabBtn2').classList.toggle('active', n === 2);
+  document.getElementById('tabBtn1').classList.toggle('active', n === 2);
+  document.getElementById('tabBtn2').classList.toggle('active', n === 1);
   document.getElementById('tabBtn3').classList.toggle('active', n === 3);
   document.getElementById('simTabContent1').classList.toggle('active', n === 1);
   document.getElementById('simTabContent2').classList.toggle('active', n === 2);
