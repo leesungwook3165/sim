@@ -1375,8 +1375,8 @@
   <!-- 탭 버튼 + 콘텐츠 — 투입고려(core) 범위에서만 표시 -->
   <div id="simScenariosSection">
   <div class="sim-tabs">
-    <button class="sim-tab-btn active" id="tabBtn1" onclick="switchSimTab(2)"><i data-ic="rocket"></i> 시나리오 2<br><span style="font-size:9px;font-weight:400;color:inherit">하카타 직항 왕복</span></button>
-    <button class="sim-tab-btn" id="tabBtn2" onclick="switchSimTab(1)"><i data-ic="ship"></i> 시나리오 1<br><span style="font-size:9px;font-weight:400;color:inherit">대마도 경유</span></button>
+    <button class="sim-tab-btn active" id="tabBtn1" onclick="switchSimTab(2)"><i data-ic="rocket"></i> 시나리오 1<br><span style="font-size:9px;font-weight:400;color:inherit">하카타 직항 왕복</span></button>
+    <button class="sim-tab-btn" id="tabBtn2" onclick="switchSimTab(1)"><i data-ic="ship"></i> 시나리오 2<br><span style="font-size:9px;font-weight:400;color:inherit">대마도 경유</span></button>
     <button class="sim-tab-btn" id="tabBtn3" onclick="switchSimTab(3)"><i data-ic="coins"></i> 운항비용<br><span style="font-size:9px;font-weight:400;color:inherit">연료비 비교</span></button>
   </div>
 
@@ -3866,6 +3866,10 @@ let _hitaArrMin, _totalMinSM, _totalMinQB, _totalMinSMret, _totalMinQBret, _tota
 // 시나리오 2: SM 하카타 직항
 let _tlSM2, _tlSM2ret, _totalMinSM2, _totalMinSM2ret;
 let sim2Marker = null;
+// 안쪽 값과 화면에 보이는 번호가 다르다. 화면 번호를 바꾸면서 안쪽 값까지 함께 바꾸면
+// 열댓 군데를 손대야 해서 위험하다. 대신 여기에 대응표를 적어 둔다.
+//   _activeSimTab === 1  →  화면의 "시나리오 2 · 히타카츠 경유"
+//   _activeSimTab === 2  →  화면의 "시나리오 1 · 하카타 직항"  (기본으로 열리는 탭)
 let _activeSimTab = 2;
 
 // ── 재생 범위(어떤 배를 움직여서 보여줄지) ──
@@ -5258,7 +5262,7 @@ function _simRenderFrame() {
     `총 왕복 ${_fmtMin(_totalMinSM2ret)}</span>`;
   if (!sim2Marker) {
     sim2Marker = L.marker(sm2Pos,{icon:_makeShipIcon(sm2Hdg,'#44ffdd','#008866',sm2Label),zIndexOffset:905}).addTo(map)
-      .bindPopup(`<div class="popup-title" style="color:#44ffdd">⛴ 산타모니카호 (시나리오 2 · 직항)</div>${_shipSvgHtml('sm')}<div class="popup-body"><b style="color:#44ffdd">시월드고속훼리 · Incat 76m wavepiercer</b><br>전장 72.67m · 폭 21m · GT 390톤<br>최고속력 45노트 · 순항 ${simSMkts}노트<br>여객 621명 · 히타카츠 미경유<br>부산↔하카타 직항 213km(115해리)</div>`,{className:'custom-popup',maxWidth:310});
+      .bindPopup(`<div class="popup-title" style="color:#44ffdd">⛴ 산타모니카호 (시나리오 1 · 직항)</div>${_shipSvgHtml('sm')}<div class="popup-body"><b style="color:#44ffdd">시월드고속훼리 · Incat 76m wavepiercer</b><br>전장 72.67m · 폭 21m · GT 390톤<br>최고속력 45노트 · 순항 ${simSMkts}노트<br>여객 621명 · 히타카츠 미경유<br>부산↔하카타 직항 213km(115해리)</div>`,{className:'custom-popup',maxWidth:310});
   } else { sim2Marker.setLatLng(sm2Pos); sim2Marker.setIcon(_makeShipIcon(sm2Hdg,'#44ffdd','#008866',sm2Label)); }
   sim2Marker.setOpacity((_activeSimTab === 2 && _simCoreVisible()) ? 1 : 0);
 
@@ -6377,8 +6381,8 @@ function _renderBerthAnalysis() {
   el.innerHTML = _icHtml(`
     <div style="font-size:11px;font-weight:700;color:#7ecfff;margin-bottom:6px">📊 최적 접안 시간대 분석 (경쟁사 수속시간 기준 · 요일 무관 항상 안전한 구간)</div>
     <div class="berth-scenario-grid">
-      ${renderCard('시나리오 1 · 히타카츠 경유', result[1])}
-      ${renderCard('시나리오 2 · 하카타 직항', result[2])}
+      ${renderCard('시나리오 1 · 하카타 직항', result[2])}
+      ${renderCard('시나리오 2 · 히타카츠 경유', result[1])}
     </div>`);
 }
 
@@ -6796,7 +6800,7 @@ function _builtinShipsHtml() {
       kts: simQBkts, departHM: simQBDepartHM, turnMin: simQBTurnMin,
       shipType: simQBShipType, tonnage: simQBTonnage,
       oneWay: _totalMinQB, roundTrip: _totalMinQBret, editable: true },
-    { which:'sm2', color: simSMColor2, name:'⛴ 산타모니카호 (직항 · 시나리오2)', route:'부산 → 하카타',
+    { which:'sm2', color: simSMColor2, name:'⛴ 산타모니카호 (직항 · 시나리오1)', route:'부산 → 하카타',
       dist: QB_DIST_KM, kts: simSMkts, departHM: simSMDepartHM, turnMin: simSMTurnMin,
       shipType: simSMShipType, tonnage: simSMTonnage,
       oneWay: _totalMinSM2, roundTrip: _totalMinSM2ret, editable: false }
