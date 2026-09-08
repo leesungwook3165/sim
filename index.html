@@ -3537,6 +3537,10 @@ let SIM_STOP_MIN   = 30;  // 히타카츠 경유 시간(분) — 팬스타 쓰�
 let BERTH_DEFAULT_MIN = 30;
 function _allWeekDays() { return ['토','일','월','화','수','목','금']; }
 
+// 기본 선박 섹션 접기 상태 (기본: 접힘)
+let _builtinCollapsed = true;
+function toggleBuiltinCollapse() { _builtinCollapsed = !_builtinCollapsed; renderShipMgrList(); }
+
 // 선박 스케줄 관리 목록의 그룹(선사) 트리 — 접힌 그룹을 담아둔다(키: "대범주|선사").
 // 첫 렌더링 시 모든 그룹을 자동으로 접힌 상태로 시작한다.
 const _shipMgrCollapsedGroups = new Set();
@@ -3759,9 +3763,9 @@ let simSMkts = 42;
 
 // 퀸비틀: 각 선사 공식 거리 기준 속도 역산
 // 부산↔히타카츠 74km(40해리) · 히타카츠↔하카타 132km(71해리) · 부산↔하카타 직항 213km(115해리)
-const SM_DIST_LEG1 = 74;   // 부산→히타카츠 공식 거리 (km)
-const SM_DIST_LEG2 = 132;  // 히타카츠→하카타 공식 거리 (km)
-const QB_DIST_KM   = 213;  // 부산→하카타 공식 거리 (km)
+let SM_DIST_LEG1 = 74;   // 부산→히타카츠 공식 거리 (km)
+let SM_DIST_LEG2 = 132;  // 히타카츠→하카타 공식 거리 (km)
+let QB_DIST_KM   = 213;  // 부산→하카타 공식 거리 (km)
 let simQBkts = 31.4; // 공식거리÷공식소요시간 역산값 31.4노트
 
 // 회항(정박) 대기시간 — 목적항(하카타) 도착 후 승하선·급유·정비 등을 마치고
@@ -3775,6 +3779,7 @@ let simQBTurnMin = 60;
 // 운항 중단 후 팬스타에 매각된 것으로 파악됨(경쟁 구도 변화 반영 필요).
 let simSMShipType = '고속선', simSMTonnage = 3500;
 let simQBShipType = '고속선', simQBTonnage = 2582;
+let simSMColor = '#ffcc00', simSMColor2 = '#44ffdd', simQBColor = '#66ccff';
 
 // 라이브 타임라인 (rebuildSim 으로 생성)
 let _tl1, _tl2, _tlQB, _tl3, _tlQBret;
@@ -6619,12 +6624,19 @@ function updateBuiltinShip(which, field, value) {
     else if (field === 'returnClock' && value) simSMTurnMin = _turnMinForReturnClock(_totalMinSM, value);
     else if (field === 'shipType') simSMShipType = value;
     else if (field === 'tonnage') simSMTonnage = Math.max(0, parseFloat(value) || 0);
+    else if (field === 'color') simSMColor = value;
+    else if (field === 'distLeg1') { const v = parseFloat(value); if (!isNaN(v) && v > 0) SM_DIST_LEG1 = v; }
+    else if (field === 'distLeg2') { const v = parseFloat(value); if (!isNaN(v) && v > 0) SM_DIST_LEG2 = v; }
   } else if (which === 'qb') {
     if (field === 'kts') { const v = parseFloat(value); if (!isNaN(v) && v > 5) simQBkts = v; }
     else if (field === 'departHM' && value) simQBDepartHM = value;
     else if (field === 'returnClock' && value) simQBTurnMin = _turnMinForReturnClock(_totalMinQB, value);
     else if (field === 'shipType') simQBShipType = value;
     else if (field === 'tonnage') simQBTonnage = Math.max(0, parseFloat(value) || 0);
+    else if (field === 'color') simQBColor = value;
+    else if (field === 'distDirect') { const v = parseFloat(value); if (!isNaN(v) && v > 0) QB_DIST_KM = v; }
+  } else if (which === 'sm2') {
+    if (field === 'color') simSMColor2 = value;
   }
   const smKtsIn = document.getElementById('smKtsInput'); if (smKtsIn) smKtsIn.value = simSMkts;
   const qbKtsIn = document.getElementById('qbKtsInput'); if (qbKtsIn) qbKtsIn.value = simQBkts.toFixed(1);
@@ -6639,15 +6651,17 @@ function _builtinShipsHtml() {
   const smDep = _hmToMin(simSMDepartHM);
   const qbDep = _hmToMin(simQBDepartHM);
   const rows = [
-    { which:'sm', color:'#ffcc00', name:'⛴ 산타모니카호 (경유)', route:'부산 → 히타카츠 → 하카타',
-      dist: SM_DIST_LEG1 + SM_DIST_LEG2, kts: simSMkts, departHM: simSMDepartHM, turnMin: simSMTurnMin,
+    { which:'sm', color: simSMColor, name:'⛴ 산타모니카호 (경유)', route:'부산 → 히타카츠 → 하카타',
+      dist: SM_DIST_LEG1 + SM_DIST_LEG2, distLeg1: SM_DIST_LEG1, distLeg2: SM_DIST_LEG2,
+      kts: simSMkts, departHM: simSMDepartHM, turnMin: simSMTurnMin,
       shipType: simSMShipType, tonnage: simSMTonnage,
       oneWay: _totalMinSM, roundTrip: _totalMinSMret, editable: true },
-    { which:'qb', color:'#66ccff', name:'🚢 퀸비틀 (직항)', route:'부산 → 하카타',
-      dist: QB_DIST_KM, kts: simQBkts, departHM: simQBDepartHM, turnMin: simQBTurnMin,
+    { which:'qb', color: simQBColor, name:'🚢 퀸비틀 (직항)', route:'부산 → 하카타',
+      dist: QB_DIST_KM, distDirect: QB_DIST_KM,
+      kts: simQBkts, departHM: simQBDepartHM, turnMin: simQBTurnMin,
       shipType: simQBShipType, tonnage: simQBTonnage,
       oneWay: _totalMinQB, roundTrip: _totalMinQBret, editable: true },
-    { which:'sm', color:'#44ffdd', name:'⛴ 산타모니카호 (직항 · 시나리오2)', route:'부산 → 하카타',
+    { which:'sm2', color: simSMColor2, name:'⛴ 산타모니카호 (직항 · 시나리오2)', route:'부산 → 하카타',
       dist: QB_DIST_KM, kts: simSMkts, departHM: simSMDepartHM, turnMin: simSMTurnMin,
       shipType: simSMShipType, tonnage: simSMTonnage,
       oneWay: _totalMinSM2, roundTrip: _totalMinSM2ret, editable: false }
@@ -6659,7 +6673,7 @@ function _builtinShipsHtml() {
     return `
     <div class="ship-row" style="border-color:${r.color}88">
       <div class="ship-row-top">
-        <span style="width:14px;height:14px;border-radius:50%;background:${r.color};display:inline-block;flex-shrink:0"></span>
+        <input type="color" value="${r.color}" title="색상" style="width:18px;height:18px;border:none;border-radius:50%;padding:0;cursor:pointer;background:none;flex-shrink:0" onchange="updateBuiltinShip('${r.which}','color',this.value);renderShipMgrList()">
         <span class="ship-row-name" style="font-weight:700;color:${r.color}">${r.name}</span>
         <span style="font-size:9px;color:#88aabb;border:1px solid #556677;border-radius:8px;padding:1px 6px;flex-shrink:0">기본</span>
       </div>
@@ -6681,6 +6695,17 @@ function _builtinShipsHtml() {
         <label>총톤수
           <input type="number" min="0" step="1" value="${r.tonnage||0}" onchange="updateBuiltinShip('${r.which}','tonnage',this.value)">
         </label>
+        ${r.distLeg1 != null ? `
+        <label>구간1거리(km)
+          <input type="number" min="1" step="1" value="${r.distLeg1}" onchange="updateBuiltinShip('${r.which}','distLeg1',this.value)">
+        </label>
+        <label>구간2거리(km)
+          <input type="number" min="1" step="1" value="${r.distLeg2}" onchange="updateBuiltinShip('${r.which}','distLeg2',this.value)">
+        </label>` : ''}
+        ${r.distDirect != null ? `
+        <label>직항거리(km)
+          <input type="number" min="1" step="1" value="${r.distDirect}" onchange="updateBuiltinShip('${r.which}','distDirect',this.value)">
+        </label>` : ''}
       </div>` : `<div style="font-size:10px;color:#667788;margin-bottom:5px">※ 산타모니카호와 속력·출항시각·회항 시각·선종·총톤수를 공유 (위 카드에서 함께 수정됨)</div>`}
       <div class="ship-row-calc">
         📏 ${r.dist}km · 편도 ${_fmtMin(r.oneWay)} · 하카타 회항 시각 ${_minToHM(departMin + r.oneWay + r.turnMin)} (대기 ${r.turnMin}분)<br>
@@ -6702,8 +6727,8 @@ function renderShipMgrList() {
     });
     _shipMgrGroupsInited = true;
   }
-  let html = `<div style="font-size:10px;color:#7ecfff;font-weight:700;margin:2px 0 6px">🧭 시뮬레이션 등록 선박 (기본)</div>`
-    + _builtinShipsHtml()
+  let html = `<div class="ship-nation-header" onclick="toggleBuiltinCollapse()" style="margin-top:2px">${_builtinCollapsed ? '▶' : '▼'} 🧭 시뮬레이션 등록 선박 (기본)</div>`
+    + (_builtinCollapsed ? '' : _builtinShipsHtml())
     + `<div style="font-size:10px;color:#7ecfff;font-weight:700;margin:12px 0 6px">➕ 등록한 선박</div>`;
   if (customShips.length === 0) {
     html += '<div style="font-size:11px;color:#667788;text-align:center;padding:8px 0">등록된 선박이 없습니다.<br>아래 버튼으로 추가하세요.</div>';
