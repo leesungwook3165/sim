@@ -1395,7 +1395,7 @@
       <div class="sim-specs" style="margin-bottom:3px">Incat 76m · 최고속력 45노트(83km/h) · 승객 621명 · 히타카츠 30분 경유</div>
       <div class="sim-specs" style="margin-bottom:3px;font-size:10px;color:#667788">※ 경유 30분은 팬스타 <a href="https://www.panstar.co.kr/business/cruise/tsushima_link" target="_blank" rel="noopener" style="color:#7ecfff">쓰시마링크호</a> 히타카츠 정박 실측 기준</div>
       <div class="sim-specs" style="margin-bottom:3px;color:#ffaa66">※ 참고 — 엘도라도호(포항↔울릉도): 평균 45노트(83km/h) · 최고 51노트(95km/h)</div>
-      <div class="sim-specs">부산→히타카츠 74km + 히타카츠→하카타 132km = 편도 206km</div>
+      <div class="sim-specs">부산→히타카츠 74km + 히타카츠→하카타 146km = 편도 220km</div>
       <div class="sim-info" style="margin-bottom:5px">
         <div class="sim-info-box"><div class="label">경과</div><div class="val" id="smElapsed">0:00</div></div>
         <div class="sim-info-box"><div class="label">남은</div><div class="val" id="smRemain">—</div></div>
@@ -2673,7 +2673,7 @@ const _rlSmLeg1 = _routeLabel(34.95, 129.22,
   '⛴ 부산→히타카츠<br>74km · 40해리', '#ffaa00');
 // 산타모니카 ② 히타카츠→하카타 — 중간지점
 const _rlSmLeg2 = _routeLabel(34.10, 129.85,
-  '⛴ 히타카츠→하카타<br>132km · 71해리', '#ffaa00');
+  '⛴ 히타카츠→하카타<br>146km · 79해리', '#ffaa00');
 // 엘도라도 익스프레스호 (포항 ↔ 울릉도 도동항) — 중간지점
 const _rlEldorado = _routeLabel(36.76, 130.14,
   '⚡ 포항↔울릉도<br>217km · 117해리', '#ffcc33');
@@ -3841,9 +3841,9 @@ const _koreaPrideWP = [
 let simSMkts = 42;
 
 // 퀸비틀: 각 선사 공식 거리 기준 속도 역산
-// 부산↔히타카츠 74km(40해리) · 히타카츠↔하카타 132km(71해리) · 부산↔하카타 직항 213km(115해리)
+// 부산↔히타카츠 74km(40해리) · 히타카츠↔하카타 146km(79해리) · 부산↔하카타 직항 213km(115해리)
 let SM_DIST_LEG1 = 74;   // 부산→히타카츠 공식 거리 (km)
-let SM_DIST_LEG2 = 132;  // 히타카츠→하카타 공식 거리 (km)
+let SM_DIST_LEG2 = 146;  // 히타카츠→하카타 공식 거리 (km)
 let QB_DIST_KM   = 213;  // 부산→하카타 공식 거리 (km)
 let simQBkts = 31.4; // 공식거리÷공식소요시간 역산값 31.4노트
 
@@ -4770,25 +4770,38 @@ function _updateSimTimelapsePlayhead() {
   try { _simTimelapse.setCustomTime(_simTimeAt(simSimMin), 'playhead'); } catch (e) {}
 }
 
+// 지도에 그린 항로는 실제 해협을 따라 굽어 있어서 공식거리보다 길다
+// (부산→히타카츠 공식 74km / 곡선 76.7km, 히타카츠→하카타 공식 146km / 곡선 153.3km,
+//  하카타↔부산 공식 213km / 곡선 212.3km). 곡선 길이를 그대로 속력으로 나누면 소요시간이
+// 공식 시간표와 어긋나므로, 구간마다 속력을 곡선/공식 비율만큼 역보정해서
+// "소요시간 = 공식거리 ÷ 설정속력"이 항상 성립하도록 맞춘다. 등록 선박(쓰시마링크호 등)이
+// 쓰는 보정과 같은 방식이며, 화면에 표시되는 순항속력은 설정값 그대로 유지된다.
+function _legTL(path, startMin, baseKmh, officialKm) {
+  let len = 0;
+  for (let i = 1; i < path.length; i++) len += _simDist(path[i-1], path[i]);
+  const kmh = (officialKm > 0 && len > 0) ? baseKmh * (len / officialKm) : baseKmh;
+  return _buildTL(path, startMin, kmh);
+}
+
 function rebuildSim() {
   _computeDelays();
   const smKmh = simSMkts * 1.852;
   const qbKmh = simQBkts * 1.852;
   // 시나리오 1: SM 경유 + QB 직항
-  _tl1 = _buildTL(catmullRom(_simWP1, 60), 0, smKmh);
+  _tl1 = _legTL(catmullRom(_simWP1, 60), 0, smKmh, SM_DIST_LEG1);
   _hitaArrMin = _tl1[_tl1.length-1].cumMin;
-  _tl2 = _buildTL(catmullRom(_simWP2, 60), _hitaArrMin + SIM_STOP_MIN, smKmh);
+  _tl2 = _legTL(catmullRom(_simWP2, 60), _hitaArrMin + SIM_STOP_MIN, smKmh, SM_DIST_LEG2);
   _totalMinSM = _tl2[_tl2.length-1].cumMin;
-  _tlQB = _buildTL(_qbWP, 0, qbKmh);
+  _tlQB = _legTL(_qbWP, 0, qbKmh, QB_DIST_KM);
   _totalMinQB = _tlQB[_tlQB.length-1].cumMin;
-  _tl3     = _buildTL(catmullRom(_retWP, 60), _totalMinSM + simSMTurnMin, smKmh);
-  _tlQBret = _buildTL(_retWP, _totalMinQB + simQBTurnMin, qbKmh);
+  _tl3     = _legTL(catmullRom(_retWP, 60), _totalMinSM + simSMTurnMin, smKmh, QB_DIST_KM);
+  _tlQBret = _legTL(_retWP, _totalMinQB + simQBTurnMin, qbKmh, QB_DIST_KM);
   _totalMinSMret  = _tl3[_tl3.length-1].cumMin;
   _totalMinQBret  = _tlQBret[_tlQBret.length-1].cumMin;
   // 시나리오 2: SM 하카타 직항
-  _tlSM2    = _buildTL(_qbWP, 0, smKmh);
+  _tlSM2    = _legTL(_qbWP, 0, smKmh, QB_DIST_KM);
   _totalMinSM2    = _tlSM2[_tlSM2.length-1].cumMin;
-  _tlSM2ret = _buildTL(_retWP, _totalMinSM2 + simSMTurnMin, smKmh);
+  _tlSM2ret = _legTL(_retWP, _totalMinSM2 + simSMTurnMin, smKmh, QB_DIST_KM);
   _totalMinSM2ret = _tlSM2ret[_tlSM2ret.length-1].cumMin;
   // 커스텀 선박 타임라인도 함께 재계산
   rebuildCustomShips();
@@ -5506,7 +5519,7 @@ function _updateFuelCostTab() {
   if (el('fuelKrwPerKg')) el('fuelKrwPerKg').textContent = '₩' + Math.round(krwPerMt).toLocaleString() + '/MT';
 
   const eldoRT = 434;                                    // 엘도라도 익스프레스호 실측 왕복거리(포항↔울릉도)
-  const smViaRT = (SM_DIST_LEG1 + SM_DIST_LEG2) * 2;   // 산타모니카(경유) 왕복 — 74+132km 편도×2
+  const smViaRT = (SM_DIST_LEG1 + SM_DIST_LEG2) * 2;   // 산타모니카(경유) 왕복 — 74+146km 편도×2
   const smDirectRT = QB_DIST_KM * 2;                     // 산타모니카(직항) 왕복 — 213km 편도×2
 
   // 연료비(costLo~costHi)에 기타운항비용(%, 최소~최대)을 더해 왕복 합계 범위를 내고,
