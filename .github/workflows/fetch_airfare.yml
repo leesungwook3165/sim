@@ -1,0 +1,39 @@
+name: Fetch Airfare (PUS→FUK)
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"   # 6시간마다 (KST 기준 03:00 / 09:00 / 15:00 / 21:00)
+  workflow_dispatch:          # 수동 실행
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Fetch airfare data
+        env:
+          MYREALTRIP_API_KEY: ${{ secrets.MYREALTRIP_API_KEY }}
+        run: python fetch_airfare.py
+
+      - name: Commit & push if changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/airfare.json
+          if git diff --cached --quiet; then
+            echo "No change — skipping commit"
+          else
+            git commit -m "chore: 부산→후쿠오카 항공운임 자동 갱신 $(date -u +%Y-%m-%dT%H:%M)Z [skip ci]"
+            git push
+          fi

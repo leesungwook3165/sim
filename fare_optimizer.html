@@ -485,6 +485,23 @@ function setStatus(state, msg) {
 // ===== 항공 검색 =====
 let _airFares = [];
 
+async function loadCachedFares(depDate) {
+  try {
+    const r = await fetch('data/airfare.json?_=' + Date.now());
+    if (!r.ok) return null;
+    const json = await r.json();
+    if (!json.results || !json.results.length) return null;
+    // 요청 날짜와 가장 가까운 항목 선택
+    const sorted = json.results
+      .filter(x => x.data)
+      .sort((a, b) => Math.abs(new Date(a.date) - new Date(depDate)) - Math.abs(new Date(b.date) - new Date(depDate)));
+    if (!sorted.length) return null;
+    const fares = extractFares(sorted[0].data);
+    if (!fares.length) return null;
+    return { fares, updatedAt: json.updatedAt, date: sorted[0].date };
+  } catch(e) { return null; }
+}
+
 async function searchFlights() {
   const origin   = document.getElementById('origin').value.toUpperCase().trim() || 'PUS';
   const dest     = document.getElementById('dest').value.toUpperCase().trim()   || 'FUK';
@@ -496,9 +513,22 @@ async function searchFlights() {
   if (!depDate) { alert('출발일을 선택해주세요.'); return; }
 
   document.getElementById('flightResultArea').innerHTML =
-    '<div style="text-align:center;padding:30px;color:var(--text2)">⏳ API 응답 대기 중...</div>';
+    '<div style="text-align:center;padding:30px;color:var(--text2)">⏳ 캐시 데이터 확인 중...</div>';
 
-  // 엔드포인트 순차 시도
+  // ① GitHub Actions가 수집해둔 캐시 JSON 우선 시도 (CORS 없음)
+  const cached = await loadCachedFares(depDate);
+  if (cached) {
+    _airFares = cached.fares;
+    const ago = cached.updatedAt ? '(갱신: ' + new Date(cached.updatedAt).toLocaleString('ko') + ')' : '';
+    renderFlightResults(_airFares, false, `캐시 데이터 ${ago}`);
+    calcFerry();
+    return;
+  }
+
+  // ② 캐시 없으면 직접 API 호출 시도
+  document.getElementById('flightResultArea').innerHTML =
+    '<div style="text-align:center;padding:30px;color:var(--text2)">⏳ API 직접 호출 중...</div>';
+
   const params = new URLSearchParams({
     departure: origin, arrival: dest,
     departureDate: depDate,
@@ -528,7 +558,6 @@ async function searchFlights() {
       break;
     }
     if (r.corsError) {
-      // CORS 차단 — 목 데이터로 대체
       _airFares = mockFares(origin, dest, depDate);
       renderFlightResults(_airFares, true);
       calcFerry();
@@ -586,9 +615,9 @@ function mockFares(orig, dest, date) {
   })).sort((a,b) => a.price - b.price);
 }
 
-function renderFlightResults(fares, isMock = false) {
+function renderFlightResults(fares, isMock = false, cacheNote = '') {
   const count = document.getElementById('flightCount');
-  count.textContent = fares.length + '건' + (isMock ? ' (샘플)' : '');
+  count.textContent = fares.length + '건' + (isMock ? ' (샘플)' : cacheNote ? ' (캐시)' : '');
 
   if (fares.length === 0) {
     document.getElementById('flightResultArea').innerHTML =
