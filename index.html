@@ -62,9 +62,24 @@
       border-radius: 5px; border: 1px solid rgba(80,160,255,0.4);
       background: rgba(30,70,130,0.55); color: #cfe6ff;
       transition: background .15s, border-color .15s;
+      position: relative;
     }
     .header-tools .map-ctrl-btn:hover { background: rgba(50,110,200,0.75); border-color: rgba(120,200,255,0.7); }
     .header-tools .map-ctrl-btn.active { background: rgba(255,200,80,0.28); border-color: rgba(255,210,100,0.7); color: #ffe9a8; }
+    .header-tools .map-ctrl-btn::after {
+      content: attr(title);
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 50%; transform: translateX(-50%);
+      white-space: nowrap;
+      background: rgba(10,20,40,0.96);
+      color: #c8daf0; font-size: 11px;
+      padding: 4px 9px; border-radius: 5px;
+      border: 1px solid rgba(80,160,255,0.3);
+      z-index: 9999; pointer-events: none;
+      opacity: 0; transition: opacity .15s;
+    }
+    .header-tools .map-ctrl-btn:hover::after { opacity: 1; }
     .header-tab:hover {
       background: rgba(50,110,200,0.75);
       border-color: rgba(120,200,255,0.7);
@@ -6850,6 +6865,33 @@ const SimControl = L.Control.extend({
       const p = document.getElementById('simPanel');
       p.classList.toggle('visible');
     });
+    // AIS 실적 항로 타임바 (두 번째)
+    const ais = L.DomUtil.create('a', 'map-ctrl-btn', wrap);
+    ais.href='#'; ais.title='AIS 실적 항로 타임바'; ais.innerHTML=icon('dish', { size: 17 });
+    L.DomEvent.on(ais, 'click', e => {
+      L.DomEvent.preventDefault(e);
+      const tb = document.getElementById('aisTimebar');
+      if (tb.classList.contains('visible')) {
+        tb.classList.remove('visible');
+        onAisStop();
+        if (_aisPrevScope != null) {
+          setSimPlayScope(_aisPrevScope);
+          simSimMin = _aisPrevSimMin;
+          _simRenderFrame();
+          _aisPrevScope = null;
+        }
+        _syncBottomBars();
+      } else {
+        tb.classList.add('visible');
+        if (typeof simRunning !== 'undefined' && simRunning) simPause();
+        if (simPlayScope !== 'none') {
+          _aisPrevScope = simPlayScope; _aisPrevSimMin = simSimMin;
+          setSimPlayScope('none');
+        }
+        _syncBottomBars();
+        if (!_aisCache[document.getElementById('aisVesselSel').value]) onAisVesselChange();
+      }
+    });
     const b = L.DomUtil.create('a', 'map-ctrl-btn', wrap);
     b.href='#'; b.title='선박 스케줄 관리 · 선석 스케줄'; b.innerHTML=icon('calendar', { size: 17 });
     L.DomEvent.on(b,'click', e => {
@@ -6871,7 +6913,6 @@ const SimControl = L.Control.extend({
       document.getElementById('simPanel').classList.add('visible');
       _startOnboardingIntro();
     });
-    // 맨 오른쪽 — 판정 기준 설정
     const st = L.DomUtil.create('a', 'map-ctrl-btn', wrap);
     st.href='#'; st.title='항구 방문 판정 기준 설정'; st.innerHTML=icon('settings', { size: 17 });
     L.DomEvent.on(st,'click', e => { L.DomEvent.preventDefault(e); portCfgToggle(); });
@@ -10771,7 +10812,7 @@ function _syncBottomBars() {
     }
     const setVis = (id, on) => { const p = el(id); if (p) p.classList.toggle('visible', on); };
     if ('sim' in st)    setVis('simPanel', st.sim);
-    if ('ops' in st)    { setVis('opsPanel', st.ops); if (st.ops && typeof renderShipMgrList === 'function') { renderShipMgrList(); renderBerthPanel(); } }
+    // opsPanel은 항상 닫힌 상태로 시작 (저장 상태 무시)
     if ('legend' in st) setVis('legendPanel', st.legend);
     if ('simMin' in st && el('simPanel')) {
       el('simPanel').classList.toggle('minimized', st.simMin);
@@ -11023,50 +11064,6 @@ function _aisScrubTo(clientX) {
   });
 })();
 
-// ── 지도에 AIS 토글 버튼 ──
-(function() {
-  const AisCtrl = L.Control.extend({
-    options: { position: 'topleft' },
-    onAdd() {
-      const c = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
-      const btn = L.DomUtil.create('a', '', c);
-      btn.href = '#'; btn.title = 'AIS 실적 항로 타임바';
-      btn.innerHTML = icon('dish', { size: 17 });
-      btn.style.cssText = 'font-size:16px;line-height:30px;width:30px;height:30px;display:block;text-align:center;text-decoration:none';
-      L.DomEvent.on(btn, 'click', e => {
-        L.DomEvent.stopPropagation(e); L.DomEvent.preventDefault(e);
-        const tb = document.getElementById('aisTimebar');
-        if (tb.classList.contains('visible')) {
-          tb.classList.remove('visible');
-          onAisStop();
-          // AIS를 닫으면 가려뒀던 구상·참고 항로선과 시뮬레이션 시점을 원래대로 되돌린다
-          if (_aisPrevScope != null) {
-            setSimPlayScope(_aisPrevScope);
-            simSimMin = _aisPrevSimMin; // setSimPlayScope가 시점을 리셋하므로 다시 되돌린다
-            _simRenderFrame();
-            _aisPrevScope = null;
-          }
-          _syncBottomBars();
-        } else {
-          tb.classList.add('visible');
-          // 실적 항로를 보는 동안은 시뮬레이션 재생을 멈추고 구상·참고 항로선을 감춘다
-          // (겹쳐 그려지면 실측 항적을 알아보기 어렵다). 닫을 때 그대로 복원.
-          if (typeof simRunning !== 'undefined' && simRunning) simPause();
-          if (simPlayScope !== 'none') {
-            _aisPrevScope = simPlayScope; _aisPrevSimMin = simSimMin;
-            setSimPlayScope('none');
-          }
-          _syncBottomBars();
-          if (!_aisCache[document.getElementById('aisVesselSel').value]) {
-            onAisVesselChange();
-          }
-        }
-      });
-      return c;
-    }
-  });
-  new AisCtrl().addTo(map);
-})();
 
 </script>
 </body>
