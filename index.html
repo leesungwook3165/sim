@@ -2114,7 +2114,10 @@ const ports = [
   // 서망항으로 잘못 적기까지 했다(정박 549점이 모두 진도항 쪽, 최근접 0.15km).
   { id:'jindo',      name:'진도항',                lat:34.375230,  lng:126.134410,  color:'#ffcc44', role:'참고 (국내 항로)', desc:'전남 진도군 임회면 팽목리. 2013년 팽목항에서 진도항으로 개칭. 씨월드고속훼리 산타모니카호의 제주·추자 항로 기점. 공식 좌표 34.37389, 126.13444 (약 150m 차이).', tags:['참고','진도항','팽목항','제주항로','국내 항로'] },
   { id:'chujado',    name:'추자항 (상추자도)',      lat:33.962020,  lng:126.297520,  color:'#ffcc44', role:'참고 (국내 항로)', desc:'제주시 추자면. 산타모니카호가 제주 항로 중간에 들르기도 하고 그냥 지나기도 하는 경유지.', tags:['참고','추자도','추자항','제주항로','경유','국내 항로'] },
-  { id:'jeju',       name:'제주항 국제여객터미널',   lat:33.520000,  lng:126.533330,  color:'#ffcc44', role:'참고 (국내 항로)', desc:'제주시 건입동 소재. 제주 항로 도착지.', tags:['참고','제주','제주항','제주항로','국내 항로'] }
+  { id:'jeju',       name:'제주항 국제여객터미널',   lat:33.520000,  lng:126.533330,  color:'#ffcc44', role:'참고 (국내 항로)', desc:'제주시 건입동 소재. 제주 항로 도착지.', tags:['참고','제주','제주항','제주항로','국내 항로'] },
+  // 코리아프라이드호 항로 (인천연안부두 ↔ 백령도)
+  { id:'incheon',    name:'인천 연안부두여객터미널', lat:37.455062,  lng:126.598000,  color:'#55ccff', role:'참고 (국내 항로)', desc:'인천시 중구 연안동 소재. 코리아프라이드호(쌍동 쾌속선) 백령도 항로 출항지.', tags:['참고','인천','연안부두','국내 항로','코리아프라이드'] },
+  { id:'baengnyeong',name:'백령도 용기포신항',       lat:37.955000,  lng:124.735000,  color:'#55ccff', role:'참고 (국내 항로)', desc:'인천시 옹진군 백령면 용기포. 코리아프라이드호(쌍동 쾌속선) 종착지. 인천항에서 약 218km·118해리.', tags:['참고','백령도','용기포','국내 항로','코리아프라이드'] }
 ];
 
 // 항구 마커 — 색 점만 찍혀 있어 무엇을 뜻하는지 알 수 없었다. 닻 아이콘을 넣고
@@ -2674,12 +2677,16 @@ const _rlSmLeg2 = _routeLabel(34.10, 129.85,
 // 엘도라도 익스프레스호 (포항 ↔ 울릉도 도동항) — 중간지점
 const _rlEldorado = _routeLabel(36.76, 130.14,
   '⚡ 포항↔울릉도<br>217km · 117해리', '#ffcc33');
+// 코리아프라이드호 (인천 연안부두 ↔ 백령도 용기포신항) — 경로 중간지점
+const _rlKoreaPride = _routeLabel(37.334, 125.433,
+  '⚡ 인천↔백령도<br>218km · 118해리', '#55ccff');
 // 항로 라인 가시성에 연동할 거리 라벨 목록
 const _routeLabelScopes = [
-  { marker: _rlQbDirect, key: 'qbDirect'    },
-  { marker: _rlSmLeg1,   key: 'smLeg1'      },
-  { marker: _rlSmLeg2,   key: 'smLeg2'      },
-  { marker: _rlEldorado, key: 'eldoradoRef'  },
+  { marker: _rlQbDirect,    key: 'qbDirect'      },
+  { marker: _rlSmLeg1,      key: 'smLeg1'        },
+  { marker: _rlSmLeg2,      key: 'smLeg2'        },
+  { marker: _rlEldorado,    key: 'eldoradoRef'   },
+  { marker: _rlKoreaPride,  key: 'koreaPrideRef' },
 ];
 
 // ════════════════════════════════════════════════════
@@ -3685,6 +3692,8 @@ function _legPath(fromPt, toPt) {
   // 포항↔울릉도(엘도라도 익스프레스호) — 사용자 제공 실측 경유점을 직선으로 연결
   if (_isNearPort(fromPt, 'pohang') && _isNearPort(toPt, 'ulleungdo')) return _eldoradoWP;
   if (_isNearPort(fromPt, 'ulleungdo') && _isNearPort(toPt, 'pohang')) return _eldoradoWP.slice().reverse();
+  if (_isNearPort(fromPt, 'incheon') && _isNearPort(toPt, 'baengnyeong')) return _koreaPrideWP;
+  if (_isNearPort(fromPt, 'baengnyeong') && _isNearPort(toPt, 'incheon')) return _koreaPrideWP.slice().reverse();
   return [fromPt, toPt];
 }
 
@@ -3789,6 +3798,40 @@ const _eldoradoWP = [
   [37.447390, 130.884097],
   [37.475463, 130.911610],
   [37.480948, 130.910023]  // 울릉도 도동항
+];
+
+// 코리아프라이드호 항로 (인천 연안부두 ↔ 백령도 용기포신항) — AIS CSV 실측 좌표
+const _koreaPrideWP = [
+  [37.455062, 126.598000], // 인천 연안부두여객터미널
+  [37.456238, 126.590245],
+  [37.446953, 126.580192],
+  [37.419597, 126.567160],
+  [37.398888, 126.539343],
+  [37.387698, 126.513312],
+  [37.366513, 126.471772],
+  [37.345857, 126.413827],
+  [37.330982, 126.345748],
+  [37.337483, 126.293902],
+  [37.333778, 126.214293],
+  [37.319505, 126.146718],
+  [37.302713, 126.045033],
+  [37.310220, 125.948662],
+  [37.322953, 125.805532],
+  [37.330667, 125.703065],
+  [37.333522, 125.593982],
+  [37.331580, 125.536073],
+  [37.336222, 125.357210],
+  [37.349040, 125.281097],
+  [37.470630, 124.922348],
+  [37.504450, 124.847645],
+  [37.538150, 124.813893],
+  [37.584523, 124.791895],
+  [37.671588, 124.747172],
+  [37.727028, 124.720562],
+  [37.781518, 124.742895],
+  [37.809990, 124.736107],
+  [37.828468, 124.726842],
+  [37.955000, 124.735000], // 백령도 용기포신항
 ];
 
 // ── 속도 변수 ──
@@ -4356,7 +4399,8 @@ const _LINE_PORTS = {
   shimonosekiRef: ['busan', 'shimonoseki'],
   miracleRef: ['busan', 'osaka'],
   gwangyangRef: ['gwangyang', 'shimonoseki'],
-  eldoradoRef:  ['pohang', 'ulleungdo']
+  eldoradoRef:  ['pohang', 'ulleungdo'],
+  koreaPrideRef:['incheon', 'baengnyeong']
 };
 // 정적 참고 항로선의 선종 — simTimelapseShipTypeFilter 적용에 사용
 const _LINE_SHIP_TYPE = {
@@ -4364,6 +4408,7 @@ const _LINE_SHIP_TYPE = {
   hitakatsuRef:'고속선', izuharaViaRef:'고속선', izuharaDirectRef:'고속선',
   camelliaRef:'로로선(화물여객선)', shimonosekiRef:'로로선(화물여객선)', miracleRef:'로로선(화물여객선)', gwangyangRef:'로로선(화물여객선)',
   eldoradoRef:'고속선',
+  koreaPrideRef:'고속선',
 };
 // 정적 항로선의 전담 타임랩스 그룹 ID — shipFilter가 특정 배로 좁혀졌을 때 그 배의 선만 남긴다.
 // undefined이면 "여러 배 공유" 공통선: sm/qb 선택 시엔 유지, 커스텀 배 선택 시엔 숨긴다.
@@ -4436,7 +4481,7 @@ function _lineVisibleForScope(key, skipPortFilter) {
       show = _simCoreVisible(); break;
     case 'hitakatsuRef': case 'izuharaViaRef':
       show = _simCustomVisible() || _simPendingVisible(); break;
-    case 'izuharaDirectRef': case 'camelliaRef': case 'shimonosekiRef': case 'miracleRef': case 'eldoradoRef':
+    case 'izuharaDirectRef': case 'camelliaRef': case 'shimonosekiRef': case 'miracleRef': case 'eldoradoRef': case 'koreaPrideRef':
       show = _simCustomVisible(); break;
     case 'gwangyangRef':
       show = _simPendingVisible(); break;
@@ -7319,6 +7364,7 @@ const _AIS_VESSELS = {
   tsushimalink:{ label:'팬스타 쓰시마링크호',  sub:'팬스타·부산↔쓰시마', file:'tushimalink_track-data-2023-01-01,2027-01-01.csv', color:'#8899ff' },
   santamonica: { label:'산타모니카호',          sub:'제주항로·중고매입 후보', file:'santamonica_track-data-2026-06-17,2026-08-06.csv', color:'#ffcc44' },
   eldorado:    { label:'엘도라도 익스프레스호', file:'eldorado_track-data-2026-06-17,2026-08-06.csv',    color:'#88ff55' },
+  koreapride:  { label:'코리아프라이드호',      sub:'인천연안부두↔백령도', file:'koreapride_track-data-2023-01-01,2027-01-01.csv', color:'#55ccff' },
   umiterashi:  { label:'우미테라시호',           file:'umiterashi_track-data-2021-01-01,2027-01-01.csv',  color:'#ff4d7a' },
   panstargrace:{ label:'팬스타 그레이스호',      sub:'팬스타·운항예정', file:'panstargrace_track-data-2025-07-01,2026-09-01.csv', color:'#ffdd55', openDay:'2026-07-29' },
   venus2:      { label:'비너스2호',  sub:'구 日韓高速船 ジェット8',  file:'venus2_track-data-2025-03-01,2026-09-01.csv',  color:'#aa55ff',
@@ -8716,7 +8762,8 @@ function _aisRefRoutes() {
     { name: '부산↔시모노세키',     pts: _shimonosekiWP },
     { name: '부산↔오사카',        pts: _miracleWP },
     { name: '광양↔시모노세키',     pts: _gwangyangWP },
-    { name: '포항↔울릉도',        pts: _eldoradoWP }
+    { name: '포항↔울릉도',        pts: _eldoradoWP },
+    { name: '인천↔백령도',        pts: _koreaPrideWP }
   ];
   if (typeof drawnItems !== 'undefined') {
     drawnItems.getLayers().forEach((l, i) => {
