@@ -6947,6 +6947,10 @@ const SimControl = L.Control.extend({
       document.getElementById('simPanel').classList.add('visible');
       _startOnboardingIntro();
     });
+    const fo = L.DomUtil.create('a', 'map-ctrl-btn', wrap);
+    fo.href='fare_optimizer.html'; fo.title='부산-하카타 운임 최적화'; fo.target='_blank';
+    fo.innerHTML=icon('chart', { size: 17 });
+    L.DomEvent.on(fo,'click', e => { L.DomEvent.stopPropagation(e); });
     const st = L.DomUtil.create('a', 'map-ctrl-btn', wrap);
     st.href='#'; st.title='항구 방문 판정 기준 설정'; st.innerHTML=icon('settings', { size: 17 });
     L.DomEvent.on(st,'click', e => { L.DomEvent.preventDefault(e); portCfgToggle(); });
@@ -10002,6 +10006,18 @@ function _aisRangeKm(key, pts, from, to) {
 // 거리(km)와 걸린 시간(분)으로 평균 속력(knot)을 낸다
 function _aisAvgKts(km, min) { return min > 0 ? (km / 1.852) / (min / 60) : 0; }
 
+// GPS 경로 누적 거리가 아닌 트랜스폰더 SOG 필드의 평균을 쓴다.
+// GPS 위치 노이즈가 수백 구간에 걸쳐 누적되면 경로거리/시간이 실제의 2-3배 속도로 보이는 문제를 회피한다.
+function _aisSogAvgKts(pts) {
+  let sum = 0, n = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const s = pts[i].speed;
+    if (s > AIS_STOP_SPEED_KTS && s <= AIS_MAX_SOG_KTS && _aisSpeedTrusted(pts, i))
+      { sum += s; n++; }
+  }
+  return n > 0 ? sum / n : 0;
+}
+
 function _aisDaySummary(key, dateStr) {
   const data = _aisCache[key];
   const pts = data && _aisDayTrack(key, dateStr);
@@ -10022,9 +10038,9 @@ function _aisDaySummary(key, dateStr) {
     out.backKm = backKm.corrKm; out.rawBackKm = backKm.rawKm;
     out.onewayKm = outKm.corrKm; // 편도 기준은 출항편 거리
   }
-  // 걸린 시간은 실측 그대로다. 길이 늘어난 만큼 평균 속력이 올라간다.
   out.avgKts = _aisAvgKts(out.totalKm, out.sailMin);
   out.rawAvgKts = _aisAvgKts(out.rawTotalKm, out.sailMin);
+  out.sogAvgKts = _aisSogAvgKts(pts); // SOG 필드 평균 (GPS 경로 노이즈 비영향)
   return out;
 }
 
@@ -10049,7 +10065,10 @@ function _aisRenderSubHours(key, dateStr) {
       ? '📏 ' + sum.totalKm.toFixed(0) + 'km <span class="ais-corr-raw">(원본 ' +
         sum.rawTotalKm.toFixed(0) + 'km · ✏' + sum.nCorr + '구간)</span>'
       : '📏 ' + sum.totalKm.toFixed(0) + 'km'];
-    if (sum.sailMin > 0) parts.push('평균 ' + sum.avgKts.toFixed(1) + 'kt');
+    if (sum.sailMin > 0) {
+      const spd = sum.sogAvgKts > 0 ? sum.sogAvgKts : sum.avgKts;
+      parts.push('평균 ' + spd.toFixed(1) + 'kt');
+    }
     if (sum.startPort) {
       parts.push('⚓ ' + sum.startPort + (sum.turnPort ? ' → ' + sum.turnPort : '') +
                  (sum.isRound ? ' 왕복' : (sum.endPort ? ' → ' + sum.endPort : '')));
