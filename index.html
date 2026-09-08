@@ -7387,13 +7387,36 @@ function _parseAisCsvRange(lines, h, from, to, pts) {
     }
     const ts = p[iTs];
     if (!ts) continue;
+    const spd = +p[iSpd];
     pts.push({
       lat: +p[iLat], lon: +p[iLon],
-      speed: +p[iSpd], course: +p[iCrs],
+      speed: spd > AIS_MAX_SOG_KTS ? 0 : spd,  // SOG 필드 오류(통신 오류) 제거
+      course: +p[iCrs],
       ts: unq(ts)
     });
   }
   return pts;
+}
+
+// 파싱 후 위치 점프 이상값 제거.
+// SOG 클램프(파싱 시)는 트랜스폰더 보고 오류를 잡고,
+// 이 함수는 GPS 위치 자체가 잘못된 포인트(이전 위치에서 AIS_MAX_PLAUSIBLE_KTS 초과 속도로
+// "순간이동"해야 도달 가능한 좌표)를 제거한다. 선박 종류와 무관하게 물리 불가능한 점만 뺀다.
+function _aisFilterAnomalies(pts) {
+  if (pts.length < 3) return pts;
+  const MAX_H = AIS_SPD_TRUST_MAX_H;   // 3시간 이상 벌어진 구간은 판단 보류
+  const out = [pts[0]];
+  for (let i = 1; i < pts.length; i++) {
+    const prev = out[out.length - 1];
+    const curr = pts[i];
+    const dtH = (new Date(curr.ts).getTime() - new Date(prev.ts).getTime()) / 3600000;
+    if (dtH > 0 && dtH <= MAX_H) {
+      const distKm = _simDist([prev.lat, prev.lon], [curr.lat, curr.lon]);
+      if (distKm / dtH / 1.852 > AIS_MAX_PLAUSIBLE_KTS) continue; // 위치 이상 → 제거
+    }
+    out.push(curr);
+  }
+  return out;
 }
 
 // 동기 버전 — 한 번에 다 읽는다 (검증 스크립트 등)
@@ -7401,7 +7424,7 @@ function _parseAisCsv(text) {
   const lines = text.split('\n');
   const h = _parseAisCsvHead(lines);
   if (!h) return [];
-  return _parseAisCsvRange(lines, h, 1, lines.length, []);
+  return _aisFilterAnomalies(_parseAisCsvRange(lines, h, 1, lines.length, []));
 }
 
 // 비동기 버전 — 몇만 줄마다 브라우저에 제어권을 넘긴다. 30만 행이면 파싱만으로도
@@ -7418,7 +7441,7 @@ async function _parseAisCsvAsync(text, onStep) {
     if (onStep) onStep(Math.round(to / lines.length * 100) + '%');
     await _aisYield();
   }
-  return pts;
+  return _aisFilterAnomalies(pts);
 }
 
 // ── 날짜 인덱스 ──
@@ -7455,7 +7478,7 @@ function _aisWorkerSource() {
     AIS_NEAR_BAND_KM, AIS_CRUISE_SAMPLE_MAX, AIS_ANALYZE_CHUNK, AIS_PARSE_CHUNK
   };
   const fns = [
-    _parseAisCsvLine, _parseAisCsvHead, _parseAisCsvRange, _parseAisCsv,
+    _parseAisCsvLine, _parseAisCsvHead, _parseAisCsvRange, _aisFilterAnomalies, _parseAisCsv,
     _simDist, _bearing, _routeLen, _buildAisIndex,
     _detectAisStops, _aisSplitLegs, _aisTerminalAt, _aisTerminalLabel,
     _nearestPortObj, _nearestPortName,
