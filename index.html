@@ -1775,6 +1775,8 @@
       <!-- 유닛 버튼들이 JS로 동적 렌더링됨 -->
     </div>
   </div>
+  <!-- 선박별 비고 노트 (note 필드가 있는 선박만 표시) -->
+  <div id="aisVesselNote" style="display:none;padding:4px 10px;font-size:10px;color:#99aacc;border-top:1px solid rgba(80,160,255,0.1);background:rgba(80,120,200,0.06);line-height:1.6"></div>
   <!-- 선택한 날짜의 시간대 세부 행 ('일' 탭에서 날짜를 고르면 자동으로 나타남) -->
   <div class="ais-tb-subtl-row" id="aisTbSubTlRow" style="display:none">
     <div class="ais-tb-subtl" id="aisTbSubTl"></div>
@@ -7110,7 +7112,13 @@ const _AIS_VESSELS = {
   santamonica: { label:'산타모니카호',          sub:'제주항로·중고매입 후보', file:'santamonica_track-data-2026-06-17,2026-08-06.csv', color:'#ffcc44' },
   eldorado:    { label:'엘도라도 익스프레스호', file:'eldorado_track-data-2026-06-17,2026-08-06.csv',    color:'#88ff55' },
   umiterashi:  { label:'우미테라시호',           file:'umiterashi_track-data-2021-01-01,2027-01-01.csv',  color:'#ff4d7a' },
-  venus2:      { label:'비너스2호',             file:'venus2_track-data-2025-03-01,2026-09-01.csv',      color:'#aa55ff' },
+  venus2:      { label:'비너스2호',  sub:'구 日韓高速船 ジェット8',  file:'venus2_track-data-2025-03-01,2026-09-01.csv',  color:'#aa55ff',
+    note: '현재 운항 중인 선박은 부관훼리가 대리점으로 운항하던 <b>日韓高速船 ジェット8</b>(제트8, 1991.7~1992.12)과 동일 선박으로 전해집니다.',
+    links: [
+      { label: '日韓高速船 — 위키피디아(日)', url: 'https://ja.wikipedia.org/wiki/%E6%97%A5%E9%9F%93%E9%AB%98%E9%80%9F%E8%88%B9#%E8%88%AA%E8%B7%AF' },
+      { label: '한국경제 1992.11.24 기사', url: 'https://www.hankyung.com/article/1992112401501' }
+    ]
+  },
 };
 
 // 드롭다운은 등록부에서 만든다 — 선박을 추가해도 HTML을 따로 고칠 필요가 없다
@@ -9820,9 +9828,23 @@ function _aisTlStep(dir) {
   pick(list[i]);
 }
 
+// ── 선박 노트 표시 ──
+function _aisRenderVesselNote(key) {
+  const el = document.getElementById('aisVesselNote');
+  if (!el) return;
+  const v = _AIS_VESSELS[key];
+  if (!v || !v.note) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  const linksHtml = (v.links || []).map(l =>
+    `<a href="${l.url}" target="_blank" rel="noopener" style="color:#88ccff;text-decoration:underline;margin-left:8px">${l.label}</a>`
+  ).join('');
+  el.innerHTML = '📋 ' + v.note + linksHtml;
+  el.style.display = 'block';
+}
+
 // ── 선박 변경 ──
 async function onAisVesselChange() {
   const key = document.getElementById('aisVesselSel').value;
+  _aisRenderVesselNote(key);
   onAisStop();
   const data = await _loadAisVessel(key);
   if (data) {
