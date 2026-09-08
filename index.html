@@ -9457,10 +9457,7 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
     const t = pts[legs.turnIdx];
     L.circleMarker([t.lat, t.lon], {
       radius: 7, color: '#ffdd44', fillColor: '#ffdd44', fillOpacity: 0.25, weight: 2
-    }).bindTooltip(
-      `🔄 회항 ${_aisFmtClock(t.ts)} KST`,
-      { permanent: true, direction: 'bottom', className: 'ais-poi-label' }
-    ).bindPopup(
+    }).bindPopup(
       `<b>${_AIS_VESSELS[key].label} — 회항 지점</b><br>` +
       `${_aisFmtDateClock(t.ts)} KST<br>출발지에서 ${legs.farDist.toFixed(0)}km<br>` +
       `출항편 ${legs.out.length}포인트 / 복항편(점선) ${legs.back.length}포인트`
@@ -9487,13 +9484,8 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
       `속도: <b>${p.speed.toFixed(1)} knot</b>  방향: ${p.course.toFixed(0)}°` +
       (i === 0 ? '<br><span style="color:#00ff88">▲ 출발</span>' : i === pts.length - 1 ? '<br><span style="color:#ff4466">▼ 도착</span>' : '')
     ).addTo(g);
-    // 출항/도착은 클릭 없이도 실제 시각이 바로 보이도록 항상-표시 라벨을 붙인다.
-    if (isEnd) {
-      mk.bindTooltip(
-        `${i === 0 ? '▲ 출항' : '▼ 도착'} ${_aisFmtClock(p.ts)} KST`,
-        { permanent: true, direction: i === 0 ? 'right' : 'left', className: 'ais-poi-label' }
-      );
-    }
+    // 출항·도착 시각은 늘 띄워 두지 않는다 — 항적을 가리고 여러 날을 겹쳐 보면
+    // 라벨끼리 엉킨다. 점을 누르면 팝업에 날짜·시각·속도·방향이 그대로 나온다.
   });
 
   // ── 보정 편집 모드 — 내가 그린 항로를 안내선으로 함께 띄운다 ──
@@ -9527,10 +9519,7 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
     const endClock = _aisFmtClock(st.endTs);
     L.circleMarker([st.lat, st.lon], {
       radius: 8, color: '#ff33cc', fillColor: '#ff33cc', fillOpacity: 0.3, weight: 2
-    }).bindTooltip(
-      `🛑 ${portName || '정박'} · ${startClock}~${endClock} KST (${Math.round(st.durMin)}분)`,
-      { permanent: true, direction: 'top', className: 'ais-poi-label' }
-    ).bindPopup(
+    }).bindPopup(
       `<b>${_AIS_VESSELS[key].label} — 실측 정박</b><br>` +
       `${portName ? portName + '<br>' : ''}` +
       `${startClock} ~ ${endClock} KST · <b>${Math.round(st.durMin)}분</b> 체류<br>` +
