@@ -1,8 +1,8 @@
 {
-  "updatedAt": "2026-09-08T10:19:05.834643Z",
+  "updatedAt": "2026-09-08T15:42:16.099568Z",
   "origin": "PUS",
   "destination": "FUK",
   "period": 3,
-  "error": null,
+  "error": "{\"data\":{},\"meta\":{},\"result\":{\"status\":401,\"message\":\"인증에 실패했습니다 : Invalid API Key\",\"code\":null}}",
   "results": []
 }
