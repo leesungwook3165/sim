@@ -1036,7 +1036,7 @@
       border: 1px solid rgba(80,160,255,0.28) !important;
       border-radius: 8px !important;
     }
-    /* ── AIS 타임바 (GFW 스타일, 하단 고정) ── */
+    /* ── AIS 타임바 (하단 고정) ── */
     #aisTimebar {
       position: fixed;
       bottom: 0; left: 0; right: 0;
@@ -1725,7 +1725,7 @@
   <div id="simTimelapseEl"></div>
 </div>
 
-<!-- AIS 타임바 (GFW 스타일, 하단 고정) -->
+<!-- AIS 타임바 (하단 고정) -->
 <!-- 보정 편집 조작 안내 — 편집 모드에서만 보인다 -->
 <div id="aisCorrHelp"></div>
 
@@ -1876,7 +1876,7 @@
   </div>
   <div style="font-size:10.5px;color:#88aabb;line-height:1.6;margin-bottom:8px">
     정박지 옆을 <b>지나간 것</b>과 실제로 <b>들른 것</b>을 가르는 기준입니다.
-    Global Fishing Watch 가 쓰는 값이 기본이고, 항로·선박에 맞게 고칠 수 있습니다.
+    밴치마킹한 기준값이 기본이고, 항로·선박에 맞게 고칠 수 있습니다.
   </div>
   <div class="pcfg-grid">
     <label title="항구 중심에서 이 거리 안으로 들어오면 항구에 들어온 것으로 봅니다">진입 거리
@@ -1900,7 +1900,7 @@
   </div>
   <div id="pcfgWarn" class="pcfg-warn"></div>
   <div class="pcfg-btns">
-    <button class="sim-btn" onclick="portCfgPreset('gfw')" title="Global Fishing Watch 원값 — 진입 3km · 이탈 4km · 정박 0.2/0.5노트 · 20분 · 공백 4시간">GFW 기본</button>
+    <button class="sim-btn" onclick="portCfgPreset('gfw')" title="밴치마킹 적용값 — 진입 3km · 이탈 4km · 정박 0.2/0.5노트 · 20분 · 공백 4시간">밴치마킹 적용</button>
     <button class="sim-btn" onclick="portCfgPreset('ferry')" title="정기 여객선용 — 접안 중에도 0.3~1노트가 찍히는 배에 맞춰 정박 기준을 2.0/3.0노트로 늦춘 값">여객선</button>
   </div>
   <div class="pcfg-btns">
@@ -7140,7 +7140,7 @@ function _startOnboardingIntro() {
 })();
 
 // ════════════════════════════════════════════════════
-//  AIS 실적 항로 뷰어 (GFW 타임바 스타일)
+//  AIS 실적 항로 뷰어
 // ════════════════════════════════════════════════════
 // 선박을 추가할 때는 여기 한 줄만 넣으면 된다 — 선택 드롭다운도 이 표에서 만들고,
 // 터미널·순항속도·기대거리·기준일은 모두 데이터에서 자동 산출한다(하드코딩 없음).
@@ -8064,7 +8064,7 @@ const AIS_CALL_NEAR_KM  = 3;   // 항구 중심에서 이 거리 안 (항구 자
 const AIS_CALL_SLOW_KTS = 3;   // 이 속도 이하로 떨어졌으면 접안한 것으로 본다
 const AIS_PORT_MIN_HITS = 2;   // 정박이 이만큼 반복된 자리를 항구로 인정
 
-// ── 항구 방문 판정 기준 (Global Fishing Watch 방식) ──
+// ── 항구 방문 판정 기준 ──
 // 정박지 옆을 지나가는 것과 실제로 들른 것을 가르는 기준이다.
 //   ① 진입 — 항구 중심에서 enterKm 안으로 들어오면 "항구에 들어왔다"
 //   ② 이탈 — exitKm 밖으로 나가야 "떠났다". 들어오는 기준보다 넓게 잡아야
@@ -8076,12 +8076,12 @@ const AIS_PORT_MIN_HITS = 2;   // 정박이 이만큼 반복된 자리를 항구
 // 정박이나 공백이 하나라도 있어야 기항으로 인정한다 — 그냥 지나간 것은 뺀다.
 // 값은 설정 패널에서 바꿀 수 있고 localStorage 에 남는다.
 const AIS_PORT_CFG_KEY = 'hanjil_ais_portcfg';
-// GFW 원값은 몇 시간씩 가만히 있는 어선을 겨냥한 기준이다. 정기 여객선은 접안한 채로도
-// 0.3~1.0노트가 계속 찍혀 정박으로 안 잡히는 일이 있어서, 실측으로 맞춰 본 값을 함께 둔다.
-// (엘도라도 울릉도·비너스2 이즈하라처럼 짧게 대는 기항이 GFW 원값에서 빠지면 왕복이
+// 밴치마킹 기준값은 정기 여객선에 맞게 조정한 것으로,
+// 접안 중 0.3~1.0노트가 찍혀도 정박으로 잡히도록 여객선 프리셋을 함께 둔다.
+// (엘도라도 울릉도·비너스2 이즈하라처럼 짧게 대는 기항이 빠지면 왕복이
 //  한 항차로 묶여 "편도 거리"가 두 배로 잡힌다.)
 const AIS_PORT_PRESETS = {
-  gfw:    { label: 'GFW 기본',  cfg: { enterKm: 3, exitKm: 4, stopKts: 0.2, resumeKts: 0.5, stopMinMin: 20, gapH: 4 } },
+  gfw:    { label: '밴치마킹 적용',  cfg: { enterKm: 3, exitKm: 4, stopKts: 0.2, resumeKts: 0.5, stopMinMin: 20, gapH: 4 } },
   ferry:  { label: '여객선',    cfg: { enterKm: 3, exitKm: 4, stopKts: 2.0, resumeKts: 3.0, stopMinMin: 20, gapH: 4 } }
 };
 const AIS_PORT_CFG_DEFAULT = {
