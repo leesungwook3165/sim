@@ -4483,8 +4483,10 @@ function _lineVisibleForScope(key, skipPortFilter) {
       show = _simCoreVisible(); break;
     case 'hitakatsuRef': case 'izuharaViaRef':
       show = _simCustomVisible() || _simPendingVisible(); break;
-    case 'izuharaDirectRef': case 'camelliaRef': case 'shimonosekiRef': case 'miracleRef': case 'eldoradoRef': case 'koreaPrideRef':
+    case 'izuharaDirectRef': case 'camelliaRef': case 'shimonosekiRef': case 'miracleRef': case 'eldoradoRef':
       show = _simCustomVisible(); break;
+    case 'koreaPrideRef':
+      show = true; break; // 서해 실존 항로 — 범위 탭 무관 항상 표시 (none 제외는 함수 상단에서 처리)
     case 'gwangyangRef':
       show = _simPendingVisible(); break;
     default:
@@ -7638,7 +7640,8 @@ function _aisWorkerSource() {
     AIS_TERMINAL_CLUSTER_KM, AIS_TERMINAL_MIN_HITS, AIS_TERMINAL_NAME_KM,
     AIS_CALL_BUFFER_KM, AIS_CALL_NEAR_KM, AIS_CALL_SLOW_KTS, AIS_PORT_MIN_HITS,
     AIS_VOY_MIN_KM, AIS_VOY_MAX_H, AIS_VOY_GATE_KM, AIS_VOY_CHUNK,
-    AIS_NEAR_BAND_KM, AIS_CRUISE_SAMPLE_MAX, AIS_ANALYZE_CHUNK, AIS_PARSE_CHUNK
+    AIS_NEAR_BAND_KM, AIS_CRUISE_SAMPLE_MAX, AIS_ANALYZE_CHUNK, AIS_PARSE_CHUNK,
+    AIS_SPD_TRUST_MAX_H
   };
   const fns = [
     _parseAisCsvLine, _parseAisCsvHead, _parseAisCsvRange, _aisFilterAnomalies, _parseAisCsv,
@@ -10442,6 +10445,12 @@ async function onAisVesselChange() {
     _aisSubHourSel = null; _aisSubLegSel = null;
     _aisCallFilter = 'all';
     _aisRenderCallFilter(key);
+    // 날짜 필터는 선박 전환 시 초기화 — 이전 선박에서 켜둔 필터가 새 선박에서 0건이 되는 문제 방지
+    _aisRefOnly = false; _aisNormalOnly = false; _aisBestOnly = false;
+    _aisSchedOnly = false; _aisCorrOnly = false; _aisLandOnly = false;
+    const _cbReset = id => { const el = document.getElementById(id); if (el) el.checked = false; };
+    _cbReset('aisRefOnly'); _cbReset('aisNormalOnly'); _cbReset('aisBestOnly');
+    _cbReset('aisSchedOnly'); _cbReset('aisCorrOnly'); _cbReset('aisLandOnly');
     // 핑이 가장 촘촘한 날을 펼친 상태로 시작한다. 가장 최근 날짜는 신호가 몇 개뿐이라
     // 항적이 뚝뚝 끊겨 보이는 일이 잦았다 — 그 배를 가장 잘 보여 주는 날부터 연다.
     _aisSelYear = _aisSelMonth = _aisSelDay = null; _aisViewLevel = 'day';

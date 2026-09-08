@@ -400,21 +400,20 @@ const _k = (s => { try { return atob(s); } catch(e){ return ''; } })(
 );
 
 const BASE_URLS = [
-  'https://api.myrealtrip.com',
-  'https://partner.myrealtrip.com',
-  'https://api.myrealtrip.com/partner',
+  'https://partner-ext-api.myrealtrip.com',
 ];
 let _activeBase = BASE_URLS[0];
 
 const ENDPOINTS = [
-  { method:'GET',  path:'/v3/flights',               desc:'항공 검색 v3' },
-  { method:'POST', path:'/v3/flights/search',         desc:'항공 검색 v3 POST' },
-  { method:'GET',  path:'/v3/flights/search',         desc:'항공 검색 v3 GET search' },
-  { method:'GET',  path:'/v3/flights/offers',         desc:'항공 검색 v3 offers' },
-  { method:'GET',  path:'/v1/products',              desc:'상품 목록' },
-  { method:'GET',  path:'/v1/availability',          desc:'가용성 조회' },
-  { method:'GET',  path:'/health',                   desc:'서버 상태' },
-  { method:'GET',  path:'/ping',                     desc:'핑' },
+  { method:'POST', path:'/v1/products/flight/calendar/window',
+    desc:'180일 왕복 캘린더 (날짜 불필요)',
+    bodyFn: (orig, dest) => ({ depCityCd: orig, arrCityCd: dest, period: 3 }) },
+  { method:'POST', path:'/v1/products/flight/calendar',
+    desc:'기간별 왕복 캘린더 (startDate/endDate)',
+    bodyFn: (orig, dest, dep) => ({ depCityCd: orig, arrCityCd: dest, period: 3,
+      startDate: dep, endDate: new Date(Date.now()+30*24*60*60*1000).toISOString().slice(0,10) }) },
+  { method:'GET',  path:'/v1/products',  desc:'상품 목록' },
+  { method:'GET',  path:'/health',       desc:'서버 상태' },
 ];
 
 // ===== 로그 =====
@@ -483,14 +482,19 @@ async function loadCachedFares(depDate) {
     if (!r.ok) return null;
     const json = await r.json();
     if (!json.results || !json.results.length) return null;
-    // 요청 날짜와 가장 가까운 항목 선택
-    const sorted = json.results
-      .filter(x => x.data)
-      .sort((a, b) => Math.abs(new Date(a.date) - new Date(depDate)) - Math.abs(new Date(b.date) - new Date(depDate)));
-    if (!sorted.length) return null;
-    const fares = extractFares(sorted[0].data);
-    if (!fares.length) return null;
-    return { fares, updatedAt: json.updatedAt, date: sorted[0].date };
+    // calendar/window 응답: data[] 배열, 각 항목에 totalPrice / airline / departureDate
+    const valid = json.results.filter(x => x.totalPrice);
+    if (!valid.length) return null;
+    const fares = valid.map(item => ({
+      airline:  item.airline || item.airlineCd || '?',
+      price:    item.totalPrice,
+      dep:      item.departureDate || '',
+      arr:      item.returnDate    || '',
+      transfer: item.transfer,
+      period:   item.period || json.period || 3,
+      raw:      item,
+    })).sort((a, b) => a.dep.localeCompare(b.dep));
+    return { fares, updatedAt: json.updatedAt, date: depDate };
   } catch(e) { return null; }
 }
 
@@ -532,18 +536,17 @@ async function searchFlights() {
     </div>`;
 }
 
-// 응답에서 운임 추출 (다양한 응답 형태 처리)
+// API 탐색기 직접 호출 응답에서 운임 추출
 function extractFares(json) {
   const candidates = [];
-  // 공통 경로 탐색
-  const lists = [json, json.data, json.results, json.flights, json.offers, json.items];
+  const lists = [json.data, json, json.results, json.flights, json.items];
   for (const lst of lists) {
     if (Array.isArray(lst) && lst.length > 0) {
       for (const item of lst) {
-        const price = item.price || item.totalPrice || item.amount || item.fare;
-        const airline = item.airline || item.carrier || item.airlineName || '?';
-        const dep = item.departureTime || item.departure || item.scheduledDepartureAt || '';
-        const arr = item.arrivalTime || item.arrival || item.scheduledArrivalAt || '';
+        const price = item.totalPrice || item.price || item.amount || item.fare;
+        const airline = item.airline || item.airlineCd || item.carrier || '?';
+        const dep = item.departureDate || item.departureTime || item.departure || '';
+        const arr = item.returnDate    || item.arrivalTime   || item.arrival   || '';
         if (price) candidates.push({ airline, price: +price, dep, arr, raw: item });
       }
       if (candidates.length > 0) return candidates;
@@ -605,7 +608,7 @@ function renderFlightResults(fares, isMock = false, cacheNote = '') {
   document.getElementById('flightResultArea').innerHTML = `
     ${isMock ? '<div style="background:rgba(243,156,18,0.1);border:1px solid rgba(243,156,18,0.3);border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:var(--warn)">⚠ CORS 제한으로 인해 샘플 데이터를 표시합니다. 실제 API 연결 시 자동으로 교체됩니다.</div>' : ''}
     <table class="price-table">
-      <thead><tr><th>항공사</th><th>출발</th><th>도착</th><th>운임</th><th>등급</th></tr></thead>
+      <thead><tr><th>항공사</th><th>출발일</th><th>귀환일</th><th>운임(왕복)</th><th>등급</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
 
@@ -787,23 +790,17 @@ function renderEndpoints() {
 
 function loadEndpoint(i) {
   const e = ENDPOINTS[i];
-  const origin = document.getElementById('origin').value.toUpperCase() || 'PUS';
-  const dest   = document.getElementById('dest').value.toUpperCase() || 'FUK';
+  const origin  = document.getElementById('origin').value.toUpperCase() || 'PUS';
+  const dest    = document.getElementById('dest').value.toUpperCase()   || 'FUK';
   const depDate = document.getElementById('depDate').value || new Date().toISOString().slice(0,10);
-  const adults  = document.getElementById('adults').value || '1';
 
-  const params = `?departure=${origin}&arrival=${dest}&departureDate=${depDate}&adults=${adults}&currency=KRW`;
-  document.getElementById('explorerUrl').value = _activeBase + e.path + (e.method === 'GET' ? params : '');
+  document.getElementById('explorerUrl').value = _activeBase + e.path;
   setExplorerMethod(e.method);
 
-  if (e.method === 'POST') {
-    document.getElementById('explorerBody').value = JSON.stringify({
-      origin, destination: dest,
-      departureDate: depDate,
-      passengers: { adults: +adults, children: 0 },
-      cabinClass: 'ECONOMY',
-      currency: 'KRW',
-    }, null, 2);
+  if (e.bodyFn) {
+    document.getElementById('explorerBody').value = JSON.stringify(e.bodyFn(origin, dest, depDate), null, 2);
+  } else {
+    document.getElementById('explorerBody').value = '';
   }
 
   switchTab('explorer');
@@ -863,7 +860,7 @@ function updateRatioLabel(v) {
 initDates();
 renderEndpoints();
 // 탐색기 기본 URL
-document.getElementById('explorerUrl').value = BASE_URLS[0] + '/v3/flights';
+document.getElementById('explorerUrl').value = BASE_URLS[0] + '/v1/products/flight/calendar/window';
 setStatus('', 'API 미연결');
 </script>
 </body>
