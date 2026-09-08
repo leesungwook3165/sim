@@ -3538,7 +3538,9 @@ let BERTH_DEFAULT_MIN = 30;
 function _allWeekDays() { return ['토','일','월','화','수','목','금']; }
 
 // 선박 스케줄 관리 목록의 그룹(선사) 트리 — 접힌 그룹을 담아둔다(키: "대범주|선사").
+// 첫 렌더링 시 모든 그룹을 자동으로 접힌 상태로 시작한다.
 const _shipMgrCollapsedGroups = new Set();
+let _shipMgrGroupsInited = false;
 function toggleShipGroupCollapse(groupKey) {
   if (_shipMgrCollapsedGroups.has(groupKey)) _shipMgrCollapsedGroups.delete(groupKey);
   else _shipMgrCollapsedGroups.add(groupKey);
@@ -6693,6 +6695,13 @@ function _builtinShipsHtml() {
 function renderShipMgrList() {
   const list = document.getElementById('shipMgrList');
   if (!list) return;
+  if (!_shipMgrGroupsInited) {
+    customShips.forEach(s => {
+      const nation = s.nation || '한국라인';
+      _shipMgrCollapsedGroups.add(nation + '|' + (s.group || '기타'));
+    });
+    _shipMgrGroupsInited = true;
+  }
   let html = `<div style="font-size:10px;color:#7ecfff;font-weight:700;margin:2px 0 6px">🧭 시뮬레이션 등록 선박 (기본)</div>`
     + _builtinShipsHtml()
     + `<div style="font-size:10px;color:#7ecfff;font-weight:700;margin:12px 0 6px">➕ 등록한 선박</div>`;
@@ -7847,11 +7856,13 @@ function _aisMaxSpeedCached(pts) {
 function _aisMaxSpeed(pts) {
   let m = 0;
   for (let i = 0; i < pts.length; i++) {
-    if (pts[i].speed > m && _aisSpeedTrusted(pts, i)) m = pts[i].speed;
+    const s = pts[i].speed;
+    if (s > m && s <= AIS_MAX_SOG_KTS && _aisSpeedTrusted(pts, i)) m = s;
   }
   return m;
 }
 
+const AIS_MAX_SOG_KTS       = 50;  // AIS SOG 필드 상한 — 이보다 빠른 보고값은 통신 오류로 무시
 const AIS_MAX_PLAUSIBLE_KTS = 70;  // 이보다 빠른 "순간 이동"은 GPS 공백을 직선 보간한 것 — 비정상으로 간주
 const AIS_MIN_POINTS_NORMAL = 20;  // 이보다 포인트가 적으면 항로 형태를 신뢰할 수 없음
 const AIS_DIST_TOLERANCE_LO = 0.6; // 기대 편도거리 대비 이 비율 미만이면 "너무 짧음"
@@ -8865,7 +8876,7 @@ function _aisDrawSpeedChart(pts, cursor) {
   const t0 = Math.min(kstMid + 6 * HOUR_MS,  Math.floor(firstMs / HOUR_MS) * HOUR_MS);
   const t1 = Math.max(kstMid + 22 * HOUR_MS, Math.ceil(lastMs  / HOUR_MS) * HOUR_MS);
   const totalMs = Math.max(1, t1 - t0);
-  // 눈금도 헛값을 빼고 잡는다 — 안 그러면 부두에서 튄 한 점 때문에 항해가 납작해진다
+  // 눈금도 헛값을 빼고 잡는다 — 통신 오류(AIS SOG > 50kt)·부두 튐 제외
   const maxSpd = Math.max(5, _aisMaxSpeedCached(pts)); // 최소 5kts 스케일 확보
 
   // 그래프가 커지면 속도·시각 눈금을 함께 그린다 (작을 때는 공간이 없어 생략)
@@ -8873,7 +8884,7 @@ function _aisDrawSpeedChart(pts, cursor) {
   const padL = roomy ? 34 : 4, padR = 34, padT = roomy ? 12 : 6, padB = roomy ? 16 : 4;
   const plotW = W - padL - padR, plotH = H - padT - padB;
   const xAt = ts => padL + ((new Date(ts).getTime() - t0) / totalMs) * plotW;
-  const yAt = spd => padT + plotH - Math.min(1, spd / maxSpd) * plotH;
+  const yAt = spd => padT + plotH - Math.min(1, Math.min(spd, AIS_MAX_SOG_KTS) / maxSpd) * plotH;
 
   ctx.font = '9px sans-serif';
   if (roomy) {
@@ -10012,10 +10023,13 @@ function _aisRenderSubHours(key, dateStr) {
   let legHtml = '';
   if (legs) {
     const turn = _aisFmtClock(pts[legs.turnIdx].ts);
+    const totalKmLbl = sum && sum.totalKm  ? ' · ' + sum.totalKm.toFixed(0) + 'km' : '';
+    const outKmLbl   = sum && sum.outKm    ? ' · ' + sum.outKm.toFixed(0)   + 'km' : '';
+    const backKmLbl  = sum && sum.backKm   ? ' · ' + sum.backKm.toFixed(0)  + 'km' : '';
     legHtml =
-      `<button class="ais-tb-subunit ais-tb-leg${_aisSubLegSel == null && _aisSubHourSel == null ? ' sel' : ''}" onclick="_aisSubLegClick(null)">🔄 왕복 전체</button>` +
-      `<button class="ais-tb-subunit ais-tb-leg${_aisSubLegSel === 'out' ? ' sel' : ''}" onclick="_aisSubLegClick('out')" title="출발 → 회항(${turn})">① 출항편</button>` +
-      `<button class="ais-tb-subunit ais-tb-leg${_aisSubLegSel === 'back' ? ' sel' : ''}" onclick="_aisSubLegClick('back')" title="회항(${turn}) → 복귀">② 복항편</button>` +
+      `<button class="ais-tb-subunit ais-tb-leg${_aisSubLegSel == null && _aisSubHourSel == null ? ' sel' : ''}" onclick="_aisSubLegClick(null)">🔄 왕복 전체${totalKmLbl}</button>` +
+      `<button class="ais-tb-subunit ais-tb-leg${_aisSubLegSel === 'out' ? ' sel' : ''}" onclick="_aisSubLegClick('out')" title="출발 → 회항(${turn})">① 출항편${outKmLbl}</button>` +
+      `<button class="ais-tb-subunit ais-tb-leg${_aisSubLegSel === 'back' ? ' sel' : ''}" onclick="_aisSubLegClick('back')" title="회항(${turn}) → 복귀">② 복항편${backKmLbl}</button>` +
       `<span class="ais-tb-subsep"></span>`;
   }
 
