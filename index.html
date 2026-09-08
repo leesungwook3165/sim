@@ -2671,11 +2671,15 @@ const _rlSmLeg1 = _routeLabel(34.95, 129.22,
 // 산타모니카 ② 히타카츠→하카타 — 중간지점
 const _rlSmLeg2 = _routeLabel(34.10, 129.85,
   '⛴ 히타카츠→하카타<br>132km · 71해리', '#ffaa00');
+// 엘도라도 익스프레스호 (포항 ↔ 울릉도 도동항) — 중간지점
+const _rlEldorado = _routeLabel(36.76, 130.14,
+  '⚡ 포항↔울릉도<br>217km · 117해리', '#ffcc33');
 // 항로 라인 가시성에 연동할 거리 라벨 목록
 const _routeLabelScopes = [
-  { marker: _rlQbDirect, key: 'qbDirect' },
-  { marker: _rlSmLeg1,   key: 'smLeg1'   },
-  { marker: _rlSmLeg2,   key: 'smLeg2'   },
+  { marker: _rlQbDirect, key: 'qbDirect'    },
+  { marker: _rlSmLeg1,   key: 'smLeg1'      },
+  { marker: _rlSmLeg2,   key: 'smLeg2'      },
+  { marker: _rlEldorado, key: 'eldoradoRef'  },
 ];
 
 // ════════════════════════════════════════════════════
@@ -4321,13 +4325,15 @@ const _LINE_PORTS = {
   camelliaRef: ['busan', 'hakata'],
   shimonosekiRef: ['busan', 'shimonoseki'],
   miracleRef: ['busan', 'osaka'],
-  gwangyangRef: ['gwangyang', 'shimonoseki']
+  gwangyangRef: ['gwangyang', 'shimonoseki'],
+  eldoradoRef:  ['pohang', 'ulleungdo']
 };
 // 정적 참고 항로선의 선종 — simTimelapseShipTypeFilter 적용에 사용
 const _LINE_SHIP_TYPE = {
   smLeg1:'고속선', smLeg2:'고속선', qbDirect:'고속선',
   hitakatsuRef:'고속선', izuharaViaRef:'고속선', izuharaDirectRef:'고속선',
   camelliaRef:'로로선(화물여객선)', shimonosekiRef:'로로선(화물여객선)', miracleRef:'로로선(화물여객선)', gwangyangRef:'로로선(화물여객선)',
+  eldoradoRef:'고속선',
 };
 // 정적 항로선의 전담 타임랩스 그룹 ID — shipFilter가 특정 배로 좁혀졌을 때 그 배의 선만 남긴다.
 // undefined이면 "여러 배 공유" 공통선: sm/qb 선택 시엔 유지, 커스텀 배 선택 시엔 숨긴다.
@@ -4400,7 +4406,7 @@ function _lineVisibleForScope(key, skipPortFilter) {
       show = _simCoreVisible(); break;
     case 'hitakatsuRef': case 'izuharaViaRef':
       show = _simCustomVisible() || _simPendingVisible(); break;
-    case 'izuharaDirectRef': case 'camelliaRef': case 'shimonosekiRef': case 'miracleRef':
+    case 'izuharaDirectRef': case 'camelliaRef': case 'shimonosekiRef': case 'miracleRef': case 'eldoradoRef':
       show = _simCustomVisible(); break;
     case 'gwangyangRef':
       show = _simPendingVisible(); break;
