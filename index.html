@@ -7445,7 +7445,7 @@ function _buildAisIndex(pts) {
 // split 한 번으로 되살린다(숫자로 보내면 되돌리는 데 더 든다).
 function _aisWorkerSource() {
   const K = {
-    AIS_STOP_SPEED_KTS, AIS_STOP_MIN_MIN, AIS_MAX_PLAUSIBLE_KTS, AIS_MIN_POINTS_NORMAL,
+    AIS_STOP_SPEED_KTS, AIS_STOP_MIN_MIN, AIS_MAX_SOG_KTS, AIS_MAX_PLAUSIBLE_KTS, AIS_MIN_POINTS_NORMAL,
     AIS_DIST_TOLERANCE_LO, AIS_DIST_TOLERANCE_HI, AIS_PORT_BUFFER_KM, AIS_MIN_MOVING_KM,
     AIS_REF_MIN_DAYS, AIS_TIME_BASE_Q, AIS_TIME_DEV_LO, AIS_TIME_DEV_HI,
     AIS_GAP_OK_DEPART, AIS_GAP_OK_ARRIVE,
@@ -7664,7 +7664,7 @@ async function _loadAisVesselInner(key) {
     if (!pts.length) throw new Error('데이터 없음');
     await _aisYield();
     const data = _buildAisIndex(pts);
-    data.maxSpeedKt = pts.reduce((m, p) => Math.max(m, p.speed), 0);
+    data.maxSpeedKt = +_aisMaxSpeed(pts).toFixed(1);
     // avgCruiseKt는 cruiseKts 확정 후 계산 (아래 _aisAnalyzeVessel 이후)
     await _aisYield();
     let _pp = 0;
@@ -7853,6 +7853,9 @@ function _aisMaxSpeedCached(pts) {
   return _aisMaxSpdCache;
 }
 
+const AIS_MAX_SOG_KTS       = 50;  // AIS SOG 필드 상한 — 이보다 빠른 보고값은 통신 오류로 무시
+const AIS_MAX_PLAUSIBLE_KTS = 70;  // 이보다 빠른 "순간 이동"은 GPS 공백을 직선 보간한 것 — 비정상으로 간주
+
 function _aisMaxSpeed(pts) {
   let m = 0;
   for (let i = 0; i < pts.length; i++) {
@@ -7861,9 +7864,6 @@ function _aisMaxSpeed(pts) {
   }
   return m;
 }
-
-const AIS_MAX_SOG_KTS       = 50;  // AIS SOG 필드 상한 — 이보다 빠른 보고값은 통신 오류로 무시
-const AIS_MAX_PLAUSIBLE_KTS = 70;  // 이보다 빠른 "순간 이동"은 GPS 공백을 직선 보간한 것 — 비정상으로 간주
 const AIS_MIN_POINTS_NORMAL = 20;  // 이보다 포인트가 적으면 항로 형태를 신뢰할 수 없음
 const AIS_DIST_TOLERANCE_LO = 0.6; // 기대 편도거리 대비 이 비율 미만이면 "너무 짧음"
 const AIS_DIST_TOLERANCE_HI = 1.6; // 기대 편도거리 대비 이 비율 초과면 "너무 김"
