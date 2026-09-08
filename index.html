@@ -617,6 +617,16 @@
     }
     .sim-info-box .label { font-size: 10px; color: #88aabb; }
     .sim-info-box .val   { font-size: 13px; font-weight: 700; color: #fff; margin-top: 2px; }
+    /* 계획 소요시간 4칸 — 편도 · 편도 회항 · 대기 · 총. 아래 .sim-info(경과·잔여)가
+       재생에 따라 움직이는 값인 반면, 이쪽은 재생과 무관한 고정 계획값이다. */
+    .sim-legs {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 1px; margin-bottom: 6px; border-radius: 6px; overflow: hidden;
+      background: rgba(126,207,255,0.14);
+    }
+    .sim-legs > div { background: rgba(8,20,38,0.72); padding: 4px 2px; text-align: center; }
+    .sim-legs .lbl { display: block; font-size: 9px; color: #88aabb; white-space: nowrap; }
+    .sim-legs .v   { display: block; font-size: 12.5px; font-weight: 700; color: #dce9f5; margin-top: 1px; }
     .sim-status {
       text-align: center; margin-bottom: 8px;
       font-size: 12px; padding: 4px 10px;
@@ -1387,15 +1397,17 @@
     <div style="border:1px solid rgba(255,200,0,0.3);border-radius:7px;padding:7px 10px;margin-bottom:7px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
         <div style="font-size:12px;font-weight:700;color:#ffcc44"><i data-ic="ship"></i> 산타모니카호 (경유)</div>
-        <div style="text-align:right;font-size:11px;color:#aac8e8">
-          <div>편도 도착 <span id="smOnewayTime" style="color:#ffcc44;font-weight:700">—</span></div>
-          <div>왕복 <span id="smEstTime" style="color:#ffcc44;font-weight:700">—</span></div>
-        </div>
       </div>
       <div class="sim-specs" style="margin-bottom:3px">Incat 76m · 최고속력 45노트(83km/h) · 승객 621명 · 히타카츠 30분 경유</div>
       <div class="sim-specs" style="margin-bottom:3px;font-size:10px;color:#667788">※ 경유 30분은 팬스타 <a href="https://www.panstar.co.kr/business/cruise/tsushima_link" target="_blank" rel="noopener" style="color:#7ecfff">쓰시마링크호</a> 히타카츠 정박 실측 기준</div>
       <div class="sim-specs" style="margin-bottom:3px;color:#ffaa66">※ 참고 — 엘도라도호(포항↔울릉도): 평균 45노트(83km/h) · 최고 51노트(95km/h)</div>
       <div class="sim-specs">부산→히타카츠 74km + 히타카츠→하카타 146km = 편도 220km</div>
+      <div class="sim-legs">
+        <div title="부산 출항 → 하카타 도착 (히타카츠 경유 정박 포함)"><span class="lbl">편도</span><span class="v" id="smOnewayTime">—</span></div>
+        <div title="하카타 출항 → 부산 도착"><span class="lbl">편도 회항</span><span class="v" id="smRetLeg">—</span></div>
+        <div title="하카타 도착 후 승하선·급유·정비를 마치고 다시 출항하기까지"><span class="lbl">대기</span><span class="v" id="smTurn">—</span></div>
+        <div title="부산 출항 → 하카타 → 부산 도착 (대기 포함)"><span class="lbl">총 소요</span><span class="v" id="smEstTime" style="color:#ffcc44">—</span></div>
+      </div>
       <div class="sim-info" style="margin-bottom:5px">
         <div class="sim-info-box"><div class="label">경과</div><div class="val" id="smElapsed">0:00</div></div>
         <div class="sim-info-box"><div class="label">남은</div><div class="val" id="smRemain">—</div></div>
@@ -1409,13 +1421,15 @@
     <div style="border:1px solid rgba(80,180,255,0.3);border-radius:7px;padding:7px 10px;margin-bottom:7px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
         <div style="font-size:12px;font-weight:700;color:#66ccff"><i data-ic="ship"></i> 퀸비틀 (직항)</div>
-        <div style="text-align:right;font-size:11px;color:#aac8e8">
-          <div>편도 도착 <span id="qbOnewayTime" style="color:#66ccff;font-weight:700">—</span></div>
-          <div>왕복 <span id="qbEstTime" style="color:#66ccff;font-weight:700">—</span></div>
-        </div>
       </div>
       <div class="sim-specs" style="margin-bottom:5px">JR큐슈고속선 · <span id="qbKtsDisp"></span>노트 역산</div>
       <div class="sim-specs">부산→하카타 직항 213km(115해리) · 스케줄 3시간 40분</div>
+      <div class="sim-legs">
+        <div title="부산 출항 → 하카타 도착"><span class="lbl">편도</span><span class="v" id="qbOnewayTime">—</span></div>
+        <div title="하카타 출항 → 부산 도착"><span class="lbl">편도 회항</span><span class="v" id="qbRetLeg">—</span></div>
+        <div title="하카타 도착 후 승하선·급유·정비를 마치고 다시 출항하기까지"><span class="lbl">대기</span><span class="v" id="qbTurn">—</span></div>
+        <div title="부산 출항 → 하카타 → 부산 도착 (대기 포함)"><span class="lbl">총 소요</span><span class="v" id="qbEstTime" style="color:#66ccff">—</span></div>
+      </div>
       <div class="sim-info" style="margin-bottom:5px">
         <div class="sim-info-box"><div class="label">경과</div><div class="val" id="qbElapsed">0:00</div></div>
         <div class="sim-info-box"><div class="label">남은</div><div class="val" id="qbRemain">—</div></div>
@@ -1435,13 +1449,15 @@
     <div style="border:1px solid rgba(68,255,221,0.3);border-radius:7px;padding:7px 10px;margin-bottom:7px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
         <div style="font-size:12px;font-weight:700;color:#44ffdd"><i data-ic="ship"></i> 산타모니카호 (하카타 직항)</div>
-        <div style="text-align:right;font-size:11px;color:#aac8e8">
-          <div>편도 도착 <span id="sm2OnewayTime" style="color:#44ffdd;font-weight:700">—</span></div>
-          <div>왕복 <span id="sm2EstTime" style="color:#44ffdd;font-weight:700">—</span></div>
-        </div>
       </div>
       <div class="sim-specs" style="margin-bottom:3px">Incat 76m · <span id="sm2KtsDisp">42</span>노트 순항 · 히타카츠 미경유</div>
       <div class="sim-specs">부산→하카타 직항 213km(115해리) · 경유 없이 왕복</div>
+      <div class="sim-legs">
+        <div title="부산 출항 → 하카타 도착"><span class="lbl">편도</span><span class="v" id="sm2OnewayTime">—</span></div>
+        <div title="하카타 출항 → 부산 도착"><span class="lbl">편도 회항</span><span class="v" id="sm2RetLeg">—</span></div>
+        <div title="하카타 도착 후 승하선·급유·정비를 마치고 다시 출항하기까지"><span class="lbl">대기</span><span class="v" id="sm2Turn">—</span></div>
+        <div title="부산 출항 → 하카타 → 부산 도착 (대기 포함)"><span class="lbl">총 소요</span><span class="v" id="sm2EstTime" style="color:#44ffdd">—</span></div>
+      </div>
       <div class="sim-info" style="margin-bottom:5px">
         <div class="sim-info-box"><div class="label">경과</div><div class="val" id="sm2Elapsed">0:00</div></div>
         <div class="sim-info-box"><div class="label">남은</div><div class="val" id="sm2Remain">—</div></div>
@@ -1455,13 +1471,15 @@
     <div style="border:1px solid rgba(80,180,255,0.3);border-radius:7px;padding:7px 10px;margin-bottom:7px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
         <div style="font-size:12px;font-weight:700;color:#66ccff"><i data-ic="ship"></i> 퀸비틀 (직항)</div>
-        <div style="text-align:right;font-size:11px;color:#aac8e8">
-          <div>편도 도착 <span id="qb2OnewayTime" style="color:#66ccff;font-weight:700">—</span></div>
-          <div>왕복 <span id="qb2EstTime" style="color:#66ccff;font-weight:700">—</span></div>
-        </div>
       </div>
       <div class="sim-specs" style="margin-bottom:5px">JR큐슈고속선 · <span id="qbKtsDisp2"></span>노트 역산</div>
       <div class="sim-specs">부산→하카타 직항 213km(115해리) · 스케줄 3시간 40분</div>
+      <div class="sim-legs">
+        <div title="부산 출항 → 하카타 도착"><span class="lbl">편도</span><span class="v" id="qb2OnewayTime">—</span></div>
+        <div title="하카타 출항 → 부산 도착"><span class="lbl">편도 회항</span><span class="v" id="qb2RetLeg">—</span></div>
+        <div title="하카타 도착 후 승하선·급유·정비를 마치고 다시 출항하기까지"><span class="lbl">대기</span><span class="v" id="qb2Turn">—</span></div>
+        <div title="부산 출항 → 하카타 → 부산 도착 (대기 포함)"><span class="lbl">총 소요</span><span class="v" id="qb2EstTime" style="color:#66ccff">—</span></div>
+      </div>
       <div class="sim-info" style="margin-bottom:5px">
         <div class="sim-info-box"><div class="label">경과</div><div class="val" id="qb2Elapsed">0:00</div></div>
         <div class="sim-info-box"><div class="label">남은</div><div class="val" id="qb2Remain">—</div></div>
@@ -4783,6 +4801,22 @@ function _legTL(path, startMin, baseKmh, officialKm) {
   return _buildTL(path, startMin, kmh);
 }
 
+// 카드의 4칸(편도 · 편도 회항 · 대기 · 총 소요)은 눈으로 더해봤을 때 맞아떨어져야 한다.
+// 칸마다 따로 반올림하면 합이 총계와 1분 어긋날 수 있어서(산타모니카 직항이 2:44+2:44+1:00
+// =6:28인데 원값 388.6분은 6:29로 반올림된다), 총 소요시간은 "반올림한 세 칸의 합"으로 잡는다.
+// 비교 문구와 초기 잔여시간도 같은 값을 써야 카드끼리 앞뒤가 맞는다.
+let _legMin = { sm:{one:0,ret:0,turn:0,tot:0}, qb:{one:0,ret:0,turn:0,tot:0}, sm2:{one:0,ret:0,turn:0,tot:0} };
+function _calcLegMin(oneRaw, retRaw, turnRaw) {
+  const one = Math.round(oneRaw), ret = Math.round(retRaw), turn = Math.round(turnRaw);
+  return { one, ret, turn, tot: one + ret + turn };
+}
+const _setTxt = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+function _simDiffText(d, via) {
+  return via
+    ? `왕복 기준 산타모니카 ${_fmtMin(Math.abs(d))} ${d>0?'더 소요':'단축'} (경유 포함)`
+    : `산타모니카 직항이 퀸비틀 대비 ${_fmtMin(Math.abs(d))} ${d>0?'더 소요':'단축'}`;
+}
+
 function rebuildSim() {
   _computeDelays();
   const smKmh = simSMkts * 1.852;
@@ -4811,35 +4845,22 @@ function rebuildSim() {
     ..._customEnds, 0
   );
   _updateWallClocks();
-  // UI 업데이트
-  const smEl  = document.getElementById('smEstTime');
-  const qbEl  = document.getElementById('qbEstTime');
-  const sm2El = document.getElementById('sm2EstTime');
-  if (smEl)  smEl.textContent  = _fmtMin(_totalMinSMret);
-  if (qbEl)  qbEl.textContent  = _fmtMin(_totalMinQBret);
-  if (sm2El) sm2El.textContent = _fmtMin(_totalMinSM2ret);
-  // 편도 도착 시간 (출항~하카타 도착까지, 경유 구간은 정박시간 포함)
-  const smOw  = document.getElementById('smOnewayTime');
-  const qbOw  = document.getElementById('qbOnewayTime');
-  const sm2Ow = document.getElementById('sm2OnewayTime');
-  const qb2Ow = document.getElementById('qb2OnewayTime');
-  if (smOw)  smOw.textContent  = _fmtMin(_totalMinSM);
-  if (qbOw)  qbOw.textContent  = _fmtMin(_totalMinQB);
-  if (sm2Ow) sm2Ow.textContent = _fmtMin(_totalMinSM2);
-  if (qb2Ow) qb2Ow.textContent = _fmtMin(_totalMinQB);
-  const qb2El  = document.getElementById('qb2EstTime');
-  const cmpQB  = document.getElementById('cmpQBTime');
-  const c2 = document.getElementById('cmp2Time');
-  if (qb2El) qb2El.textContent = _fmtMin(_totalMinQBret);
-  if (cmpQB) cmpQB.textContent = _fmtMin(_totalMinQBret);
-  if (c2) c2.textContent = _fmtMin(_totalMinSM2ret);
+  // UI 업데이트 — 편도(출항) · 편도 회항 · 대기 · 총 소요를 카드마다 네 칸으로 적는다.
+  // 경유편의 "편도"에는 히타카츠 정박 30분이 이미 들어가 있다.
+  _legMin.sm  = _calcLegMin(_totalMinSM,  _totalMinSMret  - _totalMinSM  - simSMTurnMin, simSMTurnMin);
+  _legMin.qb  = _calcLegMin(_totalMinQB,  _totalMinQBret  - _totalMinQB  - simQBTurnMin, simQBTurnMin);
+  _legMin.sm2 = _calcLegMin(_totalMinSM2, _totalMinSM2ret - _totalMinSM2 - simSMTurnMin, simSMTurnMin);
+  for (const [pre, L] of [['sm',_legMin.sm], ['qb',_legMin.qb], ['sm2',_legMin.sm2], ['qb2',_legMin.qb]]) {
+    _setTxt(pre + 'OnewayTime', _fmtMin(L.one));
+    _setTxt(pre + 'RetLeg',     _fmtMin(L.ret));
+    _setTxt(pre + 'Turn',       _fmtMin(L.turn));
+    _setTxt(pre + 'EstTime',    _fmtMin(L.tot));
+  }
+  _setTxt('cmpQBTime', _fmtMin(_legMin.qb.tot));
+  _setTxt('cmp2Time',  _fmtMin(_legMin.sm2.tot));
   if (simSimMin === 0) {
-    const d = _totalMinSMret - _totalMinQBret;
-    const diffEl = document.getElementById('simDiff');
-    if (diffEl) diffEl.textContent = `왕복 기준 산타모니카 ${_fmtMin(Math.abs(d))} ${d>0?'더 소요':'단축'} (경유 포함)`;
-    const d2 = _totalMinSM2ret - _totalMinQBret;
-    const diff2El = document.getElementById('simDiff2');
-    if (diff2El) diff2El.textContent = `산타모니카 직항이 퀸비틀 대비 ${_fmtMin(Math.abs(d2))} ${d2>0?'더 소요':'단축'}`;
+    _setTxt('simDiff',  _simDiffText(_legMin.sm.tot  - _legMin.qb.tot, true));
+    _setTxt('simDiff2', _simDiffText(_legMin.sm2.tot - _legMin.qb.tot, false));
   }
   const sm2Disp = document.getElementById('sm2KtsDisp');
   if (sm2Disp) sm2Disp.textContent = simSMkts;
@@ -5084,8 +5105,11 @@ let _hitaStopLabel = null;
 const _HITA_PT = [34.655649, 129.469231];
 let simLastReal=null, simSpeedFactor=300, simRAF=null;
 
+// 분 단위 소요시간을 "H:MM"으로. 초 단위를 버리지 않고 반올림한다 — 버리면 199.7분짜리
+// 편도가 3:19로 보여 공식거리(220km ÷ 42노트 = 3시간 20분)와 1분 어긋난다.
+// 시각을 찍는 _minToHM도 Math.round를 쓰므로 소요시간과 도착시각이 서로 맞아떨어진다.
 function _fmtMin(m) {
-  const h=Math.floor(m/60), mm=Math.floor(m%60).toString().padStart(2,'0');
+  const r=Math.round(m), h=Math.floor(r/60), mm=(r%60).toString().padStart(2,'0');
   return `${h}:${mm}`;
 }
 
@@ -5190,7 +5214,7 @@ function _simRenderFrame() {
   document.getElementById('smStatus').textContent  = statusTxt;
   document.getElementById('smStatus').className    = `sim-status ${statusCls}`;
   document.getElementById('smBar').style.width     = (Math.max(0,Math.min(smLocal,_totalMinSMret))/_totalMinSMret*100).toFixed(1)+'%';
-  document.getElementById('smEstTime').textContent = _fmtMin(_totalMinSMret);
+  _setTxt('smEstTime', _fmtMin(_legMin.sm.tot));
 
   // ── 퀸비틀 ──
   let qbPos, qbHdg, qbTxt, qbCls, qbSeg;
@@ -5227,7 +5251,7 @@ function _simRenderFrame() {
   document.getElementById('qbStatus').textContent  = qbTxt;
   document.getElementById('qbStatus').className    = `sim-status ${qbCls}`;
   document.getElementById('qbBar').style.width     = (Math.max(0,Math.min(qbLocal,_totalMinQBret))/_totalMinQBret*100).toFixed(1)+'%';
-  document.getElementById('qbEstTime').textContent = _fmtMin(_totalMinQBret);
+  _setTxt('qbEstTime', _fmtMin(_legMin.qb.tot));
 
   // 퀸비틀 — 시나리오2 탭 표시분 (동일 항로/타임라인, 표시만 별도)
   document.getElementById('qb2Elapsed').textContent = qbElapsedStr;
@@ -5236,13 +5260,11 @@ function _simRenderFrame() {
   document.getElementById('qb2Status').textContent  = qbTxt;
   document.getElementById('qb2Status').className    = `sim-status ${qbCls}`;
   document.getElementById('qb2Bar').style.width     = (Math.max(0,Math.min(qbLocal,_totalMinQBret))/_totalMinQBret*100).toFixed(1)+'%';
-  document.getElementById('qb2EstTime').textContent = _fmtMin(_totalMinQBret);
-  document.getElementById('cmpQBTime').textContent  = _fmtMin(_totalMinQBret);
+  _setTxt('qb2EstTime', _fmtMin(_legMin.qb.tot));
+  _setTxt('cmpQBTime',  _fmtMin(_legMin.qb.tot));
 
   // 왕복 시간 차이 (탭1)
-  const diff = _totalMinSMret - _totalMinQBret;
-  document.getElementById('simDiff').textContent =
-    `왕복 기준 산타모니카 ${_fmtMin(Math.abs(diff))} ${diff>0?'더 소요':'단축'} (경유 포함)`;
+  _setTxt('simDiff', _simDiffText(_legMin.sm.tot - _legMin.qb.tot, true));
 
   // 마커 가시성 — 퀸비틀은 두 탭 모두에서 운항하므로 항상 표시. 재생 범위(simPlayScope)가
   // "등록 선박만"이면 기본 선박(퀸비틀·산타모니카)은 숨긴다.
@@ -5285,11 +5307,9 @@ function _simRenderFrame() {
   document.getElementById('sm2Status').textContent  = sm2Txt;
   document.getElementById('sm2Status').className    = `sim-status ${sm2Cls}`;
   document.getElementById('sm2Bar').style.width     = (Math.max(0,Math.min(smLocal,_totalMinSM2ret))/_totalMinSM2ret*100).toFixed(1)+'%';
-  document.getElementById('sm2EstTime').textContent = _fmtMin(_totalMinSM2ret);
-  document.getElementById('cmp2Time').textContent   = _fmtMin(_totalMinSM2ret);
-  const diff2 = _totalMinSM2ret - _totalMinQBret;
-  document.getElementById('simDiff2').textContent =
-    `산타모니카 직항이 퀸비틀 대비 ${_fmtMin(Math.abs(diff2))} ${diff2>0?'더 소요':'단축'}`;
+  _setTxt('sm2EstTime', _fmtMin(_legMin.sm2.tot));
+  _setTxt('cmp2Time',   _fmtMin(_legMin.sm2.tot));
+  _setTxt('simDiff2', _simDiffText(_legMin.sm2.tot - _legMin.qb.tot, false));
 
   // ── 등록된 임의 선박들 ──
   _tickCustomShips(simSimMin);
@@ -5324,8 +5344,8 @@ function simReset() {
   // 탭1 리셋
   document.getElementById('smElapsed').textContent='0:00';
   document.getElementById('qbElapsed').textContent='0:00';
-  document.getElementById('smRemain').textContent=_fmtMin(_totalMinSMret);
-  document.getElementById('qbRemain').textContent=_fmtMin(_totalMinQBret);
+  _setTxt('smRemain', _fmtMin(_legMin.sm.tot));
+  _setTxt('qbRemain', _fmtMin(_legMin.qb.tot));
   document.getElementById('smSeg').textContent='—';
   document.getElementById('qbSeg').textContent='—';
   document.getElementById('smStatus').textContent='대기 중';
@@ -5334,25 +5354,21 @@ function simReset() {
   document.getElementById('qbStatus').className='sim-status sailing';
   document.getElementById('smBar').style.width='0%';
   document.getElementById('qbBar').style.width='0%';
-  const d=_totalMinSMret-_totalMinQBret;
-  document.getElementById('simDiff').textContent=
-    `왕복 기준 산타모니카 ${_fmtMin(Math.abs(d))} ${d>0?'더 소요':'단축'} (경유 포함)`;
+  _setTxt('simDiff', _simDiffText(_legMin.sm.tot - _legMin.qb.tot, true));
   // 탭2 리셋
   document.getElementById('sm2Elapsed').textContent='0:00';
-  document.getElementById('sm2Remain').textContent=_fmtMin(_totalMinSM2ret);
+  _setTxt('sm2Remain', _fmtMin(_legMin.sm2.tot));
   document.getElementById('sm2Seg').textContent='—';
   document.getElementById('sm2Status').textContent='대기 중';
   document.getElementById('sm2Status').className='sim-status sailing';
   document.getElementById('sm2Bar').style.width='0%';
   document.getElementById('qb2Elapsed').textContent='0:00';
-  document.getElementById('qb2Remain').textContent=_fmtMin(_totalMinQBret);
+  _setTxt('qb2Remain', _fmtMin(_legMin.qb.tot));
   document.getElementById('qb2Seg').textContent='—';
   document.getElementById('qb2Status').textContent='대기 중';
   document.getElementById('qb2Status').className='sim-status sailing';
   document.getElementById('qb2Bar').style.width='0%';
-  const d2=_totalMinSM2ret-_totalMinQBret;
-  document.getElementById('simDiff2').textContent=
-    `산타모니카 직항이 퀸비틀 대비 ${_fmtMin(Math.abs(d2))} ${d2>0?'더 소요':'단축'}`;
+  _setTxt('simDiff2', _simDiffText(_legMin.sm2.tot - _legMin.qb.tot, false));
   _setSimPlayLabel('동시 출항');
 }
 
