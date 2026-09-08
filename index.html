@@ -2766,6 +2766,7 @@ map.on("zoomend", _applyShipModelZoom);
              '<b style="color:#ffee99">2호</b>는 그리스에 매각되었습니다.' }
     ]) +
     _shipSvgHtml('sm') +
+    _tidePhotoHtml('hitakatsu_low.jpg', 'hitakatsu_high.jpg') +
     '<div class="popup-body"><b style="color:#ffcc44">시월드고속훼리 · Incat 76m wavepiercer</b><br>' +
     '전장 72.67m · 폭 21m · GT 390톤<br>' +
     '최고속력 45노트(83km/h) · 여객 621명<br>' +
@@ -2916,6 +2917,7 @@ map.on("zoomend", _applyShipModelZoom);
     '</div>' +
     '<div style="font-size:9px;text-align:center;color:#99b8d4;margin-bottom:3px">그레이스호 (전신: JR큐슈 퀸비틀) · Austal HSC 083</div>' +
     _shipSvgHtml('grace') +
+    _tidePhotoHtml('hitakatsu_low.jpg', 'hitakatsu_high.jpg') +
     '<div class="popup-body"><b style="color:#ffe066">팬스타 · Austal 83m wavepiercer</b><br>' +
     '전장 83.5m · 폭 20.2m · GT 894톤<br>' +
     '최고속력 36노트 · 순항 31.4노트<br>' +
@@ -5014,6 +5016,32 @@ function _shipSvgHtml(type) {
 <text x="10" y="106" fill="#ffe066" font-family="'Malgun Gothic',sans-serif" font-size="9.5" font-weight="bold">🕓 Grace · 팬스타 · Austal 83m wavepiercer</text>
 </svg>`;
   return '';
+}
+
+// 히타카츠항 간조/만조별 선박 흘수 여유 사진 2열 섹션
+function _tidePhotoHtml(lowSrc, highSrc) {
+  const sl = (src, label, sub) => {
+    const ph = `<div style="display:none;width:100%;height:100%;align-items:center;` +
+               `justify-content:center;color:#334455;font-size:24px;background:#06101e">🌊</div>`;
+    return `<div style="flex:1">` +
+      `<div style="height:88px;border-radius:4px;overflow:hidden;background:#06101e">` +
+        `<img src="${src}" style="width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in" ` +
+        `onmouseover="_openImgZoom(this)" onmouseout="if(!event.relatedTarget?.closest('.c-btn'))_closeImgZoom()" ` +
+        `onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` +
+        ph +
+      `</div>` +
+      `<div style="font-size:9px;text-align:center;color:#99b8d4;margin-top:2px;line-height:1.3">` +
+        `${label}<br><span style="color:#556677;font-size:8.5px">${sub}</span></div>` +
+    `</div>`;
+  };
+  return `<div style="margin:6px 0 4px">` +
+    `<div style="font-size:9.5px;font-weight:700;color:#88aacc;margin-bottom:4px;letter-spacing:.02em">` +
+      `⚓ 히타카츠항 조석별 흘수 여유</div>` +
+    `<div style="display:flex;gap:5px">` +
+      sl(lowSrc,  '간조 (低潮)', '선저↔해저 여유 최소') +
+      sl(highSrc, '만조 (高潮)', '선저↔해저 여유 최대') +
+    `</div>` +
+  `</div>`;
 }
 
 function _makeShipIcon(hdg, fill, stroke, label) {
