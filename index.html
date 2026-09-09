@@ -1493,18 +1493,75 @@
       <div class="sim-progress"><div class="sim-progress-bar" id="qb2Bar" style="width:0%;background:linear-gradient(90deg,#3399ff,#66ccff)"></div></div>
     </div>
 
-    <!-- 산타모니카 직항 vs 퀸비틀 직항 비교 -->
+    <!-- 시간 비교 카드 -->
     <div style="background:rgba(255,255,255,0.04);border-radius:7px;padding:7px 10px;margin-bottom:3px;font-size:11px">
-      <div style="color:#7ecfff;font-weight:700;margin-bottom:4px"><i data-ic="chart"></i> 직항 대 직항 비교</div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:3px">
-        <span style="color:#44ffdd"><i data-ic="ship"></i> 산타모니카 직항</span>
-        <span id="cmp2Time" style="color:#44ffdd;font-weight:700">—</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:3px">
-        <span style="color:#66ccff"><i data-ic="ship"></i> 퀸비틀 직항</span>
-        <span id="cmpQBTime" style="color:#66ccff;font-weight:700">—</span>
-      </div>
-      <div style="border-top:1px solid rgba(80,160,255,0.2);margin-top:5px;padding-top:5px;text-align:center" id="simDiff2" style="color:#aac8e8">—</div>
+      <div style="color:#7ecfff;font-weight:700;margin-bottom:6px"><i data-ic="chart"></i> 시간 비교</div>
+
+      <!-- 섹션 1: 경유 vs 직항 -->
+      <div style="font-size:9.5px;color:#aac8e8;font-weight:600;margin-bottom:3px;border-bottom:1px solid rgba(80,160,255,0.18);padding-bottom:3px">대마도 경유 → 직항 전환 효과</div>
+      <table style="width:100%;border-collapse:collapse;font-size:10.5px;margin-bottom:8px">
+        <thead>
+          <tr style="color:#556677;font-size:9px">
+            <td style="padding:2px 3px"></td>
+            <td style="text-align:right;padding:2px 3px">편도</td>
+            <td style="text-align:right;padding:2px 3px">편도 회항</td>
+            <td style="text-align:right;padding:2px 3px">총 소요</td>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="color:#ffcc44;padding:2px 3px"><i data-ic="ship"></i> 경유</td>
+            <td style="text-align:right;padding:2px 3px" id="cmpViaOne">—</td>
+            <td style="text-align:right;padding:2px 3px" id="cmpViaRet">—</td>
+            <td style="text-align:right;padding:2px 3px;color:#ffcc44;font-weight:700" id="cmpViaTot">—</td>
+          </tr>
+          <tr>
+            <td style="color:#44ffdd;padding:2px 3px"><i data-ic="ship"></i> 직항</td>
+            <td style="text-align:right;padding:2px 3px" id="cmpDirOne">—</td>
+            <td style="text-align:right;padding:2px 3px" id="cmpDirRet">—</td>
+            <td style="text-align:right;padding:2px 3px;color:#44ffdd;font-weight:700" id="cmpDirTot">—</td>
+          </tr>
+          <tr style="border-top:1px dashed rgba(255,255,255,0.12)">
+            <td style="color:#99aaaa;font-size:9px;padding:2px 3px">직항 단축</td>
+            <td style="text-align:right;padding:2px 3px;font-weight:700" id="cmpSavOne">—</td>
+            <td style="text-align:right;padding:2px 3px;font-weight:700" id="cmpSavRet">—</td>
+            <td style="text-align:right;padding:2px 3px;font-weight:700" id="cmpSavTot">—</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- 섹션 2: SM 직항 vs 퀸비틀 -->
+      <div style="font-size:9.5px;color:#aac8e8;font-weight:600;margin-bottom:3px;border-bottom:1px solid rgba(80,160,255,0.18);padding-bottom:3px">산타모니카 직항 vs 퀸비틀</div>
+      <table style="width:100%;border-collapse:collapse;font-size:10.5px">
+        <thead>
+          <tr style="color:#556677;font-size:9px">
+            <td style="padding:2px 3px"></td>
+            <td style="text-align:right;padding:2px 3px">편도</td>
+            <td style="text-align:right;padding:2px 3px">편도 회항</td>
+            <td style="text-align:right;padding:2px 3px">총 소요</td>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="color:#44ffdd;padding:2px 3px"><i data-ic="ship"></i> 산타모니카</td>
+            <td style="text-align:right;padding:2px 3px" id="cmp2One">—</td>
+            <td style="text-align:right;padding:2px 3px" id="cmp2Ret">—</td>
+            <td style="text-align:right;padding:2px 3px;color:#44ffdd;font-weight:700" id="cmp2Time">—</td>
+          </tr>
+          <tr>
+            <td style="color:#66ccff;padding:2px 3px"><i data-ic="ship"></i> 퀸비틀</td>
+            <td style="text-align:right;padding:2px 3px" id="cmpQBOne">—</td>
+            <td style="text-align:right;padding:2px 3px" id="cmpQBRet">—</td>
+            <td style="text-align:right;padding:2px 3px;color:#66ccff;font-weight:700" id="cmpQBTime">—</td>
+          </tr>
+          <tr style="border-top:1px dashed rgba(255,255,255,0.12)">
+            <td style="color:#99aaaa;font-size:9px;padding:2px 3px">SM 우위</td>
+            <td style="text-align:right;padding:2px 3px;font-weight:700" id="cmpQBDiffOne">—</td>
+            <td style="text-align:right;padding:2px 3px;font-weight:700" id="cmpQBDiffRet">—</td>
+            <td style="text-align:right;padding:2px 3px;font-weight:700" id="simDiff2">—</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
   </div><!-- /.simTabContent2 -->
@@ -4820,6 +4877,31 @@ function _simDiffText(d, via) {
     ? `왕복 기준 산타모니카 ${_fmtMin(Math.abs(d))} ${d>0?'더 소요':'단축'} (경유 포함)`
     : `산타모니카 직항이 퀸비틀 대비 ${_fmtMin(Math.abs(d))} ${d>0?'더 소요':'단축'}`;
 }
+// d > 0: 단축(유리) → ▼green, d < 0: 불리 → ▲orange
+function _diffSign(d) {
+  return d === 0 ? '±0분' : (d > 0 ? '▼' : '▲') + _fmtMin(Math.abs(d));
+}
+function _setDiffCell(id, d) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = _diffSign(d);
+  el.style.color = d > 0 ? '#44ffdd' : (d < 0 ? '#ff9955' : '#88aaaa');
+}
+function _updateCmpCard() {
+  const L = _legMin;
+  // 경유 vs 직항
+  _setTxt('cmpViaOne', _fmtMin(L.sm.one));  _setTxt('cmpViaRet', _fmtMin(L.sm.ret));  _setTxt('cmpViaTot', _fmtMin(L.sm.tot));
+  _setTxt('cmpDirOne', _fmtMin(L.sm2.one)); _setTxt('cmpDirRet', _fmtMin(L.sm2.ret)); _setTxt('cmpDirTot', _fmtMin(L.sm2.tot));
+  _setDiffCell('cmpSavOne', L.sm.one - L.sm2.one);
+  _setDiffCell('cmpSavRet', L.sm.ret - L.sm2.ret);
+  _setDiffCell('cmpSavTot', L.sm.tot - L.sm2.tot);
+  // SM 직항 vs QB
+  _setTxt('cmp2One',  _fmtMin(L.sm2.one)); _setTxt('cmp2Ret',  _fmtMin(L.sm2.ret)); _setTxt('cmp2Time', _fmtMin(L.sm2.tot));
+  _setTxt('cmpQBOne', _fmtMin(L.qb.one));  _setTxt('cmpQBRet', _fmtMin(L.qb.ret));  _setTxt('cmpQBTime',_fmtMin(L.qb.tot));
+  _setDiffCell('cmpQBDiffOne', L.qb.one - L.sm2.one);
+  _setDiffCell('cmpQBDiffRet', L.qb.ret - L.sm2.ret);
+  _setDiffCell('simDiff2',     L.qb.tot - L.sm2.tot);
+}
 
 function rebuildSim() {
   _computeDelays();
@@ -4860,12 +4942,10 @@ function rebuildSim() {
     _setTxt(pre + 'Turn',       _fmtMin(L.turn));
     _setTxt(pre + 'EstTime',    _fmtMin(L.tot));
   }
-  _setTxt('cmpQBTime', _fmtMin(_legMin.qb.tot));
-  _setTxt('cmp2Time',  _fmtMin(_legMin.sm2.tot));
   if (simSimMin === 0) {
-    _setTxt('simDiff',  _simDiffText(_legMin.sm.tot  - _legMin.qb.tot, true));
-    _setTxt('simDiff2', _simDiffText(_legMin.sm2.tot - _legMin.qb.tot, false));
+    _setTxt('simDiff', _simDiffText(_legMin.sm.tot - _legMin.qb.tot, true));
   }
+  _updateCmpCard();
   const sm2Disp = document.getElementById('sm2KtsDisp');
   if (sm2Disp) sm2Disp.textContent = simSMkts;
 }
@@ -5265,7 +5345,6 @@ function _simRenderFrame() {
   document.getElementById('qb2Status').className    = `sim-status ${qbCls}`;
   document.getElementById('qb2Bar').style.width     = (Math.max(0,Math.min(qbLocal,_totalMinQBret))/_totalMinQBret*100).toFixed(1)+'%';
   _setTxt('qb2EstTime', _fmtMin(_legMin.qb.tot));
-  _setTxt('cmpQBTime',  _fmtMin(_legMin.qb.tot));
 
   // 왕복 시간 차이 (탭1)
   _setTxt('simDiff', _simDiffText(_legMin.sm.tot - _legMin.qb.tot, true));
@@ -5312,8 +5391,6 @@ function _simRenderFrame() {
   document.getElementById('sm2Status').className    = `sim-status ${sm2Cls}`;
   document.getElementById('sm2Bar').style.width     = (Math.max(0,Math.min(smLocal,_totalMinSM2ret))/_totalMinSM2ret*100).toFixed(1)+'%';
   _setTxt('sm2EstTime', _fmtMin(_legMin.sm2.tot));
-  _setTxt('cmp2Time',   _fmtMin(_legMin.sm2.tot));
-  _setTxt('simDiff2', _simDiffText(_legMin.sm2.tot - _legMin.qb.tot, false));
 
   // ── 등록된 임의 선박들 ──
   _tickCustomShips(simSimMin);
@@ -5372,7 +5449,6 @@ function simReset() {
   document.getElementById('qb2Status').textContent='대기 중';
   document.getElementById('qb2Status').className='sim-status sailing';
   document.getElementById('qb2Bar').style.width='0%';
-  _setTxt('simDiff2', _simDiffText(_legMin.sm2.tot - _legMin.qb.tot, false));
   _setSimPlayLabel('동시 출항');
 }
 
