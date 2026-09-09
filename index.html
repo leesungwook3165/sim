@@ -580,25 +580,29 @@
       width: 390px;
       min-height: 200px;
       height: 540px;
-      overflow: auto;
+      overflow: hidden;          /* 패널 자체는 숨김 — 내부 .sim-body가 스크롤 처리 */
       resize: both;
+      display: none;
+      flex-direction: column;    /* visible 시 flex로 전환해 .sim-body가 남은 높이를 채움 */
       backdrop-filter: blur(6px);
       box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-      display: none;
     }
-    #simPanel.visible { display: block; }
+    #simPanel.visible { display: flex; }
     #simPanel.minimized .sim-body { display: none; }
     #simPanel.minimized .sim-title { margin-bottom: 0; }
     #simPanel.minimized {
       height: auto !important;   /* 끌어서 조절한 인라인 height 를 이겨야 한다 */
       min-height: 0; max-height: none;
-      overflow: hidden;          /* 접힌 상태에 스크롤바가 남지 않게 */
+      overflow: hidden;
       resize: none;              /* 접힌 채로는 크기 조절 손잡이를 숨긴다 */
     }
     .sim-title {
       font-size: 13px; font-weight: 700; color: #7ecfff;
       margin-bottom: 6px; display: flex; align-items: center; gap: 6px;
-      cursor: move; user-select: none;
+      cursor: move; user-select: none; flex-shrink: 0;
+    }
+    .sim-body {
+      flex: 1; min-height: 0; overflow-y: auto;
     }
     .sim-title-btns { margin-left: auto; display: flex; gap: 2px; }
     .sim-title-btn {
@@ -750,27 +754,27 @@
     .ops-body { display: flex; flex: 1; min-height: 0; overflow: hidden; border-top: 1px solid rgba(80,160,255,0.2); }
     .ops-col { padding: 10px 16px; overflow-y: auto; }
     /* 스크롤바 커스텀 — 패널들과 어울리는 얇고 둥근 파란 계열 스크롤바 (Firefox + 크로미움 계열 모두 적용) */
-    #simPanel, #legendPanel, .ops-col, #shipMgrList {
+    .sim-body, #legendPanel, .ops-col, #shipMgrList {
       scrollbar-width: thin;
       scrollbar-color: rgba(126,207,255,0.55) rgba(255,255,255,0.05);
     }
-    #simPanel::-webkit-scrollbar, #legendPanel::-webkit-scrollbar,
+    .sim-body::-webkit-scrollbar, #legendPanel::-webkit-scrollbar,
     .ops-col::-webkit-scrollbar, #shipMgrList::-webkit-scrollbar { width: 9px; height: 9px; }
-    #simPanel::-webkit-scrollbar-track, #legendPanel::-webkit-scrollbar-track,
+    .sim-body::-webkit-scrollbar-track, #legendPanel::-webkit-scrollbar-track,
     .ops-col::-webkit-scrollbar-track, #shipMgrList::-webkit-scrollbar-track {
       background: rgba(255,255,255,0.04); border-radius: 8px;
     }
-    #simPanel::-webkit-scrollbar-thumb, #legendPanel::-webkit-scrollbar-thumb,
+    .sim-body::-webkit-scrollbar-thumb, #legendPanel::-webkit-scrollbar-thumb,
     .ops-col::-webkit-scrollbar-thumb, #shipMgrList::-webkit-scrollbar-thumb {
       background: linear-gradient(180deg, rgba(126,207,255,0.65), rgba(80,160,255,0.45));
       border-radius: 8px; border: 2px solid rgba(8,20,45,0.9); background-clip: padding-box;
     }
-    #simPanel::-webkit-scrollbar-thumb:hover, #legendPanel::-webkit-scrollbar-thumb:hover,
+    .sim-body::-webkit-scrollbar-thumb:hover, #legendPanel::-webkit-scrollbar-thumb:hover,
     .ops-col::-webkit-scrollbar-thumb:hover, #shipMgrList::-webkit-scrollbar-thumb:hover {
       background: linear-gradient(180deg, rgba(160,220,255,0.85), rgba(110,180,255,0.7));
       background-clip: padding-box;
     }
-    #simPanel::-webkit-scrollbar-corner, #legendPanel::-webkit-scrollbar-corner { background: transparent; }
+    .sim-body::-webkit-scrollbar-corner, #legendPanel::-webkit-scrollbar-corner { background: transparent; }
     .ops-col-left { width: 380px; flex-shrink: 0; border-right: 1px solid rgba(80,160,255,0.2); }
     .ops-col-right { flex: 1; min-width: 0; }
     @media (max-width: 860px) {
@@ -1310,7 +1314,7 @@
     }
 
     .ais-lsw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 3px; }
-    #simPanel, #legendPanel, .ops-col, #shipMgrList {
+    .sim-body, #legendPanel, .ops-col, #shipMgrList {
       scrollbar-width: thin;
       scrollbar-color: rgba(80,160,255,0.3) transparent;
     }
