@@ -6475,8 +6475,10 @@ function updateCustomShip(id, field, value) {
   else if (field === 'nation')   s.nation = value || '한국라인';
   else if (field === 'shipType') s.shipType = value || '기타';
   else if (field === 'tonnage')  s.tonnage = Math.max(0, parseFloat(value) || 0);
-  else if (field === 'sourceUrl')   s.sourceUrl = value;
-  else if (field === 'sourceLabel') s.sourceLabel = value;
+  else if (field === 'sourceUrl')    s.sourceUrl = value;
+  else if (field === 'sourceLabel')  s.sourceLabel = value;
+  else if (field === 'offDepartHM') { s.offDepartHM = value; s.offConfirmed = true; _aisClearSchedCache(s.name); }
+  else if (field === 'offArriveHM') { s.offArriveHM = value; s.offConfirmed = true; _aisClearSchedCache(s.name); }
   _saveCustomShips();
   rebuildSim();
   _refreshOpenPanels();
@@ -6992,13 +6994,13 @@ function renderShipMgrList() {
         <label title="시뮬레이션이 출발하는 시각 — 설정 속력과 함께 도착시각을 만든다">출항시각 (시뮬)
           <input type="time" value="${s.departHM}" onchange="updateCustomShip('${s.id}','departHM',this.value)">
         </label>
-        <label>회항 시각
+        <label title="시뮬 출항시각 기준으로 계산된 회항(목적지 재출발) 시각">회항 시각 (시뮬)
           <input type="time" value="${_minToHM(calc.arriveMin + s.turnMin)}" onchange="updateCustomShipReturnTime('${s.id}',this.value)" ${s.roundTrip?'':'disabled'}>
         </label>
-        <label title="선사가 공시한 출항시각. 시뮬레이션과 별개로 적어 두고 견준다">공시 출항
+        <label title="선사가 공시한 출항시각. AIS 그래프에 기준선으로 표시됩니다">공시 출항
           <input type="time" value="${s.offDepartHM||''}" onchange="updateCustomShip('${s.id}','offDepartHM',this.value)">
         </label>
-        <label title="선사가 공시한 도착시각">공시 도착
+        <label title="선사가 공시한 도착시각. AIS 그래프에 기준선으로 표시됩니다">공시 도착
           <input type="time" value="${s.offArriveHM||''}" onchange="updateCustomShip('${s.id}','offArriveHM',this.value)">
         </label>
         <label>수속시간(분)
@@ -7407,38 +7409,39 @@ function _aisMinToHM(m) {
   return String(h).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
 }
 
-// 한 선박의 기준선 목록. 결과는 데이터에 캐시해 둔다(그래프가 매 프레임 다시 그려진다).
+// offDepartHM/offArriveHM 변경 시 해당 선박의 스케줄 캐시를 지운다
+function _aisClearSchedCache(shipName) {
+  Object.keys(_aisCache).forEach(k => {
+    if ((_AIS_VESSELS[k] || {}).label === shipName) delete _aisCache[k]._schedMarks;
+  });
+}
+
+// 한 선박의 기준선 목록. 공시 시각만 표시; AIS 실측 추정치는 제거.
+// 우선순위: ① _AIS_OFFICIAL 하드코딩 ② 커스텀 선박의 offDepartHM/offArriveHM
 function _aisSchedMarks(key) {
   const off = _AIS_OFFICIAL[key];
   if (off) return off.marks.map(m => Object.assign({ official: true }, m));
 
-  const data = _aisCache[key];
-  if (!data) return [];
-  if (data._schedMarks) return data._schedMarks;
-
-  const voys = (data.refVoyages && data.refVoyages.length ? data.refVoyages : data.voyages) || [];
-  const pick = (field, kind) => {
-    const bins = {};
-    voys.forEach(v => {
-      const ts = v[field];
-      if (!ts) return;
-      const b = Math.floor(_aisClockMin(ts) / AIS_SCHED_BIN_MIN);
-      (bins[b] = bins[b] || []).push(_aisClockMin(ts));
-    });
-    const total = Object.values(bins).reduce((a, x) => a + x.length, 0);
-    if (!total) return [];
-    return Object.entries(bins)
-      .filter(([, arr]) => arr.length / total >= AIS_SCHED_MIN_SHARE)
-      .map(([, arr]) => {
-        const m = Math.round(_median(arr));
-        return { min: m, kind, official: false, share: arr.length / total,
-                 text: (kind === 'dep' ? '출항 ' : '도착 ') + _aisMinToHM(m)
-                       + ' (실측 최빈 ' + Math.round(arr.length / total * 100) + '%)' };
+  // 커스텀 선박에 등록된 공시 시각 — AIS 레이블명과 선박명이 같으면 매칭
+  const vLabel = (_AIS_VESSELS[key] || {}).label || '';
+  if (vLabel && typeof customShips !== 'undefined') {
+    const cs = customShips.find(s => s.name === vLabel);
+    if (cs && (cs.offDepartHM || cs.offArriveHM)) {
+      const marks = [];
+      if (cs.offDepartHM) marks.push({
+        min: _hmToMin(cs.offDepartHM), kind: 'dep', official: true,
+        text: '공시 출항 ' + cs.offDepartHM + (cs.offConfirmed ? '' : ' (추정)')
       });
-  };
-  data._schedMarks = pick('departTs', 'dep').concat(pick('arriveTs', 'arr'))
-    .sort((a, b) => a.min - b.min);
-  return data._schedMarks;
+      if (cs.offArriveHM) marks.push({
+        min: _hmToMin(cs.offArriveHM), kind: 'arr', official: true,
+        text: '공시 도착 ' + cs.offArriveHM + (cs.offConfirmed ? '' : ' (추정)')
+      });
+      return marks.sort((a, b) => a.min - b.min);
+    }
+  }
+
+  // 공시 시각 없음 — 마커 없이 AIS 원시 데이터만 표시
+  return [];
 }
 
 const _AIS_VESSELS = {
