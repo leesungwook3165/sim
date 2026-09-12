@@ -1591,8 +1591,58 @@
         <div style="display:flex;flex-direction:column;justify-content:flex-end;font-size:10px;color:#aac8e8">환산 단가(원/MT)<br><b id="fuelKrwPerKg" style="color:#ffcc44;font-size:12px">—</b></div>
       </div>
       <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#ffdd88;cursor:pointer;margin-bottom:6px">
-        <input type="checkbox" onchange="setFuelEngSetting(this.checked)"> 산타모니카호 공학적 세팅 보정 적용 (엘도라도호 대비 저출력·저속 -15~20%)
+        <input type="checkbox" id="chkFuelEng" onchange="setFuelEngSetting(this.checked)"> 산타모니카호 공학적 세팅 보정 적용 (엘도라도호 대비 저출력·저속 -15~20%)
       </label>
+      <label id="lblFuelSpec" style="display:flex;align-items:center;gap:6px;font-size:11px;color:#ffdd88;cursor:pointer;margin-bottom:4px"
+        title="근거 — 운항시뮬레이션 분석 자료 + 산타모니카호 운항관리규정 제17조 + Incat/Cat 제원
+· 실측 기준점: 45노트 운항 시 주기관 시간당 4,260ℓ (운항시뮬레이션 분석)
+· 발전기: 시간당 28.7ℓ (1일 0.59톤 = 28.7ℓ×24h×0.86kg/ℓ ≈ 592kg). 냉난방·선내 전력용이라 속력과 무관하게 항해·정박 시간 전체에 그대로 더함
+· 주기관: Caterpillar C280-16 × 4기, 각 5,650kW(100% MCR) = 22,600kW (운항관리규정 제17조 11쪽 · Incat)
+· 속력 환산: 단순 모드는 세제곱 법칙(4,260×(v/45)³), 상세 모드는 출력 ∝ 속력ⁿ + 엔진 부하별 SFOC 곡선(Cat C280-16 데이터시트, ISO 3046/1) + 45노트 실측점 보정
+· 질량 환산: LSMGO 밀도 0.86 kg/ℓ
+※ 이 모드가 켜지면 산타모니카호는 엘도라도호 kg/km 역산·공학적 세팅 보정 대신 이 시간당 소모율로 계산됩니다.">
+        <input type="checkbox" id="chkFuelSpec" onchange="setFuelSpecMode(this.checked)"> 산타모니카호 제원 기반 환산 (45kts 4,260ℓ/h → 현재 순항속도 환산 + 발전기 28.7ℓ/h)
+        <span style="font-size:10px;color:#7ecfff;border:1px solid rgba(126,207,255,0.5);border-radius:50%;width:13px;height:13px;line-height:12px;text-align:center;flex-shrink:0">i</span>
+      </label>
+      <div id="fuelSpecInputs" style="display:none;margin:0 0 6px 20px;padding:5px 8px;border-left:2px solid rgba(255,221,136,0.35);font-size:10px;color:#aac8e8">
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px">
+          기준
+          <input type="number" step="0.1" min="1" value="45" onchange="setFuelInput('specKts', this.value)" style="width:48px" title="제원 기준 속력(노트)"> kts에서 주기관
+          <input type="number" step="10" min="1" value="4260" onchange="setFuelInput('specLph', this.value)" style="width:62px" title="기준 속력에서의 주기관 시간당 연료소모(ℓ/h)"> ℓ/h ·
+          발전기
+          <input type="number" step="0.1" min="0" value="28.7" onchange="setFuelInput('genLph', this.value)" style="width:52px" title="발전기 시간당 연료소모(ℓ/h) — 속력 무관, 항해·정박 전체 시간에 적용"> ℓ/h
+        </div>
+        <label style="display:flex;align-items:center;gap:5px;margin-top:6px;color:#ffdd88;cursor:pointer"
+          title="상세 공학 모델 — 단순 세제곱 대신 아래 3단계로 환산
+① 소요출력 P(v) = P_MCR × (v / V_MCR)ⁿ   (P_MCR 22,600kW = C280-16 5,650kW×4, V_MCR = 100% MCR 속력, n = 속력-출력 지수)
+② 엔진 부하 = P(v)/P_MCR → 부하별 연료소모율 SFOC(g/kWh)를 Cat C280-16 데이터시트(ISO 3046/1: 50% 214.8 · 75% 203.5 · 100% 193.6 · 110% 191.0)로 보간
+③ 연료 = P(v) × SFOC ÷ 밀도 0.86, 그리고 45노트 실측 4,260ℓ/h에 맞도록 보정계수 k를 곱함 (모델이 실측점을 정확히 지나게 함)
+→ 부분부하에서 SFOC가 올라가는 효과를 반영하므로 단순 세제곱보다 저속에서 소모량이 조금 더 크게 나옵니다.">
+          <input type="checkbox" id="chkFuelDetail" checked onchange="setFuelDetailMode(this.checked)"> 상세 공학 모델 (엔진 부하–SFOC 곡선 · 실측점 보정)
+          <span style="font-size:10px;color:#7ecfff;border:1px solid rgba(126,207,255,0.5);border-radius:50%;width:13px;height:13px;line-height:12px;text-align:center;flex-shrink:0">i</span>
+        </label>
+        <div id="fuelDetailInputs" style="display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;margin:4px 0 0 18px">
+          P<sub>MCR</sub>
+          <input type="number" step="10" min="1" value="22600" onchange="setFuelInput('pmcr', this.value)" style="width:62px" title="주기관 총 출력(kW) — 산타모니카호 운항관리규정 제17조: 5,650kW × 4 = 22,600kW (Incat: Caterpillar C280-16 ×4, 각 5,650kW @100% MCR)"> kW ·
+          V<sub>MCR</sub>
+          <input type="number" step="0.1" min="1" value="47.3" onchange="setFuelInput('vmcr', this.value)" style="width:52px" title="100% MCR에서의 속력(노트) — Incat 공식: 서비스 속력 47.3kn(재화중량 100t), 시운전 최고 49.7kn, 계약속력 42kn(100t). 재화중량이 늘면 이 값을 낮추면 됨"> kn ·
+          n
+          <input type="number" step="0.1" min="2" max="4" value="3" onchange="setFuelInput('expN', this.value)" style="width:44px" title="속력–출력 지수 (P ∝ vⁿ). 프로펠러 법칙 기본 3.0. 워터젯 고속선은 저속에서 제트 효율이 떨어져 3.0~3.3 정도를 씀"> ·
+          <span title="45노트 실측 4,260ℓ/h ÷ 모델 계산값. 1.0에서 멀수록 모델 가정(V_MCR, n, 밀도)과 실측이 어긋난다는 뜻">보정계수 k = <b id="fuelDetailK" style="color:#ffcc44">—</b></span>
+        </div>
+        <div style="margin-top:4px" id="fuelSpecReadout" title="현재 순항속도에서의 환산 결과">
+          현재 순항속도 <b id="fuelSpecCurKts" style="color:#ffcc44">—</b>kts → 주기관 <b id="fuelSpecCurLph" style="color:#ffcc44">—</b> ℓ/h
+          <span id="fuelDetailReadout" style="color:#88aabb"></span> · 발전기는 항해+경유정박+회항대기 시간 전체에 가산
+        </div>
+        <table id="fuelSpeedTable" style="border-collapse:collapse;font-size:9px;margin-top:4px;color:#aac8e8" title="속력별 환산표 — 현재 모델(단순/상세) 기준"></table>
+        <div style="margin-top:4px;font-size:9px;color:#667788">
+          <i data-ic="link"></i> 출처:
+          <a href="산타모니카운항관리규정.pdf#page=16" target="_blank" rel="noopener" style="color:#7ecfff" title="산타모니카호 운항관리규정 제7장 제17조(여객선 제원 및 운항구역) 11쪽 — 기관출력 5,650kW×4=22,600kW · 항해속도 42노트 · 총톤수 3,321톤">운항관리규정 제17조</a> ·
+          <a href="https://incat.com.au/incat-tasmania-redefines-mid-sized-high-speed-craft-with-76-metre-catamaran-for-south-korea/" target="_blank" rel="noopener" style="color:#7ecfff" title="Incat Tasmania — Santa Monica 1: 4× Caterpillar C280-16 (5,650kW @100% MCR), Kongsberg Kamewa S90-4 워터젯, 4× Cat C7.1 200ekW 발전기, 서비스 47.3kn @100t DWT, 시운전 49.7kn, 계약속력 42kn">Incat 제원</a> ·
+          <a href="https://www.stuartgroup.co.uk/media/generators/products/589/files/C28016-Datasheet.pdf" target="_blank" rel="noopener" style="color:#7ecfff" title="Cat C280-16 (5,420bkW @1000rpm) 데이터시트 — FUEL CONSUMPTION (ISO 3046/1): 110% 191.0 · 100% 193.6 · 75% 203.5 · 50% 214.8 g/bkW-h (허용오차 0~+5%)">Cat C280-16 SFOC</a> ·
+          <a href="https://www.cat.com/en_US/products/new/power-systems/marine-power-systems/commercial-propulsion-engines/18397696.html" target="_blank" rel="noopener" style="color:#7ecfff" title="Caterpillar 공식 C280-16 상용 추진엔진 페이지 — V16 · 보어 280mm × 행정 300mm · 배기량 296L · 4,600~5,650bkW @900~1,000rpm (최대 6,000bkW 등급)">Cat C280-16 제품페이지</a>
+        </div>
+      </div>
       <div style="display:flex;align-items:center;gap:8px;font-size:10px;color:#aac8e8;margin-bottom:2px">
         기타운항비용(인건비·정비·항비 등, 연료비의 %)
         <input type="number" step="1" min="0" max="100" value="23" onchange="setFuelInput('otherPctMin', this.value)" style="width:52px">
@@ -1663,7 +1713,7 @@
       </table>
     </div>
 
-    <div style="font-size:9px;color:#667788;margin-top:2px">※ 엘도라도 익스프레스호는 실측 기준선이라 공학적 세팅 보정과 무관하게 항상 그대로 적용됩니다.</div>
+    <div style="font-size:9px;color:#667788;margin-top:2px">※ 엘도라도 익스프레스호는 실측 기준선이라 공학적 세팅 보정·제원 기반 환산과 무관하게 항상 그대로 적용됩니다.</div>
 
   </div><!-- /.simTabContent3 -->
   </div><!-- /#simScenariosSection -->
@@ -4948,6 +4998,8 @@ function rebuildSim() {
   _updateCmpCard();
   const sm2Disp = document.getElementById('sm2KtsDisp');
   if (sm2Disp) sm2Disp.textContent = simSMkts;
+  // 순항속도·경유정박·회항대기가 바뀌면 제원 기반 연료 환산도 따라 바뀌므로 연료비 탭 갱신
+  if (typeof _updateFuelCostTab === 'function') _updateFuelCostTab();
 }
 
 function applySimSpeeds() {
@@ -5486,6 +5538,46 @@ let fuelEldoradoKgPerKm = 49.5;
 let fuelLsmgoUsdPerMt = 1400.0;
 let fuelUsdKrwRate = 1343;
 let fuelUseEngSetting = false;
+// 산타모니카호 제원 기반(시간당 소모율) 모드 — 운항시뮬레이션 분석 자료:
+//   주기관 45kts 4,260ℓ/h, 발전기 28.7ℓ/h(1일 0.59톤, 속력 무관). 현재 순항속도(simSMkts)로는
+//   프로펠러 법칙(연료 ∝ 속력³)으로 환산: 4,260 × (v/45)³. 질량 환산은 LSMGO 밀도 0.86 kg/ℓ.
+let fuelUseSpecMode = false;
+let fuelSpecKts = 45;      // 제원 기준 속력(kts)
+let fuelSpecLph = 4260;    // 기준 속력에서의 주기관 소모율(ℓ/h)
+let fuelGenLph  = 28.7;    // 발전기 소모율(ℓ/h) — 항해·정박 전체 시간에 가산
+const FUEL_LSMGO_KG_PER_L = 0.86;
+// ── 상세 공학 모델 ──
+// ① P(v) = P_MCR × (v/V_MCR)^n   ② 부하 = P/P_MCR → SFOC(g/kWh) 보간   ③ 연료 = P×SFOC/밀도 × k
+// k 는 45노트 실측 4,260ℓ/h 를 모델이 정확히 지나도록 하는 보정계수.
+let fuelUseDetail = true;
+let fuelPmcr = 22600;   // kW — 운항관리규정 제17조: 5,650kW × 4 (Caterpillar C280-16, Incat)
+let fuelVmcr = 47.3;    // kn — Incat: 서비스 속력 47.3kn @100t DWT (시운전 최고 49.7kn)
+let fuelExpN = 3.0;     // 속력-출력 지수
+// Cat C280-16 데이터시트(ISO 3046/1) 부하별 SFOC. 50% 미만은 50→75% 기울기로 외삽.
+const FUEL_SFOC_CURVE = [[0.50, 214.8], [0.75, 203.5], [1.00, 193.6], [1.10, 191.0]];
+function _fuelSfoc(load) {
+  const c = FUEL_SFOC_CURVE;
+  if (load <= c[0][0]) { const s = (c[1][1]-c[0][1])/(c[1][0]-c[0][0]); return c[0][1] + (load - c[0][0]) * s; }
+  for (let i = 1; i < c.length; i++) {
+    if (load <= c[i][0]) { const f = (load - c[i-1][0]) / (c[i][0] - c[i-1][0]); return c[i-1][1] + f * (c[i][1] - c[i-1][1]); }
+  }
+  return c[c.length-1][1];
+}
+// 보정 전 모델 ℓ/h (주기관 합계)
+function _fuelModelRawLph(kts) {
+  const P = fuelPmcr * Math.pow(kts / fuelVmcr, fuelExpN);
+  return P * _fuelSfoc(P / fuelPmcr) / 1000 / FUEL_LSMGO_KG_PER_L;
+}
+function _fuelDetailK() { const raw = _fuelModelRawLph(fuelSpecKts); return raw > 0 ? fuelSpecLph / raw : 1; }
+function _fuelSpecMainLph(kts) {
+  if (!fuelUseDetail) return fuelSpecLph * Math.pow(kts / fuelSpecKts, 3);
+  return _fuelModelRawLph(kts) * _fuelDetailK();
+}
+function _fuelDetailInfo(kts) {
+  const P = fuelPmcr * Math.pow(kts / fuelVmcr, fuelExpN);
+  const load = P / fuelPmcr;
+  return { P, load, sfoc: _fuelSfoc(load), k: _fuelDetailK() };
+}
 // 기타운항비용(인건비·정비·항비 등) — 연료비 대비 %. 엘도라도호·산타모니카(경유·직항) 셋 다 공용.
 let fuelOtherPctMin = 23;
 let fuelOtherPctMax = 25;
@@ -5507,10 +5599,31 @@ function setFuelInput(field, value) {
   else if (field === 'krwRate') fuelUsdKrwRate = v;
   else if (field === 'otherPctMin') fuelOtherPctMin = v;
   else if (field === 'otherPctMax') fuelOtherPctMax = v;
+  else if (field === 'specKts' && v > 0) fuelSpecKts = v;
+  else if (field === 'specLph') fuelSpecLph = v;
+  else if (field === 'genLph')  fuelGenLph = v;
+  else if (field === 'pmcr' && v > 0) fuelPmcr = v;
+  else if (field === 'vmcr' && v > 0) fuelVmcr = v;
+  else if (field === 'expN' && v > 0) fuelExpN = v;
+  _updateFuelCostTab();
+}
+function setFuelDetailMode(checked) {
+  fuelUseDetail = checked;
+  const box = document.getElementById('fuelDetailInputs');
+  if (box) box.style.opacity = checked ? 1 : 0.4;
   _updateFuelCostTab();
 }
 function setFuelEngSetting(checked) {
   fuelUseEngSetting = checked;
+  _updateFuelCostTab();
+}
+function setFuelSpecMode(checked) {
+  fuelUseSpecMode = checked;
+  const box = document.getElementById('fuelSpecInputs');
+  if (box) box.style.display = checked ? 'block' : 'none';
+  // 제원 기반 모드가 켜지면 공학적 세팅 보정은 산타모니카호에 적용되지 않으므로 흐리게 표시
+  const eng = document.getElementById('chkFuelEng');
+  if (eng) { eng.disabled = checked; eng.parentElement.style.opacity = checked ? 0.45 : 1; }
   _updateFuelCostTab();
 }
 // fuel_price.json (GitHub Actions 자동 갱신) 로드 — LSMGO 단가를 입력란에 반영
@@ -5591,9 +5704,22 @@ async function fetchLiveFuelPrice() {
 // 왕복거리(km) 기준 연료소모량(톤)·비용(원)을 min~max로 계산해 숫자 그대로 돌려준다(단일값이면
 // min===max) — 여기서 문자열로 포맷하지 않는 건, 기타운항비용을 더한 합계까지 마저 계산한 뒤
 // 한꺼번에 표시 문자열을 만들기 위함이다.
-function _fuelEstimate(roundTripKm, isSM) {
+// nonSailMinRT: 왕복 중 항해하지 않는 시간(분) — 경유 정박·회항 대기. 제원 기반 모드에서
+// 발전기 소모를 항해시간+이 시간에 가산하는 데만 쓰인다(엘도라도호·kg/km 모드에서는 무시).
+function _fuelEstimate(roundTripKm, isSM, nonSailMinRT) {
   const krwPerKg = (fuelLsmgoUsdPerMt / 1000) * fuelUsdKrwRate;
   let rateLo, rateHi, rateLabel;
+  if (isSM && fuelUseSpecMode) {
+    const v = simSMkts;
+    const mainLph = _fuelSpecMainLph(v);
+    const sailH  = roundTripKm / (v * 1.852);
+    const totalH = sailH + (nonSailMinRT || 0) / 60;
+    const liters = mainLph * sailH + fuelGenLph * totalH;
+    const kg = liters * FUEL_LSMGO_KG_PER_L;
+    const ton = kg / 1000, cost = kg * krwPerKg;
+    const rateLabelSpec = `${v}kts 환산 주기관 ${Math.round(mainLph).toLocaleString()}ℓ/h×${sailH.toFixed(1)}h + 발전기 ${fuelGenLph}ℓ/h×${totalH.toFixed(1)}h = ${Math.round(liters).toLocaleString()}ℓ (제원 기반 · ${fuelUseDetail ? '상세 공학 모델' : '단순 세제곱'})`;
+    return { rateLabel: rateLabelSpec, tonLo: ton, tonHi: ton, costLo: cost, costHi: cost };
+  }
   if (isSM && fuelUseEngSetting) {
     rateLo = fuelEldoradoKgPerKm * 0.80; rateHi = fuelEldoradoKgPerKm * 0.85;
     rateLabel = `${rateLo.toFixed(1)}~${rateHi.toFixed(1)} kg/km (공학적 세팅)`;
@@ -5637,9 +5763,34 @@ function _updateFuelCostTab() {
     setPair('Other', otherLo, otherHi, _fmtWon);
     setPair('Total', totalLo, totalHi, _fmtWon);
   };
+  // 제원 기반 모드 표시(현재 순항속도 환산 주기관 ℓ/h)
+  if (el('fuelSpecCurKts')) el('fuelSpecCurKts').textContent = simSMkts;
+  if (el('fuelSpecCurLph')) el('fuelSpecCurLph').textContent = Math.round(_fuelSpecMainLph(simSMkts)).toLocaleString();
+  if (el('fuelDetailK')) el('fuelDetailK').textContent = _fuelDetailK().toFixed(3);
+  if (el('fuelDetailReadout')) {
+    if (fuelUseDetail) {
+      const d = _fuelDetailInfo(simSMkts);
+      el('fuelDetailReadout').textContent =
+        `(출력 ${Math.round(d.P).toLocaleString()}kW · 부하 ${(d.load*100).toFixed(0)}% · SFOC ${d.sfoc.toFixed(1)}g/kWh · ×k ${d.k.toFixed(3)})`;
+    } else {
+      el('fuelDetailReadout').textContent = `(= ${fuelSpecLph.toLocaleString()} × (${simSMkts}/${fuelSpecKts})³ 단순 세제곱)`;
+    }
+  }
+  if (el('fuelSpeedTable')) {
+    const speeds = [36, 38, 40, 42, 44, 45, 47];
+    const cube = kts => fuelSpecLph * Math.pow(kts / fuelSpecKts, 3);
+    let h = '<tr style="color:#7ecfff"><td style="padding:1px 5px">속력(kn)</td>' + speeds.map(v => `<td style="padding:1px 5px;text-align:right${v===simSMkts?';color:#ffcc44;font-weight:700':''}">${v}</td>`).join('') + '</tr>';
+    h += '<tr><td style="padding:1px 5px">단순 세제곱 ℓ/h</td>' + speeds.map(v => `<td style="padding:1px 5px;text-align:right">${Math.round(cube(v)).toLocaleString()}</td>`).join('') + '</tr>';
+    h += '<tr><td style="padding:1px 5px">상세 모델 ℓ/h</td>' + speeds.map(v => `<td style="padding:1px 5px;text-align:right${v===simSMkts?';color:#ffcc44;font-weight:700':''}">${Math.round(_fuelModelRawLph(v)*_fuelDetailK()).toLocaleString()}</td>`).join('') + '</tr>';
+    h += '<tr style="color:#667788"><td style="padding:1px 5px">부하 %</td>' + speeds.map(v => `<td style="padding:1px 5px;text-align:right">${Math.round(_fuelDetailInfo(v).load*100)}</td>`).join('') + '</tr>';
+    el('fuelSpeedTable').innerHTML = h;
+  }
+  // 비항해 시간(왕복): 경유 항로는 히타카츠 정박 2회 + 하카타 회항 대기, 직항은 회항 대기만
+  const smViaNonSail    = SIM_STOP_MIN * 2 + simSMTurnMin;
+  const smDirectNonSail = simSMTurnMin;
   fill('fcEldo', _fuelEstimate(eldoRT, false), eldoRT);
-  fill('fcSmVia', _fuelEstimate(smViaRT, true), smViaRT);
-  fill('fcSmDirect', _fuelEstimate(smDirectRT, true), smDirectRT);
+  fill('fcSmVia', _fuelEstimate(smViaRT, true, smViaNonSail), smViaRT);
+  fill('fcSmDirect', _fuelEstimate(smDirectRT, true, smDirectNonSail), smDirectRT);
 }
 
 // ════════════════════════════════════════════════════
