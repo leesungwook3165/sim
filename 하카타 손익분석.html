@@ -1,0 +1,2198 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>하카타 항로 손익분석 — 대저페리 실적 기준</title>
+<style>
+  :root{
+    --navy:#154B8C; --sky:#5BA3D9; --ink:#17202B; --muted:#5C6B7F;
+    --rule:#D7DFE9; --canvas:#EDF1F6; --paper:#FFFFFF; --warn:#A8392F;
+    --good:#1C6B4A; --soft:#E8F1F9; --head:#F6F9FC; --amber:#8A5A12;
+    --amberbg:#FBF0DC;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--canvas)}
+  body{
+    font-family:'Pretendard GOV','Pretendard',-apple-system,'Malgun Gothic',sans-serif;
+    color:var(--ink); font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased;
+  }
+  #stage{max-width:1680px;margin:0 auto;padding:22px;display:flex;flex-direction:column;gap:14px}
+
+  .card{background:var(--paper);border:1px solid var(--rule);border-radius:4px;
+        display:flex;flex-direction:column;min-width:0}
+  .card>h2{
+    font-size:12.5px;font-weight:700;margin:0;padding:11px 15px 8px;color:var(--navy);
+    border-bottom:2px solid var(--navy);letter-spacing:-.01em;flex:none;
+    display:flex;justify-content:space-between;align-items:baseline;gap:8px;
+  }
+  .card>h2 em{font-style:normal;font-weight:400;font-size:11px;color:var(--muted)}
+  .card.flag>h2{color:var(--amber);border-bottom-color:var(--amber)}
+  .body{padding:12px 15px;flex:1;min-width:0;overflow-x:auto}
+
+  /* ── 제목 ── */
+  #head{flex:none;background:var(--navy);color:#fff;border-radius:4px;padding:16px 24px;
+        display:flex;justify-content:space-between;align-items:center;gap:26px;flex-wrap:wrap}
+  #head h1{font-size:21px;font-weight:700;margin:0 0 3px;letter-spacing:-.015em}
+  #head p{margin:0;font-size:12px;color:#C3D8EF}
+  .heads{display:flex;gap:22px;flex-wrap:wrap}
+  .hkpi{text-align:right;min-width:116px}
+  .hkpi+.hkpi{border-left:1px solid rgba(255,255,255,.25);padding-left:22px}
+  .hkpi .t{font-size:11px;color:#9FC2E4;display:block;margin-bottom:2px}
+  .hkpi .v{font-size:28px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.025em}
+  .hkpi .v small{font-size:13px;font-weight:600;margin-left:1px}
+  .hkpi .s{font-size:10.5px;color:#C3D8EF;margin-top:4px;font-variant-numeric:tabular-nums}
+
+  /* ── 배치 ── */
+  #row{display:grid;grid-template-columns:clamp(330px,23%,420px) 1fr;gap:14px;min-width:0;align-items:start}
+  #right{display:flex;flex-direction:column;gap:14px;min-width:0}
+  .pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;min-width:0;align-items:start}
+  @media (max-width:1100px){ #row{grid-template-columns:1fr} .pair{grid-template-columns:1fr} }
+
+  /* ── 입력 ── */
+  .sec{grid-column:1/-1;font-size:11px;font-weight:700;color:var(--muted);
+       margin:11px 0 1px;padding-bottom:3px;border-bottom:1px solid var(--rule)}
+  .sec:first-child{margin-top:0}
+  .fields{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px}
+  .f.wide{grid-column:1/-1}
+  .f label{font-size:11.5px;color:var(--muted);display:block;margin-bottom:2px}
+  .ib{display:flex;align-items:center;background:#fff;border:1px solid var(--rule);
+      border-radius:3px;padding:0 7px}
+  .ib:focus-within{border-color:var(--navy);box-shadow:0 0 0 2px rgba(21,75,140,.12)}
+  .ib input{border:0;outline:0;width:100%;min-width:0;padding:5px 0;background:transparent;
+    font-family:inherit;font-size:13px;font-weight:700;color:var(--navy);
+    text-align:right;font-variant-numeric:tabular-nums}
+  .ib .u{font-size:10.5px;color:var(--muted);margin-left:4px;white-space:nowrap;flex:none}
+  .fh{font-size:10.5px;color:var(--muted);margin-top:2px;line-height:1.4}
+  .fh b{color:var(--navy);font-weight:600;font-variant-numeric:tabular-nums}
+  .chk{display:flex;align-items:flex-start;gap:7px;font-size:11.5px;color:var(--ink);
+       cursor:pointer;padding:7px 9px;background:var(--amberbg);border-radius:3px;line-height:1.45}
+  .chk input{margin:2px 0 0;flex:none;accent-color:var(--amber)}
+  .btn{margin-top:9px;width:100%;padding:7px;background:#fff;border:1px solid var(--rule);
+    border-radius:3px;font-family:inherit;font-size:12px;color:var(--muted);cursor:pointer}
+  .btn:hover{border-color:var(--navy);color:var(--navy)}
+  .btn:focus-visible{outline:2px solid var(--sky);outline-offset:2px}
+
+  /* ── 지표 ── */
+  .minis{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--rule);
+    border:1px solid var(--rule);border-radius:3px;overflow:hidden;margin-bottom:10px}
+  .minis.c3{grid-template-columns:1fr 1fr 1fr}
+  .mini{background:var(--soft);padding:8px 11px}
+  .mini.warnbg{background:var(--amberbg)}
+  .mini .k{font-size:11px;color:var(--muted);margin-bottom:1px}
+  .mini .v{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;line-height:1.2;color:var(--navy)}
+  .mini .v small{font-size:11px;font-weight:600;margin-left:2px;color:var(--muted)}
+  .mini .s{font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:2px}
+  .neg{color:var(--warn)!important}
+  .pos{color:var(--good)!important}
+  .amb{color:var(--amber)!important}
+
+  /* ── 표 ── */
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th,td{padding:4px 7px;border-bottom:1px solid #EAEFF5;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  th{font-weight:700;color:var(--muted);font-size:11px;background:var(--head);border-bottom:1px solid var(--rule)}
+  th:first-child,td:first-child{text-align:left;font-variant-numeric:normal;white-space:normal}
+  tbody tr:last-child td{border-bottom:0}
+  tr.sum td{font-weight:700;background:var(--head)}
+  tr.lead td{font-weight:700;background:var(--soft);color:var(--navy)}
+  tr.thin td{color:var(--muted)}
+  tr.thin td:first-child{padding-left:18px}
+  tr.flagrow td{background:var(--amberbg);font-weight:700;color:var(--amber)}
+  tr.ck td{background:#F2F7F3;font-size:11px}
+  td.pass{color:var(--good);font-weight:700}
+  td.fail{color:var(--warn);font-weight:700}
+  td.lft{text-align:left;white-space:normal;color:var(--muted);font-variant-numeric:normal}
+
+  /* ── 원본 손익계산서 ── */
+  /* 감사보고서 지면을 그대로 옮긴 표다. 로마숫자 항목은 굵게, 세부 과목은 들여쓰기,
+     음수는 회계 관행대로 괄호, 해당 없는 칸은 하이픈. 여기에는 시뮬레이션 값을
+     섞지 않는다 — 원본과 계산을 같은 표에 두면 어느 쪽이 보고서 값인지 흐려진다. */
+  #plWrap{border:1px solid var(--rule);border-radius:3px;overflow:hidden}
+  table.pl{font-size:12px}
+  table.pl caption{caption-side:top;text-align:left;padding:9px 11px 8px;background:var(--head);
+    border-bottom:1px solid var(--rule);font-size:11px;color:var(--muted);line-height:1.6}
+  table.pl caption b{display:block;font-size:13px;color:var(--ink);font-weight:700;margin-bottom:2px}
+  table.pl caption .unit{float:right;font-weight:600}
+  table.pl th{background:var(--head)}
+  table.pl td,table.pl th{padding:3.5px 11px}
+  table.pl tr.r td{font-weight:700}
+  table.pl tr.r td:first-child{color:var(--navy)}
+  table.pl tr.t td{font-weight:700;background:var(--soft)}
+  table.pl tr.t td:first-child{color:var(--navy)}
+  table.pl tr.d td:first-child{padding-left:30px;color:var(--muted);font-weight:400}
+  table.pl td.nil{color:#A9B6C6}
+  /* 비율 열 — 금액보다 한 톤 죽여서, 읽을 때 금액이 먼저 오게 한다. */
+  table.pl td.rt{color:var(--muted);font-size:11px}
+  table.pl tr.r td.rt,table.pl tr.t td.rt{color:var(--navy);font-weight:700}
+  table.pl td.rtm{color:#8FA3B8;font-size:11px}
+  /* 주석에서 끌어와 채운 행 — 보고서 지면에는 없다. 원본과 섞이지 않게 눕히고 죽인다. */
+  table.pl tr.n td{background:#FAFCFE;color:var(--muted);font-style:italic}
+  table.pl tr.n td:first-child{padding-left:44px;font-style:italic}
+  /* EBITDA 두 줄 — 보고서에 없는 보완 행이라 눕히되, 결론에 해당하므로 죽이지는 않는다. */
+  table.pl tr.e td{background:#F3F9F5;color:var(--muted);font-style:italic}
+  table.pl tr.e td:first-child{padding-left:30px;font-style:italic}
+  table.pl tr.eb td{background:#E4F0E8;color:var(--good);font-weight:700;font-style:italic}
+  table.pl tr.hl td{background:var(--amberbg)}
+  table.pl tr.hl td:first-child{color:var(--amber);font-weight:700}
+
+  .note{font-size:10.5px;color:var(--muted);margin:8px 0 0;line-height:1.55}
+  .note b{color:var(--navy);font-variant-numeric:tabular-nums}
+  .note b.bad{color:var(--warn)}
+  .note b.amb{color:var(--amber)}
+  .note a{color:var(--navy)}
+  .legend{display:flex;gap:11px;flex-wrap:wrap;font-size:10.5px;color:var(--muted);margin-top:6px}
+  .legend span{display:flex;align-items:center;gap:4px}
+  .sw{width:13px;height:3px;border-radius:2px;display:inline-block}
+  .tagv{display:inline-block;font-size:10px;font-weight:700;padding:0 5px;border-radius:8px;
+        background:var(--soft);color:var(--navy);margin-left:5px;vertical-align:1px}
+  .tagv.ok{background:#E4F0E8;color:var(--good)}
+  .tagv.est{background:var(--amberbg);color:var(--amber)}
+  svg{display:block;width:100%;height:auto}
+
+  /* ── 설정 탭 ── */
+  .tabs{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--rule);
+        border:1px solid var(--rule);border-radius:3px;overflow:hidden;margin-bottom:11px}
+  .tab{background:var(--head);border:0;padding:7px 4px;font-family:inherit;font-size:12px;
+       font-weight:700;color:var(--muted);cursor:pointer}
+  .tab.on{background:var(--navy);color:#fff}
+  .tab:focus-visible{outline:2px solid var(--sky);outline-offset:-2px}
+  .ast{color:var(--amber);font-weight:700}
+  .sec.clksec{cursor:pointer;display:flex;align-items:center;gap:5px}
+  .sec.clksec:hover{color:var(--navy)}
+  .sec.clksec:hover .secx{text-decoration:underline;text-underline-offset:2px}
+  .sec .ic{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;
+    border-radius:50%;border:1px solid var(--sky);color:var(--sky);font-size:9px;font-weight:700;
+    line-height:1;flex:none}
+  .sec.clksec:hover .ic{background:var(--sky);color:#fff}
+  .sec.clksec:focus-visible{outline:2px solid var(--sky);outline-offset:2px}
+  .secx{margin-left:auto;font-weight:400;font-size:10px;color:var(--sky)}
+  /* 운임표 — 금액 아래 배율을 작게 깐다 */
+  table.cost{width:100%;border-collapse:collapse;font-size:11px;margin-top:2px}
+  table.cost th{padding:3px 4px;font-size:9.5px}
+  table.cost td{padding:2px 4px;vertical-align:middle}
+  table.cost td:nth-child(2){white-space:normal;line-height:1.35}
+  table.cost input[type=checkbox]{margin:0;accent-color:var(--navy)}
+  table.cost select{border:1px solid var(--rule);border-radius:2px;padding:1px 2px;
+    font-family:inherit;font-size:10.5px;font-weight:700;background:#fff;color:var(--navy)}
+  table.cost select:focus{outline:0;border-color:var(--navy)}
+  table.cost tr.off td{opacity:.42}
+  table.cost tr.off td:nth-child(2){text-decoration:line-through}
+  .kfix{color:var(--muted)} .ksemi{color:var(--amber)} .kvar{color:var(--good)}
+  table.fare td .mul{display:block;font-size:9.5px;color:var(--muted);font-weight:400}
+  table.fare td.free{color:var(--good);font-weight:700}
+  select.shipsel{width:100%;padding:5px 7px;border:1px solid var(--rule);border-radius:3px;
+    font-family:inherit;font-size:12px;font-weight:700;color:var(--navy);background:#fff;
+    margin-bottom:5px}
+  select.shipsel:focus{outline:0;border-color:var(--navy);box-shadow:0 0 0 2px rgba(21,75,140,.12)}
+  .shipbox{background:var(--soft);border:1px solid var(--rule);border-radius:3px;
+    padding:7px 9px;font-size:11px;color:var(--muted);line-height:1.6}
+  .shipbox b{color:var(--navy)}
+  .addrow{display:grid;grid-template-columns:1fr 58px 54px auto;gap:4px;margin-top:5px}
+  .addrow input{border:1px solid var(--rule);border-radius:3px;padding:4px 6px;
+    font-family:inherit;font-size:11.5px;color:var(--navy);background:#fff;min-width:0}
+  .addrow input:focus{outline:0;border-color:var(--navy)}
+  .addrow .lnk{padding:4px 10px}
+  .peerdel{background:transparent;border:0;color:var(--warn);cursor:pointer;font-size:12px;padding:0 4px}
+  .peerdel:hover{text-decoration:underline}
+
+  /* ── 좌석 등급표 ── */
+  table.seat{width:100%;border-collapse:collapse;font-size:11.5px;margin-top:2px}
+  table.seat th{padding:3px 5px;font-size:10px}
+  table.seat td{padding:2px 5px}
+  table.seat input{width:100%;border:1px solid var(--rule);border-radius:2px;padding:2px 4px;
+    font-family:inherit;font-size:11.5px;font-weight:700;color:var(--navy);text-align:right;
+    background:#fff;font-variant-numeric:tabular-nums}
+  table.seat input:focus{outline:0;border-color:var(--navy)}
+
+  /* ── 접이식 손익계산서 ──
+     제3기만 남기고 세부는 접었다. 로마숫자 줄을 누르면 그 아래 과목이 펼쳐진다.
+     100% 배율에서 가정란과 나란히 한 화면에 들어오는 것이 이 표의 조건이다. */
+  table.pl td,table.pl th{padding:2.5px 9px}
+  table.pl tr.r td:first-child{cursor:pointer;user-select:none}
+  table.pl tr.r td:first-child:hover{text-decoration:underline;text-underline-offset:2px}
+  table.pl .caret{display:inline-block;width:9px;color:var(--sky);font-size:9px;
+    transition:transform .12s}
+  table.pl tr.open .caret{transform:rotate(90deg)}
+  .plbar{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:7px}
+  .plbar .lnk{background:#fff;border:1px solid var(--rule);border-radius:3px;padding:4px 9px;
+    font-family:inherit;font-size:11px;color:var(--muted);cursor:pointer}
+  .plbar .lnk:hover{border-color:var(--navy);color:var(--navy)}
+
+  /* ── 근거 팝업 ──
+     카드가 열세 장까지 늘어나 한 화면에 안 들어왔다. 늘 봐야 하는 것만 남기고,
+     1인당 분해처럼 "필요할 때 들춰 보는" 것은 제목을 눌러 열게 옮겼다. */
+  .card>h2.clk{cursor:pointer}
+  .card>h2.clk .tt{display:inline-flex;align-items:center;gap:5px}
+  .card>h2.clk .ic,.hkpi .ic{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:13px;height:13px;border-radius:50%;border:1px solid var(--sky);
+    color:var(--sky);font-size:9px;font-weight:700;line-height:1;flex:none}
+  .card>h2.clk:hover .tt{text-decoration:underline;text-underline-offset:2px}
+  .card>h2.clk:hover .ic{background:var(--sky);color:#fff}
+  .card>h2.clk:focus-visible{outline:2px solid var(--sky);outline-offset:-2px}
+  .hkpi.kclk{cursor:pointer;border-radius:3px}
+  .hkpi.kclk:hover .v{text-decoration:underline;text-underline-offset:3px}
+  .hkpi .ic{border-color:#9FC2E4;color:#9FC2E4}
+  .hkpi.kclk:focus-visible{outline:2px solid #9FC2E4;outline-offset:4px}
+
+  .ov{position:fixed;inset:0;background:rgba(14,32,54,.5);z-index:50;
+      display:none;align-items:center;justify-content:center;padding:28px}
+  .ov[data-open="1"]{display:flex}
+  .modal{background:var(--canvas);border-radius:5px;width:min(1180px,95vw);max-height:92vh;
+         display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(10,26,46,.32)}
+  .modal>header{background:var(--navy);color:#fff;padding:14px 20px;border-radius:5px 5px 0 0;
+    display:flex;justify-content:space-between;align-items:center;gap:16px;flex:none}
+  .modal>header h3{margin:0;font-size:15px;font-weight:700}
+  .modal>header p{margin:2px 0 0;font-size:11.5px;color:#C3D8EF}
+  .modal .x{background:transparent;border:1px solid rgba(255,255,255,.4);color:#fff;
+    width:26px;height:26px;border-radius:3px;cursor:pointer;font-size:14px;line-height:1;flex:none}
+  .modal .x:hover{background:rgba(255,255,255,.15)}
+  .mbody{padding:14px;overflow:auto;display:flex;flex-direction:column;gap:14px}
+  .mbody::-webkit-scrollbar{width:8px}
+  .mbody::-webkit-scrollbar-thumb{background:var(--rule);border-radius:4px}
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <div id="head">
+    <div>
+      <h1>하카타 항로 손익분석</h1>
+      <p>대저페리 감사보고서(제3기·2024) 손익계산서를 원본 그대로 싣고, 그 위에 1인당 인건비·지급수수료·목표 영업이익률 분석을 얹는다</p>
+    </div>
+    <div class="heads">
+      <div class="hkpi">
+        <span class="t">실적 영업손익</span>
+        <div class="v neg" id="kActOp">—</div>
+        <div class="s" id="kActOpS">—</div>
+      </div>
+      <div class="hkpi">
+        <span class="t">실적 EBITDA</span>
+        <div class="v pos" id="kEb">—</div>
+        <div class="s" id="kEbS">—</div>
+      </div>
+      <div class="hkpi kclk" data-modal="ovLabor" role="button" tabindex="0" aria-haspopup="dialog"
+           title="누르면 과목별 1인당 분해">
+        <span class="t">1인당 인건비 <span class="ic">?</span></span>
+        <div class="v" id="kHead">—</div>
+        <div class="s" id="kHeadS">—</div>
+      </div>
+      <div class="hkpi">
+        <span class="t">손익분기 승객수</span>
+        <div class="v" id="kBep">—</div>
+        <div class="s" id="kBepS">—</div>
+      </div>
+      <div class="hkpi">
+        <span class="t">목표 달성 승객수</span>
+        <div class="v" id="kTgt">—</div>
+        <div class="s" id="kTgtS">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="row">
+
+    <!-- ══ 좌: 가정 입력 ══ -->
+    <section class="card">
+      <h2>설정<em>보고서 수치는 고정, 파란 값만 조정</em></h2>
+      <div class="body">
+        <div class="tabs">
+          <button type="button" class="tab on" data-tab="tabA">가정</button>
+          <button type="button" class="tab"    data-tab="tabB">목표기반 설정</button>
+        </div>
+
+        <!-- ── 탭 A · 가정 ──
+             감사보고서의 원가 구조를 세우는 칸이다. 실적의 주인인 엘도라도호가
+             참조 선박으로 고정돼 있고, 비교해 볼 배는 여기서 등록만 한다. -->
+        <div class="tabp" id="tabA">
+          <div class="fields">
+
+            <div class="sec">참조 선박 — 실적의 주인</div>
+            <div class="f wide">
+              <select id="iBase" class="shipsel"></select>
+              <div class="shipbox" id="hShip">—</div>
+            </div>
+
+            <div class="sec">인력</div>
+            <div class="f">
+              <label>지상직 (판관비)</label>
+              <div class="ib"><input type="text" inputmode="numeric" id="iHead" value="30"><span class="u">명</span></div>
+            </div>
+            <div class="f">
+              <label>선원 <span class="ast">가정</span></label>
+              <div class="ib"><input type="text" inputmode="numeric" id="iSailor" value="13"><span class="u">명</span></div>
+            </div>
+            <div class="f">
+              <label>승무원 <span class="ast">가정</span></label>
+              <div class="ib"><input type="text" inputmode="numeric" id="iCrew" value="7"><span class="u">명</span></div>
+            </div>
+            <div class="f">
+              <label>연간 편도 항차수 <span class="ast">가정</span></label>
+              <div class="ib"><input type="text" inputmode="numeric" id="iVoy" value="600"><span class="u">항차</span></div>
+            </div>
+            <div class="f wide">
+              <div class="fh">지상직 1인당 <b id="hPerHead">—</b> (월 <b id="hPerMon">—</b>) ·
+                운항 <b id="hOpHead">—</b> 1인당 <b id="hOpPer">—</b> (<b id="hOpRatio">—</b>)</div>
+            </div>
+
+            <div class="sec clksec" data-modal="ovFare" role="button" tabindex="0" aria-haspopup="dialog">
+              좌석 등급 — 이코노미 운임 배율 <span class="ic">?</span>
+              <span class="secx">누르면 실제 운임표</span>
+            </div>
+            <div class="f">
+              <label>이코노미 대인 편도 운임 (기준)</label>
+              <div class="ib"><input type="text" inputmode="numeric" id="iFare" value="81000"><span class="u">원</span></div>
+            </div>
+            <div class="f">
+              <label>유류할증료 <span class="ast">미공시</span></label>
+              <div class="ib"><input type="text" inputmode="numeric" id="iFuel" value="0"><span class="u">원</span></div>
+            </div>
+            <div class="f wide">
+              <table class="seat"><thead><tr>
+                <th>등급</th><th>배율</th><th>운임</th><th>구성비</th>
+              </tr></thead><tbody id="tSeat"></tbody></table>
+              <div class="fh" id="hSeat">—</div>
+            </div>
+
+            <div class="sec clksec" data-modal="ovCost" role="button" tabindex="0" aria-haspopup="dialog">
+              원가 구성 — 고정 · 준변동 · 변동 <span class="ic">?</span>
+              <span class="secx">누르면 원가 구조</span>
+            </div>
+            <div class="f wide">
+              <table class="cost"><thead><tr>
+                <th title="계산에 넣을지">쓰기</th><th>항목</th><th>금액</th><th>성격</th>
+              </tr></thead><tbody id="tCostMix"></tbody></table>
+              <div class="fh" id="hCostMix">—</div>
+            </div>
+            <div class="f wide">
+              <label class="chk">
+                <input type="checkbox" id="iAutoVoy">
+                <span>승객이 정원을 넘으면 <b>항차를 늘려</b> 준변동비를 올린다<br>
+                  <span style="color:var(--muted)">준변동비는 승객이 아니라 항차에 붙는다 —
+                    배를 더 띄워야 비로소 늘어난다</span></span>
+              </label>
+            </div>
+            <div class="f">
+              <label>승객 1인당 추가 변동비</label>
+              <div class="ib"><input type="text" inputmode="numeric" id="iVc" value="0"><span class="u">원</span></div>
+            </div>
+            <div class="f">
+              <label>목표 영업이익률</label>
+              <div class="ib"><input type="text" inputmode="decimal" id="iTgt" value="5"><span class="u">%</span></div>
+            </div>
+
+            <div class="sec">시뮬레이션 승객수</div>
+            <div class="f wide">
+              <label>연간 승객수</label>
+              <div class="ib"><input type="text" inputmode="numeric" id="iPax" value="130555"><span class="u">명</span></div>
+              <div class="fh">실적 역산 = 여객수입 <b>12,813,966,995</b>원 ÷ 평균운임 = <b id="hPaxAct">—</b><br>
+                참조 선박 승선율 <b id="hLoad">—</b> · 항차당 <b id="hPerVoy">—</b></div>
+            </div>
+          </div>
+
+          <button type="button" class="btn" id="btnPax">승객수를 실적 역산값으로</button>
+          <button type="button" class="btn" id="btnTgt">승객수를 목표 달성값으로</button>
+        </div>
+
+        <!-- ── 탭 B · 목표기반 설정 ──
+             가정 탭에서 세운 원가 구조를 다른 배에 얹어 본다. 배가 바뀌면 정원이
+             바뀌고, 같은 승객수라도 요구 승선율이 달라진다. 손익 금액은 그대로다. -->
+        <div class="tabp" id="tabB" hidden>
+          <div class="fields">
+            <div class="sec">대조 선박</div>
+            <div class="f wide">
+              <select id="iPeer" class="shipsel"></select>
+              <div class="fh" id="hPeer">—</div>
+            </div>
+            <div class="f wide">
+              <table class="seat"><thead><tr>
+                <th>구분</th><th>참조 · 엘도라도</th><th>대조 선박</th>
+              </tr></thead><tbody id="tCmpShip"></tbody></table>
+              <div class="fh" id="hCmpShip">—</div>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" class="btn" id="btnReset">감사보고서 기준안으로 되돌리기</button>
+      </div>
+    </section>
+
+    <!-- ══ 우 ══ -->
+    <div id="right">
+
+      <!-- ══ ① 원본 손익계산서 ══ -->
+      <section class="card">
+        <h2 class="clk" data-modal="ovRef" role="button" tabindex="0" aria-haspopup="dialog"><span class="tt">손익계산서 — 감사보고서 원본<span class="ic">?</span></span><em>제목을 누르면 주석 대조·검산</em></h2>
+        <div class="body">
+          <div class="plbar">
+            <button type="button" class="lnk" id="btnPlAll">모두 펼치기</button>
+            <button type="button" class="lnk" data-modal="ovPrev">전기 비교 (제 2 기) ▸</button>
+          </div>
+          <div id="plWrap">
+            <table class="pl">
+              <caption>
+                <span class="unit">(단위 : 원)</span>
+                <b>손 익 계 산 서</b>
+                제 3 기 2024년 1월 1일부터 2024년 12월 31일까지 · 주식회사 대저페리
+              </caption>
+              <thead><tr>
+                <th>과 목</th><th>금액</th><th>구성비</th><th>매출 대비</th>
+              </tr></thead>
+              <tbody id="tPL"></tbody>
+            </table>
+          </div>
+          <p class="note" id="plNote">—</p>
+        </div>
+      </section>
+
+                              <div class="pair">
+        <!-- ══ ⑤ 시뮬레이션 손익 요약 ══ -->
+        <section class="card">
+          <h2 class="clk" data-modal="ovLabor" role="button" tabindex="0" aria-haspopup="dialog"><span class="tt">시뮬레이션 손익 요약<span class="ic">?</span></span><em id="simCap">—</em></h2>
+          <div class="body">
+            <table>
+              <thead><tr><th>구분</th><th>실적 2024</th><th>시뮬레이션</th><th>차이</th></tr></thead>
+              <tbody id="tSim"></tbody>
+            </table>
+            <p class="note">
+              원본 손익계산서는 그대로 두고, 매출액을 <b>승객수 × 운임 + 화물·임대수입</b>으로,
+              판관비 급여영역을 <b>직원 수 × 1인당 인건비</b>로 다시 세운 결과만 여기에 따로 적는다.
+              영업외손익(이자비용 <b>4,009</b>백만원)은 항로 운영이 아니라 선박금융에서 나오는
+              비용이라 손대지 않았다 — 그래서 아래 당기순손익 줄의 차이는 영업이익 차이와 같다.
+            </p>
+          </div>
+        </section>
+
+        <!-- ══ ⑥ 목표 달성 지표 ══ -->
+        <section class="card">
+          <h2 class="clk" data-modal="ovCost" role="button" tabindex="0" aria-haspopup="dialog"><span class="tt">목표 영업이익률 도달 지표<span class="ic">?</span></span><em id="tgtCap">—</em></h2>
+          <div class="body">
+            <div class="minis">
+              <div class="mini"><div class="k">필요 승객수</div><div class="v" id="mQ">—</div><div class="s" id="mQs">—</div></div>
+              <div class="mini"><div class="k">필요 운임</div><div class="v" id="mP">—</div><div class="s" id="mPs">—</div></div>
+              <div class="mini"><div class="k">필요 매출액</div><div class="v" id="mS">—</div><div class="s" id="mSs">—</div></div>
+              <div class="mini"><div class="k">허용 총비용</div><div class="v" id="mC">—</div><div class="s" id="mCs">—</div></div>
+            </div>
+            <table>
+              <thead><tr><th>목표 영업이익률</th><th>필요 승객수</th><th>실적 대비</th><th>필요 운임</th><th>항차당</th></tr></thead>
+              <tbody id="tTgt"></tbody>
+            </table>
+            <p class="note" id="tgtNote">—</p>
+          </div>
+        </section>
+      </div>
+
+      <!-- ══ 목표별 원가 비중 ══ -->
+      <section class="card">
+        <h2>목표 영업이익률별 원가 비중<em>매출액 대비 — 목표를 만족하려면 원가가 매출의 몇 %여야 하는가</em></h2>
+        <div class="body">
+          <table>
+            <thead><tr>
+              <th>구분</th><th>매출액</th><th>운항원가</th><th>운항원가율</th>
+              <th>판관비</th><th>판관비율</th><th>전사 인건비율</th><th>영업이익률</th>
+            </tr></thead>
+            <tbody id="tRatio"></tbody>
+          </table>
+          <p class="note" id="ratioNote">—</p>
+        </div>
+      </section>
+
+      <!-- ══ ⑦ CVP ══ -->
+      <section class="card">
+        <h2>승객수–손익 구조<em>가로축 승객수, 세로축 금액(백만원)</em></h2>
+        <div class="body">
+          <div id="cvp"></div>
+          <div class="legend">
+            <span><i class="sw" style="background:#154B8C"></i> 매출액</span>
+            <span><i class="sw" style="background:#A8392F"></i> 총비용</span>
+            <span><i class="sw" style="background:#1C6B4A"></i> 손익분기점</span>
+            <span><i class="sw" style="background:#8A5A12"></i> 목표 도달점</span>
+            <span><i class="sw" style="background:#5BA3D9"></i> 실적 위치</span>
+          </div>
+        </div>
+      </section>
+      <!-- ══ ⑨ 출처 ══ -->
+      <section class="card">
+        <h2>자료 출처와 한계</h2>
+        <div class="body">
+          <p class="note" style="margin-top:0">
+            <b>재무수치</b> — 주식회사 대저페리 제3기(2024.01.01~2024.12.31) 감사보고서, 신한회계법인,
+            2025.03.31. 전자공시시스템(DART) 공시본. 위 원본 손익계산서는 보고서 지면의
+            과목·순서·금액을 그대로 옮긴 것이며, 주석 7·15·18·19를 함께 사용했다.
+            해당 보고서는 <b class="bad">의견거절</b>이며, 근거는 누적손실 11,816백만원·완전자본잠식
+            (자본총계 △1,817백만원)·2025.02.20 부산회생법원 회생절차 개시결정에 따른 계속기업
+            불확실성이다. 즉 이 숫자들은 감사인이 적정성을 확인해 준 값이 아니라 회사가 작성한 값이다.
+            전기(2023) 재무제표는 <b class="bad">감사받지 않았다</b> — 전기 비교수치는 그 점을 감안해 읽어야 한다.
+          </p>
+          <p class="note">
+            <b>운임</b> — 대저페리 공식 운임안내(<a href="https://www.daezer.com/departure/departure-charge.html" target="_blank" rel="noopener">daezer.com</a>).
+            포항↔울릉 엘도라도 익스프레스호 이코노미 대인 편도 정상 81,000원 / 할증 88,950원,
+            4~10월 월·화·수·목(공휴일 제외) 기준. 유류할증료 별도·터미널이용료 포함.
+            중고생·군인·유공자 73,050원, 경로·장애경증 65,100원, 소아 40,500원 등 할인운임과
+            비즈니스(121,500원)·퍼스트(171,500원) 상위등급이 섞여 있으므로,
+            <b>여객수입 ÷ 81,000원</b>은 실제 탑승 인원이 아니라 <b>이코노미 정상운임으로 환산한 유상여객 단위</b>다.
+          </p>
+          <p class="note">
+            <b>한계</b> — 이 페이지는 하카타 항로의 실측 표본이 아니라, 같은 선형(Incat 쌍동 쾌속선)으로
+            국내 장거리 항로를 운항하는 대저페리의 원가 구조를 대리지표로 빌려 온 것이다.
+            하카타는 국제항로라 출입국·대리점·항만 비용 구조가 다르고, 화물·면세 수입이 추가되며,
+            선박금융 조건(대저페리는 BBCHP·5년국고채+2.75%)도 달라진다. 연간 항차수와 직원 수는
+            감사보고서에 없어 가정값을 쓴다. 따라서 절대 금액이 아니라 <b>구조와 민감도</b>를 읽는 데 쓰는 것이 맞다.
+          </p>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="ovFare" role="dialog" aria-modal="true" aria-label="공시 운임표">
+  <div class="modal" style="width:min(880px,95vw)">
+    <header>
+      <div><h3>대저페리 공시 운임표 — 포항 ↔ 울릉</h3>
+        <p>엘도라도 익스프레스호 · 4~10월 월·화·수·목(공휴일 제외) · 편도 기준</p></div>
+      <button class="x" data-close aria-label="닫기">✕</button>
+    </header>
+    <div class="mbody">
+      <section class="card"><div class="body">
+        <table class="fare"><thead>
+          <tr><th rowspan="2">구분</th><th colspan="2">이코노미</th>
+              <th colspan="2">비즈니스</th><th colspan="2">퍼스트</th></tr>
+          <tr><th>정상</th><th>할증</th><th>정상</th><th>할증</th><th>정상</th><th>할증</th></tr>
+        </thead><tbody id="tFare"></tbody></table>
+        <p class="note">
+          금액 아래 작은 글씨가 <b>이코노미 대인 정상 81,000원을 1로 둔 배율</b>이다.
+          이 페이지의 좌석 등급 배율(비즈니스 1.5배 · 퍼스트 2.117배)이 여기 대인 줄에서 그대로 나온다.
+          할증은 세 등급 모두 약 1.098배로 거의 같고, 할인은 중고생·군인·유공자 0.902배,
+          경로·장애경증 0.804배, 소아 정확히 0.5배다.
+          <br><br>
+          모든 요금은 <b>편도</b> 기준이며 <b>터미널이용료는 포함</b>, <b class="amb">유류할증료는 별도</b>다.
+          운임표에 할증료 금액이 적혀 있지 않고 공지사항으로 넘기므로, 이 페이지에서는 입력값으로 뒀다.
+          이 밖에 성수기 추가요금(10월 금·토·일, 공휴일)과 경북도민 할인이 따로 적용된다.
+          <br><br>
+          출처 — <a href="https://www.daezer.com/departure/departure-charge.html" target="_blank" rel="noopener">대저페리 운임안내</a>.
+          여객수입 12,813,966,995원에는 이 표의 여러 등급·할인과 유류할증료가 섞여 있으므로,
+          단일 운임으로 나눈 승객수는 실제 탑승 인원이 아니라 <b>환산 단위</b>다.
+        </p>
+      </div></section>
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="ovShip" role="dialog" aria-modal="true" aria-label="선박 등록">
+  <div class="modal" style="width:min(560px,94vw)">
+    <header>
+      <div><h3>선박 등록</h3>
+        <p>여기 더한 배는 참조·대조 드롭다운 양쪽에 함께 나온다</p></div>
+      <button class="x" data-close aria-label="닫기">✕</button>
+    </header>
+    <div class="mbody">
+      <section class="card"><div class="body">
+        <table class="seat"><thead><tr>
+          <th>선박</th><th>정원</th><th>최고속력</th><th></th>
+        </tr></thead><tbody id="tShipList"></tbody></table>
+        <div class="addrow">
+          <input type="text" id="iAddName" placeholder="선박명" aria-label="선박명">
+          <input type="text" inputmode="numeric" id="iAddPax" placeholder="정원" aria-label="정원">
+          <input type="text" inputmode="decimal" id="iAddKts" placeholder="노트" aria-label="최고속력">
+          <button type="button" class="lnk" id="btnAddShip">추가</button>
+        </div>
+        <p class="note" id="hAddMsg">선박명과 정원은 있어야 등록된다. 속력은 비워도 된다 —
+          정원만 손익분석에 쓰이고(승선율), 나머지는 표시용이다.
+          기본 3척은 지울 수 없고, 직접 더한 배만 ✕로 지운다.
+          등록 내용은 이 브라우저에 남는다.</p>
+      </div></section>
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="ovPrev" role="dialog" aria-modal="true" aria-label="전기 비교">
+  <div class="modal">
+    <header>
+      <div><h3>손익계산서 — 제 3(당) 기 · 제 2(전) 기 비교</h3>
+        <p>제 2 기(2023)는 감사받지 아니한 수치다 — 당기와 같은 무게로 읽지 않도록 본문에서 뺐다</p></div>
+      <button class="x" data-close aria-label="닫기">✕</button>
+    </header>
+    <div class="mbody">
+      <section class="card"><div class="body">
+        <table class="pl"><thead>
+          <tr><th rowspan="2">과 목</th><th colspan="3">제 3(당) 기 · 2024</th>
+              <th colspan="3">제 2(전) 기 · 2023 (감사받지 아니함)</th><th rowspan="2">증감</th></tr>
+          <tr><th>금액</th><th>구성비</th><th>매출 대비</th>
+              <th>금액</th><th>구성비</th><th>매출 대비</th></tr>
+        </thead><tbody id="tPLPrev"></tbody></table>
+      </div></section>
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="ovLabor" role="dialog" aria-modal="true" aria-label="인건비 1인당 분해">
+  <div class="modal">
+    <header>
+      <div><h3>인건비 1인당 분해</h3><p>판관비 급여영역을 직원 수로, 운항원가 인건비를 선원+승무원 수로 나눈 결과</p></div>
+      <button class="x" data-close aria-label="닫기">✕</button>
+    </header>
+    <div class="mbody">
+<section class="card">
+        <h2>판관비 급여영역 — 과목별 1인당 분해<em>단위: 원 · 기준 인원 30명</em></h2>
+        <div class="body">
+          <table>
+            <thead><tr>
+              <th>과목</th><th>연간 합계</th><th>1인당 · 연</th><th>1인당 · 월</th>
+              <th>직원급여 대비</th><th>급여영역 내 비중</th><th>시뮬레이션 <span id="thHead"></span></th>
+            </tr></thead>
+            <tbody id="tSga"></tbody>
+          </table>
+          <p class="note" id="sgaNote">—</p>
+        </div>
+      </section>
+<section class="card">
+        <h2>인건비 — 지상직 · 선원+승무원 분리<em>주석 15 · 단위: 원</em></h2>
+        <div class="body">
+          <table>
+            <thead><tr>
+              <th>과목</th><th>지상직 (판관비)</th><th>선원+승무원 (운항원가)</th><th>합계</th>
+              <th>운항 비중</th><th>지상직 1인당 <span id="thH1"></span></th><th>운항 1인당 <span id="thH2"></span></th>
+            </tr></thead>
+            <tbody id="tCrew"></tbody>
+          </table>
+          <p class="note" id="crewNote">—</p>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+<div class="ov" id="ovRef" role="dialog" aria-modal="true" aria-label="보고서 대조 · 검산">
+  <div class="modal">
+    <header>
+      <div><h3>보고서 대조 · 검산</h3><p>손익계산서를 주석 7·15와 맞춰 보고, 주석 15가 무엇을 말하고 무엇을 말하지 않는지 확인한다</p></div>
+      <button class="x" data-close aria-label="닫기">✕</button>
+    </header>
+    <div class="mbody">
+<section class="card">
+          <h2>인건비 연간 합산 — 주석 대조<em>단위: 원</em></h2>
+          <div class="body">
+            <div class="minis c3">
+              <div class="mini"><div class="k">판관비 인건비</div><div class="v" id="cSga">—</div><div class="s">직원급여·퇴직·복리</div></div>
+              <div class="mini"><div class="k">운항원가 인건비</div><div class="v" id="cOp">—</div><div class="s">운항 인력 — 주석 15</div></div>
+              <div class="mini"><div class="k">전사 합계</div><div class="v" id="cAll">—</div><div class="s" id="cAllS">—</div></div>
+            </div>
+            <table>
+              <thead><tr><th>검증 항목</th><th>계산값</th><th>보고서 기재</th><th>차이</th></tr></thead>
+              <tbody id="tCheck"></tbody>
+            </table>
+            <p class="note" id="checkNote">—</p>
+          </div>
+        </section>
+<section class="card">
+        <h2>주석 15 부가가치 관련자료 — 원본<em>단위: 천원 · 보고서 표기 그대로</em></h2>
+        <div class="body">
+          <table id="tN15"></table>
+          <p class="note" id="n15Note">—</p>
+        </div>
+      </section>
+<div class="pair">
+<section class="card">
+          <h2>부가가치 계산<em>주석 15 기준 · 단위: 원</em></h2>
+          <div class="body">
+            <table>
+              <thead><tr><th>구성요소</th><th>당기 2024</th><th>전기 2023</th><th>당기 매출 대비</th></tr></thead>
+              <tbody id="tVA"></tbody>
+            </table>
+            <p class="note" id="vaNote">—</p>
+          </div>
+        </section>
+<section class="card flag">
+          <h2>부가세 10% 역산 — 가능한가<em>재무상태표 부가세예수금</em></h2>
+          <div class="body">
+            <table>
+              <thead><tr><th>항목</th><th>금액</th><th>비고</th></tr></thead>
+              <tbody id="tVat"></tbody>
+            </table>
+            <p class="note" id="vatNote">—</p>
+          </div>
+        </section>
+</div>
+    </div>
+  </div>
+</div>
+<div class="ov" id="ovCost" role="dialog" aria-modal="true" aria-label="원가 구조 · 지급수수료">
+  <div class="modal">
+    <header>
+      <div><h3>원가 구조 · 지급수수료</h3><p>고정비와 변동비를 가르고, 판관비 최대 단일 과목인 지급수수료를 따로 본다</p></div>
+      <button class="x" data-close aria-label="닫기">✕</button>
+    </header>
+    <div class="mbody">
+<section class="card">
+        <h2>원가 구조 — 고정·변동 분해<em>단위: 백만원</em></h2>
+        <div class="body">
+          <table>
+            <thead><tr><th>구분</th><th>금액</th><th>비중</th><th>성격</th></tr></thead>
+            <tbody id="tCost"></tbody>
+          </table>
+          <p class="note">
+            운항원가 내역은 <b>감사보고서 주석 15(부가가치 관련자료)</b>에서 판관비와 갈라
+            적힌 금액을 그대로 썼다. 주석에 항목이 잡히지 않은 잔액
+            <b id="nOpEtc">—</b>백만원이 연료·항비·수선비 등에 해당한다.
+            페리는 승객이 아니라 항차에 따라 연료가 드니 기본값은 <b>전액 고정</b>으로 두었고,
+            승객 연동으로 보려면 좌측 "승객 1인당 변동비"를 올리면 된다.
+          </p>
+        </div>
+      </section>
+<section class="card flag">
+          <h2>지급수수료 점검<em>판관비 최대 단일 과목</em></h2>
+          <div class="body">
+            <div class="minis">
+              <div class="mini warnbg"><div class="k">당기 지급수수료</div><div class="v amb" id="fAmt">—</div><div class="s" id="fAmtS">—</div></div>
+              <div class="mini warnbg"><div class="k">판관비 내 비중</div><div class="v amb" id="fShare">—</div><div class="s" id="fShareS">—</div></div>
+              <div class="mini"><div class="k">승객 1인당</div><div class="v" id="fPer">—</div><div class="s" id="fPerS">—</div></div>
+              <div class="mini"><div class="k">전기 대비</div><div class="v" id="fYoy">—</div><div class="s" id="fYoyS">—</div></div>
+            </div>
+            <table>
+              <thead><tr><th>판관비 과목 (상위)</th><th>당기 2024</th><th>전기 2023</th><th>증감</th><th>매출 대비</th></tr></thead>
+              <tbody id="tFee"></tbody>
+            </table>
+            <p class="note" id="feeNote">—</p>
+          </div>
+        </section>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═════════════════════════════════════════════════════════════════════════════
+// 손익계산서 원본 — 주식회사 대저페리 제3기(2024) 감사보고서 지면 그대로.
+// 과목명·순서·금액을 보고서에서 옮겼고, null 은 보고서에 "-" 로 적힌 칸이다.
+// 보고서가 "순손실" 로 이름 붙인 Ⅷ·Ⅹ 행은 보고서 표기대로 양수로 싣는다.
+//
+// 이 배열이 이 페이지의 유일한 원장이다. 판관비 과목 목록도, 매출 구성도 여기서
+// 파생시킨다 — 따로 적어 두면 언젠가 한쪽만 고쳐져 어긋난다.
+//   [종류, 과목, 당기, 전기]   종류: r=로마숫자 항목 / d=세부과목 / t=소계·합계
+// ═════════════════════════════════════════════════════════════════════════════
+const PL = [
+  ['r','Ⅰ.매출액',                  13146609166, 5596485400],
+  ['d','여객수입',                   12813966995, 5527657183],
+  ['d','화물수입',                     323042171,   52186526],
+  ['d','임대료수입',                     9600000,    5732600],
+  ['d','기타수입',                          null,   10909091],
+  ['r','Ⅱ.매출원가',                12246808749, 6725627421],
+  ['d','운항원가',                   12246808749, 6725627421],
+  // ↓ 여기부터 n 행 — 보고서 손익계산서에는 없다. 주석 15 당기·전기 열을 그대로
+  //   끌어와 채운 세부이고, 주석이 천원 공시라 ×1,000 해서 원으로 맞췄다.
+  //   (급여 1,253,988천원 → 1,253,988,000원)
+  //   마지막 한 줄은 운항원가 총액에서 여섯 줄을 뺀 차액이라 반올림까지 흡수한다.
+  //
+  //   다섯 번째 칸은 내부 키다. 과목명만으로 행을 찾으면 판관비의 퇴직급여·
+  //   복리후생비·세금과공과와 이름이 겹쳐 엉뚱한 행을 집는다. 화면에는 주석 15
+  //   그대로의 과목명을 쓰고, 코드에서는 이 키로 찾는다.
+  ['n','급여',              1253988000,  598243000, 'op_급여'],
+  ['n','퇴직급여',           148252000,   21645000, 'op_퇴직급여'],
+  ['n','복리후생비',          267351000,  122501000, 'op_복리후생비'],
+  ['n','감가상각비',         3349232000, 1665933000, 'op_감가상각비'],
+  ['n','세금과공과',           48282000,   67295000, 'op_세금과공과'],
+  ['n','임차료',              30929000,       null, 'op_임차료'],
+  ['n','운항기타(항비,연료비,기타 잡비)', 7148774749, 4250010421, 'op_기타'],
+  ['t','Ⅲ.매출총이익(손실)',            899800417,-1129142021],
+  ['r','Ⅳ.판매비와관리비(주15)',      2979322526, 2319581793],
+  ['d','직원급여',                    1822878650,  925393401],
+  ['d','퇴직급여',                     152420193,   47090190],
+  ['d','복리후생비',                   147553407,  149856057],
+  ['d','여비교통비',                     9246562,   13978890],
+  ['d','접대비',                         8802000,    4574200],
+  ['d','통신비',                         9364469,    1820713],
+  ['d','수도광열비',                    16446116,    5716101],
+  ['d','세금과공과',                    62971500,   28336468],
+  ['d','지급임차료',                    74136257,   29850264],
+  ['d','수선비',                            null,    5262727],
+  ['d','보험료',                         7359767,    5509172],
+  ['d','차량유지비',                      509000,     689502],
+  ['d','운반비',                          513850,    5006025],
+  ['d','교육훈련비',                     1199818,       8262],
+  ['d','도서인쇄비',                     8368000,    8484800],
+  ['d','소모품비',                       9759123,   87634156],
+  ['d','지급수수료',                   540820215,  742503791],
+  ['d','광고선전비',                   106973599,  257024074],
+  ['d','잡비',                              null,     843000],
+  ['t','Ⅴ.영업이익(손실)',           -2079522109,-3448723814],
+  ['r','Ⅵ.영업외수익',                  81389927,   38864425],
+  ['d','이자수익',                        470621,    1110223],
+  ['d','외환차익',                        987854,       null],
+  ['d','환불위약금',                    24388874,   12934430],
+  ['d','잡이익',                        55542578,   24819772],
+  ['r','Ⅶ.영업외비용',                4042055930, 2366542741],
+  ['d','이자비용(주5)',                4008855236, 2338902767],
+  ['d','유형자산처분손실',                  null,    2575684],
+  ['d','기부금',                         6400000,    9605000],
+  ['d','잡손실',                        26800694,   15459290],
+  ['t','Ⅷ.법인세비용차감전순손실',      6040188112, 5776402130],
+  ['r','Ⅸ.법인세비용(주8)',                null,       null],
+  ['t','Ⅹ.당기순손실(주16,17)',        6040188112, 5776402130],
+];
+
+// Ⅴ.영업이익 바로 뒤에 EBITDA 두 줄을 끼워 넣는다. 감가상각비는 이미 운항원가
+// 안에 들어가 있으므로, 영업이익에 도로 더하는 것이 EBITDA 다.
+// 값을 손으로 적지 않고 위 행에서 계산해 만들기 때문에 원본이 바뀌어도 어긋날 수 없다.
+// 이 두 줄도 보고서 지면에는 없다 — 'e'/'eb' 종류로 표시해 원본과 갈라 둔다.
+(() => {
+  const dep = PL.find(r => r[4] === 'op_감가상각비');
+  const iV  = PL.findIndex(r => r[1].startsWith('Ⅴ.'));
+  const opC = PL[iV][2], opP = PL[iV][3];
+  PL.splice(iV + 1, 0,
+    ['e',  '(+) 감가상각비 되더하기', dep[2],       dep[3],       'eb_dep'],
+    ['eb', 'EBITDA',                  opC + dep[2], opP + dep[3], 'eb_total']);
+
+  // EBITDA 의 I 는 Interest 다 — 교과서 정의는 당기순손익에서 이자·법인세·감가상각비를
+  // 모두 되더하는 쪽이다. 이자비용이 매출의 30%를 넘는 회사라 이 경로를 따로 보여야
+  // 한다. 영업이익 기준과는 영업외수익·이자 외 영업외비용만큼 차이가 난다.
+  // 아래는 "두 번째 EBITDA"가 아니라 같은 값에 이르는 조정표다. 교과서 정의대로
+  // 당기순손익에서 이자·법인세·감가상각비를 되더한 뒤, 영업외손익까지 걷어내면
+  // 위 EBITDA 와 정확히 같은 값이 나온다. 그 일치를 눈으로 보이는 것이 목적이다.
+  const iX   = PL.findIndex(r => r[1].startsWith('Ⅹ.'));
+  const netC = -PL[iX][2], netP = -PL[iX][3];          // 보고서는 "순손실"이라 양수로 적혀 있다
+  const int_ = PL.find(r => r[1] === '이자비용(주5)');
+  const taxR = PL.find(r => r[1].startsWith('Ⅸ.'));
+  const tC = taxR[2] || 0, tP = taxR[3] || 0;
+  const noiC = PL.find(r => r[1].startsWith('Ⅵ.'));
+  const noeC = PL.find(r => r[1].startsWith('Ⅶ.'));
+  const bookC = netC + int_[2] + tC + dep[2];
+  const bookP = netP + int_[3] + tP + dep[3];
+  PL.splice(iX + 1, 0,
+    ['e',  '당기순손익 (손실 △)',       netC,     netP,     'eb_net'],
+    ['e',  '(+) 이자비용',              int_[2],  int_[3],  'eb_int'],
+    ['e',  '(+) 법인세비용',            tC,       tP,       'eb_tax'],
+    ['e',  '(+) 감가상각비',            dep[2],   dep[3],   'eb_dep2'],
+    ['e',  '= 소계 (영업외손익 포함)',   bookC,    bookP,    'eb_book'],
+    ['e',  '(−) 영업외수익',            -noiC[2], -noiC[3], 'eb_noi'],
+    ['e',  '(+) 이자 외 영업외비용',     noeC[2]-int_[2], noeC[3]-int_[3], 'eb_noe'],
+    ['eb', '= EBITDA (Ⅴ 기준과 일치)',
+       bookC - noiC[2] + (noeC[2]-int_[2]),
+       bookP - noiC[3] + (noeC[3]-int_[3]), 'eb_net_total']);
+})();
+
+// 원본에서 값을 꺼내는 통로. 과목명으로만 접근해 오탈자가 있으면 바로 드러나게 한다.
+const pick = n => PL.find(r => (r[4] || r[1]) === n) || [null, n, 0, 0];
+const cur  = n => pick(n)[2] || 0;
+const prv  = n => pick(n)[3] || 0;
+// 판관비 세부과목 = Ⅳ 항목과 Ⅴ 항목 사이의 d 행. 목록을 손으로 또 적지 않는다.
+const iSgaFrom = PL.findIndex(r => r[1].startsWith('Ⅳ.'));
+const iSgaTo   = PL.findIndex(r => r[1].startsWith('Ⅴ.'));
+const SGA      = PL.slice(iSgaFrom + 1, iSgaTo).filter(r => r[0] === 'd');
+// 운항원가 세부(보완 행). 'd' 가 아니라 'n' 이라 위 SGA 슬라이스에 섞이지 않는다.
+const OPD      = PL.filter(r => r[0] === 'n');
+// pick() 이 찾는 키가 겹치면 엉뚱한 행을 집는다. 한 번 확인하고 넘어간다.
+(() => {
+  const seen = new Set(), dup = [];
+  PL.forEach(r => { const k = r[4] || r[1]; if (seen.has(k)) dup.push(k); seen.add(k); });
+  if (dup.length) console.error('손익계산서 조회키 중복:', dup);
+})();
+const WAGE3    = ['직원급여','퇴직급여','복리후생비'];
+const isWage   = n => WAGE3.includes(n);
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 주석 15 부가가치 관련자료 — 보고서 지면 그대로 (천원 공시).
+// 주의: 이 표는 운항원가의 "분해"가 아니다. 부가가치 계산에 필요한 6개 계정만
+// 뽑아, 그 계정이 판관비와 운항원가로 각각 얼마씩 들어갔는지 보여줄 뿐이다.
+// 그래서 운항원가 열의 합계(5,098,034천원)는 운항원가 총액(12,246,809천원)의
+// 일부이고, 나머지 7,148,775천원은 보고서 어디에도 갈라 적혀 있지 않다.
+//   [계정과목, 당기 판관비, 당기 운항원가, 전기 판관비, 전기 운항원가]  (천원)
+// ═════════════════════════════════════════════════════════════════════════════
+const N15 = [
+  ['급여',       1822879, 1253988,  925393,  598243],
+  ['퇴직급여',    152420,  148252,   47090,   21645],
+  ['복리후생비',  147553,  267351,  149856,  122501],
+  ['감가상각비',       0, 3349232,       0, 1665933],
+  ['세금과공과',   62972,   48282,   28336,   67295],
+  ['임차료',       74136,   30929,   29850,       0],
+];
+const N15_LABOR = ['급여','퇴직급여','복리후생비'];   // 이 셋만이 인건비 성격이다
+
+// ── 주석에서 온 값 (손익계산서에는 없는 것) ───────────────────────────────────
+const N = {
+  // 주석 15 부가가치 관련자료 (당기) — 천원 공시를 원으로 환산
+  opWage: 1253988000, opSev: 148252000, opWelf: 267351000,
+  opDep: 3349232000,  opTax:  48282000, opRent:  30929000,
+  n15Wage: 3076867000, n15Sev: 300672000, n15Welf: 414904000,
+  // 주석 7 퇴직급여충당부채 (당기)
+  sevAdd: 300671000,
+  // 현금흐름표 — 영업활동으로 인한 현금흐름 (EBITDA 흑자의 현실 점검용)
+  cfo: -4645599309, cfoPrev: -5004878618,
+  // 재무상태표 — 부가세예수금 (기말 잔액)
+  vatCur: 664296932, vatPrev: 212619820,
+  // 전기 부가가치 요소 (주석 15 전기 열 합계)
+  prevLabor: 1864728000, prevDep: 1665933000, prevTax: 95631000, prevRent: 29850000,
+};
+
+// ── 파생 ────────────────────────────────────────────────────────────────────
+const A = {};
+A.paxRev   = cur('여객수입');
+A.sales    = cur('Ⅰ.매출액');
+A.salesPrev= prv('Ⅰ.매출액');
+A.etcRev   = A.sales - A.paxRev;                          //   332,642,171
+A.opCost   = cur('Ⅱ.매출원가');
+A.sga      = cur('Ⅳ.판매비와관리비(주15)');
+A.sgaPrev  = prv('Ⅳ.판매비와관리비(주15)');
+A.opProfit = cur('Ⅴ.영업이익(손실)');
+A.nonOpInc = cur('Ⅵ.영업외수익');
+A.nonOpExp = cur('Ⅶ.영업외비용');
+A.netLoss  = -cur('Ⅹ.당기순손실(주16,17)');               // 표기는 양수, 실질은 손실
+A.sgaWageT = SGA.filter(r => isWage(r[1])).reduce((a,r) => a + (r[2]||0), 0);  // 2,122,852,250
+A.sgaOther = A.sga - A.sgaWageT;                          //   856,470,276
+A.fee      = cur('지급수수료');
+A.feePrev  = prv('지급수수료');
+A.sgaOtherX= A.sgaOther - A.fee;                          //   315,650,061
+A.opWageT  = N.opWage + N.opSev + N.opWelf;               // 1,669,591,000
+A.laborAll = A.sgaWageT + A.opWageT;                      // 3,792,443,250
+A.opNoted  = A.opWageT + N.opDep + N.opTax + N.opRent;    // 5,098,034,000
+A.opEtc    = A.opCost - A.opNoted;                        // 7,148,774,749
+
+// ── 참조 선박 ──────────────────────────────────────────────────────────────
+// 엘도라도는 대저페리 공식 선박정보, 나머지 둘은 이 저장소 index.html 에 적어 둔 제원이다.
+// 정원은 승선율(승객수 ÷ 정원×항차수)을 내는 데만 쓴다 — 손익 계산에는 들어가지 않는다.
+// 선박 목록은 한 벌이고, 참조·대조 드롭다운이 같은 목록을 본다.
+// 참조 선박은 감사보고서의 주인(엘도라도)이 기본값이다 — 다른 배로 바꾸면 원가 구조는
+// 그대로 둔 채 정원만 갈아 끼우는 셈이니, 승선율을 그 배 기준으로 읽게 된다.
+const SHIPS_BUILTIN = [
+  { id:'eldorado', name:'엘도라도 익스프레스호 · 대저페리', gt:3158, loa:76.70, beam:20.60,
+    pax:970, kts:50.2, route:'포항↔울릉 217km', src:'대저페리 공식 선박정보',
+    note:'감사보고서가 이 배의 실적이다' },
+  { id:'santamonica', name:'산타모니카호 · 시월드고속훼리', gt:390, loa:72.67, beam:21.0,
+    pax:621, kts:45, route:'부산↔하카타 213km (구상)', src:'index.html',
+    note:'하카타 항로 투입 구상 선박' },
+  { id:'queenbeetle', name:'퀸비틀 · JR큐슈고속선', gt:894, loa:83.5, beam:20.2,
+    pax:502, kts:36, route:'부산↔하카타 213km', src:'index.html',
+    note:'하카타 항로 기존 경쟁선' },
+];
+
+// 사용자가 더한 배는 브라우저에 남겨 둔다 — 새로고침 한 번에 날아가면 등록할 이유가 없다.
+const SHIP_KEY = 'hakata_ships_v1';
+const ADD_OPT  = '__add__';          // 드롭다운 맨 아래 "＋ 선박 추가…" 항목의 값
+let SHIPS = [];
+function loadShips(){
+  let extra = [];
+  try { extra = JSON.parse(localStorage.getItem(SHIP_KEY) || '[]'); } catch(e) { extra = []; }
+  SHIPS = SHIPS_BUILTIN.concat(Array.isArray(extra) ? extra : []);
+}
+function saveShips(){
+  try { localStorage.setItem(SHIP_KEY, JSON.stringify(SHIPS.filter(v => v.custom))); } catch(e) {}
+}
+loadShips();
+
+// ── 좌석 등급 ──────────────────────────────────────────────────────────────
+// 배율은 대저페리 운임표에서 그대로 나온 값이다 — 비즈니스 121,500 ÷ 81,000 = 1.5,
+// 퍼스트 171,500 ÷ 81,000 = 2.1173. 이코노미 운임만 바꾸면 나머지가 따라 움직인다.
+// 구성비는 보고서에 없어 입력값이고, 가중평균이 곧 실현운임이 된다.
+const SEATS = [
+  { id:'eco',  name:'이코노미',  fare0:81000  },
+  { id:'biz',  name:'비즈니스',  fare0:121500 },
+  { id:'fst',  name:'퍼스트',    fare0:171500 },
+];
+// 배율은 손으로 적지 않고 공시 운임에서 뽑는다. 반올림한 값을 적어 두면
+// 이코노미 81,000원일 때 퍼스트가 171,501원이 되어 운임표와 1원 어긋난다.
+SEATS.forEach(t => { t.mult = t.fare0 / SEATS[0].fare0; });
+
+// ── 대저페리 공시 운임표 (포항↔울릉 · 엘도라도 익스프레스호) ───────────────
+// 4~10월 월·화·수·목(공휴일 제외) 기준, 편도. 각 칸은 [정상, 할증].
+// 좌석 등급 배율이 어디서 나온 값인지 보이려고 지면 그대로 싣는다.
+const FARE_TABLE = [
+  ['대인',                    [ 81000,  88950], [121500, 133500], [171500, 188500]],
+  ['중고생 · 군인 · 유공자',   [ 73050,  80250], [109500, 120300], [154500, 169800]],
+  ['경로 · 장애경증',          [ 65100,  71500], [ 97500, 107100], [137500, 151100]],
+  ['장애중증 (보호자동반 1인)', [ 41250,  45250], [ 61500,  67500], [ 86500,  95000]],
+  ['소아 (만1세~12세미만)',    [ 40500,  44500], [ 60750,  66750], [ 85750,  94250]],
+  ['유아 (만1세미만)',         null,             null,             null           ],
+];
+
+// ── 원가 항목과 성격 ───────────────────────────────────────────────────────
+// fix  고정   — 승객·항차와 무관
+// semi 준변동 — 항차에 붙는다. 배를 더 띄워야 늘고, 같은 배에 사람을 더 태운다고 늘지 않는다.
+// var  변동   — 승객 한 명에 붙는다.
+// grp 는 손익계산서에서 어느 소계에 들어가는 금액인지다(운항원가 / 판관비).
+const COST_KINDS = { fix:'고정', semi:'준변동', var:'변동' };
+const COSTS = [
+  { id:'opLabor', grp:'op',  kind:'fix',  name:'운항 인건비 (급여·퇴직·복리)',
+    note:'선원+승무원 — 정원이 정해져 있어 승객수와 무관' },
+  { id:'opDep',   grp:'op',  kind:'fix',  name:'운항 감가상각비',
+    note:'선박 20년 정액 · 현금 유출 없음 — 끄면 EBITDA 기준이 된다' },
+  { id:'opTR',    grp:'op',  kind:'fix',  name:'운항 세금과공과·임차료', note:'' },
+  { id:'opEtc',   grp:'op',  kind:'semi', name:'운항기타 (항비·연료비·잡비)',
+    note:'항차에 붙는다 — 운항원가의 58%로 준변동비의 거의 전부' },
+  { id:'sgaWage', grp:'sga', kind:'fix',  name:'판관 급여영역',
+    note:'직원 수에 연동 — 승객수와는 무관' },
+  { id:'sgaEtc',  grp:'sga', kind:'fix',  name:'판관 그 밖 13과목', note:'' },
+  { id:'fee',     grp:'sga', kind:'var',  name:'지급수수료',
+    note:'예약·결제 채널 수수료로 보면 승객 한 명마다 붙는다' },
+];
+
+const BASE_HEAD = 30;
+const PER_HEAD  = A.sgaWageT / BASE_HEAD;                 // 70,761,741.67원
+const FEE_RATE  = A.fee / (A.paxRev / 81000);             // 승객 1인당 환산 (정상운임 기준)
+const DEFAULTS  = { head:30, sailor:13, crew:7, fare:81000, vc:0, tgt:5, voy:600,
+                    feeVar:false, ebitda:false, base:'eldorado', peer:'santamonica',
+                    mix:[70,20,10], fuel:0, autoVoy:false,
+                    kinds:{opLabor:'fix',opDep:'fix',opTR:'fix',opEtc:'semi',
+                           sgaWage:'fix',sgaEtc:'fix',fee:'var'} };
+
+// ── 표시 헬퍼 ───────────────────────────────────────────────────────────────
+const M = 1e6;
+const el = id => document.getElementById(id);
+const won = n => Math.round(n).toLocaleString('ko-KR');
+// 원본 표용 — 회계 관행대로 음수는 괄호, 보고서에 "-" 인 칸은 하이픈.
+const acc = n => n === null ? null : (n < 0 ? '(' + won(-n) + ')' : won(n));
+// 부속 표용 — 백만원. 증감을 같이 보는 화면이라 괄호보다 △ 가 눈에 빨리 들어온다.
+const mil  = (n, d=0) => (n<0?'△':'') + Math.abs(n/M).toLocaleString('ko-KR',
+               {minimumFractionDigits:d, maximumFractionDigits:d});
+const pct  = (n, d=1) => (n*100).toFixed(d) + '%';
+const sign = n => n<0 ? 'neg' : 'pos';
+const dlt  = n => n===0 ? '—' : (n>0?'+':'') + won(n);
+// 좌석표처럼 innerHTML 로 만들어 낸 칸은 없을 수도 있어, 있을 때만 채운다.
+const _setTxt = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+
+function num(id, fallback){
+  const v = parseFloat(el(id).value.replace(/[^0-9.\-]/g,''));
+  return (isNaN(v) || v < 0) ? fallback : v;
+}
+
+// ── 모델 ────────────────────────────────────────────────────────────────────
+// 영업이익 = (승객수×운임 + 기타수입) − (고정비 + 승객수×1인당변동비)
+// 목표 영업이익률 r 을 만족하는 승객수는 아래를 풀어서 얻는다.
+//   (P·Q + O) − (F + v·Q) = r·(P·Q + O)   ⇒   Q = (F − (1−r)·O) / ((1−r)·P − v)
+// 분모가 0 이하면 — 운임에서 변동비를 뺀 몫이 목표 마진을 못 덮으면 — 승객을
+// 아무리 태워도 목표에 닿지 못한다. 그 경우는 null 로 돌려 화면에서 구분한다.
+function model(){
+  const head   = Math.max(1, Math.round(num('iHead', DEFAULTS.head)));
+  // 운항원가 인건비는 선박에 타는 사람 전체가 받는 돈이다. 배를 움직이는 선원과
+  // 객실을 맡는 승무원을 따로 세고, 그 합으로 나눠야 1인당이 제 뜻을 갖는다.
+  const sailor = Math.max(0, Math.round(num('iSailor', DEFAULTS.sailor)));
+  const crew   = Math.max(0, Math.round(num('iCrew', DEFAULTS.crew)));
+  const opHead = Math.max(1, sailor + crew);
+  const fareEco = Math.max(1, num('iFare', DEFAULTS.fare));
+  // 좌석 구성비로 가중평균한 값이 실제로 받는 운임이다. 구성비 합이 100 이 아니어도
+  // 정규화해서 쓴다 — 입력 도중에 합이 안 맞는 순간이 늘 있기 때문이다.
+  const mix    = SEATS.map((t,i) => Math.max(0, num('iMix'+t.id, DEFAULTS.mix[i])));
+  const mixSum = mix.reduce((a,b) => a+b, 0);
+  const wsum   = SEATS.reduce((a,t,i) => a + t.mult*mix[i], 0);
+  // 구성비를 전부 비우면 wsum 이 0 이 되어 운임이 0 원, 승객수가 무한대로 튄다.
+  // 그 순간에는 이코노미 단일 운임으로 되돌려 화면이 깨지지 않게 한다.
+  const fareSeat = wsum > 0 ? fareEco * wsum / mixSum : fareEco;
+  // 유류할증료는 운임과 별도로 붙지만 회계상 여객수입에 함께 들어간다. 그래서 모델이
+  // 쓰는 단가는 둘을 더한 값이어야 하고, 승객수 역산도 이 단가로 나눠야 앞뒤가 맞는다.
+  const fuel   = num('iFuel', DEFAULTS.fuel);
+  const fare   = fareSeat + fuel;
+  const ship   = SHIPS.find(x => x.id === el('iBase').value) || SHIPS[0];
+  const peer   = SHIPS.find(x => x.id === el('iPeer').value) || peerList()[0] || SHIPS[0];
+  const r      = Math.min(0.99, num('iTgt', DEFAULTS.tgt) / 100);
+  const voy    = Math.max(1, Math.round(num('iVoy', DEFAULTS.voy)));
+  const DEP    = cur('op_감가상각비');          // 3,349,232,000 — 전액 운항원가에 들어가 있다
+
+  // 승객당 변동비는 원가 구성표에서 나온다. 여기 vcMan 은 표에 없는 몫을 손으로 얹는 칸이다.
+  const vcMan = num('iVc', DEFAULTS.vc);
+
+  const sgaWageT = head * PER_HEAD;
+  const O        = A.etcRev;
+  const paxAct   = A.paxRev / fare;                 // 기준 승객수 — 단가 환산의 분모
+  const pax      = Math.max(0, Math.round(num('iPax', Math.round(paxAct))));
+  const autoVoy  = el('iAutoVoy').checked;
+
+  // 항목별 금액. 판관 급여영역만 직원 수에 따라 움직이고 나머지는 보고서 금액 그대로다.
+  const amtOf = id => ({
+    opLabor: A.opWageT,  opDep: DEP,  opTR: N.opTax + N.opRent,  opEtc: A.opEtc,
+    sgaWage: sgaWageT,   sgaEtc: A.sgaOtherX,  fee: A.fee,
+  })[id];
+  const items = COSTS.map(c => ({
+    ...c,
+    on:   el('use_'+c.id).checked,
+    kind: el('kind_'+c.id).value,
+    amt:  amtOf(c.id),
+  }));
+  const pick2 = k => items.filter(x => x.on && x.kind === k);
+  const sumOf = k => pick2(k).reduce((a, x) => a + x.amt, 0);
+
+  const costF  = sumOf('fix');
+  const costSV = sumOf('semi');
+  const costV  = sumOf('var');
+  // 준변동비는 항차당, 변동비는 승객당 단가로 환산한다. 기준점(실적 항차·실적 승객)에서는
+  // 다시 곱해도 원래 금액이 되므로 보고서와 어긋나지 않는다.
+  const svPerVoy = voy > 0     ? costSV / voy    : 0;
+  const svPerVoy_of = x => voy > 0 ? x.amt / voy : 0;
+  const vPerPax  = paxAct > 0  ? costV  / paxAct : 0;
+  const vc       = vPerPax + vcMan;
+
+  const ebitda = !items.find(x => x.id === 'opDep').on;   // 감가상각비를 끄면 EBITDA 기준
+  const feeVar = (items.find(x => x.id === 'fee').kind === 'var');
+
+  // 승객이 정원을 넘으면 배를 더 띄워야 한다 — 그때 준변동비가 계단처럼 올라간다.
+  const voyFor = q => autoVoy && ship.pax > 0
+    ? Math.max(voy, Math.ceil(q / ship.pax)) : voy;
+  const fixedAt = q => costF + svPerVoy * voyFor(q);
+
+  // 항차가 승객수에 물리면 닫힌 식이 안 나온다. 항차를 고정한 채 풀고, 그 답이 항차를
+  // 밀어 올리면 다시 푸는 식으로 몇 번 돌린다 — 계단이 유한해서 금방 멎는다.
+  const qFor = rr => {
+    const den = (1-rr)*fare - vc;
+    if (den <= 0) return null;
+    let v_ = voy;
+    for (let k = 0; k < 12; k++) {
+      const q = (costF + svPerVoy*v_ - (1-rr)*O) / den;
+      if (!(q > 0)) return 0;
+      const need = voyFor(q);
+      if (need === v_) return q;
+      v_ = need;
+    }
+    return null;
+  };
+  const pFor = (rr, q) => q > 0 ? (((fixedAt(q) + vc*q)/(1-rr)) - O) / q : null;
+  const sim  = q => {
+    const sales = q*fare + O, cost = fixedAt(q) + vc*q, op = sales - cost;
+    return { q, sales, cost, op, margin: sales ? op/sales : 0 };
+  };
+  const fixed    = fixedAt(pax);                    // 지금 승객수에서의 고정+준변동 합
+  const sgaFixed = items.filter(x => x.on && x.grp === 'sga' && x.kind !== 'var')
+                        .reduce((a, x) => a + x.amt, 0);
+
+  return { head, sailor, crew, opHead, fareEco, mix, mixSum, fareSeat, fuel, fare, ship, peer,
+           vc, vcMan, vPerPax, svPerVoy, svPerVoy_of, costF, costSV, costV, items, autoVoy, voyFor, fixedAt,
+           r, voy, feeVar, ebitda, DEP, sgaWageT, sgaFixed, fixed, O,
+           paxAct, pax, qFor, pFor, sim, cur: sim(pax) };
+}
+
+// ── ① 원본 손익계산서 ───────────────────────────────────────────────────────
+// 정적인 표다. 입력이 바뀌어도 다시 그리지 않는다 — 보고서 지면은 움직이지 않는다.
+function drawPL(){
+  const salesC = cur('Ⅰ.매출액');
+  const rpct = (v, base, cls) => {
+    if (v === null || !base) return '<td class="nil">-</td>';
+    const r = v / base * 100;
+    return `<td class="${cls}">${(Math.abs(r) < 1 ? r.toFixed(2) : r.toFixed(1))}%</td>`;
+  };
+
+  // 세부행은 바로 위 로마숫자 항목에 물린다. EBITDA 작업줄(e)은 그 앞 소계(Ⅴ·Ⅹ)에 물린다.
+  let bC = 0, grpR = '', grpT = '';
+  const rows = [];
+  PL.forEach(([k, name, c, p, key]) => {
+    if (k === 'r') { bC = c; grpR = key || name; }
+    if (k === 't') grpT = key || name;
+    rows.push({ k, name, c, key,
+                base: (k === 'd' || k === 'n') ? bC : 0,
+                grp:  (k === 'd' || k === 'n') ? grpR : (k === 'e' ? grpT : '') });
+  });
+  const kids = g => rows.filter(r => r.grp === g).length;
+
+  el('tPL').innerHTML = rows.map(r => {
+    const { k, name, c, key, base, grp } = r;
+    const cell = c === null ? '<td class="nil">-</td>' : `<td>${acc(c)}</td>`;
+    const hl  = name === '지급수수료' ? ' hl' : '';
+    const tag = k === 'n'
+      ? (key === 'op_기타' ? '<span class="tagv est">차액</span>'
+                          : '<span class="tagv est">주석 15</span>')
+      : (k === 'e' || k === 'eb') ? '<span class="tagv ok">보완</span>' : '';
+    const own = key || name;
+    const nk  = (k === 'r' || k === 't') ? kids(own) : 0;
+    const car = nk ? `<span class="caret">▶</span> ` : (k === 'r' || k === 't' ? '<span class="caret"></span> ' : '');
+    const attr = nk ? ` data-grp="${own}"` : (grp ? ` data-in="${grp}" hidden` : '');
+    return `<tr class="${k}${hl}"${attr}><td>${car}${name}${tag}`
+      + (nk ? `<span class="tagv">${nk}</span>` : '') + `</td>`
+      + cell + rpct(c, base, 'rt') + rpct(c, salesC, 'rtm') + '</tr>';
+  }).join('');
+
+  // 로마숫자·소계 줄을 눌러 접었다 폈다
+  el('tPL').querySelectorAll('[data-grp]').forEach(tr => {
+    const g = tr.dataset.grp;
+    tr.querySelector('td').addEventListener('click', () => {
+      const open = tr.classList.toggle('open');
+      el('tPL').querySelectorAll(`[data-in="${g}"]`).forEach(x => { x.hidden = !open; });
+    });
+  });
+
+  el('plNote').innerHTML =
+    `제 3(당)기만 남긴 표다. 과목·순서·금액은 보고서 지면 그대로이고, 음수는 괄호,
+     보고서에 "-"로 적힌 칸은 하이픈으로 뒀다. <b>로마숫자 줄을 누르면</b> 그 아래 세부과목이
+     펼쳐진다 — 괄호 안 숫자가 접혀 있는 줄 수다.
+     <b>제 2(전)기 비교</b>는 위 "전기 비교" 단추로 따로 연다(전기는 감사받지 않았다).
+     <b>구성비</b>는 각 세부과목이 자기 소계에서 차지하는 몫, <b>매출 대비</b>는 매출액
+     ${won(A.sales)}원으로 나눈 값이다.
+     <br><br>
+     기울인 줄은 보고서에 없는 보완 행이다 — 운항원가 세부는
+     <span class="tagv est">주석 15</span>를 ×1,000 해 옮기고 남은 차액을
+     <span class="tagv est">차액</span>으로 채웠으며, 초록 줄은 EBITDA 조정이다.
+     감가상각비 ${won(cur('op_감가상각비'))}원이 전액 운항원가에 들어가 있어 영업이익 위에서
+     이미 차감되므로, 도로 더한 것이 EBITDA <b style="color:var(--good)">${won(cur('eb_total'))}</b>원
+     (마진 ${pct(cur('eb_total')/A.sales,2)})이다. Ⅹ 아래 블록은 두 번째 EBITDA가 아니라
+     당기순손익에서 거슬러 올라가 같은 값에 닿는 것을 보이는 조정표다.
+     <br><br>
+     검산: 매출 세부 합 <b>${won(A.sales)}</b> · 판관비 17과목 합
+     <b>${won(SGA.reduce((a,r)=>a+(r[2]||0),0))}</b> · 운항원가 세부 합
+     <b>${won(OPD.reduce((a,r)=>a+(r[2]||0),0))}</b> · 영업손익
+     <b class="bad">${won(A.opProfit)}</b> — 모두 보고서 소계와 일치한다.`;
+}
+
+// ── 전기 비교표 (모달) ──────────────────────────────────────────────────────
+// 제2기는 본문에서 빼되 버리지는 않는다. 감사받지 않은 수치라 나란히 두면 당기까지
+// 같은 무게로 읽히기 쉬워서, 따로 열어 보게 했다.
+function drawPLPrev(){
+  const sC = cur('Ⅰ.매출액'), sP = prv('Ⅰ.매출액');
+  let bC = 0, bP = 0;
+  const rp = (v, b, cls) => {
+    if (v === null || !b) return '<td class="nil">-</td>';
+    const r = v / b * 100;
+    return `<td class="${cls}">${(Math.abs(r) < 1 ? r.toFixed(2) : r.toFixed(1))}%</td>`;
+  };
+  el('tPLPrev').innerHTML = PL.map(([k, name, c, p, key]) => {
+    if (k === 'r') { bC = c; bP = p; }
+    const det = (k === 'd' || k === 'n');
+    const cell = v => v === null ? '<td class="nil">-</td>' : `<td>${acc(v)}</td>`;
+    const d = (c === null || p === null) ? null : c - p;
+    const dc = d === null ? '<td class="nil">-</td>'
+      : `<td>${d === 0 ? '0' : (d > 0 ? '+' : '△') + won(Math.abs(d))}</td>`;
+    return `<tr class="${k}"><td>${name}</td>`
+      + cell(c) + rp(c, det ? bC : 0, 'rt') + rp(c, sC, 'rtm')
+      + cell(p) + rp(p, det ? bP : 0, 'rt') + rp(p, sP, 'rtm') + dc + '</tr>';
+  }).join('');
+}
+
+// ── ② 판관비 급여영역 — 과목별 1인당 분해 ───────────────────────────────────
+// 요구의 핵심은 "세 과목이 각각 1인당으로 어떻게 갈라지는가"다. 그래서 합계를 먼저
+// 보여주고 나누는 게 아니라, 과목마다 연간·1인당연·1인당월을 한 줄에 세운다.
+// 직원급여 대비 비율을 같이 둔 것은 퇴직급여가 법정 1/12(8.33%)에 맞는지,
+// 복리후생비가 상식적인 범위인지 그 자리에서 검증하게 하려는 것이다.
+function drawSga(m){
+  el('thHead').textContent = `(${m.head}명)`;
+  const base = cur('직원급여');
+  const k = m.head / BASE_HEAD;
+
+  const rows = WAGE3.map(n => {
+    const v = cur(n), perY = v / BASE_HEAD;
+    return `<tr><td>${n}</td>
+      <td>${won(v)}</td><td>${won(perY)}</td><td>${won(perY/12)}</td>
+      <td>${n === '직원급여' ? '—' : pct(v/base, 2)}</td>
+      <td>${pct(v/A.sgaWageT, 1)}</td>
+      <td>${won(v*k)}</td></tr>`;
+  }).join('');
+
+  const sumRow = `<tr class="sum"><td>급여영역 합계</td>
+    <td>${won(A.sgaWageT)}</td><td>${won(PER_HEAD)}</td><td>${won(PER_HEAD/12)}</td>
+    <td>${pct(A.sgaWageT/base, 2)}</td><td>100.0%</td><td>${won(m.sgaWageT)}</td></tr>`;
+
+  // 검산 — 1인당으로 쪼갠 뒤 다시 인원수로 곱해 합계가 복원되는지
+  const back  = WAGE3.reduce((a,n) => a + (cur(n)/BASE_HEAD)*BASE_HEAD, 0);
+  const okBack= Math.abs(back - A.sgaWageT) < 1;
+  const sev   = cur('퇴직급여');
+  const okSev = Math.abs(sev/base - 1/12) < 0.005;
+
+  el('tSga').innerHTML = rows + sumRow +
+    `<tr class="ck"><td colspan="7" style="text-align:left;white-space:normal">
+      <b>검산</b> · 1인당 × ${BASE_HEAD}명 = ${won(back)}원
+      ${okBack ? '<span class="tagv ok">합계 복원 OK</span>' : '<span class="tagv est">불일치</span>'}
+      · 퇴직급여 ÷ 직원급여 = ${pct(sev/base,2)}
+      ${okSev ? '<span class="tagv ok">법정 1/12(8.33%) 부합</span>' : '<span class="tagv est">1/12 이탈</span>'}
+    </td></tr>`;
+
+  el('sgaNote').innerHTML =
+    `급여영역은 <b>직원급여·퇴직급여·복리후생비</b> 세 과목으로 잡았다. 세 과목을 각각
+     ${BASE_HEAD}명으로 나눈 뒤 다시 곱해 합계 <b>${won(A.sgaWageT)}</b>원이 복원되는 것을
+     위 검산 줄에서 확인할 수 있다. 퇴직급여가 직원급여의 <b>${pct(sev/base,2)}</b>로
+     법정 퇴직금 1/12(8.33%)에 거의 정확히 맞는다 — 인원과 급여 수준이 서로 어긋나지 않는다는 뜻이다.
+     다만 전기는 <b>${pct(prv('퇴직급여')/prv('직원급여'),2)}</b>로 낮은데, 2022년 6월 물적분할로
+     설립된 2년차라 근속 1년 미만이 많아 충당 대상이 적었던 것으로 읽힌다.
+     나머지 판관비 과목은 인원에 비례하지 않아 고정으로 둔다.`;
+}
+
+// ── ②-2 주석 15 원본 + "운항원가는 선원비인가" 에 대한 답 ────────────────────
+// 주석 15 를 운항원가의 분해표로 읽으면 틀린다. 6개 계정만 추려 판관비/운항원가로
+// 가른 표이고, 그 중 인건비 성격은 위 세 줄뿐이다. 아래 표에서 인건비 세 줄을
+// 따로 묶어 소계를 내고, 운항원가 총액과의 간극을 마지막에 명시한다.
+function drawN15(){
+  const K = 1000;                                  // 천원 → 원
+  const sumOf = (rows, i) => rows.reduce((a,r) => a + r[i], 0);
+  const labor = N15.filter(r => N15_LABOR.includes(r[0]));
+  const other = N15.filter(r => !N15_LABOR.includes(r[0]));
+  const nil = v => v === 0 ? '<td class="nil">-</td>' : `<td>${won(v)}</td>`;
+
+  const row = (r, cls='') =>
+    `<tr class="${cls}"><td>${r[0]}</td>${nil(r[1])}${nil(r[2])}<td>${won(r[1]+r[2])}</td>
+      ${nil(r[3])}${nil(r[4])}<td>${won(r[3]+r[4])}</td></tr>`;
+  const subtotal = (name, rows, cls) => {
+    const v = [1,2,3,4].map(i => sumOf(rows, i));
+    return `<tr class="${cls}"><td>${name}</td><td>${won(v[0])}</td><td>${won(v[1])}</td>
+      <td>${won(v[0]+v[1])}</td><td>${won(v[2])}</td><td>${won(v[3])}</td><td>${won(v[2]+v[3])}</td></tr>`;
+  };
+
+  el('tN15').innerHTML =
+    `<thead>
+      <tr><th rowspan="2">계정과목</th><th colspan="3">당기 2024</th><th colspan="3">전기 2023</th></tr>
+      <tr><th>판관비</th><th>운항원가</th><th>합계</th><th>판관비</th><th>운항원가</th><th>합계</th></tr>
+     </thead><tbody>`
+    + labor.map(r => row(r)).join('')
+    + subtotal('인건비 소계 ← 선원비에 해당', labor, 'flagrow')
+    + other.map(r => row(r)).join('')
+    + subtotal('주석 15 합계', N15, 'sum')
+    + `<tr class="ck"><td colspan="7" style="text-align:left;white-space:normal">
+        <b>운항원가 총액과의 간극</b> · 손익계산서 운항원가 ${won(A.opCost/K)}천원
+        − 주석 15 운항원가 열 ${won(sumOf(N15,2))}천원
+        = <b style="color:var(--warn)">${won(A.opEtc/K)}천원</b>이 보고서에 갈라 적혀 있지 않다
+        (연료·항비·수선비·보험료 등).
+      </td></tr></tbody>`;
+
+  const labOp = sumOf(labor, 2) * K;               // 1,669,591,000
+  const labOpPrev = sumOf(labor, 4) * K;
+  el('n15Note').innerHTML =
+    `<b>운항원가 = 선원비인가?</b> 아니다. 주석 15는 운항원가를 쪼갠 표가 아니라,
+     <b>부가가치 계산에 쓰는 6개 계정</b>만 뽑아 각 계정이 판관비와 운항원가로 얼마씩
+     들어갔는지 보여주는 표다. 그래서 세로로 읽으면 운항원가의 일부만 보인다.
+     <br><br>
+     운항원가 열 <b>${won(sumOf(N15,2))}</b>천원 가운데 <b class="amb">선원비에 해당하는 것은
+     급여·퇴직급여·복리후생비 세 줄 ${won(sumOf(labor,2))}천원</b>뿐이다 —
+     운항원가 총액의 <b>${pct(labOp/A.opCost)}</b>에 그친다. 나머지는 성격이 전혀 다르다:
+     감가상각비 <b>${won(N15[3][2])}</b>천원은 선박(20년 정액, 주석 2.4)이고,
+     세금과공과·임차료가 <b>${won(N15[4][2]+N15[5][2])}</b>천원이며,
+     주석에 아예 잡히지 않은 <b class="bad">${won(A.opEtc/K)}</b>천원이 연료·항비·수선비 등이다.
+     <br><br>
+     그러니 이 페이지에서 "운항 인건비"라고 적은 <b>${won(labOp)}</b>원만이 선원 인건비다.
+     다만 그 안에 선원만 있는지, 터미널·운항관리 같은 육상 운항지원 인력이 섞였는지는
+     보고서가 말해 주지 않는다 — 그래서 <b>운항 인력</b>이라고만 부르고 선원으로 단정하지 않았다.
+     전기 ${won(labOpPrev)}원 → 당기 ${won(labOp)}원으로 <b>${pct(labOp/labOpPrev-1)}</b> 늘었는데,
+     전기가 취항 첫 해라 연중 일부만 운항한 영향으로 보인다.`;
+}
+
+// ── 인건비 — 지상직 · 선원 분리 ────────────────────────────────────────────
+// 주석 15 가 판관비/운항원가로 가른 축이 그대로 지상직/선원의 경계다. 인건비 세
+// 과목만 뽑아 양쪽 1인당을 나란히 세운다. 선원 인원은 보고서에 없어 입력값이고,
+// 그 점을 표 머리와 각주에서 계속 드러낸다.
+function drawCrew(m){
+  const K = 1000;
+  el('thH1').textContent = '(' + m.head + '명)';
+  el('thH2').textContent = '(' + m.opHead + '명)';
+  const rows = N15.filter(r => N15_LABOR.includes(r[0]));
+  const g = i => rows.reduce((a,r) => a + r[i], 0);
+
+  const line = (name, gv, cv, cls) => {
+    const tot = gv + cv;
+    return '<tr class="' + (cls||'') + '"><td>' + name + '</td>' +
+      '<td>' + won(gv*K) + '</td><td>' + won(cv*K) + '</td><td>' + won(tot*K) + '</td>' +
+      '<td>' + pct(cv/tot) + '</td>' +
+      '<td>' + won(gv*K/m.head) + '</td><td>' + won(cv*K/m.opHead) + '</td></tr>';
+  };
+  const gWage = rows[0][1], cWage = rows[0][2];
+
+  el('tCrew').innerHTML =
+    rows.map(r => line(r[0], r[1], r[2])).join('')
+    + line('인건비 소계', g(1), g(2), 'sum')
+    + '<tr class="ck"><td colspan="7" style="text-align:left;white-space:normal">'
+    + '<b>인원</b> · 지상직 ' + m.head + '명 + 선원 ' + m.sailor + '명 + 승무원 ' + m.crew + '명 = '
+    + '<b>' + (m.head + m.opHead) + '명</b> · 전사 인건비 1인당 <b>'
+    + won((g(1)+g(2))*K/(m.head + m.opHead)) + '원</b></td></tr>'
+    + '<tr class="ck"><td colspan="7" style="text-align:left;white-space:normal">'
+    + '<b>구성비 점검</b> · 퇴직급여÷급여 — 지상직 <b>' + pct(rows[1][1]/gWage,2) + '</b> · '
+    + '운항 <b>' + pct(rows[1][2]/cWage,2) + '</b> (법정 1/12 = 8.33%)'
+    + ' &nbsp;|&nbsp; 복리후생비÷급여 — 지상직 <b>' + pct(rows[2][1]/gWage,2) + '</b> · '
+    + '운항 <b style="color:var(--amber)">' + pct(rows[2][2]/cWage,2) + '</b></td></tr>';
+
+  const impCrew = (g(2)*K) / PER_HEAD;
+  el('hOpHead').textContent   = '선원 ' + m.sailor + ' + 승무원 ' + m.crew + ' = ' + m.opHead + '명';
+  el('hOpPer').textContent    = won(g(2)*K/m.opHead) + '원';
+  el('hOpRatio').textContent  = (g(2)*K/m.opHead/PER_HEAD).toFixed(2) + '배';
+  el('crewNote').innerHTML =
+    '급여는 <b>지상직(판관비) ' + won(gWage*K) + '원</b>과 <b>선원(운항원가) ' + won(cWage*K) + '원</b>으로 ' +
+    '갈린다 — 주석 15가 판관비와 운항원가로 가른 축이 그대로 그 경계다. ' +
+    '인건비 3과목 전체로는 지상직 <b>' + won(g(1)*K) + '</b>원, 선원 <b>' + won(g(2)*K) + '</b>원으로 ' +
+    '선원이 <b>' + pct(g(2)/(g(1)+g(2))) + '</b>를 차지한다.<br><br>' +
+    '눈여겨볼 대목은 <b class="amb">복리후생비</b>다. 급여는 선원이 지상직보다 적은데 ' +
+    '복리후생비는 선원이 <b>' + won(rows[2][2]*K) + '</b>원으로 지상직 <b>' + won(rows[2][1]*K) + '</b>원보다 크다. ' +
+    '급여 대비로 보면 지상직 ' + pct(rows[2][1]/gWage,2) + ' 대 선원 <b>' + pct(rows[2][2]/cWage,2) + '</b>로 ' +
+    '두 배 넘게 벌어진다 — 승선 중 식비·숙식이 선원 쪽 복리후생비로 잡히기 때문으로 읽는 게 자연스럽다. ' +
+    '퇴직급여도 선원이 ' + pct(rows[1][2]/cWage,2) + '로 법정 1/12을 웃도는데, 승선수당이 평균임금에 ' +
+    '들어가면 이렇게 된다. 다만 보고서가 내역을 적지 않아 어느 쪽도 단정할 수는 없다.<br><br>' +
+    '운항원가 인건비는 배를 움직이는 <b>선원</b>과 객실을 맡는 <b>승무원</b>이 함께 받는 돈이다. ' +
+    '보고서는 둘을 가르지 않으므로 <b>선원 ' + m.sailor + '명 + 승무원 ' + m.crew + '명 = ' +
+    m.opHead + '명</b>을 합산 인원으로 놓고 나눴다. 1인당 <b>' + won(g(2)*K/m.opHead) + '원</b>, ' +
+    '지상직(' + won(PER_HEAD) + '원)의 <b>' + (g(2)*K/m.opHead/PER_HEAD).toFixed(2) + '배</b>다.<br><br>' +
+    '<b>두 인원 모두 가정값</b>이다 — 보고서에 인원이 없다. 다만 눈금은 있다. ' +
+    '운항 인건비 ' + won(g(2)*K) + '원을 지상직 단가로 환산하면 <b>' + impCrew.toFixed(1) + '명분</b>이라, ' +
+    '합산 인원을 그 언저리에 놓으면 1인당이 지상직과 비슷해진다. 지금 ' + m.opHead + '명은 ' +
+    (g(2)*K/m.opHead/PER_HEAD).toFixed(2) + '배로 ' +
+    (Math.abs(g(2)*K/m.opHead/PER_HEAD - 1) < 0.4 ? '<b>무리 없는 범위</b>다' :
+     '<b class="bad">지상직과 꽤 벌어진다</b> — 인원을 다시 볼 만하다') + '. ' +
+    '7명 같은 승무 정원만으로 나누면 1인당이 2억을 넘어 선원 급여로 볼 수 없게 되는데, ' +
+    '연간 인건비가 <b>휴무·교대까지 담고</b> 있기 때문이다. 항차당 원가를 볼 때는 승무 정원, ' +
+    '연간 인건비를 인원으로 나눌 때는 교대를 포함한 고용 인원이 맞는 눈금이다.';
+}
+
+// ── 부가가치 계산 ──────────────────────────────────────────────────────────
+// 주석 15 가 "부가가치 관련자료"인 이유가 여기 있다. 통상의 부가가치 =
+// 경상손익 + 인건비 + 순금융비용 + 임차료 + 조세공과 + 감가상각비 이고, 주석 15 는
+// 그 중 뒤 네 덩어리를 판관비/운항원가로 갈라 제공한다. 이때의 "부가가치"는
+// 부가가치세와 아무 상관이 없다 — 옆 카드에서 그 점을 다룬다.
+function drawVA(){
+  const K = 1000;
+  const ordCur  = -cur('Ⅷ.법인세비용차감전순손실');
+  const ordPrev = -prv('Ⅷ.법인세비용차감전순손실');
+  const finCur  = cur('이자비용(주5)') - cur('이자수익');
+  const finPrev = prv('이자비용(주5)') - prv('이자수익');
+  const labCur  = N15_LABOR.reduce((a,nm) => {
+    const r = N15.find(x => x[0] === nm); return a + r[1] + r[2]; }, 0) * K;
+  const depCur  = (N15[3][1] + N15[3][2]) * K;
+  const taxCur  = (N15[4][1] + N15[4][2]) * K;
+  const rentCur = (N15[5][1] + N15[5][2]) * K;
+
+  const rows = [
+    ['경상손익 (법인세비용차감전)',      ordCur,  ordPrev],
+    ['인건비 (급여·퇴직·복리)',          labCur,  N.prevLabor],
+    ['순금융비용 (이자비용−이자수익)',   finCur,  finPrev],
+    ['임차료',                           rentCur, N.prevRent],
+    ['조세공과',                         taxCur,  N.prevTax],
+    ['감가상각비',                       depCur,  N.prevDep],
+  ];
+  const vaCur  = rows.reduce((a,r) => a + r[1], 0);
+  const vaPrev = rows.reduce((a,r) => a + r[2], 0);
+
+  el('tVA').innerHTML =
+    rows.map(r => '<tr><td>' + r[0] + '</td>' +
+      '<td class="' + (r[1]<0?'neg':'') + '">' + won(r[1]) + '</td>' +
+      '<td class="' + (r[2]<0?'neg':'') + '">' + won(r[2]) + '</td>' +
+      '<td>' + pct(r[1]/A.sales) + '</td></tr>').join('')
+    + '<tr class="sum"><td>부가가치</td><td>' + won(vaCur) + '</td><td>' + won(vaPrev) + '</td>'
+    + '<td>' + pct(vaCur/A.sales) + '</td></tr>'
+    + '<tr class="lead"><td>부가가치율 (÷ 매출액)</td><td>' + pct(vaCur/A.sales,2) + '</td>'
+    + '<td>' + pct(vaPrev/A.salesPrev,2) + '</td><td>—</td></tr>';
+
+  el('vaNote').innerHTML =
+    '주석 15가 "부가가치 관련자료"인 이유가 이것이다. 통상의 부가가치는 ' +
+    '<b>경상손익 + 인건비 + 순금융비용 + 임차료 + 조세공과 + 감가상각비</b>로 구하고, ' +
+    '주석 15는 그 중 인건비·감가상각비·조세공과·임차료 네 덩어리를 판관비와 운항원가로 ' +
+    '갈라 제공한다. 당기 부가가치는 <b>' + won(vaCur) + '</b>원, 부가가치율 ' +
+    '<b>' + pct(vaCur/A.sales,2) + '</b>로 전기 <b>' + pct(vaPrev/A.salesPrev,2) + '</b>에서 크게 올랐다 — ' +
+    '매출이 2.3배가 되는 동안 감가상각비·이자비용 같은 고정 덩어리는 그만큼 늘지 않았기 때문이다. ' +
+    '<b class="bad">이 "부가가치"는 부가가치세와 전혀 다른 개념</b>이라 세율 10%로 환산되지 않는다. ' +
+    '그 얘기는 오른쪽 카드에 따로 적었다.';
+}
+
+// ── 부가세 10% 역산이 가능한가 ─────────────────────────────────────────────
+// "부가가치세가 10%니 역산하면 운항원가가 나오지 않겠나" — 방향은 맞지만 이 보고서
+// 만으로는 닫히지 않는다. 왜 안 되는지를 숫자로 보여 준다.
+function drawVat(){
+  const outVat = A.paxRev * 0.1;
+  const rows = [
+    ['부가세예수금 (2024.12.31)',               N.vatCur,             '재무상태표 유동부채'],
+    ['부가세예수금 (2023.12.31)',               N.vatPrev,            '전기 · 감사받지 아니함'],
+    ['당기 증가액',                              N.vatCur-N.vatPrev,  '현금흐름표 기재액과 일치'],
+    ['여객수입 전액 10% 과세 시 연간 매출세액',  outVat,               '참고 — 실제 과세 여부 미상'],
+    ['기말잔액 ÷ 연간 매출세액',                 null,                 pct(N.vatCur/outVat)],
+    ['부가세대급금 (매입세액)',                  null,                 '재무상태표에 없음'],
+  ];
+  el('tVat').innerHTML = rows.map(r =>
+    '<tr><td>' + r[0] + '</td><td>' +
+    (r[1] === null ? '<span style="color:#A9B6C6">—</span>' : won(r[1])) +
+    '</td><td class="lft">' + r[2] + '</td></tr>').join('');
+
+  const noVat = (A.opWageT + N.opDep) / A.opCost;
+  el('vatNote').innerHTML =
+    '<b>결론부터 — 이 보고서만으로는 역산이 닫히지 않는다.</b> 이유가 셋이다.<br><br>' +
+    '<b>①</b> 부가세예수금은 <b>기말 잔액</b>이지 연간 매출세액이 아니다. ' +
+    '전기 ' + won(N.vatPrev) + '원에서 당기 ' + won(N.vatCur) + '원으로 ' +
+    '<b>' + won(N.vatCur-N.vatPrev) + '원 쌓였고</b>, 이 증가액은 현금흐름표의 ' +
+    '"부가세예수금의 증가"와 정확히 일치한다. 정상 납부 중이라면 잔액이 이렇게 누적되지 않는다 — ' +
+    '2025.02 회생절차 개시와 겹쳐 읽으면 납부가 밀린 것으로 보는 쪽이 자연스럽다. ' +
+    '그러면 잔액은 특정 기간의 세액도 아니게 된다.<br><br>' +
+    '<b>②</b> 역산하려면 <b>매입세액(부가세대급금)</b>이 있어야 하는데 재무상태표에 없다. ' +
+    '매출세액만으로는 매출 쪽만 건드릴 뿐, 매입(=운항원가의 연료·항비)에는 닿지 못한다.<br><br>' +
+    '<b>③</b> 설령 매입세액이 있어도 운항원가 전체는 안 나온다. ' +
+    '인건비 <b>' + pct(A.opWageT/A.opCost) + '</b>와 감가상각비 <b>' + pct(N.opDep/A.opCost) + '</b>, ' +
+    '합쳐 <b>' + pct(noVat) + '</b>는 애초에 매입세액이 붙지 않는 항목이다. ' +
+    '걸리는 것은 나머지 <b>' + pct(A.opEtc/A.opCost) + '</b>인데, 공교롭게도 그게 바로 우리가 모르는 ' +
+    '미공시 잔액 ' + won(A.opEtc) + '원이다.<br><br>' +
+    '<b>다만 비중 표기는 된다</b> — 그게 질문의 뒷부분에 대한 답이다. 금액을 못 채워도 ' +
+    '<b>매출액 대비 몇 %여야 하는가</b>는 목표 영업이익률에서 그대로 떨어진다. 아래 표에 그것을 적었다.';
+}
+
+// ── 목표 영업이익률별 원가 비중 ────────────────────────────────────────────
+// 금액이 아니라 비중으로 말하면 목표가 훨씬 또렷해진다. 실적 운항원가율을 어디까지
+// 눌러야 하는지가 한 줄로 나온다.
+function drawRatio(m){
+  const line = (label, S, opc, sga, labor, r, cls) =>
+    '<tr class="' + (cls||'') + '"><td>' + label + '</td><td>' + mil(S) + '</td>' +
+    '<td>' + mil(opc) + '</td><td>' + pct(opc/S) + '</td>' +
+    '<td>' + mil(sga) + '</td><td>' + pct(sga/S) + '</td>' +
+    '<td>' + pct(labor/S) + '</td>' +
+    '<td class="' + (r<0?'fail':'pass') + '">' + pct(r) + '</td></tr>';
+
+  const actLabor = A.opWageT + A.sgaWageT;
+  let html = line('실적 2024', A.sales, A.opCost, A.sga, actLabor, A.opProfit/A.sales, 'lead');
+
+  const tiers = [0, 0.03, 0.05, 0.08, 0.10, 0.15];
+  if (!tiers.includes(m.r)) { tiers.push(m.r); tiers.sort((a,b) => a-b); }
+  html += tiers.map(rr => {
+    const q = m.qFor(rr);
+    const hit = Math.abs(rr-m.r) < 1e-9;
+    const tag = hit ? '<span class="tagv">목표</span>' : '';
+    if (q === null)
+      return '<tr><td>목표 ' + pct(rr,0) + tag + '</td><td class="fail" colspan="7">달성 불가</td></tr>';
+    const S   = q*m.fare + m.O;
+    const scal = x => x.kind === 'var'  ? x.amt/m.paxAct*q
+                    : x.kind === 'semi' ? m.svPerVoy_of(x)*m.voyFor(q) : x.amt;
+    const opc = m.items.filter(x => x.on && x.grp === 'op').reduce((a,x) => a + scal(x), 0) + m.vcMan*q;
+    const sga = m.items.filter(x => x.on && x.grp === 'sga').reduce((a,x) => a + scal(x), 0);
+    return line('목표 ' + pct(rr,0) + tag + (rr===0?'<span class="tagv">손익분기</span>':''),
+                S, opc, sga, A.opWageT + m.sgaWageT, rr, hit ? 'sum' : '');
+  }).join('');
+  el('tRatio').innerHTML = html;
+
+  const q0 = m.qFor(0), qT = m.qFor(m.r);
+  const r0 = q0===null ? null : A.opCost/(q0*m.fare + m.O);
+  const rT = qT===null ? null : A.opCost/(qT*m.fare + m.O);
+  el('ratioNote').innerHTML = qT === null
+    ? '현재 설정에서는 목표에 닿지 않아 비중을 산출할 수 없다.'
+    : '실적 운항원가율은 <b class="bad">' + pct(A.opCost/A.sales) + '</b>다 — 매출 100원을 벌어 ' +
+      '운항에만 ' + pct(A.opCost/A.sales) + '를 쓰고 있으니, 판관비 ' + pct(A.sga/A.sales) + '를 더하면 ' +
+      '100을 넘는다. 이것이 영업손실의 전부다. 손익분기에 닿으려면 운항원가율을 <b>' + pct(r0) + '</b>까지, ' +
+      '목표 ' + pct(m.r,1) + '에 닿으려면 <b>' + pct(rT) + '</b>까지 낮춰야 한다. ' +
+      '여기서는 운항원가 금액을 실적 그대로 두고 매출만 늘려 비율을 낮추는 경로를 보여 준다 — ' +
+      '원가를 줄여 같은 비율에 닿아도 결과는 같다. 전사 인건비율은 <b>' + pct(actLabor/A.sales) + '</b>에서 ' +
+      '<b>' + pct((A.opWageT+m.sgaWageT)/(qT*m.fare+m.O)) + '</b>로 내려간다.';
+}
+
+// ── ③ 인건비 연간 합산 교차검증 ─────────────────────────────────────────────
+// 판관비 쪽만 보면 인건비를 절반만 보는 셈이다. 운항원가(선원) 쪽을 더해 전사
+// 인건비를 세우고, 그 값이 주석 15·주석 7 과 맞는지 나란히 놓는다.
+function drawCheck(){
+  el('cSga').textContent  = won(A.sgaWageT);
+  el('cOp').textContent   = won(A.opWageT);
+  el('cAll').textContent  = won(A.laborAll);
+  el('cAllS').textContent = `매출액 대비 ${pct(A.laborAll/A.sales)}`;
+
+  const checks = [
+    [`급여 합계 (판관 ${won(cur('직원급여'))} + 운항 ${won(N.opWage)})`,
+      cur('직원급여') + N.opWage, N.n15Wage, '주석 15'],
+    [`퇴직급여 합계 (판관 ${won(cur('퇴직급여'))} + 운항 ${won(N.opSev)})`,
+      cur('퇴직급여') + N.opSev, N.n15Sev, '주석 15'],
+    [`복리후생비 합계 (판관 ${won(cur('복리후생비'))} + 운항 ${won(N.opWelf)})`,
+      cur('복리후생비') + N.opWelf, N.n15Welf, '주석 15'],
+    ['전사 인건비 3과목 합계',
+      A.laborAll, N.n15Wage + N.n15Sev + N.n15Welf, '주석 15'],
+    ['퇴직급여충당부채 당기 전입액',
+      cur('퇴직급여') + N.opSev, N.sevAdd, '주석 7'],
+    ['판관비 세부과목 합계',
+      SGA.reduce((a,r) => a + (r[2]||0), 0), A.sga, '손익계산서 Ⅳ'],
+    ['매출 세부 합계',
+      ['여객수입','화물수입','임대료수입','기타수입'].reduce((a,n) => a + cur(n), 0), A.sales, '손익계산서 Ⅰ'],
+    ['운항원가 세부 합계 (주석 15 ×1,000 + 차액)',
+      OPD.reduce((a,r) => a + (r[2]||0), 0), A.opCost, '손익계산서 Ⅱ'],
+    ['운항원가 세부 합계 · 전기',
+      OPD.reduce((a,r) => a + (r[3]||0), 0), prv('Ⅱ.매출원가'), '손익계산서 Ⅱ'],
+    ['영업손익 (Ⅲ − Ⅳ)',
+      cur('Ⅲ.매출총이익(손실)') - A.sga, A.opProfit, '손익계산서 Ⅴ'],
+    ['EBITDA (Ⅴ + 감가상각비)',
+      A.opProfit + cur('op_감가상각비'), cur('eb_total'), '보완 행'],
+    ['조정 소계 (순손익 + 이자 + 법인세 + 감가상각비)',
+      A.netLoss + cur('eb_int') + cur('eb_tax') + cur('eb_dep2'), cur('eb_book'), '보완 행'],
+    ['조정 후 EBITDA = Ⅴ 기준 EBITDA',
+      cur('eb_net_total'), cur('eb_total'), '보완 행 · 두 경로 일치'],
+  ];
+  el('tCheck').innerHTML = checks.map(([n, got, want, src]) => {
+    const d = got - want, ok = Math.abs(d) <= 1000;   // 주석은 천원 공시 → ±1,000원은 반올림
+    return `<tr><td>${n}<span class="tagv">${src}</span></td>
+      <td>${won(got)}</td><td>${won(want)}</td>
+      <td class="${ok?'pass':'fail'}">${d===0 ? '0' : dlt(d)}${ok?'':' ⚠'}</td></tr>`;
+  }).join('');
+
+  el('checkNote').innerHTML =
+    `주석 15는 <b>천원 단위</b>로 공시돼 있어 원 단위 손익계산서와 맞추면 최대 1,000원의
+     반올림 차이가 남는다. 퇴직급여충당부채 전입액도 주석 7에 <b>300,671</b>천원,
+     주석 15 합산으로는 <b>300,672</b>천원이라 1천원 어긋난다 — 둘 다 반올림이며
+     실질 불일치가 아니다. 위에서 차이가 ±1,000원을 넘는 줄이 없으면 판관비와 운항원가를
+     갈라 세운 이 분해가 보고서와 정합한다는 뜻이다.`;
+}
+
+// ── ④ 지급수수료 점검 ───────────────────────────────────────────────────────
+// 판관비에서 급여영역 다음으로 큰 과목이고, 성격상 승객수에 연동될 소지가 커서
+// 따로 떼어 본다. 전기와 나란히 두면 취항 초기의 판매채널 비용이 어떻게 줄었는지 드러난다.
+function drawFee(m){
+  const perPax = A.fee / m.paxAct;
+  el('fAmt').textContent   = mil(A.fee) + '백만';
+  el('fAmtS').textContent  = won(A.fee) + '원';
+  el('fShare').textContent = pct(A.fee/A.sga);
+  el('fShareS').textContent= '급여영역 다음 최대 과목';
+  el('fPer').innerHTML     = won(perPax) + '<small>원</small>';
+  el('fPerS').textContent  = `운임 ${won(m.fare)}원의 ${pct(perPax/m.fare)}`;
+  const yoy = A.fee/A.feePrev - 1;
+  el('fYoy').textContent   = pct(yoy);
+  el('fYoy').className     = 'v ' + (yoy < 0 ? 'pos' : 'neg');
+  el('fYoyS').textContent  = `${mil(A.feePrev)} → ${mil(A.fee)}백만 (${dlt(A.fee-A.feePrev)}원)`;
+
+  const wagePrev = WAGE3.reduce((a,n) => a + prv(n), 0);
+  const top = SGA.filter(r => !isWage(r[1]))
+                 .sort((a,b) => (b[2]||0) - (a[2]||0)).slice(0, 5);
+  el('tFee').innerHTML =
+    `<tr class="lead"><td>급여영역 3과목</td><td>${mil(A.sgaWageT)}</td><td>${mil(wagePrev)}</td>
+      <td>${pct(A.sgaWageT/wagePrev-1)}</td><td>${pct(A.sgaWageT/A.sales)}</td></tr>`
+    + top.map(([,n,c,p]) =>
+        `<tr class="${n==='지급수수료'?'flagrow':''}"><td>${n}</td>
+          <td>${mil(c||0)}</td><td>${mil(p||0)}</td>
+          <td>${p ? pct((c||0)/p-1) : '신규'}</td><td>${pct((c||0)/A.sales)}</td></tr>`).join('')
+    + `<tr class="sum"><td>판관비 총계</td><td>${mil(A.sga)}</td><td>${mil(A.sgaPrev)}</td>
+        <td>${pct(A.sga/A.sgaPrev-1)}</td><td>${pct(A.sga/A.sales)}</td></tr>`;
+
+  const chan     = A.fee + cur('광고선전비');
+  const chanPrev = A.feePrev + prv('광고선전비');
+  el('feeNote').innerHTML =
+    `지급수수료 <b class="amb">${won(A.fee)}</b>원은 판관비의 <b>${pct(A.fee/A.sga)}</b>,
+     매출액의 <b>${pct(A.fee/A.sales)}</b>다. 이코노미 환산 승객 ${won(m.paxAct)}명으로 나누면
+     <b>1인당 ${won(perPax)}원</b> — 운임 ${won(m.fare)}원의 ${pct(perPax/m.fare)}에 해당한다.
+     감사보고서는 수수료 내역을 갈라 적지 않아 성격을 단정할 수 없지만, 여객 사업에서
+     이 규모는 통상 <b>예약·결제 채널 수수료</b>(OTA·카드·여행사 대리점)로 본다.
+     그렇게 보면 고정비가 아니라 승객수에 연동되는 비용이므로, 좌측 체크박스로
+     <b>승객 1인당 ${won(A.fee / m.paxAct)}원</b>의 변동비로 잡아 손익분기를 다시 볼 수 있다.
+     <br><br>
+     광고선전비까지 더한 판매채널 비용은 당기 <b>${mil(chan)}</b>백만원으로 전기
+     <b>${mil(chanPrev)}</b>백만원에서 <b>${pct(chan/chanPrev-1)}</b> 줄었다. 전기에는 매출액의
+     <b>${pct(chanPrev/A.salesPrev)}</b>였던 것이 당기 <b>${pct(chan/A.sales)}</b>가 됐다 —
+     2023년은 취항 첫 해로 매출이 5,596백만원뿐이었는데 채널 확보에 쓴 돈이 그만큼 컸던 것으로,
+     이 항목은 <b>취항 초기에 크게 튀고 이후 안정화되는</b> 성격이라고 읽는 게 맞다.
+     하카타 항로를 새로 열면 초기 2~3년은 당기(${pct(chan/A.sales)})보다
+     전기(${pct(chanPrev/A.salesPrev)}) 쪽에 가까운 부담을 봐야 한다.`;
+}
+
+// ── ⑤ 시뮬레이션 손익 요약 ──────────────────────────────────────────────────
+function drawSim(m){
+  const s = m.cur;
+  // s.op 는 EBITDA 모드에서 이미 감가상각비가 빠진 값이다. 표에는 회계상 영업이익과
+  // EBITDA 를 둘 다 세워야 하므로, 여기서 되돌려 두 줄을 각각 만든다.
+  const accOp = m.ebitda ? s.op - m.DEP : s.op;
+  const simOpCost = A.opCost + m.vcMan * m.pax;
+  const feeIt     = m.items.find(x => x.id === 'fee');
+  const simFee    = !feeIt.on ? 0
+                  : feeIt.kind === 'var'  ? A.fee / m.paxAct * m.pax
+                  : feeIt.kind === 'semi' ? m.svPerVoy_of(feeIt) * m.voyFor(m.pax)
+                  : A.fee;
+  const simSga    = m.sgaWageT + A.sgaOtherX + simFee;
+  el('simCap').textContent =
+    `승객 ${won(m.pax)}명 · 운임 ${won(m.fare)}원 · 직원 ${m.head}명`
+    + `${m.feeVar?' · 수수료 승객연동':''}${m.ebitda?' · EBITDA 기준':''}`;
+
+  const rows = [
+    ['lead','매출액',            A.sales,             s.sales],
+    ['thin','여객수입',          A.paxRev,            m.pax * m.fare],
+    ['thin','화물·임대수입',     A.etcRev,            A.etcRev],
+    ['lead','매출원가(운항원가)', A.opCost,            simOpCost],
+    ['sum', '매출총이익',        A.sales - A.opCost,  s.sales - simOpCost],
+    ['lead','판매비와관리비',    A.sga,               simSga],
+    ['thin','급여영역 3과목',    A.sgaWageT,          m.sgaWageT],
+    ['thin','지급수수료',        A.fee,               simFee],
+    ['thin','그 밖 13과목',      A.sgaOtherX,         A.sgaOtherX],
+    ['sum', '영업이익',          A.opProfit,          accOp],
+    ['rate','영업이익률',        null,                null],
+    ['thin','(+) 감가상각비',    m.DEP,               m.DEP],
+    ['sum', 'EBITDA',            A.opProfit + m.DEP,  accOp + m.DEP],
+    ['ebr', 'EBITDA 마진',       null,                null],
+    ['sum', '당기순손익',        A.netLoss,           accOp + A.nonOpInc - A.nonOpExp],
+  ];
+  el('tSim').innerHTML = rows.map(([cls, name, a, b]) => {
+    if (cls === 'rate' || cls === 'ebr'){
+      const add = cls === 'ebr' ? m.DEP : 0;
+      const x = (A.opProfit + add)/A.sales, y = s.sales ? (accOp + add)/s.sales : 0;
+      return `<tr class="${cls==='ebr'?'lead':'thin'}"><td>${name}</td>
+        <td class="${sign(x)}">${pct(x,2)}</td><td class="${sign(y)}">${pct(y,2)}</td>
+        <td>${(y-x>=0?'+':'') + ((y-x)*100).toFixed(1)}%p</td></tr>`;
+    }
+    const d = b - a;
+    return `<tr class="${cls}"><td>${name}</td><td>${mil(a)}</td><td>${mil(b)}</td>
+      <td class="${Math.abs(d)<M/2?'':sign(d)}">${Math.abs(d)<M/2 ? '—' : (d>0?'+':'') + mil(d)}</td></tr>`;
+  }).join('');
+}
+
+// ── ⑥ 목표 지표 ────────────────────────────────────────────────────────────
+function drawTgt(m){
+  const qT = m.qFor(m.r), q0 = m.qFor(0);
+  el('tgtCap').textContent =
+    `목표 ${pct(m.r,1)} · 운임 ${won(m.fare)}원 · 직원 ${m.head}명`
+    + `${m.feeVar?' · 수수료 승객연동':''}${m.ebitda?' · EBITDA 기준':''}`;
+
+  if (qT === null){
+    ['mQ','mP','mS','mC'].forEach(i => { el(i).textContent = '달성 불가'; el(i).className='v neg'; });
+    ['mQs','mPs','mSs','mCs'].forEach(i => el(i).textContent = '운임 ≤ 변동비');
+  } else {
+    const t = m.sim(qT), p = m.pFor(m.r, m.pax);
+    el('mQ').innerHTML = won(qT) + '<small>명</small>'; el('mQ').className='v';
+    el('mQs').textContent = `실적 대비 ${dlt(qT-m.paxAct)}명 (${pct(qT/m.paxAct-1)})`;
+    el('mP').innerHTML = p===null ? '—' : won(p) + '<small>원</small>'; el('mP').className='v';
+    el('mPs').textContent = p===null ? '—' : `승객 ${won(m.pax)}명 고정 시 · 현재 대비 ${pct(p/m.fare-1)}`;
+    el('mS').innerHTML = mil(t.sales) + '<small>백만</small>'; el('mS').className='v';
+    el('mSs').textContent = `실적 ${mil(A.sales)}백만 대비 ${pct(t.sales/A.sales-1)}`;
+    el('mC').innerHTML = mil(t.cost) + '<small>백만</small>'; el('mC').className='v';
+    el('mCs').textContent = `영업이익 ${mil(t.op)}백만 확보`;
+  }
+
+  const tiers = [0, 0.03, 0.05, 0.08, 0.10, 0.15];
+  if (!tiers.includes(m.r)) { tiers.push(m.r); tiers.sort((a,b) => a-b); }
+  el('tTgt').innerHTML = tiers.map(rr => {
+    const q = m.qFor(rr), hit = Math.abs(rr-m.r) < 1e-9;
+    const tag = (hit?'<span class="tagv">목표</span>':'') + (rr===0?'<span class="tagv">손익분기</span>':'');
+    if (q === null)
+      return `<tr class="${hit?'lead':''}"><td>${pct(rr,0)}${tag}</td>
+        <td class="fail" colspan="4">운임이 변동비를 못 넘어 달성 불가</td></tr>`;
+    const p = m.pFor(rr, m.pax), gap = q - m.paxAct;
+    return `<tr class="${hit?'lead':''}"><td>${pct(rr,0)}${tag}</td>
+      <td>${won(q)}명</td><td class="${gap>0?'fail':'pass'}">${dlt(gap)}명</td>
+      <td>${p===null?'—':won(p)+'원'}</td><td>${won(q/m.voy)}명</td></tr>`;
+  }).join('');
+
+  const s = m.cur;
+  el('tgtNote').innerHTML = q0 === null
+    ? '현재 운임이 승객 1인당 변동비를 넘지 못해 승객을 늘려도 손익분기에 닿지 않는다.'
+    : `지금 설정에서 손익분기는 <b>${won(q0)}명</b>, 실적 환산 <b>${won(m.paxAct)}명</b>이라
+       <b class="bad">${won(q0-m.paxAct)}명</b>이 모자란다. 이를 운임으로 메우려면
+       <b>${won(m.pFor(0, m.pax))}원</b>(현재 대비 ${pct(m.pFor(0,m.pax)/m.fare-1)})이 필요하다.
+       입력한 승객 <b>${won(m.pax)}명</b>에서는 ${m.ebitda?'EBITDA':'영업손익'}
+       <b class="${s.op<0?'bad':''}">${mil(s.op)}</b>백만원,
+       ${m.ebitda?'EBITDA 마진':'영업이익률'} <b class="${s.op<0?'bad':''}">${pct(s.margin)}</b>이다.
+       <br><br>
+       <b>감가상각비를 어떻게 보느냐로 결론이 갈린다.</b> 실적 영업손익은
+       <b class="bad">${mil(A.opProfit)}</b>백만원 적자지만, 현금이 나가지 않는 감가상각비
+       <b>${mil(m.DEP)}</b>백만원을 되돌리면 EBITDA는 <b>+${mil(A.opProfit+m.DEP)}</b>백만원
+       흑자(마진 ${pct((A.opProfit+m.DEP)/A.sales,2)})다. 손익분기 승객수도 회계상
+       <b>${won((A.opCost+A.sga-A.etcRev)/m.fare)}명</b>에서 EBITDA 기준
+       <b>${won((A.opCost+A.sga-m.DEP-A.etcRev)/m.fare)}명</b>으로 내려가는데,
+       후자는 실적 ${won(m.paxAct)}명이 <b>이미 넘어선</b> 수치다.
+       좌측 체크박스로 기준을 바꿔 볼 수 있다.`;
+}
+
+// ── ⑦ 원가 구조 ────────────────────────────────────────────────────────────
+function drawCost(m){
+  const voyNow = m.voyFor(m.pax);
+  const scaled = x => x.kind === 'semi' ? m.svPerVoy_of(x) * voyNow
+                    : x.kind === 'var'  ? (x.amt / m.paxAct) * m.pax
+                    : x.amt;
+  const on = m.items.filter(x => x.on);
+  const tot = on.reduce((a, x) => a + scaled(x), 0) + m.vcMan * m.pax;
+
+  const kindTag = k => `<span class="k${k}">${COST_KINDS[k]}</span>`;
+  const drive = x => x.kind === 'semi' ? `${won(m.svPerVoy_of(x))}원/항차 × ${won(voyNow)}항차`
+                   : x.kind === 'var'  ? `${won(x.amt / m.paxAct)}원/인 × ${won(m.pax)}명`
+                   : '승객·항차와 무관';
+
+  el('tCost').innerHTML =
+    on.map(x => `<tr><td>${x.name}</td><td>${mil(scaled(x))}</td>
+      <td>${pct(scaled(x)/tot)}</td>
+      <td class="lft">${kindTag(x.kind)} — ${drive(x)}</td></tr>`).join('')
+    + (m.vcMan > 0
+        ? `<tr><td>승객 1인당 추가 변동비</td><td>${mil(m.vcMan*m.pax)}</td>
+            <td>${pct(m.vcMan*m.pax/tot)}</td>
+            <td class="lft">${kindTag('var')} — ${won(m.vcMan)}원/인 × ${won(m.pax)}명</td></tr>`
+        : '')
+    + `<tr class="sum"><td>총비용</td><td>${mil(tot)}</td><td>100.0%</td><td></td></tr>`
+    + (m.items.some(x => !x.on)
+        ? `<tr class="ck"><td colspan="4" style="text-align:left;white-space:normal">
+            <b>계산에서 뺀 항목</b> — ${m.items.filter(x => !x.on).map(x =>
+              `${x.name.split(' (')[0]} ${mil(x.amt)}백만`).join(' · ')}
+            ${m.ebitda ? '<br>감가상각비를 뺐으니 이 화면은 <b>EBITDA 기준</b>이다.' : ''}
+           </td></tr>`
+        : '');
+  el('nOpEtc').textContent = mil(A.opEtc);
+}
+
+// ── ⑧ CVP 그래프 ───────────────────────────────────────────────────────────
+// 매출선과 총비용선이 만나는 자리가 손익분기다. 목표점·실적점을 같은 축에 얹어
+// 세 지점의 거리를 한눈에 보이게 한다.
+function drawCVP(m){
+  const W=1000, H=300, L=64, R=16, T=14, B=34;
+  const qT = m.qFor(m.r), q0 = m.qFor(0);
+  const qMax = Math.max(...[m.paxAct, m.pax, q0||0, qT||0].filter(v => isFinite(v) && v>0), 1) * 1.25;
+  const yMax = Math.max(m.sim(qMax).sales, m.sim(qMax).cost) * 1.05;
+  const x = q => L + (W-L-R) * (q/qMax);
+  const y = v => T + (H-T-B) * (1 - v/yMax);
+
+  const line = (fn, col) =>
+    `<polyline points="${[0,qMax].map(q => `${x(q).toFixed(1)},${y(fn(q)).toFixed(1)}`).join(' ')}"
+       fill="none" stroke="${col}" stroke-width="2"/>`;
+  const mark = (q, col, label, dy) => {
+    if (q===null || !isFinite(q) || q<=0 || q>qMax) return '';
+    const v = m.sim(q);
+    return `<line x1="${x(q).toFixed(1)}" y1="${y(0).toFixed(1)}" x2="${x(q).toFixed(1)}" y2="${y(v.sales).toFixed(1)}"
+              stroke="${col}" stroke-width="1.2" stroke-dasharray="4 3"/>
+            <circle cx="${x(q).toFixed(1)}" cy="${y(v.sales).toFixed(1)}" r="4" fill="${col}"/>
+            <text x="${x(q).toFixed(1)}" y="${(y(v.sales)+dy).toFixed(1)}" fill="${col}"
+              font-size="11" font-weight="700" text-anchor="middle">${label}</text>`;
+  };
+
+  let ticks = '';                                   // y축 — 5,000백만원 간격
+  for (let v=0; v<=yMax; v+=5000*M)
+    ticks += `<line x1="${L}" y1="${y(v).toFixed(1)}" x2="${W-R}" y2="${y(v).toFixed(1)}"
+                stroke="#EAEFF5" stroke-width="1"/>
+              <text x="${L-7}" y="${(y(v)+3.5).toFixed(1)}" fill="#5C6B7F" font-size="10"
+                text-anchor="end">${mil(v)}</text>`;
+  let xt = '';                                      // x축 — 50,000명 간격
+  for (let q=0; q<=qMax; q+=50000)
+    xt += `<text x="${x(q).toFixed(1)}" y="${H-12}" fill="#5C6B7F" font-size="10"
+             text-anchor="middle">${(q/1000).toFixed(0)}천명</text>`;
+
+  el('cvp').innerHTML =
+    `<svg viewBox="0 0 ${W} ${H}" role="img"
+       aria-label="승객수에 따른 매출액과 총비용, 손익분기점과 목표 도달점">
+      ${ticks}${xt}
+      <line x1="${L}" y1="${y(0).toFixed(1)}" x2="${W-R}" y2="${y(0).toFixed(1)}" stroke="#D7DFE9"/>
+      <line x1="${L}" y1="${T}" x2="${L}" y2="${y(0).toFixed(1)}" stroke="#D7DFE9"/>
+      ${line(q => m.sim(q).cost,  '#A8392F')}
+      ${line(q => m.sim(q).sales, '#154B8C')}
+      ${mark(q0,       '#1C6B4A', '손익분기 ' + won(q0||0) + '명', -12)}
+      ${mark(qT,       '#8A5A12', '목표 ' + won(qT||0) + '명',     -28)}
+      ${mark(m.paxAct, '#5BA3D9', '실적 ' + won(m.paxAct) + '명',   18)}
+    </svg>`;
+}
+
+// ── 원가 구성표 ────────────────────────────────────────────────────────────
+// 체크박스는 "이 원가를 계산에 넣을지", 드롭다운은 "승객·항차와 어떻게 물리는지"다.
+// 금액 자체는 보고서 값이라 못 바꾼다 — 바꿀 수 있는 것은 취급뿐이다.
+function buildCostMix(){
+  el('tCostMix').innerHTML = COSTS.map(c =>
+    `<tr id="row_${c.id}">
+      <td><input type="checkbox" id="use_${c.id}" checked aria-label="${c.name} 포함"></td>
+      <td><b>${c.name}</b>${c.note ? `<br><span style="color:var(--muted);font-size:9.5px">${c.note}</span>` : ''}</td>
+      <td id="amt_${c.id}">—</td>
+      <td><select id="kind_${c.id}" aria-label="${c.name} 성격">`
+      + Object.entries(COST_KINDS).map(([k, label]) =>
+          `<option value="${k}"${k === DEFAULTS.kinds[c.id] ? ' selected' : ''}>${label}</option>`).join('')
+      + `</select></td></tr>`).join('');
+
+  COSTS.forEach(c => {
+    el('use_'+c.id).addEventListener('change', render);
+    el('kind_'+c.id).addEventListener('change', render);
+  });
+}
+
+// ── 공시 운임표 (정적) ─────────────────────────────────────────────────────
+// 모든 배율의 기준점은 이코노미 대인 정상 81,000원이다. 그 한 칸에서 나머지가 전부
+// 파생된다는 것이 이 표의 요지라, 금액 아래 배율을 같이 깐다.
+function buildFareTable(){
+  const base = FARE_TABLE[0][1][0];      // 81,000
+  const cell = v => v === null
+    ? '<td class="free">무임</td>'
+    : `<td>${won(v)}<span class="mul">${(v/base).toFixed(3)}배</span></td>`;
+  el('tFare').innerHTML = FARE_TABLE.map(r =>
+    `<tr${r[0]==='대인' ? ' class="lead"' : ''}><td>${r[0]}</td>`
+    + (r[1] === null
+        ? '<td class="free">무임</td><td class="free">무임</td><td class="free">무임</td>'
+          + '<td class="free">무임</td><td class="free">무임</td><td class="free">무임</td>'
+        : cell(r[1][0]) + cell(r[1][1]) + cell(r[2][0]) + cell(r[2][1]) + cell(r[3][0]) + cell(r[3][1]))
+    + '</tr>').join('');
+}
+
+// ── 대조 선박 — 같은 원가 구조를 다른 배에 얹으면 요구 승선율이 달라진다 ──
+// 손익 금액은 배와 무관하다(운임과 승객수로만 정해진다). 배가 바꾸는 것은 오직
+// "그 승객을 태우려면 정원 대비 몇 %를 채워야 하는가"뿐이라, 그 한 가지만 견준다.
+function drawPeer(m){
+  const pe = m.peer;
+  if (!pe) {
+    el('hPeer').innerHTML = '<b class="bad">등록된 대조 선박이 없다</b> — 가정 탭에서 추가한다.';
+    el('tCmpShip').innerHTML = '';
+    el('hCmpShip').textContent = '';
+    return;
+  }
+  el('hPeer').innerHTML =
+    (pe.gt ? `GT ${won(pe.gt)}톤 · 전장 ${pe.loa}m · ` : '')
+    + `<b>여객정원 ${won(pe.pax)}명</b>`
+    + (pe.kts !== '—' ? ` · 최고 ${pe.kts}노트` : '')
+    + `<br>${pe.route}<span class="tagv">${pe.src}</span>`;
+
+  const q0 = m.qFor(0), qT = m.qFor(m.r);
+  const row = (label, q) => {
+    if (q === null) return `<tr><td>${label}</td><td class="fail" colspan="2">달성 불가</td></tr>`;
+    const a = q / (m.ship.pax * m.voy), b = q / (pe.pax * m.voy);
+    const bad = x => x > 1 ? ' class="fail"' : '';
+    return `<tr><td>${label}<br><span style="color:var(--muted);font-size:10px">${won(q)}명 · 항차당 ${won(q/m.voy)}명</span></td>
+      <td${bad(a)}>${pct(a)}</td><td${bad(b)}>${pct(b)}</td></tr>`;
+  };
+  el('tCmpShip').innerHTML =
+    `<tr><td>여객정원</td><td>${won(m.ship.pax)}명</td><td>${won(pe.pax)}명</td></tr>`
+    + row('입력 승객수', m.pax)
+    + row('손익분기', q0)
+    + row(`목표 ${pct(m.r,1)}`, qT);
+
+  const need = qT === null ? null : qT / (pe.pax * m.voy);
+  el('hCmpShip').innerHTML = need === null
+    ? '현재 설정에서는 목표에 닿지 않아 요구 승선율을 낼 수 없다.'
+    : `손익 금액은 배와 무관하다 — 운임과 승객수로만 정해진다. 배가 바꾸는 것은
+       <b>그 승객을 태우려면 정원을 몇 %까지 채워야 하는가</b>뿐이다.
+       ${pe.name.split(' · ')[0]}(정원 ${won(pe.pax)}명)로 목표 ${pct(m.r,1)}에 닿으려면
+       연 ${won(m.voy)}항차 기준 <b${need > 1 ? ' class="bad"' : ''}>승선율 ${pct(need)}</b>,
+       항차당 <b>${won(qT/m.voy)}명</b>이 필요하다.
+       ${need > 1 ? '<b class="bad">정원을 넘는다</b> — 항차수를 늘리거나 운임을 올려야 한다.' : ''}
+       참조 선박 ${m.ship.name.split(' · ')[0]}(정원 ${won(m.ship.pax)}명)라면 같은 승객이
+       ${pct(qT/(m.ship.pax*m.voy))}에 해당한다.`;
+}
+
+// ── 좌석 등급표 · 대조 선박 (한 번만 세운다) ───────────────────────────────
+function buildInputs(){
+  buildShipSelects();
+  buildCostMix();
+
+  // 배율은 운임표에서 나온 고정값이라 읽기 전용으로 두고, 구성비만 입력받는다.
+  el('tSeat').innerHTML = SEATS.map((t,i) =>
+    `<tr><td>${t.name}</td><td>${(+t.mult.toFixed(4))}배</td>
+      <td id="hSeat${t.id}">—</td>
+      <td><input type="text" inputmode="numeric" id="iMix${t.id}" value="${DEFAULTS.mix[i]}"></td></tr>`).join('')
+    + `<tr class="sum"><td>가중평균 운임</td><td id="hSeatMult">—</td>
+        <td id="hSeatFare">—</td><td id="hSeatMix">—</td></tr>`
+    + `<tr><td>(+) 유류할증료</td><td id="hFuelMult">—</td>
+        <td id="hFuelAmt">—</td><td style="color:var(--muted);font-size:10px">원/인</td></tr>`
+    + `<tr class="lead"><td>= 실현 단가</td><td id="hUnitMult">—</td>
+        <td id="hUnit">—</td><td></td></tr>`;
+
+  SEATS.forEach(t => el('iMix'+t.id).addEventListener('input', render));
+  buildFareTable();
+
+  el('btnAddShip').addEventListener('click', addShip);
+  ['iAddName','iAddPax','iAddKts'].forEach(id =>
+    el(id).addEventListener('keydown', e => { if (e.key === 'Enter') addShip(); }));
+}
+
+// 참조·대조 드롭다운은 같은 목록을 본다. 맨 아래 "＋ 선박 추가…"를 고르면 등록 창이
+// 열리고, 고른 값은 원래대로 되돌린다 — 그 항목은 배가 아니라 동작이기 때문이다.
+// 참조 드롭다운에는 실적의 주인(엘도라도)과 직접 등록한 배만 둔다. 산타모니카·퀸비틀은
+// 견줄 대상이지 실적의 주인이 아니라서, 참조로 고르면 원가 구조와 배가 어긋난다.
+const baseList = () => SHIPS.filter(v => v.id === 'eldorado' || v.custom);
+const peerList = () => SHIPS.filter(v => v.id !== 'eldorado');
+
+function buildShipSelects(){
+  [['iBase', DEFAULTS.base, baseList], ['iPeer', DEFAULTS.peer, peerList]].forEach(([id, fallback, list]) => {
+    const sel = el(id), keep = sel.value, opts = list();
+    sel.innerHTML = opts.map(v => `<option value="${v.id}">${v.name}</option>`).join('')
+      + `<option disabled>──────────</option>`
+      + `<option value="${ADD_OPT}">＋ 선박 추가…</option>`;
+    sel.value = opts.some(v => v.id === keep) ? keep
+              : (opts.some(v => v.id === fallback) ? fallback
+              : (opts[0] ? opts[0].id : ''));
+    sel.dataset.last = sel.value;
+    sel.onchange = () => {
+      if (sel.value === ADD_OPT) {
+        sel.value = sel.dataset.last;      // 되돌리고 창만 연다
+        openOv('ovShip');
+        el('iAddName').focus();
+        return;
+      }
+      sel.dataset.last = sel.value;
+      render();
+    };
+  });
+  buildShipList();
+}
+
+// 등록 창 안의 목록. 기본 3척은 지울 수 없다 — 출처가 있는 값이라 지우면 되돌릴 길이 없다.
+function buildShipList(){
+  el('tShipList').innerHTML = SHIPS.map(v =>
+    `<tr><td>${v.name}</td><td>${won(v.pax)}명</td><td>${v.kts === '—' ? '—' : v.kts + '노트'}</td>
+      <td>${v.custom ? `<button type="button" class="peerdel" data-del="${v.id}" title="삭제">✕</button>` : ''}</td></tr>`
+  ).join('');
+  el('tShipList').querySelectorAll('[data-del]').forEach(b =>
+    b.addEventListener('click', () => {
+      SHIPS = SHIPS.filter(v => v.id !== b.dataset.del);
+      saveShips(); buildShipSelects(); render();
+    }));
+}
+
+// 선박 추가 — 이름·정원·속력만 받는다. 손익 금액에는 쓰이지 않고 승선율에만 들어가므로
+// 그 셋이면 충분하다. 값이 모자라면 조용히 무시하지 말고 자리에서 알려 준다.
+function addShip(){
+  const name = el('iAddName').value.trim();
+  const pax  = Math.round(parseFloat(el('iAddPax').value.replace(/[^0-9.]/g,'')));
+  const kts  = parseFloat(el('iAddKts').value.replace(/[^0-9.]/g,''));
+  if (!name || !(pax > 0)) {
+    el('hAddMsg').innerHTML = '<b class="bad">선박명과 정원은 있어야 등록된다.</b>';
+    el('iAddName').focus();
+    return;
+  }
+  const id = 'c' + Date.now().toString(36);
+  SHIPS.push({ id, name, pax, kts: isFinite(kts) && kts > 0 ? kts : '—',
+               gt:null, loa:null, beam:null, route:'직접 등록', src:'사용자 입력', custom:true });
+  saveShips();
+  el('iAddName').value = ''; el('iAddPax').value = ''; el('iAddKts').value = '';
+  el('hAddMsg').innerHTML = `<b>${name}</b> 등록됨 — 참조·대조 드롭다운에서 고를 수 있다.`;
+  buildShipSelects();
+  render();
+}
+
+// ── 갱신 ───────────────────────────────────────────────────────────────────
+function render(){
+  const m = model();
+  el('hPerHead').textContent = won(PER_HEAD) + '원';
+  el('hPerMon').textContent  = won(PER_HEAD/12) + '원';
+  el('hPaxAct').textContent  = won(m.paxAct) + '명';
+
+  // 참조 선박 — 고정
+  const v = m.ship;
+  el('hShip').innerHTML =
+    `<b>${v.name}</b><br>GT ${won(v.gt)}톤 · 전장 ${v.loa}m · 전폭 ${v.beam}m · `
+    + `<b>여객정원 ${won(v.pax)}명</b> · 최고 ${v.kts}노트<br>`
+    + `${v.route} — ${v.note}<span class="tagv">${v.src}</span>`;
+
+  // 좌석 등급 — 배율로 편 운임과 가중평균
+  SEATS.forEach((t,i) => {
+    _setTxt('hSeat'+t.id, won(m.fareEco * t.mult) + '원');
+  });
+  const wMult = m.mixSum > 0 ? SEATS.reduce((a,t,i) => a + t.mult*m.mix[i], 0) / m.mixSum : 1;
+  _setTxt('hSeatMult', wMult.toFixed(3) + '배');
+  _setTxt('hSeatFare', won(m.fareSeat) + '원');
+  _setTxt('hSeatMix',  won(m.mixSum) + '%');
+  _setTxt('hFuelMult', m.fuel > 0 ? (m.fuel/m.fareEco).toFixed(3) + '배' : '—');
+  _setTxt('hFuelAmt',  won(m.fuel) + '원');
+  _setTxt('hUnitMult', (m.fare/m.fareEco).toFixed(3) + '배');
+  _setTxt('hUnit',     won(m.fare) + '원');
+
+  const mixMsg = m.mixSum === 0
+    ? `<b class="bad">구성비가 모두 비어 있다</b> — 이코노미 단일 운임 ${won(m.fareEco)}원으로 되돌려 계산한다.`
+    : m.mixSum === 100
+    ? `가중평균 운임 <b>${won(m.fareSeat)}</b>원 — 이코노미 ${won(m.fareEco)}원의 <b>${wMult.toFixed(3)}배</b>.
+       등급 배율은 대저페리 운임표에서 뽑은 값이고, 구성비는 가정이다.`
+    : `<b class="bad">구성비 합이 ${won(m.mixSum)}%</b>다 — 100%로 정규화해 가중평균
+       <b>${won(m.fareSeat)}</b>원을 쓴다.`;
+  const fuelMsg = m.fuel > 0
+    ? `<br>유류할증료 <b>${won(m.fuel)}</b>원은 이코노미 운임의
+       <b>${pct(m.fuel/m.fareEco,1)}</b>, 가중평균 운임의 <b>${pct(m.fuel/m.fareSeat,1)}</b>다.
+       실현 단가 <b>${won(m.fare)}</b>원 가운데 <b>${pct(m.fuel/m.fare,1)}</b>를 차지한다.`
+    : `<br><b class="amb">유류할증료가 0원</b>이다. 대저페리 운임표는 "유류할증료 별도"라고만
+       적고 <b>금액을 공시하지 않는다</b> — 공지사항으로 넘긴다. 그런데 회계상으로는 운임과 함께
+       <b>여객수입</b>에 들어가므로, 0으로 두면 그만큼이 운임에 섞여 승객수가 실제보다 많게 역산된다.
+       금액을 알면 여기 넣으면 된다.`;
+  el('hSeat').innerHTML = mixMsg + fuelMsg;
+
+  // 승선율 — 참조 선박 기준
+  const cap = v.pax * m.voy;
+  _setTxt('hLoad',   pct(m.pax/cap) + ' (정원 ' + won(v.pax) + '명 × ' + won(m.voy) + '항차)');
+  _setTxt('hPerVoy', won(m.pax/m.voy) + '명');
+
+  // 원가 구성표
+  m.items.forEach(x => {
+    _setTxt('amt_'+x.id, mil(x.amt) + '백만');
+    const tr = document.getElementById('row_'+x.id);
+    if (tr) tr.className = x.on ? '' : 'off';
+    const sel = document.getElementById('kind_'+x.id);
+    if (sel) sel.className = 'k' + x.kind;
+  });
+  const totCost = m.costF + m.costSV + m.costV;
+  const off = m.items.filter(x => !x.on);
+  el('hCostMix').innerHTML =
+    `고정 <b>${mil(m.costF)}</b>백만 · 준변동 <b class="amb">${mil(m.costSV)}</b>백만 `
+    + `· 변동 <b style="color:var(--good)">${mil(m.costV)}</b>백만 = <b>${mil(totCost)}</b>백만<br>`
+    + `준변동 <b>${won(m.svPerVoy)}</b>원/항차 · 변동 <b>${won(m.vPerPax)}</b>원/인`
+    + (m.vcMan > 0 ? ` (+ 수동 ${won(m.vcMan)}원/인)` : '')
+    + `<br>승객 한 명을 더 태울 때 실제로 늘어나는 돈은 <b>${won(m.vc)}</b>원 — `
+    + `운임 ${won(m.fare)}원의 <b>${pct(m.vc/m.fare,1)}</b>다. 나머지 `
+    + `<b>${pct(1 - m.vc/m.fare,1)}</b>가 고정·준변동비를 메우러 간다.`
+    + (off.length ? `<br><b class="bad">뺀 항목</b> — ${off.map(x => x.name.split(' (')[0]).join(', ')}`
+                  + `${m.ebitda ? ' (감가상각비를 뺐으니 EBITDA 기준이다)' : ''}` : '');
+
+  drawPeer(m);
+
+  const qT = m.qFor(m.r), q0 = m.qFor(0);
+  el('kActOp').textContent  = mil(A.opProfit) + '백만';
+  el('kActOpS').textContent = '영업이익률 ' + pct(A.opProfit/A.sales);
+  const ebAct = A.opProfit + m.DEP;
+  el('kEb').textContent     = mil(ebAct) + '백만';
+  el('kEb').className       = 'v ' + (ebAct < 0 ? 'neg' : 'pos');
+  el('kEbS').textContent    = 'EBITDA 마진 ' + pct(ebAct/A.sales, 2);
+  el('kHead').innerHTML     = won(PER_HEAD/1e4) + '<small>만원</small>';
+  el('kHeadS').textContent  = `월 ${won(PER_HEAD/12)}원 · ${BASE_HEAD}명 기준`;
+  el('kBep').innerHTML      = q0===null ? '—' : won(q0) + '<small>명</small>';
+  el('kBepS').textContent   = q0===null ? '달성 불가'
+    : (m.ebitda ? 'EBITDA 기준 · ' : '') + '실적 대비 ' + dlt(q0-m.paxAct)
+      + '명 (' + pct(q0/m.paxAct-1) + ')';
+  el('kTgt').innerHTML      = qT===null ? '—' : won(qT) + '<small>명</small>';
+  el('kTgtS').textContent   = qT===null ? '달성 불가'
+    : '목표 ' + pct(m.r,1) + ' · 항차당 ' + won(qT/m.voy) + '명';
+
+  drawSga(m); drawCrew(m); drawRatio(m); drawFee(m); drawSim(m); drawTgt(m); drawCost(m); drawCVP(m);
+}
+
+['iHead','iSailor','iCrew','iFare','iFuel','iVc','iTgt','iVoy','iPax'].forEach(id =>
+  el(id).addEventListener('input', render));
+el('iAutoVoy').addEventListener('change', render);
+
+el('btnPax').addEventListener('click', () => {
+  el('iPax').value = Math.round(A.paxRev / model().fare);
+  render();
+});
+el('btnTgt').addEventListener('click', () => {
+  const m = model(), q = m.qFor(m.r);
+  if (q !== null) { el('iPax').value = Math.round(q); render(); }
+});
+// 설정 탭
+document.querySelectorAll('.tab').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === b));
+    document.querySelectorAll('.tabp').forEach(x => { x.hidden = (x.id !== b.dataset.tab); });
+  });
+});
+
+// 손익계산서 모두 펼치기 / 접기
+el('btnPlAll').addEventListener('click', () => {
+  const rows = el('tPL').querySelectorAll('[data-grp]');
+  const open = ![...rows].every(r => r.classList.contains('open'));
+  rows.forEach(r => {
+    r.classList.toggle('open', open);
+    el('tPL').querySelectorAll(`[data-in="${r.dataset.grp}"]`).forEach(x => { x.hidden = !open; });
+  });
+  el('btnPlAll').textContent = open ? '모두 접기' : '모두 펼치기';
+});
+
+el('btnReset').addEventListener('click', () => {
+  el('iHead').value = DEFAULTS.head; el('iSailor').value = DEFAULTS.sailor;
+  el('iCrew').value = DEFAULTS.crew;
+  el('iFare').value = DEFAULTS.fare;
+  el('iVc').value   = DEFAULTS.vc;   el('iTgt').value  = DEFAULTS.tgt;
+  el('iVoy').value  = DEFAULTS.voy;
+  el('iAutoVoy').checked = DEFAULTS.autoVoy;
+  COSTS.forEach(c => { el('use_'+c.id).checked = true;
+                       el('kind_'+c.id).value = DEFAULTS.kinds[c.id]; });
+  el('iFuel').value = DEFAULTS.fuel;
+  if (SHIPS.some(v => v.id === DEFAULTS.base)) el('iBase').value = DEFAULTS.base;
+  if (SHIPS.some(v => v.id === DEFAULTS.peer)) el('iPeer').value = DEFAULTS.peer;
+  el('iBase').dataset.last = el('iBase').value;
+  el('iPeer').dataset.last = el('iPeer').value;
+  SEATS.forEach((t,i) => { el('iMix'+t.id).value = DEFAULTS.mix[i]; });
+  el('iPax').value  = Math.round(A.paxRev / DEFAULTS.fare);
+  render();
+});
+
+// ── 근거 팝업 열고 닫기 ────────────────────────────────────────────────────
+let lastFocus = null;
+function openOv(id){
+  lastFocus = document.activeElement;
+  const ov = el(id);
+  ov.setAttribute('data-open', '1');
+  ov.querySelector('.x').focus();
+}
+function closeOv(ov){
+  ov.removeAttribute('data-open');
+  if (lastFocus && lastFocus.focus) lastFocus.focus();
+}
+document.querySelectorAll('[data-modal]').forEach(t => {
+  const open = () => openOv(t.dataset.modal);
+  t.addEventListener('click', open);
+  t.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+  });
+});
+document.querySelectorAll('.ov').forEach(ov => {
+  ov.addEventListener('click', e => { if (e.target === ov) closeOv(ov); });
+  ov.querySelector('[data-close]').addEventListener('click', () => closeOv(ov));
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  document.querySelectorAll('.ov[data-open="1"]').forEach(closeOv);
+});
+
+buildInputs();   // 드롭다운·좌석표를 먼저 세워야 model() 이 그 값을 읽을 수 있다
+// 실적 역산 승객수의 초깃값도 좌석 가중평균 운임 기준이라야 앞뒤가 맞는다
+{
+  const w = SEATS.reduce((a,t,i) => a + t.mult*DEFAULTS.mix[i], 0)
+          / DEFAULTS.mix.reduce((a,b) => a+b, 0);
+  el('iPax').value = Math.round(A.paxRev / (DEFAULTS.fare * w));
+}
+drawPL();      // 원본 표는 한 번만 그린다 — 입력과 무관하다
+drawPLPrev();  // 전기 비교표도 정적이다
+drawN15();     // 주석 15 원본도 정적이다
+drawVA();      // 부가가치 계산 — 보고서 값만 쓴다
+drawVat();     // 부가세 역산 가능성 검증
+drawCheck();   // 보고서 내부 정합성 검증도 정적이다
+render();
+</script>
+</body>
+</html>
