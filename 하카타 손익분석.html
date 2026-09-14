@@ -328,8 +328,8 @@
               <div class="ib"><input type="text" inputmode="numeric" id="iCrew" value="7"><span class="u">명</span></div>
             </div>
             <div class="f">
-              <label>연간 편도 항차수 <span class="ast">가정</span></label>
-              <div class="ib"><input type="text" inputmode="numeric" id="iVoy" value="600"><span class="u">항차</span></div>
+              <label>연간 편도 항차수 <a href="https://www.ulcruise.co.kr/www/aboutus/press?mode=view&idx=5807" target="_blank" rel="noopener" style="font-size:10px;color:var(--sky);margin-left:4px">근거↗</a></label>
+              <div class="ib"><input type="text" inputmode="numeric" id="iVoy" value="500"><span class="u">항차</span></div>
             </div>
             <div class="f wide">
               <div class="fh">지상직 1인당 <b id="hPerHead">—</b> (월 <b id="hPerMon">—</b>) ·
@@ -346,7 +346,7 @@
             </div>
             <div class="f">
               <label>유류할증료 <span class="ast">미공시</span></label>
-              <div class="ib"><input type="text" inputmode="numeric" id="iFuel" value="0"><span class="u">원</span></div>
+              <div class="ib"><input type="text" inputmode="numeric" id="iFuel" value="7950"><span class="u">원</span></div>
             </div>
             <div class="f wide">
               <table class="seat"><thead><tr>
@@ -396,10 +396,11 @@
         </div>
 
         <!-- ── 탭 B · 목표기반 설정 ──
-             가정 탭에서 세운 원가 구조를 다른 배에 얹어 본다. 배가 바뀌면 정원이
-             바뀌고, 같은 승객수라도 요구 승선율이 달라진다. 손익 금액은 그대로다. -->
+             가정 탭과 독립된 인력·항차 가정을 두고, 대조 선박 정원과 화물 적재
+             조건을 얹어 목표 시나리오의 BEP·승선율을 계산한다. -->
         <div class="tabp" id="tabB" hidden>
           <div class="fields">
+
             <div class="sec">대조 선박</div>
             <div class="f wide">
               <select id="iPeer" class="shipsel"></select>
@@ -410,6 +411,93 @@
                 <th>구분</th><th>참조 · 엘도라도</th><th>대조 선박</th>
               </tr></thead><tbody id="tCmpShip"></tbody></table>
               <div class="fh" id="hCmpShip">—</div>
+            </div>
+
+            <div class="sec">인력</div>
+            <div class="f">
+              <label>지상직 (판관비)</label>
+              <div class="ib"><input type="text" inputmode="numeric" id="iHeadPeer" value="30"><span class="u">명</span></div>
+            </div>
+            <div class="f">
+              <label>선원 <span class="ast">가정</span></label>
+              <div class="ib"><input type="text" inputmode="numeric" id="iSailorPeer" value="13"><span class="u">명</span></div>
+            </div>
+            <div class="f">
+              <label>승무원 <span class="ast">가정</span></label>
+              <div class="ib"><input type="text" inputmode="numeric" id="iCrewPeer" value="7"><span class="u">명</span></div>
+            </div>
+            <div class="f">
+              <label>연간 편도 항차수 <span class="ast">목표기반</span></label>
+              <div class="ib"><input type="text" inputmode="numeric" id="iVoyPeer" value="600"><span class="u">항차</span></div>
+            </div>
+            <div class="f wide">
+              <div class="fh" id="hPeerHead">—</div>
+            </div>
+
+            <div class="sec">좌석 등급</div>
+            <div class="f">
+              <label>이코노미 대인 편도 운임 (기준)</label>
+              <div class="ib"><input type="text" inputmode="numeric" id="iFarePeer" value="90000"><span class="u">원</span></div>
+            </div>
+            <div class="f">
+              <label>유류할증료</label>
+              <div class="ib"><input type="text" inputmode="numeric" id="iFuelPeer" value="30000"><span class="u">원</span></div>
+            </div>
+            <div class="f wide">
+              <table class="seat"><thead><tr>
+                <th>등급</th><th>배율</th><th>운임</th><th>구성비</th>
+              </tr></thead><tbody id="tSeatPeer"></tbody></table>
+              <div class="fh" id="hSeatPeer">—</div>
+            </div>
+
+            <div class="sec">화물 수입 시뮬레이션</div>
+            <div class="f">
+              <label>선적율</label>
+              <div class="ib"><input type="text" inputmode="decimal" id="iCargoLoad" value="30"><span class="u">%</span></div>
+            </div>
+            <div class="f">
+              <label>참조 선박 항차당 최대 화물 수입</label>
+              <div class="ib"><input type="text" inputmode="numeric" id="iCargoBase" value="0"><span class="u">원</span></div>
+            </div>
+            <div class="f">
+              <label>대조 선박 항차당 최대 화물 수입</label>
+              <div class="ib"><input type="text" inputmode="numeric" id="iCargoPeer" value="0"><span class="u">원</span></div>
+            </div>
+            <div class="f wide">
+              <table class="seat"><thead><tr>
+                <th>구분</th><th>참조 · 엘도라도</th><th>대조 선박</th>
+              </tr></thead><tbody id="tCargoCmp"></tbody></table>
+              <div class="fh" id="hCargoCmp">—</div>
+            </div>
+
+            <div class="sec">대조 선박 손익계산서</div>
+            <div class="f wide">
+              <table class="pl">
+                <caption>
+                  <span class="unit">(단위 : 원)</span>
+                  <b>손 익 계 산 서</b>
+                </caption>
+                <thead><tr>
+                  <th>과 목</th><th>금액</th><th>구성비</th><th>매출 대비</th>
+                </tr></thead>
+                <tbody>
+                  <tr class="r"><td>Ⅰ. 매출액</td><td id="ppSales">—</td><td class="nil">-</td><td id="ppSalesM">-</td></tr>
+                  <tr class="d"><td>여객수입</td><td id="ppPaxRev">—</td><td id="ppPaxRevR">-</td><td id="ppPaxRevM">-</td></tr>
+                  <tr class="d"><td>화물수입</td><td id="ppCargoRev">—</td><td id="ppCargoRevR">-</td><td id="ppCargoRevM">-</td></tr>
+                  <tr class="d"><td>기타수입</td><td id="ppEtcRev">—</td><td id="ppEtcRevR">-</td><td id="ppEtcRevM">-</td></tr>
+                  <tr class="r"><td>Ⅱ. 운항원가 (−)</td><td id="ppOpCost">—</td><td class="nil">-</td><td id="ppOpCostM">-</td></tr>
+                  <tr class="d"><td>운항 인건비</td><td id="ppOpLabor">—</td><td id="ppOpLaborR">-</td><td id="ppOpLaborM">-</td></tr>
+                  <tr class="d"><td>운항 감가상각비</td><td id="ppOpDep">—</td><td id="ppOpDepR">-</td><td id="ppOpDepM">-</td></tr>
+                  <tr class="d"><td>운항 세금과공과·임차료</td><td id="ppOpTR">—</td><td id="ppOpTRR">-</td><td id="ppOpTRM">-</td></tr>
+                  <tr class="d"><td>운항기타</td><td id="ppOpEtc">—</td><td id="ppOpEtcR">-</td><td id="ppOpEtcM">-</td></tr>
+                  <tr class="t"><td>Ⅲ. 매출총이익</td><td id="ppGross">—</td><td class="nil">-</td><td id="ppGrossM">-</td></tr>
+                  <tr class="r"><td>Ⅳ. 판관비 (−)</td><td id="ppSgaCost">—</td><td class="nil">-</td><td id="ppSgaCostM">-</td></tr>
+                  <tr class="d"><td>판관 급여영역</td><td id="ppSgaWage">—</td><td id="ppSgaWageR">-</td><td id="ppSgaWageM">-</td></tr>
+                  <tr class="d"><td>판관 그 밖</td><td id="ppSgaEtc">—</td><td id="ppSgaEtcR">-</td><td id="ppSgaEtcM">-</td></tr>
+                  <tr class="d"><td>지급수수료</td><td id="ppFee">—</td><td id="ppFeeR">-</td><td id="ppFeeM">-</td></tr>
+                  <tr class="lead"><td>Ⅴ. 영업이익(손실)</td><td id="ppOpProfit">—</td><td class="nil">-</td><td id="ppOpProfitM">-</td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -446,48 +534,23 @@
         </div>
       </section>
 
-                              <div class="pair">
-        <!-- ══ ⑤ 시뮬레이션 손익 요약 ══ -->
-        <section class="card">
-          <h2 class="clk" data-modal="ovLabor" role="button" tabindex="0" aria-haspopup="dialog"><span class="tt">시뮬레이션 손익 요약<span class="ic">?</span></span><em id="simCap">—</em></h2>
-          <div class="body">
-            <table>
-              <thead><tr><th>구분</th><th>실적 2024</th><th>시뮬레이션</th><th>차이</th></tr></thead>
-              <tbody id="tSim"></tbody>
-            </table>
-            <p class="note">
-              원본 손익계산서는 그대로 두고, 매출액을 <b>승객수 × 운임 + 화물·임대수입</b>으로,
-              판관비 급여영역을 <b>직원 수 × 1인당 인건비</b>로 다시 세운 결과만 여기에 따로 적는다.
-              영업외손익(이자비용 <b>4,009</b>백만원)은 항로 운영이 아니라 선박금융에서 나오는
-              비용이라 손대지 않았다 — 그래서 아래 당기순손익 줄의 차이는 영업이익 차이와 같다.
-            </p>
-          </div>
-        </section>
 
-        <!-- ══ ⑥ 목표 달성 지표 ══ -->
-        <section class="card">
-          <h2 class="clk" data-modal="ovCost" role="button" tabindex="0" aria-haspopup="dialog"><span class="tt">목표 영업이익률 도달 지표<span class="ic">?</span></span><em id="tgtCap">—</em></h2>
-          <div class="body">
-            <div class="minis">
-              <div class="mini"><div class="k">필요 승객수</div><div class="v" id="mQ">—</div><div class="s" id="mQs">—</div></div>
-              <div class="mini"><div class="k">필요 운임</div><div class="v" id="mP">—</div><div class="s" id="mPs">—</div></div>
-              <div class="mini"><div class="k">필요 매출액</div><div class="v" id="mS">—</div><div class="s" id="mSs">—</div></div>
-              <div class="mini"><div class="k">허용 총비용</div><div class="v" id="mC">—</div><div class="s" id="mCs">—</div></div>
-            </div>
-            <table>
-              <thead><tr><th>목표 영업이익률</th><th>필요 승객수</th><th>실적 대비</th><th>필요 운임</th><th>항차당</th></tr></thead>
-              <tbody id="tTgt"></tbody>
-            </table>
-            <p class="note" id="tgtNote">—</p>
-          </div>
-        </section>
-      </div>
-
-      <!-- ══ 목표별 원가 비중 ══ -->
+      <!-- ══ ⑥ 목표 달성 지표 + 원가 비중 ══ -->
       <section class="card">
-        <h2>목표 영업이익률별 원가 비중<em>매출액 대비 — 목표를 만족하려면 원가가 매출의 몇 %여야 하는가</em></h2>
+        <h2 class="clk" data-modal="ovCost" role="button" tabindex="0" aria-haspopup="dialog"><span class="tt">목표 영업이익률 도달 지표<span class="ic">?</span></span><em id="tgtCap">—</em></h2>
         <div class="body">
+          <div class="minis">
+            <div class="mini"><div class="k">필요 승객수</div><div class="v" id="mQ">—</div><div class="s" id="mQs">—</div></div>
+            <div class="mini"><div class="k">필요 운임</div><div class="v" id="mP">—</div><div class="s" id="mPs">—</div></div>
+            <div class="mini"><div class="k">필요 매출액</div><div class="v" id="mS">—</div><div class="s" id="mSs">—</div></div>
+            <div class="mini"><div class="k">허용 총비용</div><div class="v" id="mC">—</div><div class="s" id="mCs">—</div></div>
+          </div>
           <table>
+            <thead><tr><th>목표 영업이익률</th><th>필요 승객수</th><th>실적 대비</th><th>필요 운임</th><th>항차당</th></tr></thead>
+            <tbody id="tTgt"></tbody>
+          </table>
+          <p class="note" id="tgtNote">—</p>
+          <table style="margin-top:12px">
             <thead><tr>
               <th>구분</th><th>매출액</th><th>운항원가</th><th>운항원가율</th>
               <th>판관비</th><th>판관비율</th><th>전사 인건비율</th><th>영업이익률</th>
@@ -929,6 +992,8 @@ A.paxRev   = cur('여객수입');
 A.sales    = cur('Ⅰ.매출액');
 A.salesPrev= prv('Ⅰ.매출액');
 A.etcRev   = A.sales - A.paxRev;                          //   332,642,171
+A.cargoRev    = cur('화물수입');                            //   323,042,171
+A.nonCargoRev = A.etcRev - A.cargoRev;                    //     9,600,000 (임대료 등)
 A.opCost   = cur('Ⅱ.매출원가');
 A.sga      = cur('Ⅳ.판매비와관리비(주15)');
 A.sgaPrev  = prv('Ⅳ.판매비와관리비(주15)');
@@ -1027,9 +1092,12 @@ const COSTS = [
 const BASE_HEAD = 30;
 const PER_HEAD  = A.sgaWageT / BASE_HEAD;                 // 70,761,741.67원
 const FEE_RATE  = A.fee / (A.paxRev / 81000);             // 승객 1인당 환산 (정상운임 기준)
-const DEFAULTS  = { head:30, sailor:13, crew:7, fare:81000, vc:0, tgt:5, voy:600,
+const DEFAULTS  = { head:30, sailor:13, crew:7, fare:81000, vc:0, tgt:5, voy:500, voyPeer:600,
+                    headPeer:30, sailorPeer:13, crewPeer:7,
                     feeVar:false, ebitda:false, base:'eldorado', peer:'santamonica',
-                    mix:[70,20,10], fuel:0, autoVoy:false,
+                    mix:[100,0,0], fuel:7950, autoVoy:false,
+                    farePeer:90000, fuelPeer:30000, mixPeer:[100,0,0],
+                    cargoLoad:30, cargoBase:0, cargoPeer:0,
                     kinds:{opLabor:'fix',opDep:'fix',opTR:'fix',opEtc:'semi',
                            sgaWage:'fix',sgaEtc:'fix',fee:'var'} };
 
@@ -1082,7 +1150,8 @@ function model(){
   const ship   = SHIPS.find(x => x.id === el('iBase').value) || SHIPS[0];
   const peer   = SHIPS.find(x => x.id === el('iPeer').value) || peerList()[0] || SHIPS[0];
   const r      = Math.min(0.99, num('iTgt', DEFAULTS.tgt) / 100);
-  const voy    = Math.max(1, Math.round(num('iVoy', DEFAULTS.voy)));
+  const voy     = Math.max(1, Math.round(num('iVoy',     DEFAULTS.voy)));
+  const voyPeer = Math.max(1, Math.round(num('iVoyPeer', DEFAULTS.voyPeer)));
   const DEP    = cur('op_감가상각비');          // 3,349,232,000 — 전액 운항원가에 들어가 있다
 
   // 승객당 변동비는 원가 구성표에서 나온다. 여기 vcMan 은 표에 없는 몫을 손으로 얹는 칸이다.
@@ -1115,6 +1184,43 @@ function model(){
   // 다시 곱해도 원래 금액이 되므로 보고서와 어긋나지 않는다.
   const svPerVoy = voy > 0     ? costSV / voy    : 0;
   const svPerVoy_of = x => voy > 0 ? x.amt / voy : 0;
+
+  // ── 목표기반(탭 B) 독립 인력·운임·원가 ─────────────────────────────────────
+  const headPeer    = Math.max(1, Math.round(num('iHeadPeer',   DEFAULTS.headPeer)));
+  const sailorPeer  = Math.max(0, Math.round(num('iSailorPeer', DEFAULTS.sailorPeer)));
+  const crewPeer    = Math.max(0, Math.round(num('iCrewPeer',   DEFAULTS.crewPeer)));
+  const opHeadPeer  = Math.max(1, sailorPeer + crewPeer);
+  const sgaWagePeer = headPeer * PER_HEAD;
+  // sgaWage 만 peer 인력값으로 교체, 나머지 원가 항목은 가정 탭과 동일
+  const amtOfPeer = id => id === 'sgaWage' ? sgaWagePeer : amtOf(id);
+  const itemsPeer = items.map(c => ({ ...c, amt: amtOfPeer(c.id) }));
+  const sumPeer   = k => itemsPeer.filter(x => x.on && x.kind === k).reduce((a,x) => a+x.amt, 0);
+  const costFpeer  = sumPeer('fix');
+  const costSVpeer = sumPeer('semi');
+  const svPerVoyPeer    = voyPeer > 0 ? costSVpeer / voyPeer : 0;
+  // 목표기반 탭 독립 운임 계산
+  const fareEcoPeer  = Math.max(1, num('iFarePeer', DEFAULTS.farePeer));
+  const mixPeer      = SEATS.map((t,i) => Math.max(0, num('iMix'+t.id+'Peer', DEFAULTS.mixPeer[i])));
+  const mixSumPeer   = mixPeer.reduce((a,b) => a+b, 0);
+  const wsumPeer     = SEATS.reduce((a,t,i) => a + t.mult*mixPeer[i], 0);
+  const fareSeatPeer = wsumPeer > 0 ? fareEcoPeer * wsumPeer / mixSumPeer : fareEcoPeer;
+  const fuelPeer     = num('iFuelPeer', DEFAULTS.fuelPeer);
+  const farePeer     = fareSeatPeer + fuelPeer;
+  const voyForPeer = q => autoVoy && peer && peer.pax > 0
+    ? Math.max(voyPeer, Math.ceil(q / peer.pax)) : voyPeer;
+  const qForPeer = rr => {
+    const den = (1-rr)*farePeer - vc;
+    if (den <= 0) return null;
+    let v_ = voyPeer;
+    for (let k = 0; k < 12; k++) {
+      const q = (costFpeer + svPerVoyPeer*v_ - (1-rr)*O) / den;
+      if (!(q > 0)) return 0;
+      const need = voyForPeer(q);
+      if (need === v_) return q;
+      v_ = need;
+    }
+    return null;
+  };
   const vPerPax  = paxAct > 0  ? costV  / paxAct : 0;
   const vc       = vPerPax + vcMan;
 
@@ -1152,7 +1258,10 @@ function model(){
 
   return { head, sailor, crew, opHead, fareEco, mix, mixSum, fareSeat, fuel, fare, ship, peer,
            vc, vcMan, vPerPax, svPerVoy, svPerVoy_of, costF, costSV, costV, items, autoVoy, voyFor, fixedAt,
-           r, voy, feeVar, ebitda, DEP, sgaWageT, sgaFixed, fixed, O,
+           r, voy, voyPeer, feeVar, ebitda, DEP, sgaWageT, sgaFixed, fixed, O,
+           headPeer, sailorPeer, crewPeer, opHeadPeer, sgaWagePeer,
+           costFpeer, costSVpeer, svPerVoyPeer, voyForPeer, qForPeer,
+           fareEcoPeer, mixPeer, mixSumPeer, fareSeatPeer, fuelPeer, farePeer,
            paxAct, pax, qFor, pFor, sim, cur: sim(pax) };
 }
 
@@ -1880,6 +1989,30 @@ function buildFareTable(){
 // "그 승객을 태우려면 정원 대비 몇 %를 채워야 하는가"뿐이라, 그 한 가지만 견준다.
 function drawPeer(m){
   const pe = m.peer;
+
+  _setTxt('hPeerHead',
+    `지상직 1인당 ${won(PER_HEAD)}원 · ${m.headPeer}명 → 판관 급여 ${won(m.sgaWagePeer)}원 ·`
+    + ` 운항 ${m.opHeadPeer}명(선원 ${m.sailorPeer}+승무원 ${m.crewPeer})`);
+
+  // 목표기반 좌석 등급 표 업데이트
+  SEATS.forEach((t,i) => {
+    _setTxt('hSeatPeer'+t.id, won(m.fareEcoPeer * t.mult) + '원');
+  });
+  const wMultP = m.mixSumPeer > 0 ? SEATS.reduce((a,t,i) => a + t.mult*m.mixPeer[i], 0) / m.mixSumPeer : 1;
+  _setTxt('hSeatMultPeer', wMultP.toFixed(3) + '배');
+  _setTxt('hSeatFarePeer', won(m.fareSeatPeer) + '원');
+  _setTxt('hSeatMixPeer',  won(m.mixSumPeer) + '%');
+  _setTxt('hFuelMultPeer', m.fuelPeer > 0 ? (m.fuelPeer/m.fareEcoPeer).toFixed(3) + '배' : '—');
+  _setTxt('hFuelAmtPeer',  won(m.fuelPeer) + '원');
+  _setTxt('hUnitMultPeer', (m.farePeer/m.fareEcoPeer).toFixed(3) + '배');
+  _setTxt('hUnitPeer',     won(m.farePeer) + '원');
+  const mixMsgP = m.mixSumPeer === 0
+    ? `<b class="bad">구성비가 모두 비어 있다</b> — 이코노미 단일 운임 ${won(m.fareEcoPeer)}원으로 계산한다.`
+    : m.mixSumPeer === 100
+    ? `가중평균 운임 <b>${won(m.fareSeatPeer)}</b>원 + 유류할증 <b>${won(m.fuelPeer)}</b>원 = 실현 단가 <b>${won(m.farePeer)}</b>원`
+    : `<b class="bad">구성비 합이 ${won(m.mixSumPeer)}%</b> — 정규화 후 가중평균 <b>${won(m.fareSeatPeer)}</b>원, 실현 단가 <b>${won(m.farePeer)}</b>원`;
+  { const e = document.getElementById('hSeatPeer'); if (e) e.innerHTML = mixMsgP; }
+
   if (!pe) {
     el('hPeer').innerHTML = '<b class="bad">등록된 대조 선박이 없다</b> — 가정 탭에서 추가한다.';
     el('tCmpShip').innerHTML = '';
@@ -1892,10 +2025,10 @@ function drawPeer(m){
     + (pe.kts !== '—' ? ` · 최고 ${pe.kts}노트` : '')
     + `<br>${pe.route}<span class="tagv">${pe.src}</span>`;
 
-  const q0 = m.qFor(0), qT = m.qFor(m.r);
+  const q0 = m.qForPeer(0), qT = m.qForPeer(m.r);
   const row = (label, q) => {
     if (q === null) return `<tr><td>${label}</td><td class="fail" colspan="2">달성 불가</td></tr>`;
-    const a = q / (m.ship.pax * m.voy), b = q / (pe.pax * m.voy);
+    const a = q / (m.ship.pax * m.voy), b = q / (pe.pax * m.voyPeer);
     const bad = x => x > 1 ? ' class="fail"' : '';
     return `<tr><td>${label}<br><span style="color:var(--muted);font-size:10px">${won(q)}명 · 항차당 ${won(q/m.voy)}명</span></td>
       <td${bad(a)}>${pct(a)}</td><td${bad(b)}>${pct(b)}</td></tr>`;
@@ -1906,17 +2039,69 @@ function drawPeer(m){
     + row('손익분기', q0)
     + row(`목표 ${pct(m.r,1)}`, qT);
 
-  const need = qT === null ? null : qT / (pe.pax * m.voy);
+  const need = qT === null ? null : qT / (pe.pax * m.voyPeer);
   el('hCmpShip').innerHTML = need === null
     ? '현재 설정에서는 목표에 닿지 않아 요구 승선율을 낼 수 없다.'
     : `손익 금액은 배와 무관하다 — 운임과 승객수로만 정해진다. 배가 바꾸는 것은
        <b>그 승객을 태우려면 정원을 몇 %까지 채워야 하는가</b>뿐이다.
        ${pe.name.split(' · ')[0]}(정원 ${won(pe.pax)}명)로 목표 ${pct(m.r,1)}에 닿으려면
-       연 ${won(m.voy)}항차 기준 <b${need > 1 ? ' class="bad"' : ''}>승선율 ${pct(need)}</b>,
-       항차당 <b>${won(qT/m.voy)}명</b>이 필요하다.
+       연 ${won(m.voyPeer)}항차 기준 <b${need > 1 ? ' class="bad"' : ''}>승선율 ${pct(need)}</b>,
+       항차당 <b>${won(qT/m.voyPeer)}명</b>이 필요하다.
        ${need > 1 ? '<b class="bad">정원을 넘는다</b> — 항차수를 늘리거나 운임을 올려야 한다.' : ''}
        참조 선박 ${m.ship.name.split(' · ')[0]}(정원 ${won(m.ship.pax)}명)라면 같은 승객이
        ${pct(qT/(m.ship.pax*m.voy))}에 해당한다.`;
+}
+
+// ── 화물 수입 시뮬레이션 ──────────────────────────────────────────────────────
+// 기존 화물수입(실적)을 빼고 선박별 적재 상한 × 선적율로 교체한 O_new 로 BEP 를 재계산한다.
+function drawCargo(m){
+  const cargoLoad = Math.min(1, Math.max(0, num('iCargoLoad', DEFAULTS.cargoLoad) / 100));
+  const cargoBase = Math.max(0, num('iCargoBase', DEFAULTS.cargoBase));
+  const cargoPeer = Math.max(0, num('iCargoPeer', DEFAULTS.cargoPeer));
+  const pe = m.peer;
+
+  const O_base = A.nonCargoRev + cargoBase * cargoLoad * m.voy;
+  const O_peer = pe ? A.nonCargoRev + cargoPeer * cargoLoad * m.voyPeer : null;
+
+  const qForO = (rr, O_new, isPeer) => {
+    const den = (1-rr)*(isPeer ? m.farePeer : m.fare) - m.vc;
+    if (den <= 0) return null;
+    const cF  = isPeer ? m.costFpeer    : m.costF;
+    const sV  = isPeer ? m.svPerVoyPeer : m.svPerVoy;
+    const vF  = isPeer ? m.voyForPeer   : m.voyFor;
+    const v0  = isPeer ? m.voyPeer      : m.voy;
+    let v_ = v0;
+    for (let k = 0; k < 12; k++) {
+      const q = (cF + sV*v_ - (1-rr)*O_new) / den;
+      if (!(q > 0)) return 0;
+      const need = vF(q);
+      if (need === v_) return q;
+      v_ = need;
+    }
+    return null;
+  };
+
+  const q0b = qForO(0, O_base, false), qTb = qForO(m.r, O_base, false);
+  const q0p = O_peer !== null ? qForO(0, O_peer, true) : null;
+  const qTp = O_peer !== null ? qForO(m.r, O_peer, true) : null;
+
+  const fmtQ = v => v === null ? '<span class="fail">달성 불가</span>'
+                               : won(Math.ceil(v)) + '명';
+  const col2 = (vb, vp) =>
+    `<td>${fmtQ(vb)}</td><td>${pe ? fmtQ(vp) : '—'}</td>`;
+
+  el('tCargoCmp').innerHTML =
+    `<tr><td>항차당 최대 화물 수입</td><td>${won(cargoBase)}원</td><td>${pe ? won(cargoPeer) + '원' : '—'}</td></tr>`
+    + `<tr><td>연간 시뮬레이션 화물수입<br><span style="color:var(--muted);font-size:10px">최대 × 선적율 × 항차수</span></td>`
+    +   `<td>${won(Math.round(cargoBase * cargoLoad * m.voy))}원</td>`
+    +   `<td>${pe ? won(Math.round(cargoPeer * cargoLoad * m.voyPeer)) + '원' : '—'}</td></tr>`
+    + `<tr><td>화물 반영 손익분기</td>${col2(q0b, q0p)}</tr>`
+    + `<tr><td>화물 반영 목표 ${pct(m.r,1)}</td>${col2(qTb, qTp)}</tr>`;
+
+  el('hCargoCmp').innerHTML = (cargoBase === 0 && cargoPeer === 0)
+    ? '<b class="amb">항차당 최대 화물 수입이 0원</b>이다 — 운항관리규정 적재 상한을 확인한 뒤 입력한다.'
+    : `선적율 <b>${pct(cargoLoad)}</b> 기준 화물수입이 고정비를 상쇄해 손익분기 승객수가 줄어든다.`
+    + ` 실적 화물수입(${won(A.cargoRev)}원)은 이 시뮬레이션에서 제외하고 최대×선적율 값으로 대체한다.`;
 }
 
 // ── 좌석 등급표 · 대조 선박 (한 번만 세운다) ───────────────────────────────
@@ -1937,6 +2122,20 @@ function buildInputs(){
         <td id="hUnit">—</td><td></td></tr>`;
 
   SEATS.forEach(t => el('iMix'+t.id).addEventListener('input', render));
+
+  // 목표기반 탭 좌석 등급 표
+  el('tSeatPeer').innerHTML = SEATS.map((t,i) =>
+    `<tr><td>${t.name}</td><td>${(+t.mult.toFixed(4))}배</td>
+      <td id="hSeatPeer${t.id}">—</td>
+      <td><input type="text" inputmode="numeric" id="iMix${t.id}Peer" value="${DEFAULTS.mixPeer[i]}"></td></tr>`).join('')
+    + `<tr class="sum"><td>가중평균 운임</td><td id="hSeatMultPeer">—</td>
+        <td id="hSeatFarePeer">—</td><td id="hSeatMixPeer">—</td></tr>`
+    + `<tr><td>(+) 유류할증료</td><td id="hFuelMultPeer">—</td>
+        <td id="hFuelAmtPeer">—</td><td style="color:var(--muted);font-size:10px">원/인</td></tr>`
+    + `<tr class="lead"><td>= 실현 단가</td><td id="hUnitMultPeer">—</td>
+        <td id="hUnitPeer">—</td><td></td></tr>`;
+  SEATS.forEach(t => el('iMix'+t.id+'Peer').addEventListener('input', render));
+
   buildFareTable();
 
   el('btnAddShip').addEventListener('click', addShip);
@@ -2080,6 +2279,7 @@ function render(){
                   + `${m.ebitda ? ' (감가상각비를 뺐으니 EBITDA 기준이다)' : ''}` : '');
 
   drawPeer(m);
+  drawCargo(m);
 
   const qT = m.qFor(m.r), q0 = m.qFor(0);
   el('kActOp').textContent  = mil(A.opProfit) + '백만';
@@ -2101,7 +2301,10 @@ function render(){
   drawSga(m); drawCrew(m); drawRatio(m); drawFee(m); drawSim(m); drawTgt(m); drawCost(m); drawCVP(m);
 }
 
-['iHead','iSailor','iCrew','iFare','iFuel','iVc','iTgt','iVoy','iPax'].forEach(id =>
+['iHead','iSailor','iCrew','iFare','iFuel','iVc','iTgt','iVoy','iPax',
+ 'iHeadPeer','iSailorPeer','iCrewPeer','iVoyPeer',
+ 'iFarePeer','iFuelPeer',
+ 'iCargoLoad','iCargoBase','iCargoPeer'].forEach(id =>
   el(id).addEventListener('input', render));
 el('iAutoVoy').addEventListener('change', render);
 
@@ -2137,7 +2340,11 @@ el('btnReset').addEventListener('click', () => {
   el('iCrew').value = DEFAULTS.crew;
   el('iFare').value = DEFAULTS.fare;
   el('iVc').value   = DEFAULTS.vc;   el('iTgt').value  = DEFAULTS.tgt;
-  el('iVoy').value  = DEFAULTS.voy;
+  el('iVoy').value        = DEFAULTS.voy;
+  el('iHeadPeer').value   = DEFAULTS.headPeer;
+  el('iSailorPeer').value = DEFAULTS.sailorPeer;
+  el('iCrewPeer').value   = DEFAULTS.crewPeer;
+  el('iVoyPeer').value    = DEFAULTS.voyPeer;
   el('iAutoVoy').checked = DEFAULTS.autoVoy;
   COSTS.forEach(c => { el('use_'+c.id).checked = true;
                        el('kind_'+c.id).value = DEFAULTS.kinds[c.id]; });
@@ -2147,7 +2354,13 @@ el('btnReset').addEventListener('click', () => {
   el('iBase').dataset.last = el('iBase').value;
   el('iPeer').dataset.last = el('iPeer').value;
   SEATS.forEach((t,i) => { el('iMix'+t.id).value = DEFAULTS.mix[i]; });
-  el('iPax').value  = Math.round(A.paxRev / DEFAULTS.fare);
+  el('iFarePeer').value = DEFAULTS.farePeer;
+  el('iFuelPeer').value = DEFAULTS.fuelPeer;
+  SEATS.forEach((t,i) => { el('iMix'+t.id+'Peer').value = DEFAULTS.mixPeer[i]; });
+  el('iPax').value       = Math.round(A.paxRev / DEFAULTS.fare);
+  el('iCargoLoad').value = DEFAULTS.cargoLoad;
+  el('iCargoBase').value = DEFAULTS.cargoBase;
+  el('iCargoPeer').value = DEFAULTS.cargoPeer;
   render();
 });
 
