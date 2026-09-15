@@ -1913,6 +1913,9 @@ function drawFee(m){
 
 // ── ⑤ 시뮬레이션 손익 요약 ──────────────────────────────────────────────────
 function drawSim(m){
+  // 이 카드는 지면에서 빠질 수 있다(목표기반 탭 개편 때 실제로 빠졌다). 그때 null 에
+  // innerHTML 을 쓰면 render 가 여기서 멎어 뒤따르는 표가 전부 안 그려진다.
+  if (!document.getElementById('tSim')) return;
   const s = m.cur;
   // s.op 는 EBITDA 모드에서 이미 감가상각비가 빠진 값이다. 표에는 회계상 영업이익과
   // EBITDA 를 둘 다 세워야 하므로, 여기서 되돌려 두 줄을 각각 만든다.
