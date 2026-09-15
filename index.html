@@ -2897,7 +2897,7 @@ map.on("zoomend", _applyShipModelZoom);
     _shipSvgHtml('sm') +
     _tidePhotoHtml('hitakatsu_low.jpg', 'hitakatsu_high.jpg') +
     '<div class="popup-body"><b style="color:#ffcc44">시월드고속훼리 · Incat 76m wavepiercer</b><br>' +
-    '전장 72.67m · 폭 21m · GT 390톤<br>' +
+    '전장 72.67m · 폭 21m · GT 3,300톤<br>' +
     '최고속력 45노트(83km/h) · 여객 621명<br>' +
     '히타카츠항 정박 구상 모형 — 드래그(이동) · ↻핸들(회전)<br><br>' +
     '<b style="color:#ffcc88">히타카츠(쓰시마) 경유 시 승객 정책</b><br>' +
@@ -5341,7 +5341,7 @@ function _simRenderFrame() {
     `ETA ${_smETA2} 하카타 · 총 왕복 ${_fmtMin(_totalMinSMret)}</span>`;
   if (!simMarker) {
     simMarker = L.marker(pos,{icon:_makeShipIcon(hdg,'#ffcc00','#cc8800',smLabel),zIndexOffset:910}).addTo(map)
-      .bindPopup(`<div class="popup-title">⛴ 산타모니카호</div>${_shipSvgHtml('sm')}<div class="popup-body"><b style="color:#ffcc44">시월드고속훼리 · Incat 76m wavepiercer</b><br>전장 72.67m · 폭 21m · GT 390톤<br>최고속력 45노트(83km/h) · 순항 ${simSMkts}노트<br>여객 621명 · 차량 미탑재<br>히타카츠 ${SIM_STOP_MIN}분 경유 <a href="https://www.panstar.co.kr/business/cruise/tsushima_link" target="_blank" rel="noopener" style="color:#7ecfff;font-size:10px">※쓰시마링크호 실측</a></div>`,{className:'custom-popup',maxWidth:310});
+      .bindPopup(`<div class="popup-title">⛴ 산타모니카호</div>${_shipSvgHtml('sm')}<div class="popup-body"><b style="color:#ffcc44">시월드고속훼리 · Incat 76m wavepiercer</b><br>전장 72.67m · 폭 21m · GT 3,300톤<br>최고속력 45노트(83km/h) · 순항 ${simSMkts}노트<br>여객 621명 · 차량 미탑재<br>히타카츠 ${SIM_STOP_MIN}분 경유 <a href="https://www.panstar.co.kr/business/cruise/tsushima_link" target="_blank" rel="noopener" style="color:#7ecfff;font-size:10px">※쓰시마링크호 실측</a></div>`,{className:'custom-popup',maxWidth:310});
   } else { simMarker.setLatLng(pos); simMarker.setIcon(_makeShipIcon(hdg,'#ffcc00','#cc8800',smLabel)); }
 
   document.getElementById('smElapsed').textContent = smElapsedStr;
@@ -5432,7 +5432,7 @@ function _simRenderFrame() {
     `총 왕복 ${_fmtMin(_totalMinSM2ret)}</span>`;
   if (!sim2Marker) {
     sim2Marker = L.marker(sm2Pos,{icon:_makeShipIcon(sm2Hdg,'#44ffdd','#008866',sm2Label),zIndexOffset:905}).addTo(map)
-      .bindPopup(`<div class="popup-title" style="color:#44ffdd">⛴ 산타모니카호 (시나리오 1 · 직항)</div>${_shipSvgHtml('sm')}<div class="popup-body"><b style="color:#44ffdd">시월드고속훼리 · Incat 76m wavepiercer</b><br>전장 72.67m · 폭 21m · GT 390톤<br>최고속력 45노트 · 순항 ${simSMkts}노트<br>여객 621명 · 히타카츠 미경유<br>부산↔하카타 직항 213km(115해리)</div>`,{className:'custom-popup',maxWidth:310});
+      .bindPopup(`<div class="popup-title" style="color:#44ffdd">⛴ 산타모니카호 (시나리오 1 · 직항)</div>${_shipSvgHtml('sm')}<div class="popup-body"><b style="color:#44ffdd">시월드고속훼리 · Incat 76m wavepiercer</b><br>전장 72.67m · 폭 21m · GT 3,300톤<br>최고속력 45노트 · 순항 ${simSMkts}노트<br>여객 621명 · 히타카츠 미경유<br>부산↔하카타 직항 213km(115해리)</div>`,{className:'custom-popup',maxWidth:310});
   } else { sim2Marker.setLatLng(sm2Pos); sim2Marker.setIcon(_makeShipIcon(sm2Hdg,'#44ffdd','#008866',sm2Label)); }
   sim2Marker.setOpacity((_activeSimTab === 2 && _simCoreVisible()) ? 1 : 0);
 
