@@ -73,6 +73,10 @@
   table.seat input[type=number]::-webkit-inner-spin-button{
     opacity:1; margin-left:2px; height:18px; cursor:pointer}
   .ib input[type=number]{padding-right:0}
+  /* 지금 주인이 아닌 칸 — 값은 그대로 보이되 만질 수 없다는 것만 드러낸다 */
+  input.ro{background:#F2F5F9;color:var(--muted)!important;cursor:default}
+  input.ro::-webkit-outer-spin-button,
+  input.ro::-webkit-inner-spin-button{opacity:.25}
   .fh{font-size:10.5px;color:var(--muted);margin-top:2px;line-height:1.4}
   .fh b{color:var(--navy);font-weight:600;font-variant-numeric:tabular-nums}
   .chk{display:flex;align-items:flex-start;gap:7px;font-size:11.5px;color:var(--ink);
@@ -568,13 +572,27 @@
 
             <div class="sec">시뮬레이션 승객수</div>
             <div class="f wide">
-              <label>연간 부산-하카타 예상 승객수요</label>
-              <div class="ib"><input type="number" step="1000" min="0" id="iPaxPeer" value="212812"><span class="u">명</span></div>
-              <div class="fh" id="hPaxPeer">—</div>
+              <label>항차당 승선율 <small style="color:#888;font-weight:normal">(정원 대비 — 여기서 수요가 정해진다)</small></label>
+              <div class="ib"><input type="number" step="5" min="0" max="100" id="iLoadPeer" value="50"><span class="u">%</span></div>
+              <div class="fh" id="hLoadPeerHint">—</div>
             </div>
             <div class="f wide">
-              <label><input type="checkbox" id="chkPerVoy" style="margin-right:5px;vertical-align:middle">항차당 예상인원 <small style="color:#888;font-weight:normal">(체크 시 연간수요 자동 연동)</small></label>
-              <div class="ib"><input type="number" step="10" min="0" id="iPerVoyPeer" value="300.53"><span class="u">명</span></div>
+              <label class="chk">
+                <input type="checkbox" id="chkPaxDirect">
+                <span>인원수로 직접 입력<br>
+                  <span style="color:var(--muted)">켜면 아래 칸을 직접 쓰고 승선율이 따라 계산된다</span></span>
+              </label>
+            </div>
+            <div class="f">
+              <label>항차당 인원</label>
+              <div class="ib"><input type="number" step="10" min="0" id="iPerVoyPeer" value="310.5" readonly class="ro"><span class="u">명</span></div>
+            </div>
+            <div class="f">
+              <label>연간 승객수</label>
+              <div class="ib"><input type="number" step="1000" min="0" id="iPaxPeer" value="186300" readonly class="ro"><span class="u">명</span></div>
+            </div>
+            <div class="f wide">
+              <div class="fh" id="hPaxPeer">—</div>
               <div class="fh" id="hPerVoyPeer">—</div>
             </div>
 
@@ -2498,6 +2516,7 @@ function debtService(principal, ratePct, years, grace, method){
 // 목표기반 탭에서는 대조 선박으로 다시 세운 값을 보여야 한 화면 안에서 앞뒤가 맞는다.
 let ACTIVE_TAB = 'tabA';
 let PEER_PL = null;
+let PAX_SRC = 'perVoy';      // 인원 직접입력 때 어느 칸을 방금 만졌는가
 let PEER_DS = null;
 
 function drawPeerPL(m) {
@@ -2628,6 +2647,18 @@ function drawPeerPL(m) {
     html += `<tr class="lead"><td>Ⅶ. 법인세차감전순이익(손실)</td>`
           + `<td${preColor}>${acc(Math.round(preProfit))}</td>`
           + `<td class="nil">-</td>${fp(preProfit, sales)}</tr>`;
+
+    // 여기부터는 손익이 아니라 수지다. 원금 상환은 비용이 아니라 손익계산서에
+    // 들어가지 않지만 통장에서는 빠진다 — 흑자인데 돈이 모자라는 일이 여기서 생긴다.
+    const cash = preProfit + opDep - DS.prin1;
+    const cashColor = cash < 0 ? ' style="color:var(--warn)"' : '';
+    html += `<tr class="r"><td>〔수지〕 현금 기준 <span class="tagv ok">보완</span></td>`
+          + `<td class="nil">-</td><td class="nil">-</td><td class="nil">-</td></tr>`;
+    html += rowN('(+) 감가상각비 되더하기', opDep, sales);
+    html += rowN('(−) 차입금 원금상환', -DS.prin1, sales);
+    html += `<tr class="lead"><td>= 순현금흐름</td>`
+          + `<td${cashColor}>${acc(Math.round(cash))}</td>`
+          + `<td class="nil">-</td>${fp(cash, sales)}</tr>`;
   }
 
   el('tPeerPL').innerHTML = html;
@@ -2886,10 +2917,38 @@ function addShip(){
 
 // ── 갱신 ───────────────────────────────────────────────────────────────────
 function render(){
-  if (el('chkPerVoy').checked) {
-    const perVoy = parseFloat(el('iPerVoyPeer').value) || 0;
-    const voy    = parseFloat(el('iVoyPeer').value)    || 0;
-    if (perVoy > 0 && voy > 0) el('iPaxPeer').value = Math.round(perVoy * voy);
+  // 수요는 승선율에서 내려온다: 승선율 → 항차당 인원 → 연간 승객수.
+  // "인원수로 직접 입력"을 켜면 방향이 뒤집혀, 인원 칸이 주인이 되고 승선율이 따라온다.
+  {
+    const direct = el('chkPaxDirect').checked;
+    // disabled 로 두면 값이 죽어 보이고 복사도 안 된다. readonly 는 값을 그대로
+    // 보여 주면서 편집만 막는다 — 지금 무엇이 입력이고 무엇이 결과인지가 목적이다.
+    el('iPerVoyPeer').readOnly = !direct;
+    el('iPaxPeer').readOnly    = !direct;
+    el('iLoadPeer').readOnly   = direct;
+    el('iPerVoyPeer').classList.toggle('ro', !direct);
+    el('iPaxPeer').classList.toggle('ro',    !direct);
+    el('iLoadPeer').classList.toggle('ro',   direct);
+    if (!direct) {
+      const pe  = SHIPS.find(x => x.id === el('iPeer').value) || SHIPS[1] || SHIPS[0];
+      const load = parseFloat(el('iLoadPeer').value) || 0;
+      const voy  = parseFloat(el('iVoyPeer').value)  || 0;
+      if (pe && pe.pax > 0) {
+        const perVoy = pe.pax * load / 100;
+        el('iPerVoyPeer').value = perVoy.toFixed(2);
+        if (voy > 0) el('iPaxPeer').value = Math.round(perVoy * voy);
+      }
+    } else {
+      // 인원 칸이 주인이면 항차당 인원에서 연간을 맞춘다
+      const perVoy = parseFloat(el('iPerVoyPeer').value) || 0;
+      const voy    = parseFloat(el('iVoyPeer').value)    || 0;
+      if (PAX_SRC === 'perVoy' && perVoy > 0 && voy > 0) {
+        el('iPaxPeer').value = Math.round(perVoy * voy);
+      } else if (PAX_SRC === 'year' && voy > 0) {
+        const yr = parseFloat(el('iPaxPeer').value) || 0;
+        el('iPerVoyPeer').value = (yr / voy).toFixed(2);
+      }
+    }
   }
   const m = model();
   el('hPerHead').textContent = won(PER_HEAD) + '원';
@@ -2952,6 +3011,18 @@ function render(){
   }
 
   // 항차당 예상인원 헬퍼
+  // 인원 칸이 주인일 때는 승선율이 계산 결과라 그 값을 되비춘다
+  if (m.peer && m.peer.pax > 0) {
+    const cur = (m.paxPeer / m.voyPeer) / m.peer.pax * 100;
+    if (el('chkPaxDirect').checked
+        && Math.abs((parseFloat(el('iLoadPeer').value) || 0) - cur) > 0.05) {
+      el('iLoadPeer').value = cur.toFixed(1);
+    }
+    el('hLoadPeerHint').innerHTML =
+      `정원 <b>${won(m.peer.pax)}</b>명 × <b>${pct(cur/100,1)}</b> = 항차당 <b>${won(m.peer.pax*cur/100)}</b>명`
+      + ` · ${won(m.voyPeer)}항차 → 연 <b>${won(m.paxPeer)}</b>명`
+      + (cur > 100 ? ' <b class="bad">정원 초과</b>' : '');
+  }
   const perVoyPeer = parseFloat(el('iPerVoyPeer').value) || 0;
   if (perVoyPeer > 0 && m.voyPeer > 0) {
     const impliedAnnual = Math.round(perVoyPeer * m.voyPeer);
@@ -3113,6 +3184,10 @@ el('iFuelEsc').addEventListener('change', render);
 ['iLoanYears','iLoanGrace'].forEach(id => el(id).addEventListener('input', render));
 el('iLoanMethod').addEventListener('change', render);
 ['iTgtPeer','iReEquity'].forEach(id => el(id).addEventListener('input', render));
+el('iLoadPeer').addEventListener('input', render);
+el('chkPaxDirect').addEventListener('change', render);
+el('iPerVoyPeer').addEventListener('input', () => { PAX_SRC = 'perVoy'; render(); });
+el('iPaxPeer').addEventListener('input',    () => { PAX_SRC = 'year';   render(); });
 el('btnTgtRebuy').addEventListener('click', () => {
   const R = rebuyTarget(model());
   if (R) { el('iTgtPeer').value = (R.rate * 100).toFixed(1); render(); }
@@ -3150,16 +3225,7 @@ el('btnFuelLive').addEventListener('click', () => loadFuelPrice(false));
 loadFuelPrice(true);          // 열릴 때 한 번 조용히 시도
 
 let paxPeerManual = el('iPaxPeer').value;
-el('chkPerVoy').addEventListener('change', function() {
-  if (this.checked) {
-    paxPeerManual = el('iPaxPeer').value;
-    el('iPaxPeer').disabled = true;
-  } else {
-    el('iPaxPeer').disabled = false;
-    el('iPaxPeer').value = paxPeerManual;
-  }
-  render();
-});
+
 
 el('btnPax').addEventListener('click', () => {
   el('iPax').value = Math.round(A.paxRev / model().fare);
@@ -3223,7 +3289,8 @@ el('btnReset').addEventListener('click', () => {
   el('iFuelPeer').value = DEFAULTS.fuelPeer;
   SEATS.forEach((t,i) => { el('iMix'+t.id+'Peer').value = DEFAULTS.mixPeer[i]; });
   el('iPax').value       = Math.round(A.paxRev / DEFAULTS.fare);
-  el('chkPerVoy').checked = false;
+  el('chkPaxDirect').checked = false;
+  el('iLoadPeer').value = 50;
   el('iPaxPeer').disabled = false;
   { const ps = SHIPS.find(s => s.id === el('iPeer').value);
     el('iPaxPeer').value = ps && ps.paxPeer != null ? ps.paxPeer : Math.round(A.paxRev / DEFAULTS.fare);
