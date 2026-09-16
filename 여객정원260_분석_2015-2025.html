@@ -296,11 +296,11 @@ function cards(){
   const lossJpy=JPY_KRW>0?loss/JPY_KRW:0;
   const fmtJpy=v=>v>=1e8?(v/1e8).toFixed(1)+'億円':v>=1e4?(v/1e4).toFixed(0)+'万円':Math.round(v).toLocaleString()+'円';
   if(LANG==='ja'){
-    set('b6',fmtJpy(lossJpy)+'<small>円</small>','');
+    set('b6',fmtJpy(lossJpy)+'','');
     document.getElementById('b6j').innerHTML=fmtLoss(loss)+'<small>원</small> <span style="font-size:10px">(1JPY='+JPY_KRW.toFixed(2)+'원)</span>';
   } else {
     set('b6',fmtLoss(loss)+'<small>원</small>','');
-    document.getElementById('b6j').innerHTML=lossJpy>0?fmtJpy(lossJpy)+'<small>円</small> <span style="font-size:10px">(1JPY='+JPY_KRW.toFixed(2)+'원)</span>':'';
+    document.getElementById('b6j').innerHTML=lossJpy>0?fmtJpy(lossJpy)+' <span style="font-size:10px">(1JPY='+JPY_KRW.toFixed(2)+'원)</span>':'';
   }
   document.getElementById('b6n').textContent=`초과 ${n(exT)}명 × (66.62%×${n(FARE_OUT)}원 + 33.38%×${n(FARE_IN)}원) — 정원 260명 만석을 가정한 하한 추정. 실운항 시 100% 객실 점유는 현실적으로 불가능하므로 실질 기회손실은 이를 상회할 수 있음.`;
   document.getElementById('scope').textContent=
