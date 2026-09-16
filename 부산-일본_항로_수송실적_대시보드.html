@@ -1,0 +1,1302 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>부산–일본 항로 수송실적</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&family=Noto+Serif+KR:wght@500;600;700&display=swap">
+<style>
+:root{
+  --bg:#eef2f5;
+  --surface:#ffffff;
+  --surface-2:#f7fafb;
+  --ink:#0d1a23;
+  --ink-2:#465b69;
+  --muted:#7d8f9c;
+  --line:#dbe4ea;
+  --line-soft:#e9eef2;
+  --accent:#0f4c75;
+  --accent-2:#2a78d6;
+  --accent-wash:#e2edf5;
+  --good:#0ca30c;
+  --warn:#fab219;
+  --crit:#d03b3b;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100;
+  --s5:#e87ba4; --s6:#008300; --s7:#4a3aa7; --s8:#e34948;
+  --grid:#e1e7eb;
+  --axis:#c2ced6;
+  --shadow:0 1px 2px rgba(13,26,35,.05), 0 8px 24px -12px rgba(13,26,35,.18);
+  --sans:"IBM Plex Sans KR", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --serif:"Noto Serif KR", Georgia, serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#080e13;
+    --surface:#111c24;
+    --surface-2:#16232c;
+    --ink:#eaf2f7;
+    --ink-2:#a5bac7;
+    --muted:#7d8f9c;
+    --line:#22333f;
+    --line-soft:#1b2a34;
+    --accent:#5aa6d8;
+    --accent-2:#3987e5;
+    --accent-wash:#152836;
+    --good:#0ca30c;
+    --warn:#fab219;
+    --crit:#e66767;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+    --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+    --grid:#1f2e38;
+    --axis:#33454f;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#080e13;
+  --surface:#111c24;
+  --surface-2:#16232c;
+  --ink:#eaf2f7;
+  --ink-2:#a5bac7;
+  --muted:#7d8f9c;
+  --line:#22333f;
+  --line-soft:#1b2a34;
+  --accent:#5aa6d8;
+  --accent-2:#3987e5;
+  --accent-wash:#152836;
+  --good:#0ca30c;
+  --warn:#fab219;
+  --crit:#e66767;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+  --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+  --grid:#1f2e38;
+  --axis:#33454f;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.7);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:14px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1160px;margin:0 auto;padding-inline:18px;padding-block:0 64px}
+
+/* ---------- header ---------- */
+.masthead{
+  border-bottom:1px solid var(--line);
+  background:var(--surface);
+}
+.masthead .wrap{padding-block:26px 0}
+.eyebrow{
+  font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);font-weight:600;margin:0 0 8px
+}
+h1{
+  font-family:var(--serif);font-weight:700;font-size:clamp(22px,3.4vw,31px);
+  margin:0 0 6px;letter-spacing:-.01em;text-wrap:balance;color:var(--ink)
+}
+.sub{color:var(--ink-2);margin:0 0 18px;max-width:66ch;font-size:13.5px}
+.srcline{
+  display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);
+  margin:0 0 18px
+}
+.srcline span{display:inline-flex;align-items:center;gap:5px}
+.srcline b{color:var(--ink-2);font-weight:500}
+
+/* ---------- tabs ---------- */
+.tabs{display:flex;gap:2px;flex-wrap:wrap}
+.tab{
+  appearance:none;border:0;background:none;cursor:pointer;
+  font-family:inherit;font-size:13.5px;font-weight:500;color:var(--ink-2);
+  padding:11px 15px;border-bottom:2px solid transparent;margin-bottom:-1px;
+  border-radius:4px 4px 0 0;transition:color .15s, background .15s
+}
+.tab:hover{color:var(--ink);background:var(--surface-2)}
+.tab[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.tab:focus-visible{outline:2px solid var(--accent-2);outline-offset:-3px}
+
+/* ---------- blocks ---------- */
+section.panel{padding-top:28px}
+.sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:0 0 14px}
+h2{
+  font-family:var(--serif);font-size:18px;font-weight:600;margin:0;
+  letter-spacing:-.01em
+}
+h2 .num{color:var(--accent);font-family:var(--sans);font-weight:600;font-size:13px;margin-right:7px;vertical-align:1px}
+.sec-note{font-size:12px;color:var(--muted);margin:0}
+.block{margin-bottom:34px}
+
+.card{
+  background:var(--surface);border:1px solid var(--line);border-radius:10px;
+  box-shadow:var(--shadow)
+}
+.card-pad{padding:18px}
+
+/* ---------- KPI ---------- */
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
+  border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.kpis[data-n="4"]{grid-template-columns:repeat(4,1fr)}
+@media (max-width:1000px){.kpis[data-n="4"]{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:820px){.kpis{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:480px){.kpis{grid-template-columns:1fr}}
+.kpi{background:var(--surface);padding:16px 17px;display:flex;flex-direction:column;gap:3px}
+.kpi .k-label{font-size:11.5px;color:var(--muted);letter-spacing:.02em}
+.kpi .k-val{font-size:26px;font-weight:600;letter-spacing:-.02em;line-height:1.15;color:var(--ink)}
+.kpi .k-val small{font-size:13px;font-weight:500;color:var(--ink-2);margin-left:2px}
+.kpi .k-foot{font-size:11.5px;color:var(--ink-2);display:flex;align-items:center;gap:5px}
+.delta{font-weight:600;font-variant-numeric:tabular-nums}
+.delta.up{color:var(--good)}
+.delta.down{color:var(--crit)}
+.kpi.is-est{background:var(--surface-2)}
+.kpi.is-est .k-val{color:var(--accent)}
+
+/* ---------- chart ---------- */
+.chart-shell{position:relative}
+.chart-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
+svg.chart{display:block;width:100%;min-width:660px;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin:12px 0 0;padding:0;list-style:none}
+.legend li{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-2)}
+.swatch{width:11px;height:11px;border-radius:3px;flex:0 0 auto}
+.swatch.est{background:transparent;border:1.5px dashed var(--muted)}
+.tip{
+  position:absolute;pointer-events:none;opacity:0;transform:translate(-50%,-100%);
+  background:var(--surface);border:1px solid var(--line);border-radius:8px;
+  box-shadow:var(--shadow);padding:9px 11px;font-size:12px;min-width:148px;
+  transition:opacity .1s;z-index:5;color:var(--ink)
+}
+.tip .t-title{font-weight:600;margin-bottom:6px;font-size:12.5px;display:flex;justify-content:space-between;gap:10px}
+.tip .t-row{display:flex;align-items:center;gap:7px;justify-content:space-between;line-height:1.7}
+.tip .t-row .nm{display:flex;align-items:center;gap:6px;color:var(--ink-2)}
+.tip .t-row .vl{font-variant-numeric:tabular-nums;font-weight:500}
+.tip .t-total{border-top:1px solid var(--line-soft);margin-top:6px;padding-top:5px;font-weight:600}
+
+/* ---------- table ---------- */
+.seg{display:inline-flex;flex-wrap:wrap;gap:2px;background:var(--surface-2);border:1px solid var(--line);
+  border-radius:8px;padding:3px}
+.seg button{
+  appearance:none;border:0;background:none;font-family:inherit;font-size:12.5px;color:var(--ink-2);
+  padding:6px 11px;border-radius:5px;cursor:pointer;white-space:nowrap
+}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--accent);font-weight:600;box-shadow:0 1px 2px rgba(13,26,35,.08)}
+.seg button:focus-visible{outline:2px solid var(--accent-2);outline-offset:-2px}
+
+.tbl-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:separate;border-spacing:0;width:100%;font-size:12.5px;min-width:800px}
+th,td{padding:8px 11px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line-soft)}
+thead th{
+  position:sticky;top:0;background:var(--surface-2);color:var(--ink-2);font-weight:600;
+  font-size:11.5px;border-bottom:1px solid var(--line);z-index:2
+}
+th.lft,td.lft{text-align:left}
+td.num,th.num{font-variant-numeric:tabular-nums}
+tbody tr:hover td{background:var(--surface-2)}
+td.sticky,th.sticky{position:sticky;left:0;background:var(--surface);z-index:1}
+thead th.sticky{background:var(--surface-2);z-index:3}
+tbody tr:hover td.sticky{background:var(--surface-2)}
+tr.r-sub td{background:var(--surface-2);font-weight:500}
+tr.r-sub td.sticky{background:var(--surface-2)}
+tr.r-route td{background:var(--accent-wash);font-weight:600}
+tr.r-route td.sticky{background:var(--accent-wash)}
+tr.r-grand td{background:var(--accent-wash);font-weight:700;border-top:1.5px solid var(--accent);border-bottom:0}
+tr.r-grand td.sticky{background:var(--accent-wash)}
+td.est,th.est{color:var(--accent);background:linear-gradient(0deg,var(--accent-wash),var(--accent-wash))}
+tr.r-route td.est,tr.r-grand td.est,tr.r-sub td.est{background:var(--accent-wash)}
+td.zero{color:var(--muted)}
+th.flag{color:var(--muted);font-weight:500}
+.rname{display:flex;align-items:center;gap:8px}
+.rname .code{font-size:10.5px;color:var(--muted);letter-spacing:.04em}
+.rdot{width:8px;height:8px;border-radius:2px;flex:0 0 auto}
+
+/* ---------- notes ---------- */
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:14px}
+.note{
+  background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);
+  border-radius:0 8px 8px 0;padding:13px 15px
+}
+.note h4{margin:0 0 5px;font-size:13px;font-weight:600;color:var(--ink)}
+.note p{margin:0;font-size:12.5px;color:var(--ink-2);line-height:1.65}
+.note.warn{border-left-color:var(--warn)}
+.note.crit{border-left-color:var(--crit)}
+.note.good{border-left-color:var(--good)}
+
+.flags{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px;padding:0;list-style:none}
+.flag-pill{
+  display:inline-flex;align-items:center;gap:7px;font-size:11.5px;color:var(--ink-2);
+  background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px 11px
+}
+.flag-pill i{width:8px;height:8px;border-radius:50%;display:block;font-style:normal}
+
+.rowlist{margin:0;padding:0;list-style:none;border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden}
+.rowlist li{display:grid;grid-template-columns:132px 1fr;gap:14px;padding:12px 15px;border-bottom:1px solid var(--line-soft);align-items:start}
+.rowlist li:last-child{border-bottom:0}
+.rowlist .nm{display:flex;align-items:center;gap:8px;font-weight:600;font-size:12.5px}
+.rowlist .tx{font-size:12.5px;color:var(--ink-2);line-height:1.6}
+.rowlist li.sum{background:var(--surface-2)}
+@media (max-width:560px){
+  .rowlist li{grid-template-columns:1fr;gap:4px}
+}
+
+footer.foot{border-top:1px solid var(--line);margin-top:40px;padding-top:18px;font-size:11.5px;color:var(--muted)}
+footer.foot p{margin:0 0 5px}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+<style>img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="wrap">
+    <p class="eyebrow">타선사 월별 수송실적 · 2017–2026</p>
+    <h1>부산–일본 항로 수송실적</h1>
+    <p class="sub">한일 4개 여객항로(시모노세키·오사카·후쿠오카·쓰시마)의 선사별 수송실적과, 같은 구간을 두고 경쟁하는 부산–후쿠오카·키타큐슈 항공노선 실적을 한 화면에서 비교합니다.</p>
+    <div class="srcline">
+      <span>집계 기준 <b>역년(1~12월)</b></span>
+      <span>단위 <b>명 / 편</b></span>
+      <span>2026년 <b>1~6월 실적 + 연환산 추정(2026E)</b></span>
+      <span>2021년 <b>원자료 없음</b></span>
+    </div>
+    <div class="tabs" role="tablist" aria-label="화면 전환">
+      <button class="tab" role="tab" id="tab-sea" aria-controls="panel-sea" aria-selected="true">해운 (4개 항로)</button>
+      <button class="tab" role="tab" id="tab-air" aria-controls="panel-air" aria-selected="false">항공 (FSC+LCC)</button>
+      <button class="tab" role="tab" id="tab-cmp" aria-controls="panel-cmp" aria-selected="false">해운 vs 항공</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+<!-- ======================= 해운 ======================= -->
+<section class="panel" id="panel-sea" role="tabpanel" aria-labelledby="tab-sea">
+
+  <div class="block">
+    <div class="kpis" id="sea-kpis"></div>
+  </div>
+
+  <div class="block">
+    <div class="sec-head">
+      <h2><span class="num">01</span>항로별 연간 수송인원</h2>
+      <p class="sec-note">막대 위 숫자는 4개 항로 합계 · 점선 테두리는 추정치</p>
+    </div>
+    <ul class="flags">
+      <li class="flag-pill"><i style="background:var(--warn)"></i>2019 No Japan · 2020·2022 코로나</li>
+      <li class="flag-pill"><i style="background:var(--muted)"></i>2026은 1~6월 실적만</li>
+      <li class="flag-pill"><i style="background:var(--accent)"></i>2026E = 계절성 환산 / 단순 연환산 추정</li>
+    </ul>
+    <div class="card card-pad">
+      <div class="chart-shell" id="c-sea-pax"></div>
+    </div>
+  </div>
+
+  <div class="block">
+    <div class="sec-head">
+      <h2><span class="num">02</span>항로 × 선사 × 연도 상세</h2>
+      <div class="seg" id="metric-seg" role="group" aria-label="지표 선택"></div>
+    </div>
+    <div class="tbl-scroll">
+      <table id="sea-table"><thead></thead><tbody></tbody></table>
+    </div>
+    <p class="sec-note" style="margin-top:9px" id="metric-note"></p>
+  </div>
+
+  <div class="block">
+    <div class="sec-head">
+      <h2><span class="num">03</span>평균 승선율(소석율) 추이</h2>
+      <p class="sec-note">선사·월별 승선율의 단순평균 · 항로 소계 기준</p>
+    </div>
+    <div class="card card-pad">
+      <div class="chart-shell" id="c-sea-load"></div>
+    </div>
+  </div>
+
+  <div class="block">
+    <div class="sec-head">
+      <h2><span class="num">04</span>국적 구성 (4개 항로 전체)</h2>
+      <p class="sec-note">한국인 비중은 2022년 54.7% 저점 이후 2026년 90.9%까지 재상승</p>
+    </div>
+    <div class="card card-pad">
+      <div class="chart-shell" id="c-sea-nat"></div>
+    </div>
+  </div>
+
+  <div class="block">
+    <div class="sec-head"><h2><span class="num">05</span>읽을 거리</h2></div>
+    <div class="notes" id="sea-notes"></div>
+  </div>
+</section>
+
+<!-- ======================= 항공 ======================= -->
+<section class="panel" id="panel-air" role="tabpanel" aria-labelledby="tab-air" hidden>
+
+  <div class="block">
+    <div class="kpis" id="air-kpis"></div>
+  </div>
+
+  <div class="block">
+    <div class="sec-head">
+      <h2><span class="num">01</span>부산–후쿠오카 항공사별 여객</h2>
+      <p class="sec-note">막대 위 숫자는 노선 합계 · 2026E는 항공사별 연환산 합산</p>
+    </div>
+    <div class="card card-pad">
+      <div class="chart-shell" id="c-air-pax"></div>
+    </div>
+  </div>
+
+  <div class="block">
+    <div class="sec-head">
+      <h2><span class="num">02</span>후쿠오카 노선 항공사별 실적</h2>
+      <p class="sec-note">단위: 명</p>
+    </div>
+    <div class="tbl-scroll">
+      <table id="air-table-fuk"><thead></thead><tbody></tbody></table>
+    </div>
+    <div style="margin-top:14px">
+      <ul class="rowlist" id="air-notes-fuk"></ul>
+    </div>
+  </div>
+
+  <div class="block">
+    <div class="sec-head">
+      <h2><span class="num">03</span>부산–키타큐슈 노선</h2>
+      <p class="sec-note">코로나 이전 대비 대폭 축소 · 2026년 에어로케이 단독 운항</p>
+    </div>
+    <div class="tbl-scroll">
+      <table id="air-table-kit"><thead></thead><tbody></tbody></table>
+    </div>
+    <div style="margin-top:14px">
+      <ul class="rowlist" id="air-notes-kit"></ul>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= 비교 ======================= -->
+<section class="panel" id="panel-cmp" role="tabpanel" aria-labelledby="tab-cmp" hidden>
+
+  <div class="block">
+    <div class="kpis" id="cmp-kpis"></div>
+  </div>
+
+  <div class="block">
+    <div class="sec-head">
+      <h2><span class="num">01</span>부산–후쿠오카: 해운 vs 항공 여객</h2>
+      <p class="sec-note">동일 도시쌍 · 해운은 카멜리아+고속선 합계</p>
+    </div>
+    <div class="card card-pad">
+      <div class="chart-shell" id="c-cmp-abs"></div>
+    </div>
+  </div>
+
+  <div class="block">
+    <div class="sec-head">
+      <h2><span class="num">02</span>해운 분담률 (후쿠오카 도시쌍)</h2>
+      <p class="sec-note">해운 ÷ (해운+항공) · 2017년 25.0% → 2025년 10.7%</p>
+    </div>
+    <div class="card card-pad">
+      <div class="chart-shell" id="c-cmp-share"></div>
+    </div>
+  </div>
+
+  <div class="block">
+    <div class="sec-head">
+      <h2><span class="num">03</span>연도별 대조표</h2>
+      <p class="sec-note">해운 4개 항로 합계와 항공 2개 노선 합계는 대상 범위가 달라 직접 비교 불가 — 참고용</p>
+    </div>
+    <div class="tbl-scroll">
+      <table id="cmp-table"><thead></thead><tbody></tbody></table>
+    </div>
+  </div>
+
+  <div class="block">
+    <div class="sec-head"><h2><span class="num">04</span>해석 시 유의점</h2></div>
+    <div class="notes" id="cmp-notes"></div>
+  </div>
+</section>
+
+<footer class="foot">
+  <p>출처: 「타선사_월별수송실적_2017-2026」 — [항로선사별요약] 시트, [항공기(FSC+LCC)] 시트. 원자료는 2017~2026 연도별 시트 통합본이며 2018년 5월 구본은 제외.</p>
+  <p>항차당 평균 = 수송인원 ÷ 항차수 · 평균 승선율 = 선사·월별 승선율의 단순평균 · 2026E는 기준연도(2025) 상반기 비중을 적용한 계절성 환산 또는 단순 연환산(÷6×12) 추정치로 실적이 아닙니다.</p>
+</footer>
+</main>
+
+<script>
+(function(){
+"use strict";
+
+/* ============ 데이터 ============ */
+var YEARS = [2017,2018,2019,2020,2022,2023,2024,2025,2026];
+var YLAB  = ["2017","2018","2019","2020","2022","2023","2024","2025","2026 1~6월","2026E"];
+var FLAG  = {2019:"No Japan",2020:"코로나",2022:"코로나",2026:"반기"};
+
+/* --- 항로/선사 행 정의 (수송인원 표와 동일 행 구성) --- */
+var ROWS = [
+ {r:"시모노세키(下關)",c:"PUKWAN",n:"부관훼리",k:"carrier"},
+ {r:"시모노세키(下關)",c:"",n:"소계",k:"route"},
+ {r:"오사카(大阪)",c:"PANSTAR",n:"팬스타",k:"carrier"},
+ {r:"오사카(大阪)",c:"",n:"소계",k:"route"},
+ {r:"후쿠오카(福岡)",c:"CAMELLIA",n:"카멜리아",k:"carrier"},
+ {r:"후쿠오카(福岡)",c:"",n:"소계 [RORO]",k:"sub"},
+ {r:"후쿠오카(福岡)",c:"BEETLE",n:"비틀",k:"carrier"},
+ {r:"후쿠오카(福岡)",c:"JR KYUSHU",n:"JR큐슈고속선",k:"carrier"},
+ {r:"후쿠오카(福岡)",c:"KOBEE",n:"코비",k:"carrier"},
+ {r:"후쿠오카(福岡)",c:"Q BEETLE",n:"퀸비틀",k:"carrier"},
+ {r:"후쿠오카(福岡)",c:"",n:"소계 [고속선]",k:"sub"},
+ {r:"후쿠오카(福岡)",c:"",n:"합계",k:"route"},
+ {r:"쓰시마(對馬)",c:"BEETLE",n:"비틀",k:"carrier"},
+ {r:"쓰시마(對馬)",c:"DAE-A",n:"대아고속해운",k:"carrier"},
+ {r:"쓰시마(對馬)",c:"HAN-IL",n:"한일고속",k:"carrier"},
+ {r:"쓰시마(對馬)",c:"KOBEE",n:"코비",k:"carrier"},
+ {r:"쓰시마(對馬)",c:"PANSTAR",n:"팬스타",k:"carrier"},
+ {r:"쓰시마(對馬)",c:"STAR LINE",n:"스타라인",k:"carrier"},
+ {r:"쓰시마(對馬)",c:"",n:"소계",k:"route"},
+ {r:"전체 합계",c:"",n:"4개 항로 계",k:"grand"}
+];
+var N = null; // 실적 없음
+
+/* 각 지표: [2017..2026(1~6월), 2026E, 전체] */
+var M = {};
+M.pax = [
+ [205578,176757,100149,7763,1533,106382,145707,164137,95037,173825,1003043],
+ [205578,176757,100149,7763,1533,106382,145707,164137,95037,173825,1003043],
+ [65826,51622,32939,2994,1260,36306,54417,49538,23463,37541,318365],
+ [65826,51622,32939,2994,1260,36306,54417,49538,23463,37541,318365],
+ [171858,186193,119576,12642,0,106673,180564,182011,106632,205864,1066149],
+ [171858,186193,119576,12642,0,106673,180564,182011,106632,205864,1066149],
+ [183181,181520,144797,13796,1167,13872,0,0,0,0,538333],
+ [0,0,0,0,0,96400,75186,0,0,0,171586],
+ [52065,0,0,0,0,0,0,0,0,0,52065],
+ [0,0,0,0,1864,0,0,0,0,0,1864],
+ [235246,181520,144797,13796,3031,110272,75186,0,0,0,763848],
+ [407104,367713,264373,26438,3031,216945,255750,182011,106632,205864,1829997],
+ [145230,128301,96548,7357,0,0,0,0,0,0,377436],
+ [318715,276912,154657,7933,0,0,0,211101,99430,198860,1068748],
+ [0,92651,31479,0,0,0,0,0,0,0,124130],
+ [255834,326804,211062,8293,0,2365,0,0,0,0,804358],
+ [0,0,0,0,0,115214,196843,174908,110604,221208,597569],
+ [0,0,0,0,0,123965,191386,155102,133281,266562,603734],
+ [719779,824668,493746,23583,0,241544,388229,541111,343315,686630,3575975],
+ [1398287,1420760,891207,60778,5824,601177,844103,936797,568447,1103860,6727380]
+];
+M.voy = [
+ [694,686,629,113,40,684,672,696,336,615,4550],
+ [694,686,629,113,40,684,672,696,336,672,4550],
+ [292,288,282,63,52,290,296,272,129,206,1964],
+ [292,288,282,63,52,290,296,272,129,258,1964],
+ [600,673,661,128,0,609,670,662,311,600,4314],
+ [600,673,661,128,0,609,670,662,311,622,4314],
+ [1636,1510,1494,272,12,118,0,0,0,0,5042],
+ [0,0,0,0,0,429,283,0,0,0,712],
+ [471,0,0,0,0,0,0,0,0,0,471],
+ [0,0,0,0,10,0,0,0,0,0,10],
+ [2107,1510,1494,272,22,547,283,0,0,0,6235],
+ [2707,2183,2155,400,22,1156,953,662,311,622,10549],
+ [1230,1261,1144,131,0,0,0,0,0,0,3766],
+ [892,783,558,66,0,0,0,652,305,610,3256],
+ [0,625,280,0,0,0,0,0,0,0,905],
+ [979,1592,1060,84,0,28,0,0,0,0,3743],
+ [0,0,0,0,0,574,825,746,397,794,2542],
+ [0,0,0,0,0,454,664,582,452,904,2152],
+ [3101,4261,3042,281,0,1056,1489,1980,1154,2308,16364],
+ [6794,7418,6108,857,114,3186,3410,3610,1930,3860,33427]
+];
+M.avg = [
+ [296.2,257.7,159.2,68.7,38.3,155.5,216.8,235.8,282.8,282.6,220.4],
+ [296.2,257.7,159.2,68.7,38.3,155.5,216.8,235.8,282.8,258.7,220.4],
+ [225.4,179.2,116.8,47.5,24.2,125.2,183.8,182.1,181.9,182.2,162.1],
+ [225.4,179.2,116.8,47.5,24.2,125.2,183.8,182.1,181.9,145.5,162.1],
+ [286.4,276.7,180.9,98.8,N,175.2,269.5,274.9,342.9,343.1,247.1],
+ [286.4,276.7,180.9,98.8,N,175.2,269.5,274.9,342.9,331.0,247.1],
+ [112.0,120.2,96.9,50.7,97.3,117.6,N,N,N,N,106.8],
+ [N,N,N,N,N,224.7,265.7,N,N,N,241.0],
+ [110.5,N,N,N,N,N,N,N,N,N,110.5],
+ [N,N,N,N,186.4,N,N,N,N,N,186.4],
+ [111.6,120.2,96.9,50.7,137.8,201.6,265.7,N,N,N,122.5],
+ [150.4,168.4,122.7,66.1,137.8,187.7,268.4,274.9,342.9,331.0,173.5],
+ [118.1,101.7,84.4,56.2,N,N,N,N,N,N,100.2],
+ [357.3,353.7,277.2,120.2,N,N,N,323.8,326.0,326.0,328.2],
+ [N,148.2,112.4,N,N,N,N,N,N,N,137.2],
+ [261.3,205.3,199.1,98.7,N,84.5,N,N,N,N,214.9],
+ [N,N,N,N,N,200.7,238.6,234.5,278.6,278.6,235.1],
+ [N,N,N,N,N,273.1,288.2,266.5,294.9,294.9,280.5],
+ [232.1,193.5,162.3,83.9,N,228.7,260.7,273.3,297.5,297.5,218.5],
+ [205.8,191.5,145.9,70.9,51.1,188.7,247.5,259.5,294.5,286.0,201.3]
+];
+M.load = [
+ [.5813,.5064,.3264,.1127,.0525,.3035,.4297,.4639,.5547,.5547,.3701],
+ [.5813,.5064,.3264,.1127,.0525,.3035,.4297,.4639,.5547,.5547,.3701],
+ [.4186,.3336,.2202,.0800,.0435,.2283,.3378,.3219,.3393,.3393,.2581],
+ [.4186,.3336,.2202,.0800,.0435,.2283,.3378,.3219,.3393,.3393,.2581],
+ [.4859,.4743,.3062,.1340,N,.2957,.4622,.4739,.5898,.5898,.4027],
+ [.4859,.4743,.3062,.1340,N,.2957,.4622,.4739,.5898,.5898,.4027],
+ [.5796,.6322,.5031,.2063,.2080,.2530,N,N,N,N,.3970],
+ [N,N,N,N,N,.4964,.5577,N,N,N,.5271],
+ [.5536,N,N,N,N,N,N,N,N,N,.5536],
+ [N,N,N,N,.3710,N,N,N,N,N,.3710],
+ [.5678,.6322,.5031,.2063,.2895,.4356,.5577,N,N,N,.4560],
+ [.5405,.5533,.4046,.1702,.2895,.3656,.4974,.4739,.5898,.5898,.4316],
+ [.6147,.5413,.4158,.2613,N,N,N,N,N,N,.4583],
+ [.7422,.7979,.5409,.2715,N,N,N,.7265,.7712,.7712,.6417],
+ [N,.4665,.3433,N,N,N,N,N,N,N,.4049],
+ [.6808,.6698,.5083,.2117,N,.6165,N,N,N,N,.5374],
+ [N,N,N,N,N,.4289,.5628,.5298,.6585,.6585,.5450],
+ [N,N,N,N,N,.5889,.6658,.6149,.6800,.6800,.6374],
+ [.6793,.6221,.4666,.2452,N,.5114,.6143,.6209,.7032,.7032,.5579],
+ [.5838,.5537,.3978,.1780,.1285,.3773,.4986,.5113,.5989,.5989,.4253]
+];
+M.kr = [
+ [.9021,.8756,.7962,.7724,.9041,.8236,.8099,.8167,.8446,.8446,.8447],
+ [.9021,.8756,.7962,.7724,.9041,.8236,.8099,.8167,.8446,.8446,.8447],
+ [.9003,.8015,.7111,.6760,.8556,.7148,.6121,.6828,.7478,.7478,.7469],
+ [.9003,.8015,.7111,.6760,.8556,.7148,.6121,.6828,.7478,.7478,.7469],
+ [.8899,.8548,.7654,.6578,N,.8353,.7430,.6968,.7448,.7448,.7892],
+ [.8899,.8548,.7654,.6578,N,.8353,.7430,.6968,.7448,.7448,.7892],
+ [.5534,.5006,.3981,.3447,.3907,.4381,N,N,N,N,.4852],
+ [N,N,N,N,N,.3272,.3558,N,N,N,.3397],
+ [.9626,N,N,N,N,N,N,N,N,N,.9626],
+ [N,N,N,N,.1427,N,N,N,N,N,.1427],
+ [.6440,.5006,.3981,.3447,.2382,.3411,.3558,N,N,N,.4842],
+ [.7478,.6800,.5642,.4944,.2382,.5841,.6292,.6968,.7448,.7448,.6619],
+ [.9735,.9671,.9552,.8956,N,N,N,N,N,N,.9652],
+ [.9940,.9936,.9906,.9812,N,N,N,.9887,.9900,.9900,.9919],
+ [N,.9928,.9933,N,N,N,N,N,N,N,.9930],
+ [.9916,.9919,.9889,.9699,N,.9894,N,N,N,N,.9908],
+ [N,N,N,N,N,.9803,.9781,.9793,.9826,.9826,.9797],
+ [N,N,N,N,N,.9867,.9879,.9877,.9918,.9918,.9885],
+ [.9890,.9887,.9832,.9505,N,.9837,.9829,.9854,.9883,.9883,.9862],
+ [.9018,.8879,.8278,.7159,.5470,.7949,.8220,.8838,.9087,.9087,.8656]
+];
+M.jp = [
+ [.0923,.1180,.1890,.2107,.0887,.1584,.1686,.1554,.1269,.1269,.1391],
+ [.0923,.1180,.1890,.2107,.0887,.1584,.1686,.1554,.1269,.1269,.1391],
+ [.0898,.1787,.2575,.2836,.1159,.2294,.2779,.2092,.1273,.1273,.1929],
+ [.0898,.1787,.2575,.2836,.1159,.2294,.2779,.2092,.1273,.1273,.1929],
+ [.0951,.1253,.1941,.2888,N,.1017,.1313,.1354,.1146,.1146,.1294],
+ [.0951,.1253,.1941,.2888,N,.1017,.1313,.1354,.1146,.1146,.1294],
+ [.4061,.4473,.5409,.6150,.5193,.4588,N,N,N,N,.4632],
+ [N,N,N,N,N,.5106,.4524,N,N,N,.4851],
+ [.0102,N,N,N,N,N,N,N,N,N,.0102],
+ [N,N,N,N,.8230,N,N,N,N,N,.8230],
+ [.3185,.4473,.5409,.6150,.7060,.5041,.4524,N,N,N,.4381],
+ [.2242,.2842,.3841,.4590,.7060,.3062,.2257,.1354,.1146,.1146,.2583],
+ [.0192,.0240,.0333,.0748,N,N,N,N,N,N,.0255],
+ [.0016,.0013,.0026,.0035,N,N,N,.0053,.0042,.0042,.0027],
+ [N,.0016,.0017,N,N,N,N,N,N,N,.0016],
+ [.0020,.0022,.0028,.0074,N,.0017,N,N,N,N,.0024],
+ [N,N,N,N,N,.0124,.0140,.0110,.0087,.0087,.0118],
+ [N,N,N,N,N,.0045,.0033,.0044,.0028,.0028,.0037],
+ [.0053,.0052,.0086,.0271,N,.0083,.0087,.0069,.0051,.0051,.0067],
+ [.0858,.0978,.1495,.2511,.4159,.1557,.1194,.0685,.0511,.0511,.1037]
+];
+M.etc = [
+ [.0057,.0064,.0148,.0169,.0072,.0180,.0215,.0280,.0285,.0285,.0162],
+ [.0057,.0064,.0148,.0169,.0072,.0180,.0215,.0280,.0285,.0285,.0162],
+ [.0099,.0198,.0314,.0404,.0286,.0559,.1100,.1080,.1249,.1249,.0602],
+ [.0099,.0198,.0314,.0404,.0286,.0559,.1100,.1080,.1249,.1249,.0602],
+ [.0150,.0199,.0405,.0534,N,.0630,.1257,.1679,.1406,.1406,.0814],
+ [.0150,.0199,.0405,.0534,N,.0630,.1257,.1679,.1406,.1406,.0814],
+ [.0404,.0520,.0609,.0403,.0900,.1031,N,N,N,N,.0516],
+ [N,N,N,N,N,.1622,.1918,N,N,N,.1752],
+ [.0272,N,N,N,N,N,N,N,N,N,.0272],
+ [N,N,N,N,.0343,N,N,N,N,N,.0343],
+ [.0375,.0520,.0609,.0403,.0558,.1548,.1918,N,N,N,.0776],
+ [.0280,.0358,.0517,.0466,.0558,.1097,.1451,.1679,.1406,.1406,.0798],
+ [.0072,.0088,.0115,.0296,N,N,N,N,N,N,.0093],
+ [.0044,.0051,.0068,.0153,N,N,N,.0060,.0058,.0058,.0054],
+ [N,.0056,.0050,N,N,N,N,N,N,N,.0054],
+ [.0063,.0059,.0082,.0228,N,.0089,N,N,N,N,.0068],
+ [N,N,N,N,N,.0073,.0079,.0097,.0087,.0087,.0085],
+ [N,N,N,N,N,.0088,.0088,.0079,.0054,.0054,.0078],
+ [.0057,.0060,.0082,.0224,N,.0081,.0084,.0077,.0066,.0066,.0071],
+ [.0124,.0143,.0227,.0331,.0371,.0494,.0586,.0477,.0403,.0403,.0307]
+];
+
+var METRICS = [
+ {id:"pax", label:"수송인원(名)", fmt:"int",  note:"항로×선사×연도 총수송인원. 2026E는 2025년 상반기 비중을 적용한 계절성 환산 또는 단순 연환산 추정치."},
+ {id:"voy", label:"항차(편)",     fmt:"int",  note:"연간 운항 항차 수. 2026년은 1~6월 실적."},
+ {id:"avg", label:"항차당 평균(名/편)", fmt:"dec", note:"수송인원 ÷ 항차수. 2025년 259.5명 → 2026년 상반기 294.5명으로 상승."},
+ {id:"load",label:"평균 승선율",  fmt:"pct",  note:"선사·월별 승선율의 단순평균. 전체 열은 연도 평균의 단순평균."},
+ {id:"kr",  label:"한국인 점유율", fmt:"pct", note:"쓰시마 항로는 98~99%가 한국인, 후쿠오카 고속선은 일본인 비중이 높았던 구조."},
+ {id:"jp",  label:"일본인 점유율", fmt:"pct", note:"고속선(비틀·JR큐슈·퀸비틀) 철수 이후 일본인 비중은 2026년 5.1%까지 하락."},
+ {id:"etc", label:"기타(외국인) 점유율", fmt:"pct", note:"제3국 외국인 비중은 2017년 1.2% → 2024년 5.9%로 구조적 상승."}
+];
+
+/* --- 4개 항로 소계 (차트용) --- */
+var SEA_ROUTES = [
+ {name:"쓰시마(對馬)", idx:18, cvar:"--s1"},
+ {name:"시모노세키(下關)", idx:1, cvar:"--s2"},
+ {name:"후쿠오카(福岡)", idx:11, cvar:"--s3"},
+ {name:"오사카(大阪)", idx:3, cvar:"--s4"}
+];
+
+/* --- 항공: 후쿠오카 --- */
+var AIR_FUK = [
+ {n:"에어부산",   v:[635925,777699,529319,57770,80765,581626,607785,575122,284301,566090,4696402], cvar:"--s1",
+  note:"전성기(2018년 777,699명) 대비 점유율은 회복하지 못했으나 최근 3년 57~61만명대 유지 중"},
+ {n:"티웨이항공", v:[186676,116829,95924,12037,17606,141449,242694,346063,365859,889013,2414150], cvar:"--s2",
+  note:"가장 큰 수혜 항공사. 2025년 346,063명은 2017년(186,676명)의 1.85배, 2026년 반기(365,859명)만으로 작년 연간 실적 초과"},
+ {n:"제주항공",   v:[200646,261290,218993,16237,57323,279559,262614,270419,123736,279822,1970639], cvar:"--s3",
+  note:"2023년 279,559명 이후 2024년 262,614명(-6.1%)으로 조정, 2025년 270,419명 재상승. 2026E 279,822명으로 소폭 상승 예상"},
+ {n:"이스타항공", v:[N,2388,N,N,N,N,N,48022,129099,258198,437707], cvar:"--s4",
+  note:"전년대비 대폭 상승. 2026년 반기 129,099명으로 작년 연간(48,022명)의 약 2.7배"},
+ {n:"진에어",     v:[7268,N,N,N,29486,72906,73033,72097,63387,139130,457307], cvar:"--s5",
+  note:"코로나 이후 후쿠오카 노선 7만명대 유지(2023~25년 72~73천명), 2026E 139,130명(+93%)으로 대폭 증대 예상"},
+ {n:"에어로케이", v:[N,N,N,N,N,N,N,51704,51909,155923,259536], cvar:"--s6",
+  note:"2025년 신규 진입(51,704명), 2026년 반기 51,909명으로 이미 작년 연간 실적 초과"},
+ {n:"대한항공",   v:[191055,195066,124884,18024,N,58818,225010,160494,N,0,973351], cvar:"--s7",
+  note:"2024년 225,010명 → 2025년 160,494명으로 감소, 2026년 상반기 실적 없음(노선 중단 추정)"},
+ {n:"스쿠트 항공",v:[N,N,N,N,N,184,N,N,N,N,184], cvar:"--s8",
+  note:"2023년 184명 단발성 운항 외 실적 없음"}
+];
+var AIR_FUK_SUM = [1221570,1353272,969120,104068,185180,1134542,1411136,1523921,1018291,2288176,11209276];
+var AIR_FUK_SUM_NOTE = "노선 소계: 2017년 1,221,570명 → 2025년 1,523,921명. 2026E 2,288,176명은 항공사별 연환산 합산값으로 상반기 집중 수요가 반영되어 과대 가능";
+
+/* --- 항공: 키타큐슈 (비고는 원본 시트의 행 밀림을 바로잡아 재정렬) --- */
+var AIR_KIT = [
+ {n:"에어로케이",     v:[N,N,N,N,N,N,N,8206,30348,60696,99250], cvar:"--s1",
+  note:"2025년 8,206명 → 2026년 반기 30,348명으로 급증. 현재 키타큐슈 노선 사실상 유일 운항사"},
+ {n:"스타플라이어항공",v:[13735,1993,N,N,N,8567,10748,N,N,N,35043], cvar:"--s2",
+  note:"2017년 13,735명 → 2024년 10,748명, 2025년 이후 실적 없음(운항 중단)"},
+ {n:"진에어",         v:[81578,85042,58147,5560,N,N,N,N,N,N,230327], cvar:"--s3",
+  note:"2017~2020년 운항(누적 230,327명) 후 코로나 이후 미재개"},
+ {n:"티웨이항공",     v:[13354,17891,26640,N,N,N,N,N,N,N,57885], cvar:"--s4",
+  note:"2017~2019년 운항(누적 57,885명) 후 코로나 이후 미재개"},
+ {n:"에어부산",       v:[N,N,11187,N,N,N,N,N,N,N,11187], cvar:"--s5",
+  note:"2019년 11,187명 단발성 운항 이후 실적 없음"}
+];
+var AIR_KIT_SUM = [108667,104926,95974,5560,N,8567,10748,8206,30348,60696,433692];
+var AIR_KIT_SUM_NOTE = "2026년 반기 30,348명(2026E 60,696명)으로 회복세이나 2017년(108,667명)의 56% 수준";
+var AIR_TOTAL = [1330237,1458198,1065094,109628,185180,1143109,1421884,1532127,1048639,2348872,11642968];
+
+/* ============ 포맷터 ============ */
+function fInt(v){ return (v===N||v===undefined) ? "–" : Math.round(v).toLocaleString("ko-KR"); }
+function fDec(v){ return (v===N||v===undefined) ? "–" : v.toFixed(1); }
+function fPct(v){ return (v===N||v===undefined) ? "–" : (v*100).toFixed(1)+"%"; }
+function fmtBy(k){ return k==="pct"?fPct : k==="dec"?fDec : fInt; }
+function cssv(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function el(tag,cls,txt){ var e=document.createElement(tag); if(cls)e.className=cls; if(txt!=null)e.textContent=txt; return e; }
+function svgEl(t,a){ var e=document.createElementNS("http://www.w3.org/2000/svg",t); for(var k in a){ e.setAttribute(k,a[k]); } return e; }
+function niceMax(v){
+  if(v<=0) return 1;
+  var mag=Math.pow(10,Math.floor(Math.log10(v))), n=v/mag;
+  var s = n<=1?1 : n<=1.2?1.2 : n<=1.5?1.5 : n<=2?2 : n<=2.5?2.5 : n<=3?3 : n<=4?4 : n<=5?5 : n<=6?6 : n<=8?8 : 10;
+  return s*mag;
+}
+function roundTopRect(x,y,w,h,r){
+  r=Math.min(r,w/2,Math.max(h,0));
+  if(h<=0.6) return "";
+  return "M"+x+","+(y+h)+"V"+(y+r)+"a"+r+","+r+" 0 0 1 "+r+",-"+r+"h"+(w-2*r)+"a"+r+","+r+" 0 0 1 "+r+","+r+"V"+(y+h)+"Z";
+}
+
+/* ============ 차트: 누적 막대 ============ */
+function stackedChart(host, opt){
+  host.innerHTML="";
+  var scroll=el("div","chart-scroll"); host.appendChild(scroll);
+  var tip=el("div","tip"); host.appendChild(tip);
+
+  var W=880,H=opt.height||390, mL=68,mR=18,mT=22,mB=54;
+  var labels=opt.labels, estIdx=opt.estIdx;
+  var series=opt.series.map(function(s){ return {n:s.n,cvar:s.cvar,v:s.v.slice(0,labels.length)}; });
+  var nC=labels.length, iw=W-mL-mR, ih=H-mT-mB;
+  var band=iw/nC, bw=Math.min(52, band*0.62);
+
+  var totals=labels.map(function(_,i){
+    return series.reduce(function(a,s){ return a+(s.v[i]===N||!s.v[i]?0:s.v[i]); },0);
+  });
+  var ymax=niceMax(Math.max.apply(null,totals)*1.12);
+  var y=function(v){ return mT+ih-(v/ymax)*ih; };
+
+  var svg=svgEl("svg",{viewBox:"0 0 "+W+" "+H,role:"img","aria-label":opt.aria||"차트",class:"chart"});
+  var ink=cssv("--ink-2"), muted=cssv("--muted"), grid=cssv("--grid"), axis=cssv("--axis"), surf=cssv("--surface");
+
+  // grid + y ticks
+  for(var t=0;t<=4;t++){
+    var vv=ymax*t/4, yy=y(vv);
+    svg.appendChild(svgEl("line",{x1:mL,x2:W-mR,y1:yy,y2:yy,stroke:t===0?axis:grid,"stroke-width":1}));
+    var tx=svgEl("text",{x:mL-10,y:yy+4,"text-anchor":"end",fill:muted,"font-size":11,"font-family":"inherit"});
+    tx.textContent = opt.ytick ? opt.ytick(vv) : (vv>=10000? (vv/10000)+"만" : fInt(vv));
+    svg.appendChild(tx);
+  }
+
+  // bars
+  labels.forEach(function(lb,i){
+    var cx=mL+band*i+band/2, x0=cx-bw/2, acc=0, isEst=(i===estIdx);
+    var stack=[];
+    series.forEach(function(s){
+      var v=(s.v[i]===N||!s.v[i])?0:s.v[i];
+      if(v>0) stack.push({s:s,v:v});
+    });
+    stack.forEach(function(p,j){
+      var yTop=y(acc+p.v), yBot=y(acc), h=Math.max(yBot-yTop-2,0);
+      var topMost=(j===stack.length-1);
+      var col=cssv(p.s.cvar);
+      if(topMost){
+        var d=roundTopRect(x0,yTop,bw,h,4);
+        if(d) svg.appendChild(svgEl("path",{d:d,fill:col,opacity:isEst?0.55:1}));
+      } else {
+        svg.appendChild(svgEl("rect",{x:x0,y:yTop,width:bw,height:h,fill:col,opacity:isEst?0.55:1}));
+      }
+      acc+=p.v;
+    });
+    if(isEst && totals[i]>0){
+      svg.appendChild(svgEl("rect",{x:x0-1.5,y:y(totals[i])-1.5,width:bw+3,height:(y(0)-y(totals[i]))+1.5,
+        fill:"none",stroke:cssv("--accent"),"stroke-width":1.5,"stroke-dasharray":"4 3",rx:5}));
+    }
+    // total label
+    if(totals[i]>0){
+      var lt=svgEl("text",{x:cx,y:y(totals[i])-9,"text-anchor":"middle",fill:isEst?cssv("--accent"):ink,
+        "font-size":11.5,"font-weight":600,"font-family":"inherit"});
+      lt.textContent= opt.totalFmt? opt.totalFmt(totals[i]) : fInt(totals[i]);
+      svg.appendChild(lt);
+    }
+    // x label
+    var parts=String(lb).split(" ");
+    var xt=svgEl("text",{x:cx,y:H-mB+20,"text-anchor":"middle",fill:isEst?cssv("--accent"):ink,
+      "font-size":11.5,"font-family":"inherit","font-weight":isEst?600:400});
+    xt.textContent=parts[0];
+    svg.appendChild(xt);
+    if(parts[1]){
+      var xt2=svgEl("text",{x:cx,y:H-mB+34,"text-anchor":"middle",fill:muted,"font-size":10,"font-family":"inherit"});
+      xt2.textContent=parts[1]; svg.appendChild(xt2);
+    }
+    var fl=FLAG[YEARS[i]];
+    if(fl && i!==estIdx && !parts[1]){
+      var ft=svgEl("text",{x:cx,y:H-mB+(parts[1]?46:34),"text-anchor":"middle",fill:muted,"font-size":9.5,"font-family":"inherit"});
+      ft.textContent="⚠ "+fl; svg.appendChild(ft);
+    }
+    // hover band
+    var hb=svgEl("rect",{x:mL+band*i,y:mT,width:band,height:ih,fill:"transparent",style:"cursor:crosshair"});
+    hb.addEventListener("pointerenter",function(){ showTip(i,cx); });
+    hb.addEventListener("pointermove",function(){ showTip(i,cx); });
+    hb.addEventListener("pointerleave",function(){ tip.style.opacity=0; });
+    svg.appendChild(hb);
+  });
+
+  scroll.appendChild(svg);
+
+  // legend
+  var lg=el("ul","legend");
+  series.forEach(function(s){
+    var li=el("li");
+    var sw=el("span","swatch"); sw.style.background=cssv(s.cvar);
+    li.appendChild(sw); li.appendChild(el("span",null,s.n));
+    lg.appendChild(li);
+  });
+  if(estIdx!=null){
+    var li2=el("li"); var sw2=el("span","swatch est"); li2.appendChild(sw2);
+    li2.appendChild(el("span",null,"2026E (추정치)")); lg.appendChild(li2);
+  }
+  host.appendChild(lg);
+
+  function showTip(i,cx){
+    var rows="", tot=totals[i];
+    series.slice().reverse().forEach(function(s){
+      var v=s.v[i];
+      if(v===N||!v) return;
+      rows+='<div class="t-row"><span class="nm"><span class="swatch" style="background:'+cssv(s.cvar)+'"></span>'+s.n+'</span>'+
+            '<span class="vl">'+fInt(v)+(opt.unit||"")+'</span></div>';
+    });
+    if(!rows) rows='<div class="t-row"><span class="nm">실적 없음</span></div>';
+    var flag=FLAG[YEARS[i]]?'<span style="color:'+cssv("--muted")+';font-weight:400">⚠ '+FLAG[YEARS[i]]+'</span>':'';
+    if(i===estIdx) flag='<span style="color:'+cssv("--accent")+';font-weight:400">추정</span>';
+    tip.innerHTML='<div class="t-title"><span>'+String(labels[i]).replace(" "," ")+'</span>'+flag+'</div>'+rows+
+      '<div class="t-row t-total"><span class="nm">합계</span><span class="vl">'+fInt(tot)+(opt.unit||"")+'</span></div>';
+    var sx=scroll.scrollLeft, rect=scroll.getBoundingClientRect();
+    var px=(cx/W)*scroll.firstChild.getBoundingClientRect().width - sx;
+    tip.style.left=Math.max(80,Math.min(rect.width-80,px))+"px";
+    tip.style.top=(mT/H)*scroll.firstChild.getBoundingClientRect().height+"px";
+    tip.style.opacity=1;
+  }
+}
+
+/* ============ 차트: 선 ============ */
+function lineChart(host, opt){
+  host.innerHTML="";
+  var scroll=el("div","chart-scroll"); host.appendChild(scroll);
+  var tip=el("div","tip"); host.appendChild(tip);
+
+  var W=880,H=opt.height||340, mL=62,mR=20,mT=20,mB=48;
+  var labels=opt.labels, estIdx=opt.estIdx;
+  var series=opt.series.map(function(s){ return {n:s.n,cvar:s.cvar,v:s.v.slice(0,labels.length)}; });
+  var nC=labels.length, iw=W-mL-mR, ih=H-mT-mB, band=iw/nC;
+  var xs=function(i){ return mL+band*i+band/2; };
+
+  var vals=[];
+  series.forEach(function(s){ s.v.forEach(function(v){ if(v!==N&&v!=null) vals.push(v); }); });
+  var ymax=opt.ymax!=null?opt.ymax:niceMax(Math.max.apply(null,vals)*1.1);
+  var y=function(v){ return mT+ih-(v/ymax)*ih; };
+
+  var svg=svgEl("svg",{viewBox:"0 0 "+W+" "+H,role:"img","aria-label":opt.aria||"차트",class:"chart"});
+  var ink=cssv("--ink-2"), muted=cssv("--muted"), grid=cssv("--grid"), axis=cssv("--axis"), surf=cssv("--surface");
+
+  for(var t=0;t<=4;t++){
+    var vv=ymax*t/4, yy=y(vv);
+    svg.appendChild(svgEl("line",{x1:mL,x2:W-mR,y1:yy,y2:yy,stroke:t===0?axis:grid,"stroke-width":1}));
+    var tx=svgEl("text",{x:mL-10,y:yy+4,"text-anchor":"end",fill:muted,"font-size":11,"font-family":"inherit"});
+    tx.textContent=opt.ytick?opt.ytick(vv):fInt(vv);
+    svg.appendChild(tx);
+  }
+  if(estIdx!=null){
+    svg.appendChild(svgEl("rect",{x:mL+band*estIdx,y:mT,width:band,height:ih,fill:cssv("--accent"),opacity:.06}));
+  }
+
+  series.forEach(function(s){
+    var col=cssv(s.cvar), segs=[], cur=[];
+    s.v.forEach(function(v,i){
+      if(v===N||v==null){ if(cur.length){segs.push(cur);cur=[];} }
+      else cur.push([xs(i),y(v),i,v]);
+    });
+    if(cur.length) segs.push(cur);
+    segs.forEach(function(sg){
+      if(sg.length>1){
+        var d=sg.map(function(p,k){ return (k?"L":"M")+p[0].toFixed(1)+","+p[1].toFixed(1); }).join("");
+        svg.appendChild(svgEl("path",{d:d,fill:"none",stroke:col,"stroke-width":2,"stroke-linecap":"round","stroke-linejoin":"round"}));
+      }
+      sg.forEach(function(p){
+        svg.appendChild(svgEl("circle",{cx:p[0],cy:p[1],r:4.5,fill:col,stroke:surf,"stroke-width":2}));
+      });
+    });
+    // direct label at last point
+    var last=null;
+    for(var i=s.v.length-1;i>=0;i--){ if(s.v[i]!==N&&s.v[i]!=null){ last=i; break; } }
+    if(last!=null && opt.directLabel!==false){
+      var lt=svgEl("text",{x:xs(last)+(last===nC-1?-8:8),y:y(s.v[last])-10,
+        "text-anchor":last===nC-1?"end":"start",fill:col,"font-size":11,"font-weight":600,"font-family":"inherit"});
+      lt.textContent=(opt.ptFmt?opt.ptFmt(s.v[last]):fInt(s.v[last]));
+      svg.appendChild(lt);
+    }
+  });
+
+  labels.forEach(function(lb,i){
+    var parts=String(lb).split(" ");
+    var isEst=(i===estIdx);
+    var xt=svgEl("text",{x:xs(i),y:H-mB+20,"text-anchor":"middle",fill:isEst?cssv("--accent"):ink,"font-size":11.5,
+      "font-family":"inherit","font-weight":isEst?600:400});
+    xt.textContent=parts[0]; svg.appendChild(xt);
+    if(parts[1]){
+      var x2=svgEl("text",{x:xs(i),y:H-mB+34,"text-anchor":"middle",fill:muted,"font-size":10,"font-family":"inherit"});
+      x2.textContent=parts[1]; svg.appendChild(x2);
+    }
+    var hb=svgEl("rect",{x:mL+band*i,y:mT,width:band,height:ih,fill:"transparent",style:"cursor:crosshair"});
+    hb.addEventListener("pointerenter",function(){ show(i); });
+    hb.addEventListener("pointermove",function(){ show(i); });
+    hb.addEventListener("pointerleave",function(){ tip.style.opacity=0; cross.setAttribute("opacity",0); });
+    svg.appendChild(hb);
+  });
+
+  var cross=svgEl("line",{y1:mT,y2:mT+ih,stroke:cssv("--axis"),"stroke-width":1,"stroke-dasharray":"3 3",opacity:0});
+  svg.appendChild(cross);
+  scroll.appendChild(svg);
+
+  var lg=el("ul","legend");
+  series.forEach(function(s){
+    var li=el("li"); var sw=el("span","swatch"); sw.style.background=cssv(s.cvar);
+    li.appendChild(sw); li.appendChild(el("span",null,s.n)); lg.appendChild(li);
+  });
+  host.appendChild(lg);
+
+  function show(i){
+    cross.setAttribute("x1",xs(i)); cross.setAttribute("x2",xs(i)); cross.setAttribute("opacity",1);
+    var rows="";
+    series.forEach(function(s){
+      var v=s.v[i]; if(v===N||v==null) return;
+      rows+='<div class="t-row"><span class="nm"><span class="swatch" style="background:'+cssv(s.cvar)+'"></span>'+s.n+'</span>'+
+        '<span class="vl">'+(opt.ptFmt?opt.ptFmt(v):fInt(v))+'</span></div>';
+    });
+    if(!rows) rows='<div class="t-row"><span class="nm">실적 없음</span></div>';
+    var flag=FLAG[YEARS[i]]?'<span style="color:'+cssv("--muted")+';font-weight:400">⚠ '+FLAG[YEARS[i]]+'</span>':'';
+    if(i===estIdx) flag='<span style="color:'+cssv("--accent")+';font-weight:400">추정</span>';
+    tip.innerHTML='<div class="t-title"><span>'+String(labels[i]).replace(" "," ")+'</span>'+flag+'</div>'+rows;
+    var w=scroll.firstChild.getBoundingClientRect().width;
+    var px=(xs(i)/W)*w - scroll.scrollLeft, rect=scroll.getBoundingClientRect();
+    tip.style.left=Math.max(85,Math.min(rect.width-85,px))+"px";
+    tip.style.top=(mT/H)*scroll.firstChild.getBoundingClientRect().height+"px";
+    tip.style.opacity=1;
+  }
+}
+
+/* ============ 차트: 그룹 막대 (2계열) ============ */
+function groupedChart(host,opt){
+  host.innerHTML="";
+  var scroll=el("div","chart-scroll"); host.appendChild(scroll);
+  var tip=el("div","tip"); host.appendChild(tip);
+  var W=880,H=opt.height||370,mL=68,mR=18,mT=22,mB=52;
+  var labels=opt.labels, estIdx=opt.estIdx;
+  var series=opt.series.map(function(s){ return {n:s.n,cvar:s.cvar,v:s.v.slice(0,labels.length)}; });
+  var nC=labels.length, iw=W-mL-mR, ih=H-mT-mB, band=iw/nC;
+  var gw=Math.min(54,band*0.66), bw=(gw-4)/2;
+  var vals=[]; series.forEach(function(s){s.v.forEach(function(v){ if(v) vals.push(v); });});
+  var ymax=niceMax(Math.max.apply(null,vals)*1.12);
+  var y=function(v){ return mT+ih-(v/ymax)*ih; };
+  var svg=svgEl("svg",{viewBox:"0 0 "+W+" "+H,class:"chart",role:"img","aria-label":opt.aria||"차트"});
+  var ink=cssv("--ink-2"),muted=cssv("--muted"),grid=cssv("--grid"),axis=cssv("--axis");
+  for(var t=0;t<=4;t++){
+    var vv=ymax*t/4,yy=y(vv);
+    svg.appendChild(svgEl("line",{x1:mL,x2:W-mR,y1:yy,y2:yy,stroke:t===0?axis:grid,"stroke-width":1}));
+    var tx=svgEl("text",{x:mL-10,y:yy+4,"text-anchor":"end",fill:muted,"font-size":11,"font-family":"inherit"});
+    tx.textContent=vv>=10000?(vv/10000)+"만":fInt(vv); svg.appendChild(tx);
+  }
+  labels.forEach(function(lb,i){
+    var cx=mL+band*i+band/2, isEst=(i===estIdx);
+    series.forEach(function(s,j){
+      var v=s.v[i]; if(!v||v===N) return;
+      var x0=cx-gw/2+j*(bw+4), yT=y(v), h=y(0)-yT;
+      var d=roundTopRect(x0,yT,bw,h,4);
+      if(d) svg.appendChild(svgEl("path",{d:d,fill:cssv(s.cvar),opacity:isEst?0.55:1}));
+      if(isEst) svg.appendChild(svgEl("rect",{x:x0-1.5,y:yT-1.5,width:bw+3,height:h+1.5,fill:"none",
+        stroke:cssv("--accent"),"stroke-width":1.3,"stroke-dasharray":"4 3",rx:5}));
+    });
+    var parts=String(lb).split(" ");
+    var xt=svgEl("text",{x:cx,y:H-mB+20,"text-anchor":"middle",fill:isEst?cssv("--accent"):ink,"font-size":11.5,
+      "font-family":"inherit","font-weight":isEst?600:400});
+    xt.textContent=parts[0]; svg.appendChild(xt);
+    if(parts[1]){var x2=svgEl("text",{x:cx,y:H-mB+34,"text-anchor":"middle",fill:muted,"font-size":10,"font-family":"inherit"});
+      x2.textContent=parts[1]; svg.appendChild(x2);}
+    var hb=svgEl("rect",{x:mL+band*i,y:mT,width:band,height:ih,fill:"transparent",style:"cursor:crosshair"});
+    hb.addEventListener("pointerenter",function(){show(i,cx);});
+    hb.addEventListener("pointermove",function(){show(i,cx);});
+    hb.addEventListener("pointerleave",function(){tip.style.opacity=0;});
+    svg.appendChild(hb);
+  });
+  scroll.appendChild(svg);
+  var lg=el("ul","legend");
+  series.forEach(function(s){var li=el("li");var sw=el("span","swatch");sw.style.background=cssv(s.cvar);
+    li.appendChild(sw);li.appendChild(el("span",null,s.n));lg.appendChild(li);});
+  if(estIdx!=null){var li2=el("li");li2.appendChild(el("span","swatch est"));li2.appendChild(el("span",null,"2026E (추정치)"));lg.appendChild(li2);}
+  host.appendChild(lg);
+  function show(i,cx){
+    var rows="";
+    series.forEach(function(s){ var v=s.v[i]; if(!v||v===N) return;
+      rows+='<div class="t-row"><span class="nm"><span class="swatch" style="background:'+cssv(s.cvar)+'"></span>'+s.n+'</span><span class="vl">'+fInt(v)+'명</span></div>';});
+    var a=series[0].v[i],b=series[1].v[i];
+    if(a&&b) rows+='<div class="t-row t-total"><span class="nm">해운 분담률</span><span class="vl">'+(a/(a+b)*100).toFixed(1)+'%</span></div>';
+    tip.innerHTML='<div class="t-title"><span>'+String(labels[i]).replace(" "," ")+'</span></div>'+rows;
+    var w=scroll.firstChild.getBoundingClientRect().width;
+    var px=(cx/W)*w-scroll.scrollLeft, rect=scroll.getBoundingClientRect();
+    tip.style.left=Math.max(85,Math.min(rect.width-85,px))+"px";
+    tip.style.top=(mT/H)*scroll.firstChild.getBoundingClientRect().height+"px";
+    tip.style.opacity=1;
+  }
+}
+
+/* ============ KPI ============ */
+function kpis(host,items){
+  host.innerHTML="";
+  host.setAttribute("data-n",items.length);
+  items.forEach(function(it){
+    var d=el("div","kpi"+(it.est?" is-est":""));
+    d.appendChild(el("div","k-label",it.label));
+    var v=el("div","k-val"); v.textContent=it.value;
+    if(it.unit){ var s=document.createElement("small"); s.textContent=it.unit; v.appendChild(s); }
+    d.appendChild(v);
+    var f=el("div","k-foot");
+    if(it.delta!=null){
+      var dd=el("span","delta "+(it.delta>=0?"up":"down"),(it.delta>=0?"▲ ":"▼ ")+Math.abs(it.delta).toFixed(1)+"%");
+      f.appendChild(dd);
+    }
+    f.appendChild(el("span",null,it.foot));
+    d.appendChild(f);
+    host.appendChild(d);
+  });
+}
+
+/* ============ 테이블 ============ */
+function seaTable(metricId){
+  var m=METRICS.filter(function(x){return x.id===metricId;})[0];
+  var fmt=fmtBy(m.fmt), data=M[metricId];
+  var thead=document.querySelector("#sea-table thead"), tbody=document.querySelector("#sea-table tbody");
+  thead.innerHTML=""; tbody.innerHTML="";
+
+  var tr=document.createElement("tr");
+  tr.appendChild(th("항로","lft sticky"));
+  tr.appendChild(th("선사","lft"));
+  YLAB.forEach(function(l,i){
+    var c=th(l.replace(" "," "),"num"+(i===9?" est":""));
+    if(FLAG[YEARS[i]]&&i<9) c.classList.add("flag");
+    tr.appendChild(c);
+  });
+  tr.appendChild(th(m.fmt==="pct"?"전체 평균":"전체","num"));
+  thead.appendChild(tr);
+
+  var lastRoute=null;
+  ROWS.forEach(function(r,ri){
+    var row=document.createElement("tr");
+    row.className = r.k==="grand"?"r-grand" : r.k==="route"?"r-route" : r.k==="sub"?"r-sub":"";
+    var c1=document.createElement("td"); c1.className="lft sticky";
+    c1.textContent = (r.r!==lastRoute||r.k==="grand") ? r.r : "";
+    if(r.r!==lastRoute) lastRoute=r.r;
+    row.appendChild(c1);
+    var c2=document.createElement("td"); c2.className="lft";
+    var wrap=el("span","rname");
+    if(r.k==="carrier"){
+      var col=routeColor(r.r);
+      var dot=el("span","rdot"); dot.style.background=col; wrap.appendChild(dot);
+    }
+    wrap.appendChild(el("span",null,r.n));
+    if(r.c){ wrap.appendChild(el("span","code",r.c)); }
+    c2.appendChild(wrap); row.appendChild(c2);
+    data[ri].forEach(function(v,i){
+      var td=document.createElement("td"); td.className="num"+(i===9?" est":"");
+      if(v===N||v===0||v==null) td.classList.add("zero");
+      td.textContent=fmt(v);
+      row.appendChild(td);
+    });
+    tbody.appendChild(row);
+  });
+  document.getElementById("metric-note").textContent="※ "+m.note;
+  function th(t,c){ var e=document.createElement("th"); e.textContent=t; if(c)e.className=c; return e; }
+}
+function routeColor(rname){
+  for(var i=0;i<SEA_ROUTES.length;i++) if(SEA_ROUTES[i].name===rname) return cssv(SEA_ROUTES[i].cvar);
+  return cssv("--muted");
+}
+
+function airTable(tblId, rows, sum, sumLabel){
+  var thead=document.querySelector("#"+tblId+" thead"), tbody=document.querySelector("#"+tblId+" tbody");
+  thead.innerHTML=""; tbody.innerHTML="";
+  var tr=document.createElement("tr");
+  tr.appendChild(mk("th","항공사","lft sticky"));
+  YLAB.forEach(function(l,i){ tr.appendChild(mk("th",l.replace(" "," "),"num"+(i===9?" est":""))); });
+  tr.appendChild(mk("th","총합계","num"));
+  thead.appendChild(tr);
+  rows.forEach(function(r){
+    var row=document.createElement("tr");
+    var c=mk("td","","lft sticky");
+    var w=el("span","rname");
+    var dot=el("span","rdot"); dot.style.background=cssv(r.cvar); w.appendChild(dot);
+    w.appendChild(el("span",null,r.n)); c.appendChild(w); row.appendChild(c);
+    r.v.forEach(function(v,i){
+      var td=mk("td",fInt(v),"num"+(i===9?" est":""));
+      if(v===N||!v) td.classList.add("zero");
+      row.appendChild(td);
+    });
+    tbody.appendChild(row);
+  });
+  var srow=document.createElement("tr"); srow.className="r-grand";
+  srow.appendChild(mk("td",sumLabel,"lft sticky"));
+  sum.forEach(function(v,i){ srow.appendChild(mk("td",fInt(v),"num"+(i===9?" est":""))); });
+  tbody.appendChild(srow);
+  function mk(t,txt,cls){ var e=document.createElement(t); e.textContent=txt; if(cls)e.className=cls; return e; }
+}
+
+function noteList(host, rows, sum){
+  host.innerHTML="";
+  rows.forEach(function(r){
+    var li=document.createElement("li");
+    var nm=el("span","nm");
+    var dot=el("span","rdot"); dot.style.background=cssv(r.cvar);
+    nm.appendChild(dot); nm.appendChild(el("span",null,r.n));
+    li.appendChild(nm); li.appendChild(el("span","tx",r.note));
+    host.appendChild(li);
+  });
+  if(sum){
+    var li2=document.createElement("li"); li2.className="sum";
+    li2.appendChild(el("span","nm",sum.n));
+    li2.appendChild(el("span","tx",sum.note));
+    host.appendChild(li2);
+  }
+}
+
+/* ============ 렌더 ============ */
+function renderSea(){
+  var g=M.pax[19], v=M.voy[19], a=M.avg[19], kr=M.kr[19];
+  kpis(document.getElementById("sea-kpis"),[
+    {label:"2025년 수송인원", value:fInt(g[7]), unit:"명", delta:(g[7]/g[6]-1)*100, foot:"전년 844,103명 대비"},
+    {label:"2026년 1~6월 실적", value:fInt(g[8]), unit:"명", foot:"상반기 확정 실적"},
+    {label:"2026E 연환산 추정", value:fInt(g[9]), unit:"명", est:true, delta:(g[9]/g[7]-1)*100, foot:"2025년 대비 · 추정치"},
+    {label:"항차당 평균 (2026 상반기)", value:fDec(a[8]), unit:"명/편", foot:"2017년 205.8명 이후 최고"},
+    {label:"평균 승선율 (2026 상반기)", value:fPct(M.load[19][8]), foot:"2025년 51.1% → 59.9%"},
+    {label:"한국인 점유율 (2026 상반기)", value:fPct(kr[8]), foot:"일본인 5.1% · 기타 4.0%"}
+  ]);
+
+  stackedChart(document.getElementById("c-sea-pax"),{
+    labels:YLAB, estIdx:9, unit:"명", aria:"항로별 연간 수송인원 누적 막대그래프",
+    series:SEA_ROUTES.map(function(r){ return {n:r.name, cvar:r.cvar, v:M.pax[r.idx]}; })
+  });
+
+  lineChart(document.getElementById("c-sea-load"),{
+    labels:YLAB, estIdx:9, height:330, ymax:0.8,
+    aria:"항로별 평균 승선율 추이 선그래프",
+    ytick:function(v){ return (v*100).toFixed(0)+"%"; },
+    ptFmt:function(v){ return (v*100).toFixed(1)+"%"; },
+    series:SEA_ROUTES.map(function(r){ return {n:r.name, cvar:r.cvar, v:M.load[r.idx]}; })
+  });
+
+  var nat=[
+    {n:"한국인", cvar:"--s1", v:M.kr[19]},
+    {n:"일본인", cvar:"--s2", v:M.jp[19]},
+    {n:"기타(외국인)", cvar:"--s3", v:M.etc[19]}
+  ];
+  lineChart(document.getElementById("c-sea-nat"),{
+    labels:YLAB, estIdx:9, height:320, ymax:1,
+    aria:"국적별 점유율 추이 선그래프",
+    ytick:function(v){ return (v*100).toFixed(0)+"%"; },
+    ptFmt:function(v){ return (v*100).toFixed(1)+"%"; },
+    series:nat
+  });
+
+  var notes=[
+   {cls:"", h:"쓰시마가 해운 실적을 좌우한다", p:"2025년 4개 항로 936,797명 중 쓰시마가 541,111명(57.8%). 대아·팬스타·스타라인 3사 체제로 재편된 뒤 2023년 241,544명 → 2025년 541,111명으로 2.2배 늘었다."},
+   {cls:"crit", h:"후쿠오카 고속선은 소멸했다", p:"비틀·JR큐슈·코비·퀸비틀 합계는 2017년 235,246명에서 2025년 0명. 후쿠오카 항로에 남은 것은 카멜리아(RORO) 단독이며, 이 수요는 대부분 항공으로 이전됐다."},
+   {cls:"good", h:"부관훼리 2026E는 2024년 수준 회복", p:"2026년 상반기 95,037명. 2025년 상반기 비중 54.7%를 적용한 계절성 환산으로 연간 173,825명 — 2024년 145,707명을 19.3% 웃도는 수준이다."},
+   {cls:"", h:"배는 더 꽉 찬 상태로 다닌다", p:"항차는 2017년 6,794편에서 2025년 3,610편으로 거의 반토막인데, 항차당 평균 탑승은 205.8명 → 259.5명(2026 상반기 294.5명). 공급 축소가 승선율 회복을 이끌고 있다."},
+   {cls:"warn", h:"일본인 인바운드는 여전히 회복 전", p:"일본인 점유율은 2020년 25.1%·2022년 41.6%에서 2026년 5.1%로 하락. 절대 인원도 2017년 119,971명 → 2025년 64,215명이다. 고속선 철수와 무관하지 않다."},
+   {cls:"", h:"제3국 외국인이 새 축으로", p:"기타(외국인) 점유율은 2017년 1.2% → 2024년 5.9%. 특히 오사카 12.5%, 후쿠오카 14.1%(2026 상반기)로 항로별 편차가 크다."}
+  ];
+  var nh=document.getElementById("sea-notes"); nh.innerHTML="";
+  notes.forEach(function(x){
+    var d=el("div","note "+x.cls); d.appendChild(el("h4",null,x.h)); d.appendChild(el("p",null,x.p)); nh.appendChild(d);
+  });
+}
+
+function renderAir(){
+  var s=AIR_FUK_SUM, k=AIR_KIT_SUM;
+  kpis(document.getElementById("air-kpis"),[
+    {label:"후쿠오카 2025년", value:fInt(s[7]), unit:"명", delta:(s[7]/s[6]-1)*100, foot:"전년 1,411,136명 대비"},
+    {label:"후쿠오카 2026년 1~6월", value:fInt(s[8]), unit:"명", foot:"2025년 연간의 66.8%"},
+    {label:"후쿠오카 2026E", value:fInt(s[9]), unit:"명", est:true, foot:"연환산 합산 · 과대 가능"},
+    {label:"운항 항공사 (2026 상반기)", value:"5", unit:"사", foot:"에어부산·티웨이·제주·이스타·진에어·에어로케이"},
+    {label:"키타큐슈 2026년 1~6월", value:fInt(k[8]), unit:"명", foot:"에어로케이 단독 · 2017년의 28%"},
+    {label:"일본 2개 노선 2025년", value:fInt(AIR_TOTAL[7]), unit:"명", foot:"후쿠오카 + 키타큐슈"}
+  ]);
+
+  stackedChart(document.getElementById("c-air-pax"),{
+    labels:YLAB, estIdx:9, unit:"명", height:400,
+    aria:"부산-후쿠오카 항공사별 여객 누적 막대그래프",
+    series:AIR_FUK.map(function(a){ return {n:a.n, cvar:a.cvar, v:a.v}; })
+  });
+
+  airTable("air-table-fuk", AIR_FUK, AIR_FUK_SUM, "후쿠오카 소계");
+  noteList(document.getElementById("air-notes-fuk"), AIR_FUK, {n:"후쿠오카 소계", note:AIR_FUK_SUM_NOTE});
+  airTable("air-table-kit", AIR_KIT, AIR_KIT_SUM, "키타큐슈 소계");
+  noteList(document.getElementById("air-notes-kit"), AIR_KIT, {n:"키타큐슈 소계", note:AIR_KIT_SUM_NOTE});
+}
+
+function renderCmp(){
+  var sea=M.pax[11], air=AIR_FUK_SUM;
+  var share=sea.map(function(v,i){
+    var a=air[i]; if(!a||v===N) return N;
+    return v/(v+a);
+  });
+  kpis(document.getElementById("cmp-kpis"),[
+    {label:"후쿠오카 해운 분담률 2017", value:(share[0]*100).toFixed(1), unit:"%", foot:"해운 407,104 / 항공 1,221,570명"},
+    {label:"후쿠오카 해운 분담률 2025", value:(share[7]*100).toFixed(1), unit:"%", foot:"해운 182,011 / 항공 1,523,921명"},
+    {label:"분담률 변화 (2017→2025)", value:((share[7]-share[0])*100).toFixed(1), unit:"%p", foot:"고속선 철수 구간과 겹침"},
+    {label:"2025년 해운:항공 비율", value:"1 : "+(air[7]/sea[7]).toFixed(1), foot:"후쿠오카 도시쌍 기준"}
+  ]);
+
+  groupedChart(document.getElementById("c-cmp-abs"),{
+    labels:YLAB, estIdx:9, height:380,
+    aria:"부산-후쿠오카 해운과 항공 여객 비교 막대그래프",
+    series:[
+      {n:"해운 (후쿠오카 항로 합계)", cvar:"--s1", v:sea},
+      {n:"항공 (후쿠오카 노선 합계)", cvar:"--s2", v:air}
+    ]
+  });
+
+  lineChart(document.getElementById("c-cmp-share"),{
+    labels:YLAB, estIdx:9, height:300, ymax:0.3,
+    aria:"후쿠오카 도시쌍 해운 분담률 추이",
+    ytick:function(v){ return (v*100).toFixed(0)+"%"; },
+    ptFmt:function(v){ return (v*100).toFixed(1)+"%"; },
+    series:[{n:"해운 분담률", cvar:"--s1", v:share}]
+  });
+
+  // table
+  var thead=document.querySelector("#cmp-table thead"), tbody=document.querySelector("#cmp-table tbody");
+  thead.innerHTML=""; tbody.innerHTML="";
+  var hr=document.createElement("tr");
+  [["구분","lft sticky"]].concat(YLAB.map(function(l,i){return [l.replace(" "," "),"num"+(i===9?" est":"")];}))
+   .forEach(function(p){ var e=document.createElement("th"); e.textContent=p[0]; e.className=p[1]; hr.appendChild(e); });
+  thead.appendChild(hr);
+  var rows=[
+    {n:"해운 · 후쿠오카 항로", v:sea, f:fInt, cls:""},
+    {n:"항공 · 후쿠오카 노선", v:air, f:fInt, cls:""},
+    {n:"해운 분담률", v:share, f:fPct, cls:"r-sub"},
+    {n:"해운 · 4개 항로 합계", v:M.pax[19], f:fInt, cls:""},
+    {n:"항공 · 일본 2개 노선 합계", v:AIR_TOTAL, f:fInt, cls:""}
+  ];
+  rows.forEach(function(r){
+    var tr=document.createElement("tr"); tr.className=r.cls;
+    var c=document.createElement("td"); c.className="lft sticky"; c.textContent=r.n; tr.appendChild(c);
+    for(var i=0;i<10;i++){
+      var td=document.createElement("td"); td.className="num"+(i===9?" est":"");
+      var v=r.v[i]; td.textContent=r.f(v);
+      if(v===N||!v) td.classList.add("zero");
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  });
+
+  var cn=[
+   {cls:"warn", h:"집계 범위가 다르다", p:"해운은 시모노세키·오사카·후쿠오카·쓰시마 4개 항로, 항공은 부산–후쿠오카·키타큐슈 2개 노선이다. 총량끼리의 비교는 참고용이며, 의미 있는 비교는 같은 도시쌍인 후쿠오카 구간뿐이다."},
+   {cls:"crit", h:"2026E는 실적이 아니다", p:"항공 2026E는 항공사별 상반기를 단순 2배한 합산값이라 여름 성수기가 이중 반영돼 과대 추정될 수 있다. 해운 2026E는 2025년 상반기 비중을 적용한 계절성 환산이라 산출 방식 자체가 달라, 두 추정치의 직접 비교는 피해야 한다."},
+   {cls:"", h:"특수요인 연도는 추세에서 빼라", p:"2019년 No Japan, 2020·2022년 코로나 운항중단·부분운항, 2021년 원자료 없음. 추세 분석에는 2017·2018·2023·2024·2025년만 쓰는 편이 안전하다."},
+   {cls:"", h:"분담률 하락의 성격", p:"후쿠오카 해운 분담률 25.0%→10.7%는 해운 수요가 사라졌다기보다 고속선 공급이 사라진 결과에 가깝다. 카멜리아 단독 실적(182,011명)은 2017년 171,858명을 오히려 웃돈다."}
+  ];
+  var ch=document.getElementById("cmp-notes"); ch.innerHTML="";
+  cn.forEach(function(x){ var d=el("div","note "+x.cls); d.appendChild(el("h4",null,x.h)); d.appendChild(el("p",null,x.p)); ch.appendChild(d); });
+}
+
+/* ============ 탭 / 지표 선택 ============ */
+var PANELS=[["tab-sea","panel-sea"],["tab-air","panel-air"],["tab-cmp","panel-cmp"]];
+PANELS.forEach(function(p){
+  document.getElementById(p[0]).addEventListener("click",function(){
+    PANELS.forEach(function(q){
+      var on=(q[0]===p[0]);
+      document.getElementById(q[0]).setAttribute("aria-selected",on?"true":"false");
+      document.getElementById(q[1]).hidden=!on;
+    });
+    try{ localStorage.setItem("bj-tab",p[0]); }catch(e){}
+    window.scrollTo({top:0,behavior:"instant"});
+  });
+});
+
+var seg=document.getElementById("metric-seg");
+METRICS.forEach(function(m,i){
+  var b=document.createElement("button");
+  b.type="button"; b.id="mb-"+m.id; b.textContent=m.label;
+  b.setAttribute("aria-pressed", i===0?"true":"false");
+  b.addEventListener("click",function(){
+    METRICS.forEach(function(x){ document.getElementById("mb-"+x.id).setAttribute("aria-pressed","false"); });
+    b.setAttribute("aria-pressed","true");
+    seaTable(m.id);
+    try{ localStorage.setItem("bj-metric",m.id); }catch(e){}
+  });
+  seg.appendChild(b);
+});
+
+/* boot */
+renderSea(); renderAir(); renderCmp();
+var savedMetric="pax";
+try{ var sm=localStorage.getItem("bj-metric"); if(sm&&M[sm]) savedMetric=sm; }catch(e){}
+document.getElementById("mb-"+savedMetric).click();
+try{ var st=localStorage.getItem("bj-tab"); if(st&&document.getElementById(st)) document.getElementById(st).click(); }catch(e){}
+
+/* 테마 변경 시 차트 색 재계산 */
+if(window.matchMedia){
+  var mq=window.matchMedia("(prefers-color-scheme: dark)");
+  var re=function(){ renderSea(); renderAir(); renderCmp();
+    var cur="pax"; METRICS.forEach(function(x){ var b=document.getElementById("mb-"+x.id); if(b&&b.getAttribute("aria-pressed")==="true") cur=x.id; });
+    seaTable(cur);
+  };
+  if(mq.addEventListener) mq.addEventListener("change",re); else if(mq.addListener) mq.addListener(re);
+}
+new MutationObserver(function(muts){
+  for(var i=0;i<muts.length;i++) if(muts[i].attributeName==="data-theme"){
+    renderSea(); renderAir(); renderCmp();
+    var cur="pax"; METRICS.forEach(function(x){ var b=document.getElementById("mb-"+x.id); if(b&&b.getAttribute("aria-pressed")==="true") cur=x.id; });
+    seaTable(cur); break;
+  }
+}).observe(document.documentElement,{attributes:true});
+
+})();
+</script>
+
+</body>
+</html>
