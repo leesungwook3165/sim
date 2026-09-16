@@ -35,7 +35,7 @@
         display:flex;justify-content:space-between;align-items:center;gap:26px;flex-wrap:wrap}
   #head h1{font-size:21px;font-weight:700;margin:0 0 3px;letter-spacing:-.015em}
   #head p{margin:0;font-size:12px;color:#C3D8EF}
-  .heads{display:flex;gap:22px;flex-wrap:wrap}
+  .heads{display:flex;gap:22px;flex-wrap:wrap;justify-content:flex-end}
   .hkpi{text-align:right;min-width:116px}
   .hkpi+.hkpi{border-left:1px solid rgba(255,255,255,.25);padding-left:22px}
   .hkpi .t{font-size:11px;color:#9FC2E4;display:block;margin-bottom:2px}
@@ -314,6 +314,11 @@
         <div class="v" id="kTgt">—</div>
         <div class="s" id="kTgtS">—</div>
       </div>
+      <div class="hkpi">
+        <span class="t" id="kUtilT">가동율 (편도항차)</span>
+        <div class="v" id="kUtil">—</div>
+        <div class="s" id="kUtilS">—</div>
+      </div>
     </div>
   </div>
 
@@ -355,7 +360,7 @@
             </div>
             <div class="f">
               <label>연간 편도 항차수 <a href="https://www.ulcruise.co.kr/www/aboutus/press?mode=view&idx=5807" target="_blank" rel="noopener" style="font-size:10px;color:var(--sky);margin-left:4px">근거↗</a></label>
-              <div class="ib"><input type="number" step="10" min="1" max="9999" id="iVoy" value="500"><span class="u">항차</span></div>
+              <div class="ib"><input type="number" step="10" min="1" max="9999" id="iVoy" value="498"><span class="u">항차</span></div>
             </div>
             <div class="f wide">
               <div class="fh">지상직 1인당 <b id="hPerHead">—</b> (월 <b id="hPerMon">—</b>) ·
@@ -1009,6 +1014,22 @@
   </div>
 </div>
 
+<div class="ov" id="ovOpEtcCalc" role="dialog" aria-modal="true" aria-label="운항기타 산출 근거">
+  <div class="modal" style="width:min(700px,95vw)">
+    <header>
+      <div><h3>운항기타 — 산출 근거</h3>
+        <p>감사보고서 잔액을 세목별 가정 비율로 배분 후 항차 비율로 스케일, 연료비에만 가격 증가율을 추가 적용</p>
+      </div>
+      <button class="x" data-close aria-label="닫기">✕</button>
+    </header>
+    <div class="mbody">
+      <section class="card">
+        <div class="body" id="opEtcCalcBody" style="font-size:12px">—</div>
+      </section>
+    </div>
+  </div>
+</div>
+
 <script>
 // ═════════════════════════════════════════════════════════════════════════════
 // 손익계산서 원본 — 주식회사 대저페리 제3기(2024) 감사보고서 지면 그대로.
@@ -1362,16 +1383,18 @@ const COSTS = [
 const FUEL_SRC = {
   base:  { usd:820,    fx:1360,    label:'2024 평균 (가정)' },
   now:   { usd:1490.0, fx:1346.24, date:'2026-09-14', label:'Bunker Index 부산항' },
-  kgPerL:0.86, kgPerKm:49.5, kmOneWay:217, voy:500,
+  kgPerL:0.86, kgPerKm:49.5, kmOneWay:217, voy:498,
   priceUrl:'https://www.bunkerindex.com/prices/port.php?p=109&n=busan-republic-of-korea',
   newsUrl :'https://www.kyongbuk.co.kr/news/articleView.html?idxno=4071039',
 };
 const fuelKrwPerKg = (usd, fx) => usd / 1000 * fx;
 
-const BASE_HEAD = 30;
-const PER_HEAD  = A.sgaWageT / BASE_HEAD;                 // 70,761,741.67원
+const BASE_HEAD      = 30;
+const PER_HEAD       = A.sgaWageT / BASE_HEAD;            // 70,761,741.67원 (퇴직급여 포함)
+const PER_HEAD_CASH  = (cur('직원급여') + cur('복리후생비')) / BASE_HEAD;  // 현금성만
+const PER_HEAD_SEV   = cur('퇴직급여') / BASE_HEAD;       // 퇴직급여(비현금)
 const FEE_RATE  = A.fee / (A.paxRev / 81000);             // 승객 1인당 환산 (정상운임 기준)
-const DEFAULTS  = { head:30, sailor:13, crew:7, fare:81000, vc:0, tgt:5, voy:500, voyPeer:600,
+const DEFAULTS  = { head:30, sailor:13, crew:7, fare:81000, vc:0, tgt:5, voy:498, voyPeer:600,
                     headPeer:30, sailorPeer:13, crewPeer:7, paxPeer:212812,
                     feeVar:false, ebitda:false, base:'eldorado', peer:'santamonica',
                     mix:[100,0,0], fuel:7950, autoVoy:false,
@@ -1818,18 +1841,25 @@ function drawCrew(m){
   const rows = N15.filter(r => N15_LABOR.includes(r[0]));
   const g = i => rows.reduce((a,r) => a + r[i], 0);
 
-  const line = (name, gv, cv, cls) => {
+  const line = (name, gv, cv, cls, muted) => {
     const tot = gv + cv;
-    return '<tr class="' + (cls||'') + '"><td>' + name + '</td>' +
-      '<td>' + won(gv*K) + '</td><td>' + won(cv*K) + '</td><td>' + won(tot*K) + '</td>' +
-      '<td>' + pct(cv/tot) + '</td>' +
-      '<td>' + won(gv*K/m.head) + '</td><td>' + won(cv*K/m.opHead) + '</td></tr>';
+    const sty = muted ? ' style="color:var(--muted)"' : '';
+    return `<tr class="${cls||''}"${sty}><td>${name}</td>` +
+      `<td>${won(gv*K)}</td><td>${won(cv*K)}</td><td>${won(tot*K)}</td>` +
+      `<td>${pct(cv/tot)}</td>` +
+      `<td>${won(gv*K/m.head)}</td><td>${won(cv*K/m.opHead)}</td></tr>`;
   };
   const gWage = rows[0][1], cWage = rows[0][2];
+  // rows[0]=급여 rows[1]=퇴직급여 rows[2]=복리후생비
+  const gCash = rows[0][1] + rows[2][1];
+  const cCash = rows[0][2] + rows[2][2];
 
   el('tCrew').innerHTML =
-    rows.map(r => line(r[0], r[1], r[2])).join('')
-    + line('인건비 소계', g(1), g(2), 'sum')
+    line('급여', rows[0][1], rows[0][2])
+    + line('복리후생비', rows[2][1], rows[2][2])
+    + line('현금 인건비 소계', gCash, cCash, 'sum')
+    + line('퇴직급여 <span style="font-size:10px;margin-left:3px">(비현금)</span>', rows[1][1], rows[1][2], '', true)
+    + line('인건비 합계', g(1), g(2), 'sum')
     + '<tr class="ck"><td colspan="7" style="text-align:left;white-space:normal">'
     + '<b>인원</b> · 지상직 ' + m.head + '명 + 선원 ' + m.sailor + '명 + 승무원 ' + m.crew + '명 = '
     + '<b>' + (m.head + m.opHead) + '명</b> · 전사 인건비 1인당 <b>'
@@ -1840,10 +1870,10 @@ function drawCrew(m){
     + ' &nbsp;|&nbsp; 복리후생비÷급여 — 지상직 <b>' + pct(rows[2][1]/gWage,2) + '</b> · '
     + '운항 <b style="color:var(--amber)">' + pct(rows[2][2]/cWage,2) + '</b></td></tr>';
 
-  const impCrew = (g(2)*K) / PER_HEAD;
+  const impCrew = (g(2)*K) / PER_HEAD_CASH;
   el('hOpHead').textContent   = '선원 ' + m.sailor + ' + 승무원 ' + m.crew + ' = ' + m.opHead + '명';
   el('hOpPer').textContent    = won(g(2)*K/m.opHead) + '원';
-  el('hOpRatio').textContent  = (g(2)*K/m.opHead/PER_HEAD).toFixed(2) + '배';
+  el('hOpRatio').textContent  = (g(2)*K/m.opHead/PER_HEAD_CASH).toFixed(2) + '배';
   el('crewNote').innerHTML =
     '급여는 <b>지상직(판관비) ' + won(gWage*K) + '원</b>과 <b>선원(운항원가) ' + won(cWage*K) + '원</b>으로 ' +
     '갈린다 — 주석 15가 판관비와 운항원가로 가른 축이 그대로 그 경계다. ' +
@@ -1858,12 +1888,12 @@ function drawCrew(m){
     '운항원가 인건비는 배를 움직이는 <b>선원</b>과 객실을 맡는 <b>승무원</b>이 함께 받는 돈이다. ' +
     '보고서는 둘을 가르지 않으므로 <b>선원 ' + m.sailor + '명 + 승무원 ' + m.crew + '명 = ' +
     m.opHead + '명</b>을 합산 인원으로 놓고 나눴다. 1인당 <b>' + won(g(2)*K/m.opHead) + '원</b>, ' +
-    '지상직(' + won(PER_HEAD) + '원)의 <b>' + (g(2)*K/m.opHead/PER_HEAD).toFixed(2) + '배</b>다.<br><br>' +
+    '지상직(' + won(PER_HEAD_CASH) + '원, 퇴직급여 제외)의 <b>' + (g(2)*K/m.opHead/PER_HEAD_CASH).toFixed(2) + '배</b>다.<br><br>' +
     '<b>두 인원 모두 가정값</b>이다 — 보고서에 인원이 없다. 다만 눈금은 있다. ' +
     '운항 인건비 ' + won(g(2)*K) + '원을 지상직 단가로 환산하면 <b>' + impCrew.toFixed(1) + '명분</b>이라, ' +
     '합산 인원을 그 언저리에 놓으면 1인당이 지상직과 비슷해진다. 지금 ' + m.opHead + '명은 ' +
-    (g(2)*K/m.opHead/PER_HEAD).toFixed(2) + '배로 ' +
-    (Math.abs(g(2)*K/m.opHead/PER_HEAD - 1) < 0.4 ? '<b>무리 없는 범위</b>다' :
+    (g(2)*K/m.opHead/PER_HEAD_CASH).toFixed(2) + '배로 ' +
+    (Math.abs(g(2)*K/m.opHead/PER_HEAD_CASH - 1) < 0.4 ? '<b>무리 없는 범위</b>다' :
      '<b class="bad">지상직과 꽤 벌어진다</b> — 인원을 다시 볼 만하다') + '. ' +
     '7명 같은 승무 정원만으로 나누면 1인당이 2억을 넘어 선원 급여로 볼 수 없게 되는데, ' +
     '연간 인건비가 <b>휴무·교대까지 담고</b> 있기 때문이다. 항차당 원가를 볼 때는 승무 정원, ' +
@@ -2414,9 +2444,11 @@ function buildFareTable(){
 function drawPeer(m){
   const pe = m.peer;
 
-  _setTxt('hPeerHead',
-    `지상직 1인당 ${won(PER_HEAD)}원 · ${m.headPeer}명 → 판관 급여 ${won(m.sgaWagePeer)}원 ·`
-    + ` 운항 ${m.opHeadPeer}명(선원 ${m.sailorPeer}+승무원 ${m.crewPeer})`);
+  const _util = m.voyPeer / (365 * 2) * 100;
+  el('hPeerHead').innerHTML =
+    `가동율 <b>${_util.toFixed(1)}%</b> (${won(m.voyPeer)}항차 ÷ 730일) &nbsp;·&nbsp;`
+    + ` 지상직 1인당 ${won(PER_HEAD_CASH)}원(퇴직 제외) · ${m.headPeer}명 → 판관 급여 ${won(m.sgaWagePeer)}원 ·`
+    + ` 운항 ${m.opHeadPeer}명(선원 ${m.sailorPeer}+승무원 ${m.crewPeer})`;
 
   // 목표기반 좌석 등급 표 업데이트
   SEATS.forEach((t,i) => {
@@ -2608,7 +2640,7 @@ function drawPeerPL(m) {
   html += rowN('감가상각비',                    opDep,  opCost);
   html += rowN('세금과공과',                    opTax,  opCost);
   html += rowN('임차료',                        opRent, opCost);
-  html += rowN('운항기타 (세목 합계)', opEtc, opCost);
+  html += rowN('운항기타 (세목 합계) <span class="ic" onclick="openOv(\'ovOpEtcCalc\')" style="cursor:pointer;margin-left:4px" role="button" tabindex="0" title="산출 근거 보기">?</span>', opEtc, opCost);
   m.etcPeer.forEach(t => {
     html += rowN('&nbsp;&nbsp;· ' + t.name
       + (t.id === 'fuel' && m.fuelEsc
@@ -2662,6 +2694,47 @@ function drawPeerPL(m) {
   }
 
   el('tPeerPL').innerHTML = html;
+
+  // ── 운항기타 산출 근거 모달 내용 갱신 ──
+  const _voyR = m.voy > 0 ? m.voyPeer / m.voy : 1;
+  const rows = m.etcPeer.map((t, i) => {
+    const baseAmt = m.etcBase[i].amt;
+    return `<tr>
+      <td style="padding:4px 8px">${t.name}</td>
+      <td style="text-align:right;padding:4px 8px;color:var(--muted)">${t.pct.toFixed(2)}%</td>
+      <td style="text-align:right;padding:4px 8px">${acc(Math.round(baseAmt))}</td>
+      <td style="text-align:center;padding:4px 8px;color:var(--muted)">× ${_voyR.toFixed(3)}</td>
+      <td style="text-align:center;padding:4px 8px;color:${t.id==='fuel'&&m.fuelEsc?'var(--amber)':'var(--muted)'}">
+        ${t.id === 'fuel' && m.fuelEsc ? '× ' + m.escRate.toFixed(3) : '—'}</td>
+      <td style="text-align:right;padding:4px 8px"><b>${acc(Math.round(t.amt))}</b></td>
+    </tr>`;
+  }).join('');
+  el('opEtcCalcBody').innerHTML = `
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr style="border-bottom:2px solid var(--rule)">
+        <th style="text-align:left;padding:4px 8px">계정</th>
+        <th style="text-align:right;padding:4px 8px">비율(가정)</th>
+        <th style="text-align:right;padding:4px 8px">기준금액 (감사보고서 비례)</th>
+        <th style="text-align:center;padding:4px 8px">항차비율</th>
+        <th style="text-align:center;padding:4px 8px">연료할증</th>
+        <th style="text-align:right;padding:4px 8px">적용금액</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr style="border-top:2px solid var(--rule);font-weight:700">
+        <td style="padding:5px 8px">합계</td>
+        <td style="text-align:right;padding:5px 8px">100%</td>
+        <td style="text-align:right;padding:5px 8px">${acc(Math.round(A.opEtc))}</td>
+        <td colspan="2"></td>
+        <td style="text-align:right;padding:5px 8px">${acc(Math.round(opEtc))}</td>
+      </tr></tfoot>
+    </table>
+    <p style="margin-top:10px;font-size:11px;color:var(--muted);line-height:1.7">
+      <b>항차비율</b> = 대조 ${won(m.voyPeer)}항차 ÷ 참조 ${won(m.voy)}항차 = <b>${_voyR.toFixed(4)}</b><br>
+      <b>기준금액</b> = 감사보고서 운항원가 잔액 ${acc(Math.round(A.opEtc))}원 × 세목 비율<br>
+      ${m.fuelEsc
+        ? `<b>연료할증</b> = 현재 ${acc(Math.round(m.krwNow))}원/MT ÷ 기준 ${acc(Math.round(m.krwBase))}원/MT = <b style="color:var(--amber)">${m.escRate.toFixed(4)}배</b> (연료비 항목에만 적용)`
+        : '<b>연료할증</b> = 미적용'}
+    </p>`;
 
   const peerName = m.peer ? m.peer.name.split(' · ')[0] : '대조 선박';
   _setTxt('plPeerSub', `${peerName} · ${won(m.voyPeer)}항차 · 승객 ${won(m.paxPeer)}명 · 영업이익률 ${pct(margin, 1)}`);
@@ -2951,8 +3024,8 @@ function render(){
     }
   }
   const m = model();
-  el('hPerHead').textContent = won(PER_HEAD) + '원';
-  el('hPerMon').textContent  = won(PER_HEAD/12) + '원';
+  el('hPerHead').textContent = won(PER_HEAD_CASH) + '원';
+  el('hPerMon').textContent  = won(PER_HEAD_CASH/12) + '원';
   el('hPaxAct').textContent  = won(m.paxAct) + '명';
 
   // 참조 선박 — 고정
@@ -3151,11 +3224,16 @@ function render(){
   if (onPeer) {
     const labor = m.sgaWagePeer + m.opLaborPeer;
     const heads = m.headPeer + m.opHeadPeer;
-    el('kHead').innerHTML    = won(labor / heads / 1e4) + '<small>만원</small>';
-    el('kHeadS').textContent = `지상직 ${m.headPeer} + 해상직 ${m.opHeadPeer} = ${heads}명`;
+    const cashSga = m.headPeer * PER_HEAD_CASH;
+    const cashOp  = m.opHead > 0 ? (N.opWage + N.opWelf) * m.opHeadPeer / m.opHead : (N.opWage + N.opWelf);
+    const sevTotal = labor - (cashSga + cashOp);
+    const cashPer  = (cashSga + cashOp) / heads;
+    const sevPer   = sevTotal / heads;
+    el('kHead').innerHTML  = won(cashPer / 1e4) + '<small>만원</small>';
+    el('kHeadS').innerHTML = `+퇴직(비현금) ${won(sevPer/1e4)}만원 · 합계 ${won(labor/heads/1e4)}만원<br>지상직 ${m.headPeer} + 해상직 ${m.opHeadPeer} = ${heads}명`;
   } else {
-    el('kHead').innerHTML    = won(PER_HEAD / 1e4) + '<small>만원</small>';
-    el('kHeadS').textContent = `월 ${won(PER_HEAD/12)}원 · ${BASE_HEAD}명 기준`;
+    el('kHead').innerHTML  = won(PER_HEAD_CASH / 1e4) + '<small>만원</small>';
+    el('kHeadS').innerHTML = `+퇴직(비현금) ${won(PER_HEAD_SEV/1e4)}만원 · 합계 ${won(PER_HEAD/1e4)}만원`;
   }
 
   el('kBep').innerHTML    = bepV === null ? '—' : won(bepV) + '<small>명</small>';
@@ -3167,6 +3245,12 @@ function render(){
   el('kTgtS').textContent = tgtV === null ? '달성 불가'
     : `목표 ${pct(m.r,1)} · 항차당 ${won(tgtV / (voyV||1))}명`
       + (shipV ? ` · 승선율 ${pct(tgtV / (shipV.pax * voyV))}` : '');
+
+  const _utilPct = voyV / (365 * 2) * 100;
+  _setTxt('kUtilT', (onPeer ? '대조 ' : '') + '가동율 (편도항차)');
+  el('kUtil').innerHTML    = _utilPct.toFixed(1) + '<small>%</small>';
+  el('kUtil').className    = 'v';
+  el('kUtilS').textContent = `${won(voyV)}항차 ÷ 730일(365×2)`;
 
   drawSga(m); drawCrew(m); drawRatio(m); drawFee(m); drawSim(m); drawTgt(m); drawCost(m); drawCVP(m);
 }
