@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>여객 정원 260명 초과 분석 2015–2025</title>
+<title>하마유 신조 여객정원에 따른 예상손익 분석</title>
 <style>
 :root{color-scheme:light;
  --bg:#f7f6f3;--card:#fcfcfb;--ink:#0b0b0b;--mut:#52514e;--faint:#8a8781;--line:#e3e0da;--grid:#eceae5;
@@ -71,7 +71,8 @@ tr.sel td{background:#eef4fb}
 #hm tr.hsel td.l{font-weight:700}
 #hm tr.hsel td.cell{box-shadow:0 0 0 2px var(--card) inset,0 0 0 2px var(--ink)}
 #hm tr.hx td{opacity:.45}
-#hm tfoot td,#hm tr.hfoot td{border-top:1px solid var(--line)}
+#hm tfoot td,#hm tr.hfoot td{border-top:2px solid var(--ink);font-weight:650}
+#hm tr.hfoot td.l{font-size:11px;color:var(--mut)}
 .ramp{display:inline-flex;align-items:center;gap:0;vertical-align:-2px;margin:0 6px}
 .ramp i{width:14px;height:10px;display:block}
 .hb{display:inline-block;height:11px;border-radius:3px;background:var(--s2);vertical-align:middle}
@@ -110,8 +111,8 @@ svg{display:block;width:100%;height:auto}
 .ttab-bar+div>.panel,.ttab-bar+div>.panel.scroll{border-top-left-radius:0}
 </style><script src="i18n.js"></script></head><body><div class="wrap">
 
-<h1 data-i18n="pageTitle">여객 정원 260명 초과 분석</h1>
-<p class="sub" data-i18n="pageSub">부관훼리 일일운송실적 · <b>2015–2019 · 2023–2025</b> 8개 연도 (코로나 기간 2020–2022 제외)</p>
+<h1 data-i18n="pageTitle">하마유 신조 여객정원에 따른 예상손익 분석</h1>
+<p class="sub" data-i18n="pageSub">부관훼리 일일운송실적 · <b>2015–2019 · 2023–2025</b> 8개 연도 기반 (코로나 기간 2020–2022 제외)</p>
 
 <div class="bar-top">
   <label for="ysel" data-i18n="scopeLabel">조회 범위</label>
@@ -166,6 +167,12 @@ svg{display:block;width:100%;height:auto}
   <button class="tab mtab" data-m="sum" aria-selected="false" data-i18n="hmSum">여객 합계</button>
   <button class="tab mtab" data-m="ex" aria-selected="false" data-i18n="hmEx">260명 초과 인원</button>
   <span class="note" id="hmleg" style="margin:0"></span>
+  <span style="margin-left:12px;font-size:11.5px;color:var(--mut)">
+    <span class="sbadge hi" id="lgHi">성수기</span> 상위 3개월
+    <span class="sbadge md" style="margin-left:6px" id="lgMd">평수기</span> 중간 6개월
+    <span class="sbadge lo" style="margin-left:6px" id="lgLo">비수기</span> 하위 3개월
+    &nbsp;<span style="color:var(--faint);font-size:10.5px" id="lgAvgNote">— 월 평균 행 기준</span>
+  </span>
 </div>
 <div class="panel scroll"><table id="hm"><thead></thead><tbody></tbody></table></div>
 <p class="note" id="hmnote"></p>
@@ -240,7 +247,7 @@ let JPY_KRW=9.42;     // KRW per 1 JPY — updated from fuel_price.json
 /* ---------- 드롭다운 ---------- */
 const ysel=document.getElementById('ysel');
 function buildDropdown(){
-  while(ysel.options.length)ysel.remove(0);
+  ysel.innerHTML='';
   {const o=document.createElement('option');o.value='all';o.textContent=t('ddAll');ysel.appendChild(o);}
   const g1=document.createElement('optgroup'); g1.label=t('ddActGroup');
   const _act=YS.filter(y=>!isX(y.y));
@@ -254,9 +261,9 @@ function buildDropdown(){
     :YS.slice().reverse().filter(y=>!isX(y.y)); // 'year': 최근연도 우선(원래 순서)
   sorted.forEach(y=>{
     const r=_rank[y.y];
-    const badge=r<=3?`${_medal[r-1]} ${r}${t('ddRank')}`:`${r}${t('ddRank')}`;
+    const badge=r<=3?_medal[r-1]:`${r}${t('ddRank')}`;
     const o=document.createElement('option');o.value=y.y;
-    o.textContent=`${y.y}${t('yrSpanLabel')}  —  ${badge}  (${n(y.in_sum+y.out_sum)}${t('ddPaxUnit')})`;
+    o.textContent=`${y.y}${t('yrSpanLabel')} ${badge}  ${n(y.in_sum+y.out_sum)}${t('ddPaxUnit')}`;
     if(MODE==='year'&&y.y===YEAR)o.selected=true;
     g1.appendChild(o);});
   ysel.appendChild(g1);
@@ -588,6 +595,13 @@ function heatmap(){
   const ramp=(isDark()?RAMP.slice().reverse():RAMP).map(c=>`<i style="background:${c}"></i>`).join('');
   document.getElementById('hmleg').innerHTML=
     `${MET.lab} · ${t('hmLegLow')} <span class="ramp">${ramp}</span> ${t('hmLegHigh')} (${fmt(lo)}–${fmt(hi)} ${MET.u})`;
+  const _lbl=t('seasonHi')+'|'+t('seasonMd')+'|'+t('seasonLo');
+  const [_hi,_md,_lo]=_lbl.split('|');
+  const _n=t('hmAvgLegNote')||'— 월 평균 행 기준';
+  if(document.getElementById('lgHi')) document.getElementById('lgHi').textContent=_hi;
+  if(document.getElementById('lgMd')) document.getElementById('lgMd').textContent=_md;
+  if(document.getElementById('lgLo')) document.getElementById('lgLo').textContent=_lo;
+  if(document.getElementById('lgAvgNote')) document.getElementById('lgAvgNote').textContent=_n;
   document.getElementById('hmnote').textContent= best.length?
     `${t('hmNoteColor')} ${MET.lab}${t('hmNoteIs')} ${best[0][1]+1}${t('hmNoteMonth')}${best[1][1]+1}${t('hmNoteMonth')}${best[2][1]+1}${t('hmNoteOff')} ${best[best.length-1][1]+1}${t('hmNoteOffMonth')}${best[best.length-2][1]+1}${t('hmNoteEnd')}`:'';
 }
