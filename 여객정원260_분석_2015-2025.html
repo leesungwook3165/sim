@@ -96,6 +96,18 @@ svg{display:block;width:100%;height:auto}
 .langbtn{font-size:11.5px;padding:4px 10px;border:1px solid var(--line);border-radius:6px;
  background:var(--card);color:var(--mut);cursor:pointer;margin-left:auto;white-space:nowrap}
 .b6jpy{font-size:12px;color:var(--mut);margin-top:2px;line-height:1.4}
+.sbadge{font-size:9px;border-radius:3px;padding:0 3px;line-height:1.6;display:inline-block;margin-top:2px;white-space:nowrap}
+.sbadge.hi{background:#fecaca;color:#991b1b}
+.sbadge.lo{background:#dbeafe;color:#1d4ed8}
+.sbadge.md{background:var(--grid);color:var(--faint)}
+.ctab-bar{display:flex;gap:6px;margin:18px 0 0}
+.ctab{font-size:12.5px;padding:5px 14px;border:1px solid var(--line);border-radius:7px 7px 0 0;background:var(--card);color:var(--mut);cursor:pointer;border-bottom:none;margin-bottom:-1px;position:relative;z-index:1}
+.ctab.on{background:var(--card);color:var(--ink);font-weight:650;border-bottom:1px solid var(--card)}
+.ctab-bar+div>.panel, .ctab-bar+div+div>.panel{border-top-left-radius:0}
+.ttab-bar{display:flex;gap:6px;margin:28px 0 0;flex-wrap:wrap}
+.ttab{font-size:12.5px;padding:5px 14px;border:1px solid var(--line);border-radius:7px 7px 0 0;background:var(--card);color:var(--mut);cursor:pointer;border-bottom:none;margin-bottom:-1px;position:relative;z-index:1}
+.ttab.on{background:var(--card);color:var(--ink);font-weight:650;border-bottom:1px solid var(--card)}
+.ttab-bar+div>.panel,.ttab-bar+div>.panel.scroll{border-top-left-radius:0}
 </style><script src="i18n.js"></script></head><body><div class="wrap">
 
 <h1 data-i18n="pageTitle">여객 정원 260명 초과 분석</h1>
@@ -130,16 +142,23 @@ svg{display:block;width:100%;height:auto}
   <div class="c warn"><div class="lab" id="b6l"></div><div class="val" id="b6"></div><div class="b6jpy" id="b6j"></div><div class="note" id="b6n"></div></div>
 </div>
 
-<h2 id="t1"></h2>
-<div class="panel"><div class="plotwrap"><svg id="ct" viewBox="0 0 900 380" role="img" aria-label="여객 수송 추이"></svg><div class="tip" id="tt"></div></div>
-<div class="legend"><span><i style="background:var(--s3);height:3px"></i><span data-i18n="lgPaxSum">여객 합계</span></span>
-<span><i style="background:var(--s1)"></i><span data-i18n="lgInSP">입항(SP)</span></span><span><i style="background:var(--s2)"></i><span data-i18n="lgOutPS">출항(PS)</span></span>
-<span class="dim" id="lg1"></span></div></div>
-
-<h2 id="t2"></h2>
-<div class="panel"><div class="plotwrap"><svg id="cb" viewBox="0 0 900 320" role="img" aria-label="260명 초과 인원"></svg><div class="tip" id="tb"></div></div>
-<div class="legend"><span><i class="sq" style="background:var(--s1)"></i><span data-i18n="lgBarIn">입항 초과</span></span><span><i class="sq" style="background:var(--s2)"></i><span data-i18n="lgBarOut">출항 초과</span></span>
-<span class="dim" data-i18n="lgBarCov">회색 구간 = 코로나 기간(집계 제외) · 막대 위 숫자는 최대·최소</span></div></div>
+<div class="ctab-bar" id="ctabBar">
+  <button class="ctab on" data-c="pct" id="ctab0"></button>
+  <button class="ctab" data-c="pcb" id="ctab1"></button>
+</div>
+<div id="pct">
+  <h2 id="t1"></h2>
+  <div class="panel"><div class="plotwrap"><svg id="ct" viewBox="0 0 900 380" role="img"></svg><div class="tip" id="tt"></div></div>
+  <div class="legend"><span><i style="background:var(--s3);height:3px"></i><span data-i18n="lgPaxSum">여객 합계</span></span>
+  <span><i style="background:var(--s1)"></i><span data-i18n="lgInSP">입항(SP)</span></span><span><i style="background:var(--s2)"></i><span data-i18n="lgOutPS">출항(PS)</span></span>
+  <span class="dim" id="lg1"></span></div></div>
+</div>
+<div id="pcb" hidden>
+  <h2 id="t2"></h2>
+  <div class="panel"><div class="plotwrap"><svg id="cb" viewBox="0 0 900 320" role="img"></svg><div class="tip" id="tb"></div></div>
+  <div class="legend"><span><i class="sq" style="background:var(--s1)"></i><span data-i18n="lgBarIn">입항 초과</span></span><span><i class="sq" style="background:var(--s2)"></i><span data-i18n="lgBarOut">출항 초과</span></span>
+  <span class="dim" data-i18n="lgBarCov">회색 구간 = 코로나 기간(집계 제외) · 막대 위 숫자는 최대·최소</span></div></div>
+</div>
 
 <h2 data-i18n="h2Heat">성수기 · 비수기 히트맵<span>연도 × 월</span></h2>
 <div class="ctrls">
@@ -151,32 +170,43 @@ svg{display:block;width:100%;height:auto}
 <div class="panel scroll"><table id="hm"><thead></thead><tbody></tbody></table></div>
 <p class="note" id="hmnote"></p>
 
-<h2 data-i18n="h2Dist">초과 규모 분포<span>초과 항차를 초과 인원 크기로 구분</span></h2>
-<div class="panel scroll"><table id="btbl"><thead><tr>
-<th class="l" data-i18n="thBand">여객 구간</th><th data-i18n="thExPax">초과 인원</th><th data-i18n="thVoy">항차</th><th data-i18n="thShare">비중</th><th data-i18n="thExSum">초과 인원 합계</th><th data-i18n="thShare">비중</th><th class="l"></th></tr></thead><tbody></tbody></table></div>
-<p class="note" data-i18n="noteDistBody">정원을 조금 넘는 항차와 크게 넘는 항차를 나눠 본 것입니다. 증선·대형화 판단 시 &ldquo;몇 명짜리 초과가 몇 번&rdquo;인지가 핵심 근거가 됩니다.</p>
-
-<h2 data-i18n="h2Year">연도별 집계<span>코로나 기간 제외</span></h2>
-<div class="panel scroll"><table id="ytbl"><thead><tr>
-<th class="l" data-i18n="thYear">연도</th><th data-i18n="thDays">운항일</th><th data-i18n="thVoys">항차</th><th data-i18n="thPaxSum">여객 합계</th><th data-i18n="thAvgPax">항차 평균</th><th data-i18n="thExVoy">초과 항차</th><th data-i18n="thExRate">초과 비율</th><th data-i18n="thExPaxCol">초과 인원</th><th data-i18n="thExPerVoy">초과 항차당</th><th data-i18n="thLossRate">손실률</th><th data-i18n="thEstLoss">추정 손해액</th></tr></thead><tbody></tbody></table></div>
-<p class="note" data-i18n="noteYearBody">초과 비율 = 260명 초과 항차 ÷ 전체 항차. 손실률 = 초과 인원 ÷ 여객 합계. 연평균 행은 <b>코로나 기간을 뺀 8개 연도</b>의 산술평균이며, 표 아래 2020–2022년은 참고용으로만 표시합니다. <b>2026년 행은 예상 수요 173,825명</b>을 2025년 항차별 여객 분포에 비례 적용(×1.0616)해 추정한 값이며, 실적이 아니므로 합계·평균에 포함하지 않았습니다.</p>
-
-<h2 id="t3"></h2>
-<div class="panel scroll"><table id="mtbl"><thead><tr>
-<th class="l" data-i18n="thMonth">월</th><th data-i18n="thDays">운항일</th><th data-i18n="thIn">입항 여객</th><th data-i18n="thOut">출항 여객</th><th data-i18n="thTotal">여객 합계</th><th data-i18n="thInEx">입항 초과</th><th data-i18n="thOutEx">출항 초과</th><th data-i18n="thExTotal">초과 합계</th><th class="l"></th></tr></thead><tbody></tbody></table></div>
-<p class="note" id="mnote"></p>
-
-<h2 id="t4"></h2>
-<div class="ctrls">
-  <button class="tab" data-v="over" aria-selected="true" data-i18n="tabOver">260명 초과 항차만</button>
-  <button class="tab" data-v="all" aria-selected="false" data-i18n="tabAll">전체 원본 데이터</button>
-  <label for="msel" style="margin-left:6px" data-i18n="thMonth">월</label>
-  <select id="msel"><option value="" data-i18n="selMonth">전체</option></select>
-  <span class="note" id="dsum" style="margin:0"></span>
+<div class="ttab-bar" id="ttabBar">
+  <button class="ttab on" data-t="secYear" id="ttab0" data-i18n="h2YearShort">연도별 집계</button>
+  <button class="ttab" data-t="secMonth" id="ttab1" data-i18n="h2MonthShort">월별 집계</button>
+  <button class="ttab" data-t="secDist" id="ttab2" data-i18n="h2DistShort">초과 분포</button>
+  <button class="ttab" data-t="secDay" id="ttab3" data-i18n="h2DayShort">원본 데이터</button>
 </div>
-<div class="panel wrapbox"><table id="dtbl"><thead><tr>
-<th class="l" data-i18n="thDate">일자</th><th class="l" data-i18n="thShip">선명</th><th data-i18n="thInPax">입항 여객</th><th data-i18n="thInExCol">입항 초과</th><th data-i18n="thOutPax">출항 여객</th><th data-i18n="thOutExCol">출항 초과</th><th data-i18n="thExTot">초과 합계</th></tr></thead><tbody></tbody></table></div>
-<p class="note" data-i18n="noteDayBody">원본 일일운송실적을 그대로 옮긴 표입니다. 여객 칸이 &ldquo;–&rdquo;인 날은 해당 방향 실적이 없는 날(미운항 등)이며, 260명을 넘은 값은 색으로 표시했습니다.</p>
+<div id="secYear">
+  <h2 data-i18n="h2Year">연도별 집계<span>코로나 기간 제외</span></h2>
+  <div class="panel scroll"><table id="ytbl"><thead><tr>
+  <th class="l" data-i18n="thYear">연도</th><th data-i18n="thDays">운항일</th><th data-i18n="thVoys">항차</th><th data-i18n="thPaxSum">여객 합계</th><th data-i18n="thAvgPax">항차 평균</th><th data-i18n="thExVoy">초과 항차</th><th data-i18n="thExRate">초과 비율</th><th data-i18n="thExPaxCol">초과 인원</th><th data-i18n="thExPerVoy">초과 항차당</th><th data-i18n="thLossRate">손실률</th><th data-i18n="thEstLoss">추정 손해액</th></tr></thead><tbody></tbody></table></div>
+  <p class="note" data-i18n="noteYearBody">초과 비율 = 260명 초과 항차 ÷ 전체 항차. 손실률 = 초과 인원 ÷ 여객 합계. 연평균 행은 <b>코로나 기간을 뺀 8개 연도</b>의 산술평균이며, 표 아래 2020–2022년은 참고용으로만 표시합니다. <b>2026년 행은 예상 수요 173,825명</b>을 2025년 항차별 여객 분포에 비례 적용(×1.0616)해 추정한 값이며, 실적이 아니므로 합계·평균에 포함하지 않았습니다.</p>
+</div>
+<div id="secMonth" hidden>
+  <h2 id="t3"></h2>
+  <div class="panel scroll"><table id="mtbl"><thead><tr>
+  <th class="l" data-i18n="thMonth">월</th><th data-i18n="thDays">운항일</th><th data-i18n="thIn">입항 여객</th><th data-i18n="thOut">출항 여객</th><th data-i18n="thTotal">여객 합계</th><th data-i18n="thInEx">입항 초과</th><th data-i18n="thOutEx">출항 초과</th><th data-i18n="thExTotal">초과 합계</th><th class="l"></th></tr></thead><tbody></tbody></table></div>
+  <p class="note" id="mnote"></p>
+</div>
+<div id="secDist" hidden>
+  <h2 data-i18n="h2Dist">초과 규모 분포<span>초과 항차를 초과 인원 크기로 구분</span></h2>
+  <div class="panel scroll"><table id="btbl"><thead><tr>
+  <th class="l" data-i18n="thBand">여객 구간</th><th data-i18n="thExPax">초과 인원</th><th data-i18n="thVoy">항차</th><th data-i18n="thShare">비중</th><th data-i18n="thExSum">초과 인원 합계</th><th data-i18n="thShare">비중</th><th class="l"></th></tr></thead><tbody></tbody></table></div>
+  <p class="note" data-i18n="noteDistBody">정원을 조금 넘는 항차와 크게 넘는 항차를 나눠 본 것입니다. 증선·대형화 판단 시 &ldquo;몇 명짜리 초과가 몇 번&rdquo;인지가 핵심 근거가 됩니다.</p>
+</div>
+<div id="secDay" hidden>
+  <h2 id="t4"></h2>
+  <div class="ctrls">
+    <button class="tab" data-v="over" aria-selected="true" data-i18n="tabOver">260명 초과 항차만</button>
+    <button class="tab" data-v="all" aria-selected="false" data-i18n="tabAll">전체 원본 데이터</button>
+    <label for="msel" style="margin-left:6px" data-i18n="thMonth">월</label>
+    <select id="msel"><option value="" data-i18n="selMonth">전체</option></select>
+    <span class="note" id="dsum" style="margin:0"></span>
+  </div>
+  <div class="panel wrapbox"><table id="dtbl"><thead><tr>
+  <th class="l" data-i18n="thDate">일자</th><th class="l" data-i18n="thShip">선명</th><th data-i18n="thInPax">입항 여객</th><th data-i18n="thInExCol">입항 초과</th><th data-i18n="thOutPax">출항 여객</th><th data-i18n="thOutExCol">출항 초과</th><th data-i18n="thExTot">초과 합계</th></tr></thead><tbody></tbody></table></div>
+  <p class="note" data-i18n="noteRawBody">원본 일일운송실적을 그대로 옮긴 표입니다. 여객 칸이 &ldquo;–&rdquo;인 날은 해당 방향 실적이 없는 날(미운항 등)이며, 260명을 넘은 값은 색으로 표시했습니다.</p>
+</div>
 
 <div class="cap" data-i18n="capBody"><b>참고</b> — 2020~2022년은 코로나로 운항이 사실상 중단되어(2021년 전무, 2022년 16항차) 모든 합계·평균·차트에서 제외했습니다. 드롭다운에서 개별 조회는 가능합니다. 초과 인원은 정원 260명 선박으로 운항했을 때의 <b>이론상 최대 손실</b>이며, 실제로는 예약 단계에서 마감되므로 그대로 놓친 수요는 아닙니다.</div>
 
@@ -235,6 +265,12 @@ function buildDropdown(){
     const o=document.createElement('option');o.value=y.y;o.textContent=y.y+t('ddCovSuffix');o.className='xopt';g2.appendChild(o);});
   ysel.appendChild(g2);
   if(MODE==='all') ysel.value='all'; else ysel.value=YEAR||'all';
+  const g3=document.createElement('optgroup'); g3.label=t('grpForecast')||'── 예상 연도 ──';
+  const ofc=document.createElement('option'); ofc.value='2026';
+  ofc.textContent=`2026년  —  ${t('fcLabel')||'예상'}`;
+  if(MODE==='year'&&YEAR==='2026') ofc.selected=true;
+  g3.appendChild(ofc);
+  ysel.appendChild(g3);
 }
 buildDropdown();
 ysel.onchange=()=>{MODE=ysel.value==='all'?'all':'year'; YEAR=MODE==='year'?ysel.value:null; refresh();};
@@ -255,6 +291,28 @@ document.getElementById('langBtn').addEventListener('click',()=>{
   applyLang(LANG==='ko'?'ja':'ko');
 });
 
+/* 차트 탭 */
+document.querySelectorAll('.ctab').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on');
+    const id=btn.dataset.c;
+    document.querySelectorAll('#pct,#pcb').forEach(d=>{d.hidden=d.id!==id;});
+    if(id==='pct') drawTrend(); else drawBars();
+  });
+});
+
+/* 데이터 탭 */
+const TSECS=['secYear','secMonth','secDist','secDay'];
+document.querySelectorAll('.ttab').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.ttab').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on');
+    const id=btn.dataset.t;
+    TSECS.forEach(s=>{const el=document.getElementById(s);if(el)el.hidden=s!==id;});
+  });
+});
+
 /* fuel_price.json 에서 JPY/KRW 환율 로드 */
 fetch('fuel_price.json',{cache:'no-store'}).then(r=>r.json()).then(d=>{
   if(d.jpy_krw_rate){JPY_KRW=d.jpy_krw_rate; cards();}
@@ -263,12 +321,29 @@ fetch('fuel_price.json',{cache:'no-store'}).then(r=>r.json()).then(d=>{
 /* ---------- 버킷 ---------- */
 function buckets(){
   if(MODE==='all') return YS.map(y=>Object.assign({label:y.y, short:y.y, x:isX(y.y)},y));
+  if(YEAR==='2026') return [{label:'2026(예상)', short:'예상', x:false,
+    in_sum:Math.round(FC.tot*0.3338), out_sum:Math.round(FC.tot*0.6662),
+    in_n:Math.round(FC.ov/2), out_n:Math.round(FC.ov/2),
+    in_ex:Math.round(FC.ex*0.3338), out_ex:Math.round(FC.ex*0.6662),
+    in_ov:Math.round(FC.ov/2), out_ov:Math.round(FC.ov/2), days:365
+  }];
   return MS.filter(m=>m.m.slice(0,4)===YEAR).map(m=>Object.assign({label:m.m, short:(+m.m.slice(5))+t('hmMonthSuffix'), x:false},m));
 }
 function scopeAgg(){
-  return MODE==='all'?TOT:YS.find(y=>y.y===YEAR);
+  if(MODE==='all') return TOT;
+  if(YEAR==='2026') return {
+    in_sum:Math.round(FC.tot*0.3338), out_sum:Math.round(FC.tot*0.6662),
+    in_n:Math.round(FC.ov/2), out_n:Math.round(FC.ov/2),
+    in_ex:Math.round(FC.ex*0.3338), out_ex:Math.round(FC.ex*0.6662),
+    in_ov:Math.round(FC.ov/2), out_ov:Math.round(FC.ov/2),
+    days:365
+  };
+  return YS.find(y=>y.y===YEAR);
 }
-function overRows(){ return MODE==='all'?OV.filter(r=>!isX(r.d.slice(0,4))):OV.filter(r=>r.d.slice(0,4)===YEAR); }
+function overRows(){
+  if(YEAR==='2026') return [];
+  return MODE==='all'?OV.filter(r=>!isX(r.d.slice(0,4))):OV.filter(r=>r.d.slice(0,4)===YEAR);
+}
 
 /* ---------- 카드 ---------- */
 function cards(){
@@ -481,7 +556,7 @@ function heatmap(){
   const act=rows.filter(r=>!r.x);
   const vals=act.flatMap(r=>r.cells).filter(v=>v!=null&&v>0);
   const lo=Math.min(...vals), hi=Math.max(...vals);
-  const t=v=>hi===lo?.5:(v-lo)/(hi-lo);
+  const t2=v=>hi===lo?.5:(v-lo)/(hi-lo);
   /* 월 평균 프로필 */
   const prof=[]; for(let k=0;k<12;k++){const vs=act.map(r=>r.cells[k]).filter(v=>v!=null&&v>0);
     prof.push(vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null);}
@@ -490,19 +565,29 @@ function heatmap(){
     +'<th class="gap"></th><th>'+t('hmYearRow')+'</th></tr>';
   const fmt=v=>v==null?'–':HMET==='avg'?Math.round(v):n(v);
   const cell=v=>{ if(v==null||v<=0) return '<td class="cell" style="background:var(--grid);color:var(--faint)">–</td>';
-    const c=hmColor(t(v)); return `<td class="cell" style="background:${c.bg};color:${c.fg}">${fmt(v)}</td>`;};
+    const c=hmColor(t2(v)); return `<td class="cell" style="background:${c.bg};color:${c.fg}">${fmt(v)}</td>`;};
   const tb=document.querySelector('#hm tbody'); tb.innerHTML='';
-  const draw=(r,cls)=>{const tr=document.createElement('tr'); if(cls)tr.className=cls;
-    tr.innerHTML=`<td class="l">${r.y}</td>`+r.cells.map(cell).join('')
+  const draw=(r,cls,cells_override=null)=>{const tr=document.createElement('tr'); if(cls)tr.className=cls;
+    const cellsHtml=cells_override||r.cells.map(cell);
+    tr.innerHTML=`<td class="l">${r.y}</td>`+cellsHtml.join('')
       +'<td class="gap"></td>'+`<td class="l" style="text-align:right;padding-right:12px;font-weight:650">${fmt(r.yr)}</td>`;
     tb.appendChild(tr);};
   act.forEach(r=>draw(r,(MODE==='year'&&r.y===YEAR)?'hsel':''));
-  draw({y:t('hmMonthAvgRow'),cells:prof,yr:(()=>{const v=prof.filter(x=>x!=null);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;})()},'hfoot');
+  const best=prof.map((v,i)=>[v,i]).filter(([v])=>v!=null).sort((a,b)=>b[0]-a[0]);
+  const seasonRank=new Array(12).fill('md');
+  best.slice(0,3).forEach(([,i])=>seasonRank[i]='hi');
+  best.slice(-3).forEach(([,i])=>seasonRank[i]='lo');
+  const seasonLabel={hi:t('seasonHi'),md:t('seasonMd'),lo:t('seasonLo')};
+  const cellSeason=(v,mi)=>{
+    if(v==null||v<=0) return '<td class="cell" style="background:var(--grid);color:var(--faint)">–</td>';
+    const c=hmColor(t2(v));
+    return `<td class="cell" style="background:${c.bg};color:${c.fg}">${fmt(v)}<br><span class="sbadge ${seasonRank[mi]}">${seasonLabel[seasonRank[mi]]}</span></td>`;
+  };
+  draw({y:t('hmAvgRow'),cells:prof,yr:(()=>{const v=prof.filter(x=>x!=null);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;})()},'hfoot',prof.map((v,i)=>cellSeason(v,i)));
   rows.filter(r=>r.x).forEach(r=>draw(r,'hx'+(MODE==='year'&&r.y===YEAR?' hsel':'')));
   const ramp=(isDark()?RAMP.slice().reverse():RAMP).map(c=>`<i style="background:${c}"></i>`).join('');
   document.getElementById('hmleg').innerHTML=
     `${MET.lab} · ${t('hmLegLow')} <span class="ramp">${ramp}</span> ${t('hmLegHigh')} (${fmt(lo)}–${fmt(hi)} ${MET.u})`;
-  const best=prof.map((v,i)=>[v,i]).filter(([v])=>v!=null).sort((a,b)=>b[0]-a[0]);
   document.getElementById('hmnote').textContent= best.length?
     `${t('hmNoteColor')} ${MET.lab}${t('hmNoteIs')} ${best[0][1]+1}${t('hmNoteMonth')}${best[1][1]+1}${t('hmNoteMonth')}${best[2][1]+1}${t('hmNoteOff')} ${best[best.length-1][1]+1}${t('hmNoteOffMonth')}${best[best.length-2][1]+1}${t('hmNoteEnd')}`:'';
 }
@@ -655,6 +740,8 @@ function refresh(){
     ? `${t('h2MonthSeason')}<span>${t('h2MonthSeasonSpan')}</span>` : `${t('h2MonthYear')}<span>${YEAR}${t('yrSpanLabel')}</span>`;
   document.getElementById('t4').innerHTML=`${t('h2RawData')}<span>${scope}${MODE==='all'?t('h2RawCov'):''}</span>`;
   document.getElementById('lg1').textContent=MODE==='all'?t('lg1Text'):'';
+  const el0=document.getElementById('ctab0'); if(el0) el0.textContent=t('ctabTrend');
+  const el1=document.getElementById('ctab1'); if(el1) el1.textContent=t('ctabBars');
   const isCov=MODE==='year'&&isX(YEAR);
   document.getElementById('xbadge').hidden=!isCov;
   ysel.classList.toggle('xsel',isCov);

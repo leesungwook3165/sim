@@ -178,6 +178,12 @@ const I18N = {
     ddCovSuffix: '년 · 코로나',
     ddRank: '위',
     ddPaxUnit: '명',
+    seasonHi: '성수기', seasonMd: '평수기', seasonLo: '비수기',
+    hmAvgRow: '월 평균',
+    ctabTrend: '여객수 추이', ctabBars: '260명 초과',
+    h2YearShort: '연도별 집계', h2MonthShort: '월별 집계', h2DistShort: '초과 분포', h2DayShort: '원본 데이터',
+    noteRawBody: '원본 일일운송실적을 그대로 옮긴 표입니다. 여객 칸이 \"–\"인 날은 해당 방향 실적이 없는 날(미운항 등)이며, 260명을 넘은 값은 색으로 표시했습니다.',
+    grpForecast: '── 예상 연도 ──', fcLabel: '예상',
   },
   ja: {
     pageTitle: '乗客定員260名超過分析',
@@ -357,6 +363,12 @@ const I18N = {
     ddCovSuffix: '年 · コロナ',
     ddRank: '位',
     ddPaxUnit: '名',
+    seasonHi: '繁忙期', seasonMd: '平常期', seasonLo: '閑散期',
+    hmAvgRow: '月平均',
+    ctabTrend: '旅客数推移', ctabBars: '260名超過',
+    h2YearShort: '年別集計', h2MonthShort: '月別集計', h2DistShort: '超過分布', h2DayShort: '原本データ',
+    noteRawBody: '日次輸送実績をそのまま掲載した表です。旅客欄が「–」の日は該当方向の実績がない日（欠航等）で、260名を超えた値は色で表示しています。',
+    grpForecast: '── 予想年度 ──', fcLabel: '予想',
   }
 };
 
