@@ -448,14 +448,14 @@ function drawBars(){
 
 /* ---------- 성수기 히트맵 ---------- */
 const FC={y:'2026',tot:173825,ex:36316,ov:286,base:163741};
-const RAMP=['#dbeafe','#93c5fd','#60a5fa','#3b82f6','#4f46e5','#7c3aed','#a855f7','#db2777','#ef4444','#dc2626','#b91c1c','#7f1d1d'];
+const RAMP=['#cde2fb','#b7d3f6','#9ec5f4','#86b6ef','#6da7ec','#5598e7','#3987e5','#2a78d6','#256abf','#1c5cab','#184f95','#0d366b'];
 const isDark=()=>matchMedia('(prefers-color-scheme: dark)').matches&&document.documentElement.getAttribute('data-theme')!=='light'
   || document.documentElement.getAttribute('data-theme')==='dark';
 let HMET='avg';
 function hmColor(t){ /* t: 0~1 */
   const arr=isDark()?RAMP.slice().reverse():RAMP;
   const i=Math.max(0,Math.min(arr.length-1,Math.round(t*(arr.length-1))));
-  return {bg:arr[i], fg:(isDark()? (i<arr.length*0.35?'#0b0b0b':'#ffffff') : (i>=arr.length*0.35?'#ffffff':'#0b0b0b'))};
+  return {bg:arr[i], fg:(isDark()? (i<arr.length*0.45?'#0b0b0b':'#ffffff') : (i>=arr.length*0.55?'#ffffff':'#0b0b0b'))};
 }
 function heatmap(){
   const MET={avg:{lab:'항차 평균 여객',u:'명/항차',get:m=>{const c=m.in_n+m.out_n;return c?(m.in_sum+m.out_sum)/c:null;}},
@@ -482,26 +482,20 @@ function heatmap(){
   const fmt=v=>v==null?'–':HMET==='avg'?Math.round(v):n(v);
   const cell=v=>{ if(v==null||v<=0) return '<td class="cell" style="background:var(--grid);color:var(--faint)">–</td>';
     const c=hmColor(t(v)); return `<td class="cell" style="background:${c.bg};color:${c.fg}">${fmt(v)}</td>`;};
-  /* 월 평균 행 전용: 월별 프로필 자체 범위로 재정규화해 계절성을 강조 */
-  const profVals=prof.filter(v=>v!=null&&v>0);
-  const pLo=profVals.length?Math.min(...profVals):0, pHi=profVals.length?Math.max(...profVals):1;
-  const tPro=v=>pHi===pLo?.5:(v-pLo)/(pHi-pLo);
-  const cellPro=v=>{ if(v==null||v<=0) return '<td class="cell" style="background:var(--grid);color:var(--faint)">–</td>';
-    const c=hmColor(tPro(v)); return `<td class="cell" style="background:${c.bg};color:${c.fg};outline:1px solid rgba(0,0,0,.12);outline-offset:-1px">${fmt(v)}</td>`;};
   const tb=document.querySelector('#hm tbody'); tb.innerHTML='';
-  const draw=(r,cls,cf=cell)=>{const tr=document.createElement('tr'); if(cls)tr.className=cls;
-    tr.innerHTML=`<td class="l">${r.y}</td>`+r.cells.map(cf).join('')
+  const draw=(r,cls)=>{const tr=document.createElement('tr'); if(cls)tr.className=cls;
+    tr.innerHTML=`<td class="l">${r.y}</td>`+r.cells.map(cell).join('')
       +'<td class="gap"></td>'+`<td class="l" style="text-align:right;padding-right:12px;font-weight:650">${fmt(r.yr)}</td>`;
     tb.appendChild(tr);};
   act.forEach(r=>draw(r,(MODE==='year'&&r.y===YEAR)?'hsel':''));
-  draw({y:'월 평균 ★',cells:prof,yr:(()=>{const v=prof.filter(x=>x!=null);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;})()},'hfoot',cellPro);
+  draw({y:'월 평균',cells:prof,yr:(()=>{const v=prof.filter(x=>x!=null);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;})()},'hfoot');
   rows.filter(r=>r.x).forEach(r=>draw(r,'hx'+(MODE==='year'&&r.y===YEAR?' hsel':'')));
   const ramp=(isDark()?RAMP.slice().reverse():RAMP).map(c=>`<i style="background:${c}"></i>`).join('');
   document.getElementById('hmleg').innerHTML=
-    `${MET.lab} · 파랑(낮음) <span class="ramp">${ramp}</span> 빨강(높음) &nbsp;(${fmt(lo)}–${fmt(hi)} ${MET.u})`;
+    `${MET.lab} · 낮음 <span class="ramp">${ramp}</span> 높음 (${fmt(lo)}–${fmt(hi)} ${MET.u})`;
   const best=prof.map((v,i)=>[v,i]).filter(([v])=>v!=null).sort((a,b)=>b[0]-a[0]);
   document.getElementById('hmnote').textContent= best.length?
-    `파란색 → 보라 → 빨간색 순서로 ${MET.lab}이 높아집니다. 8개 연도 평균 기준 성수기(상위 3개월): ${best[0][1]+1}월·${best[1][1]+1}월·${best[2][1]+1}월, 비수기(하위 2개월): ${best[best.length-1][1]+1}월·${best[best.length-2][1]+1}월. ★ 월 평균 행은 월별 범위로만 재색상화해 계절성을 강조했습니다. 코로나 기간(2020–2022)은 색 기준에서 제외하고 맨 아래에 흐리게 표시했습니다.`:'';
+    `색이 진할수록 ${MET.lab}이 큽니다. 8개 연도 평균 기준 성수기는 ${best[0][1]+1}월·${best[1][1]+1}월·${best[2][1]+1}월, 비수기는 ${best[best.length-1][1]+1}월·${best[best.length-2][1]+1}월입니다. 코로나 기간(2020–2022)은 색 기준에서 제외하고 맨 아래에 흐리게 표시했습니다.`:'';
 }
 document.querySelectorAll('.mtab').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('.mtab').forEach(x=>x.setAttribute('aria-selected','false'));
