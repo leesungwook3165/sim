@@ -90,15 +90,25 @@ svg{display:block;width:100%;height:auto}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .cap{background:#241f16;border-color:#3d3527;color:#cdbb95}}
 :root[data-theme="dark"] .cap{background:#241f16;border-color:#3d3527;color:#cdbb95}
 @media(max-width:520px){.c .val{font-size:22px}}
-</style></head><body><div class="wrap">
+.sortbtn{font-size:11.5px;padding:4px 9px;border:1px solid var(--line);border-radius:6px;
+ background:var(--card);color:var(--mut);cursor:pointer;line-height:1.4;white-space:nowrap}
+.sortbtn.on{background:var(--s1);color:#fff;border-color:var(--s1)}
+.langbtn{font-size:11.5px;padding:4px 10px;border:1px solid var(--line);border-radius:6px;
+ background:var(--card);color:var(--mut);cursor:pointer;margin-left:auto;white-space:nowrap}
+.b6jpy{font-size:12px;color:var(--mut);margin-top:2px;line-height:1.4}
+</style><script src="i18n.js"></script></head><body><div class="wrap">
 
 <h1>여객 정원 260명 초과 분석</h1>
 <p class="sub">부관훼리 일일운송실적 · <b>2015–2019 · 2023–2025</b> 8개 연도 (코로나 기간 2020–2022 제외)</p>
 
 <div class="bar-top">
-  <label for="ysel">조회 범위</label>
+  <label for="ysel" data-i18n="scopeLabel">조회 범위</label>
   <select id="ysel"></select>
-  <span class="scope" id="scope"></span><span class="badge" id="xbadge" hidden>코로나 기간 · 통합 집계 제외</span>
+  <button class="sortbtn" id="btnDesc" data-i18n="btnDesc">▼ 내림차순</button>
+  <button class="sortbtn" id="btnAsc" data-i18n="btnAsc">▲ 오름차순</button>
+  <button class="sortbtn on" id="btnReset" data-i18n="btnReset">↺ 원상복귀</button>
+  <span class="scope" id="scope"></span><span class="badge" id="xbadge" hidden data-i18n="badgeCov">코로나 기간 · 통합 집계 제외</span>
+  <button class="langbtn" id="langBtn" data-i18n="langBtn">🇯🇵 日本語</button>
 </div>
 
 <p class="secttl">여객 실적</p>
@@ -117,6 +127,7 @@ svg{display:block;width:100%;height:auto}
   <div class="c warn"><div class="lab">초과 항차당 평균 초과</div><div class="val" id="b3"></div><div class="note" id="b3n"></div></div>
   <div class="c"><div class="lab" id="b4l">연평균 초과 인원</div><div class="val" id="b4"></div><div class="note" id="b4n"></div></div>
   <div class="c fc"><div class="lab">2026년 예상 초과 인원 <span class="badge">추정</span></div><div class="val" id="b5"></div><div class="note" id="b5n"></div></div>
+  <div class="c warn"><div class="lab">추정 손해액 <span class="badge" style="background:var(--s2);color:#fff">운임 기준</span></div><div class="val" id="b6"></div><div class="b6jpy" id="b6j"></div><div class="note" id="b6n"></div></div>
 </div>
 
 <h2 id="t1"></h2>
@@ -147,7 +158,7 @@ svg{display:block;width:100%;height:auto}
 
 <h2>연도별 집계<span>코로나 기간 제외</span></h2>
 <div class="panel scroll"><table id="ytbl"><thead><tr>
-<th class="l">연도</th><th>운항일</th><th>항차</th><th>여객 합계</th><th>항차 평균</th><th>초과 항차</th><th>초과 비율</th><th>초과 인원</th><th>초과 항차당</th><th>손실률</th></tr></thead><tbody></tbody></table></div>
+<th class="l">연도</th><th>운항일</th><th>항차</th><th>여객 합계</th><th>항차 평균</th><th>초과 항차</th><th>초과 비율</th><th>초과 인원</th><th>초과 항차당</th><th>손실률</th><th>추정 손해액</th></tr></thead><tbody></tbody></table></div>
 <p class="note">초과 비율 = 260명 초과 항차 ÷ 전체 항차. 손실률 = 초과 인원 ÷ 여객 합계. 연평균 행은 <b>코로나 기간을 뺀 8개 연도</b>의 산술평균이며, 표 아래 2020–2022년은 참고용으로만 표시합니다. <b>2026년 행은 예상 수요 173,825명</b>을 2025년 항차별 여객 분포에 비례 적용(×1.0616)해 추정한 값이며, 실적이 아니므로 합계·평균에 포함하지 않았습니다.</p>
 
 <h2 id="t3"></h2>
@@ -180,6 +191,11 @@ const el=(t,a)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAt
 const tx=(x,y,s,o={})=>{const t=el('text',Object.assign({x,y,'font-size':11,fill:o.fill||css('--mut')},o));t.textContent=s;return t;};
 const ex=v=>v==null?0:Math.max(v-CAP,0);
 const KEYS=['days','in_n','out_n','in_sum','out_sum','in_ov','out_ov','in_ex','out_ex'];
+// 방향별 인당 운임 (여객운임 비중 기준)
+const FARE_OUT=45503;   // 부관 인당 운임 · 66.62%
+const FARE_IN =92575;   // 관부 인당 운임 · 33.38%
+const lossWon=y=>{const t=y.out_ex+y.in_ex;return t*0.6662*FARE_OUT+t*0.3338*FARE_IN;};
+const fmtLoss=v=>v>=1e8?(v/1e8).toFixed(2)+'억':(v/1e4).toFixed(0)+'만';
 const zero=()=>Object.fromEntries(KEYS.map(k=>[k,0]));
 const addTo=(a,b)=>{KEYS.forEach(k=>a[k]+=b[k]);return a;};
 const EXCL=['2020','2021','2022'];
@@ -188,21 +204,61 @@ const ACT=YS.filter(y=>!isX(y.y));
 const TOT=ACT.reduce((a,y)=>addTo(a,y),zero());
 
 let MODE='all', YEAR=null;
+let SORT_ORDER='year'; // 'year'=원래순서(기본), 'desc'=내림차순, 'asc'=오름차순
+let JPY_KRW=9.42;     // KRW per 1 JPY — updated from fuel_price.json
 
 /* ---------- 드롭다운 ---------- */
 const ysel=document.getElementById('ysel');
-{const o=document.createElement('option');o.value='all';o.textContent='통합 (2015–2019 · 2023–2025)';ysel.appendChild(o);}
-{
+function buildDropdown(){
+  while(ysel.options.length)ysel.remove(0);
+  {const o=document.createElement('option');o.value='all';o.textContent='통합 (2015–2019 · 2023–2025)';ysel.appendChild(o);}
   const g1=document.createElement('optgroup'); g1.label='── 분석 대상 연도 ──';
-  YS.slice().reverse().filter(y=>!isX(y.y)).forEach(y=>{
-    const o=document.createElement('option');o.value=y.y;o.textContent=y.y+'년';g1.appendChild(o);});
+  const _act=YS.filter(y=>!isX(y.y));
+  const _ranked=_act.slice().sort((a,b)=>(b.in_sum+b.out_sum)-(a.in_sum+a.out_sum));
+  const _rank={}; _ranked.forEach((y,i)=>_rank[y.y]=i+1);
+  const _medal=['🥇','🥈','🥉'];
+  const sorted=SORT_ORDER==='asc'
+    ?_act.slice().sort((a,b)=>(a.in_sum+a.out_sum)-(b.in_sum+b.out_sum))
+    :SORT_ORDER==='desc'
+    ?_act.slice().sort((a,b)=>(b.in_sum+b.out_sum)-(a.in_sum+a.out_sum))
+    :YS.slice().reverse().filter(y=>!isX(y.y)); // 'year': 최근연도 우선(원래 순서)
+  sorted.forEach(y=>{
+    const r=_rank[y.y];
+    const badge=r<=3?`${_medal[r-1]} ${r}위`:`${r}위`;
+    const o=document.createElement('option');o.value=y.y;
+    o.textContent=`${y.y}년  —  ${badge}  (${n(y.in_sum+y.out_sum)}명)`;
+    if(MODE==='year'&&y.y===YEAR)o.selected=true;
+    g1.appendChild(o);});
   ysel.appendChild(g1);
   const g2=document.createElement('optgroup'); g2.label='── 코로나 기간 (집계 제외) ──';
   YS.slice().reverse().filter(y=>isX(y.y)).forEach(y=>{
     const o=document.createElement('option');o.value=y.y;o.textContent=y.y+'년 · 코로나';o.className='xopt';g2.appendChild(o);});
   ysel.appendChild(g2);
+  if(MODE==='all') ysel.value='all'; else ysel.value=YEAR||'all';
 }
+buildDropdown();
 ysel.onchange=()=>{MODE=ysel.value==='all'?'all':'year'; YEAR=MODE==='year'?ysel.value:null; refresh();};
+
+/* 정렬 버튼 */
+function setSortUI(order){
+  SORT_ORDER=order;
+  ['btnDesc','btnAsc','btnReset'].forEach(id=>document.getElementById(id).classList.remove('on'));
+  document.getElementById(order==='desc'?'btnDesc':order==='asc'?'btnAsc':'btnReset').classList.add('on');
+  buildDropdown();
+}
+document.getElementById('btnDesc').addEventListener('click',()=>setSortUI('desc'));
+document.getElementById('btnAsc').addEventListener('click',()=>setSortUI('asc'));
+document.getElementById('btnReset').addEventListener('click',()=>setSortUI('year'));
+
+/* 언어 토글 */
+document.getElementById('langBtn').addEventListener('click',()=>{
+  applyLang(LANG==='ko'?'ja':'ko');
+});
+
+/* fuel_price.json 에서 JPY/KRW 환율 로드 */
+fetch('fuel_price.json',{cache:'no-store'}).then(r=>r.json()).then(d=>{
+  if(d.jpy_krw_rate){JPY_KRW=d.jpy_krw_rate; cards();}
+}).catch(()=>{});
 
 /* ---------- 버킷 ---------- */
 function buckets(){
@@ -233,6 +289,17 @@ function cards(){
   set('b4',n(exT/per)+'<small>명</small>',`${per}개 ${unit} 기준`);
   set('a5',n(FC.tot)+'<small>명</small>',`2025년 ${n(FC.base)}명 대비 +${f1((FC.tot/FC.base-1)*100)}% · 2017년 정점의 ${f1(FC.tot/204849*100)}%`);
   set('b5',n(FC.ex)+'<small>명</small>',`예상 여객의 ${f1(FC.ex/FC.tot*100)}% · 초과 ${FC.ov}항차 (2025년 271항차)`);
+  const loss=lossWon(S);
+  const lossJpy=JPY_KRW>0?loss/JPY_KRW:0;
+  const fmtJpy=v=>v>=1e8?(v/1e8).toFixed(1)+'億円':v>=1e4?(v/1e4).toFixed(0)+'万円':Math.round(v).toLocaleString()+'円';
+  if(LANG==='ja'){
+    set('b6',fmtJpy(lossJpy)+'<small>円</small>','');
+    document.getElementById('b6j').innerHTML=fmtLoss(loss)+'<small>원</small> <span style="font-size:10px">(1JPY='+JPY_KRW.toFixed(2)+'원)</span>';
+  } else {
+    set('b6',fmtLoss(loss)+'<small>원</small>','');
+    document.getElementById('b6j').innerHTML=lossJpy>0?fmtJpy(lossJpy)+'<small>円</small> <span style="font-size:10px">(1JPY='+JPY_KRW.toFixed(2)+'원)</span>':'';
+  }
+  document.getElementById('b6n').textContent=`초과 ${n(exT)}명 × (66.62%×${n(FARE_OUT)}원 + 33.38%×${n(FARE_IN)}원) — 정원 260명 만석을 가정한 하한 추정. 실운항 시 100% 객실 점유는 현실적으로 불가능하므로 실질 기회손실은 이를 상회할 수 있음.`;
   document.getElementById('scope').textContent=
     (MODE==='all'?'통합 8개 연도':YEAR+'년'+(isX(YEAR)?' (코로나 · 통합 집계 제외)':''))
     +` · 운항 ${n(S.days)}일 · 여객 ${n(tot)}명 · 260명 초과 ${n(exT)}명`;
@@ -378,7 +445,7 @@ function drawBars(){
 
 /* ---------- 성수기 히트맵 ---------- */
 const FC={y:'2026',tot:173825,ex:36316,ov:286,base:163741};
-const RAMP=['#cde2fb','#b7d3f6','#9ec5f4','#86b6ef','#6da7ec','#5598e7','#3987e5','#2a78d6','#256abf','#1c5cab','#184f95','#0d366b'];
+const RAMP=['#f0f9ff','#bae6fd','#7dd3fc','#38bdf8','#0ea5e9','#0369a1','#65a30d','#fde047','#fb923c','#f97316','#ef4444','#991b1b'];
 const isDark=()=>matchMedia('(prefers-color-scheme: dark)').matches&&document.documentElement.getAttribute('data-theme')!=='light'
   || document.documentElement.getAttribute('data-theme')==='dark';
 let HMET='avg';
@@ -463,22 +530,26 @@ function yearTable(){
   const row=(label,y,cls)=>{
     const tot=y.in_sum+y.out_sum, cnt=y.in_n+y.out_n, exT=y.in_ex+y.out_ex, ovN=y.in_ov+y.out_ov;
     const tr=document.createElement('tr'); if(cls)tr.className=cls;
+    const lw=lossWon(y);
     tr.innerHTML=`<td class="l">${label}</td><td>${n(y.days)}</td><td>${n(cnt)}</td>
      <td class="sum">${tot?n(tot):'<span class="dim">–</span>'}</td>
      <td class="i">${cnt?n(tot/cnt):'<span class="dim">–</span>'}</td>
      <td>${n(ovN)}</td><td>${cnt?f1(ovN/cnt*100)+'%':'<span class="dim">–</span>'}</td>
      <td class="o">${exT?n(exT):'<span class="dim">–</span>'}</td>
      <td>${ovN?n(exT/ovN)+' 명':'<span class="dim">–</span>'}</td>
-     <td>${tot?f1(exT/tot*100)+'%':'<span class="dim">–</span>'}</td>`;
+     <td>${tot?f1(exT/tot*100)+'%':'<span class="dim">–</span>'}</td>
+     <td class="o">${lw?fmtLoss(lw)+'원':'<span class="dim">–</span>'}</td>`;
     tb.appendChild(tr);};
   ACT.forEach(y=>row(y.y+'년',y,MODE==='year'&&y.y===YEAR?'sel':''));
   row('합계',TOT,'tot');
   const avg=zero(); KEYS.forEach(k=>avg[k]=TOT[k]/ACT.length);
   row('연평균',avg,'avg');
   const fr=document.createElement('tr'); fr.className='fcrow';
+  const fcLoss=lossWon({out_ex:FC.ex*0.6662,in_ex:FC.ex*0.3338});
   fr.innerHTML=`<td class="l">2026년<span class="badge">예상</span></td><td class="dim">–</td><td class="dim">–</td>
    <td class="sum">${n(FC.tot)}</td><td class="dim">–</td><td>${n(FC.ov)}</td><td class="dim">–</td>
-   <td class="o">${n(FC.ex)}</td><td>${n(FC.ex/FC.ov)} 명</td><td>${f1(FC.ex/FC.tot*100)}%</td>`;
+   <td class="o">${n(FC.ex)}</td><td>${n(FC.ex/FC.ov)} 명</td><td>${f1(FC.ex/FC.tot*100)}%</td>
+   <td class="o">${fmtLoss(fcLoss)}원<span class="badge">추정</span></td>`;
   tb.appendChild(fr);
   const gr=document.createElement('tr'); gr.className='grp';
   gr.innerHTML='<td class="l" colspan="10">코로나 기간 — 위 합계·연평균에서 제외</td>'; tb.appendChild(gr);

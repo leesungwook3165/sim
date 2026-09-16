@@ -68,6 +68,17 @@ def scrape() -> dict:
     except Exception as e:
         print(f"환율 조회 실패(무시): {e}", file=sys.stderr)
 
+    jpy_krw = None
+    jpy_fx_date = None
+    try:
+        jfx = requests.get("https://api.frankfurter.app/latest?from=JPY&to=KRW", timeout=10)
+        jfx.raise_for_status()
+        jfx_data = jfx.json()
+        jpy_krw = jfx_data["rates"]["KRW"]
+        jpy_fx_date = jfx_data.get("date")
+    except Exception as e:
+        print(f"JPY 환율 조회 실패(무시): {e}", file=sys.stderr)
+
     kst = timezone(timedelta(hours=9))
     return {
         "fetched_at": datetime.now(kst).isoformat(timespec="seconds"),
@@ -75,6 +86,7 @@ def scrape() -> dict:
         "vlsfo_usd_per_mt": prices.get("vlsfo"),
         "lsmgo_usd_per_mt": prices.get("lsmgo"),
         "usd_krw_rate": usd_krw,
+        "jpy_krw_rate": jpy_krw,
         "fx_date": fx_date,
         "source_url": URL,
         "fx_source_url": "https://api.frankfurter.app",
