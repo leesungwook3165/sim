@@ -3,7 +3,11 @@ const I18N = {
   ko: {
     pageTitle: '하마유 신조 여객정원 감소에 따른 예상손익 분석 (460→260)',
     pageTitleFull: '하마유 신조 여객정원 감소에 따른 예상손익 분석 (460→260)',
-    pageSub: '부관훼리 일일운송실적 · <b>2015–2019 · 2023–2025</b> 8개 연도 기반 (코로나 기간 2020–2022 제외)',
+    pageSub: '부관훼리 일일운송실적 · <b>2015–2019 · 2023–2025</b> 원본 데이터 기반 (코로나 2020–2022 제외) · 합계·평균은 <b>핵심 6개년 (2015–18·24–25)</b> 기준',
+    pageSubAll8: '부관훼리 일일운송실적 · <b>2015–2019 · 2023–2025</b> 8개 연도 기반 (코로나 2020–2022 제외) · 합계·평균은 <b>핵심 6개년 (2015–18·24–25)</b> 기준',
+    pageSubAll9: '부관훼리 일일운송실적 · <b>2015–2019 · 2023–2026</b> 9개 연도 기반 (코로나 2020–2022 제외) · 합계·평균은 <b>핵심 7개년 (2015–18·24–26)</b> 기준',
+    pageSubYear: '부관훼리 일일운송실적 · <b>{y}년</b> 단일 연도',
+    pageSubYearCov: '부관훼리 일일운송실적 · <b>{y}년</b> (코로나 기간)',
     scopeLabel: '조회 범위',
     langBtn: '🇯🇵 日本語',
     btnDesc: '▼ 내림차순',
@@ -25,7 +29,7 @@ const I18N = {
     thExSum: '초과 인원 합계',
     thYear: '연도', thDays: '운항일', thVoys: '항차', thPaxSum: '여객 합계',
     thAvgPax: '항차 평균', thExVoy: '초과 항차', thExRate: '초과 비율',
-    thExPaxCol: '초과 인원', thExPerVoy: '초과 항차당', thLossRate: '손실률', thEstLoss: '추정 손해액',
+    thExPaxCol: '초과 인원', thExPerVoy: '초과 항차당', thLossRate: '손실률', thEstLoss: '추정 손해액', thLossOut: '부관방향 손해', thLossIn: '관부방향 손해',
     thMonth: '월', thIn: '입항 여객', thOut: '출항 여객', thTotal: '여객 합계',
     thInEx: '입항 초과', thOutEx: '출항 초과', thExTotal: '초과 합계',
     thDate: '일자', thShip: '선명', thInPax: '입항 여객', thInExCol: '입항 초과',
@@ -107,7 +111,7 @@ const I18N = {
     hmMonthAvgRow: '월 평균',
     hmLegLow: '낮음', hmLegHigh: '높음',
     hmNoteColor: '색이 진할수록',
-    hmNoteIs: '이 큽니다. 8개 연도 평균 기준 성수기는',
+    hmNoteIs: '이 큽니다. 핵심 6개년 평균 기준 성수기는',
     hmNoteMonth: '월·',
     hmNoteOff: '월, 비수기는',
     hmNoteOffMonth: '월·',
@@ -133,6 +137,7 @@ const I18N = {
     ytVoyUnit: ' 명',
     ytLossUnit: '원',
     ytFcLossUnit: '원',
+    fc2018Rec: '2018년 대비 {p}% 회복',
 
     // monthTable()
     mtMonthSuffix: '월',
@@ -142,6 +147,11 @@ const I18N = {
     mtNoteAll: '분석 대상 연도(2015–2018·2024–2025)를 같은 달끼리 합산한 계절성 표입니다. 성수기·비수기 판단에 쓰시면 됩니다.',
 
     // dayTable()
+    btnPrintDay: '🖨 표만 인쇄',
+    nearBandLabel: '영향권',
+    dtNear2019: '노재팬',
+    dtNear2023: '엔데믹 前',
+
     dtCovBadge: '코로나',
     dtNoData: '해당 조건의 데이터가 없습니다.', dtFcOnly: '예상 수요 기준 연도 — 원본 실적 데이터 없음',
     dtSumSep: '일 · 여객 ',
@@ -156,7 +166,7 @@ const I18N = {
     h2BarsAll: '연도별 260명 초과 인원',
     h2BarsYear: '월별 260명 초과 인원',
     h2MonthSeason: '월별 계절성',
-    h2MonthSeasonSpan: '8개 연도 같은 달 합산',
+    h2MonthSeasonSpan: '핵심 6개년 같은 달 합산',
     h2MonthYear: '월별 집계',
     h2RawData: '원본 데이터',
     h2RawCov: ' · 코로나 기간 포함 전체 일자',
@@ -175,7 +185,7 @@ const I18N = {
     capBody: '<b>참고</b> — 2020~2022년은 코로나로 운항이 사실상 중단되어(2021년 전무, 2022년 16항차) 모든 합계·평균·차트에서 제외했습니다. 드롭다운에서 개별 조회는 가능합니다. 초과 인원은 정원 260명 선박으로 운항했을 때의 <b>이론상 최대 손실</b>이며, 실제로는 예약 단계에서 마감되므로 그대로 놓친 수요는 아닙니다.',
 
     // dropdown
-    ddAll: '통합 (2015–2019 · 2023–2025)',
+    ddAll: '통합 (집계 기준: 2015–18·24–25)',
     ddActGroup: '── 분석 대상 연도 ──',
     ddCovGroup: '── 코로나 기간 (집계 제외) ──',
     ddYearSuffix: '년',
@@ -212,7 +222,11 @@ const I18N = {
   ja: {
     pageTitle: 'はまゆ新造 旅客定員別 予想損益分析',
     pageTitleFull: 'はまゆ新造 旅客定員別 予想損益分析',
-    pageSub: '釜関フェリー 日次輸送実績 · <b>2015–2019 · 2023–2025</b> 8年間ベース (コロナ期間 2020–2022 除外)',
+    pageSub: '釜関フェリー 日次輸送実績 · <b>2015–2019 · 2023–2025</b> 原本データ基準 (コロナ 2020–2022 除外) · 合計·平均は<b>分析6年間 (2015–18·24–25)</b>基準',
+    pageSubAll8: '釜関フェリー 日次輸送実績 · <b>2015–2019 · 2023–2025</b> 8年間基準 (コロナ 2020–2022 除外) · 合計·平均は<b>分析6年間 (2015–18·24–25)</b>基準',
+    pageSubAll9: '釜関フェリー 日次輸送実績 · <b>2015–2019 · 2023–2026</b> 9年間基準 (コロナ 2020–2022 除外) · 合計·平均は<b>分析7年間 (2015–18·24–26)</b>基準',
+    pageSubYear: '釜関フェリー 日次輸送実績 · <b>{y}年</b>',
+    pageSubYearCov: '釜関フェリー 日次輸送実績 · <b>{y}年</b> (コロナ期間)',
     scopeLabel: '表示範囲',
     langBtn: '🇰🇷 한국어',
     btnDesc: '▼ 降順',
@@ -234,7 +248,7 @@ const I18N = {
     thExSum: '超過人員合計',
     thYear: '年度', thDays: '運航日', thVoys: '航海', thPaxSum: '旅客合計',
     thAvgPax: '航海平均', thExVoy: '超過航海', thExRate: '超過率',
-    thExPaxCol: '超過人員', thExPerVoy: '超過航海あたり', thLossRate: '損失率', thEstLoss: '推定損害額',
+    thExPaxCol: '超過人員', thExPerVoy: '超過航海あたり', thLossRate: '損失率', thEstLoss: '推定損害額', thLossOut: '釜関 損害', thLossIn: '関釜 損害',
     thMonth: '月', thIn: '入港旅客', thOut: '出港旅客', thTotal: '旅客合計',
     thInEx: '入港超過', thOutEx: '出港超過', thExTotal: '超過合計',
     thDate: '日付', thShip: '船名', thInPax: '入港旅客', thInExCol: '入港超過',
@@ -245,7 +259,7 @@ const I18N = {
     badgeCov: 'コロナ期間 · 統合集計除外',
 
     // KRW formatting units (used as secondary display in JA mode)
-    unitEok: '억', unitMan: '만',
+    unitEok: '億', unitMan: '万',
 
     // cards() dynamic strings
     unitYear: '年', unitMonth: '月',
@@ -278,7 +292,7 @@ const I18N = {
     unitKrw: 'ウォン',
 
     // scope text
-    scopeAll: '統合8年間',
+    scopeAll: '統合 (分析6年間)',
     scopeYearCov: ' (コロナ · 統合集計除外)',
     scopeSep: ' · 運航 ',
     scopeSep2: '日 · 旅客 ',
@@ -314,7 +328,7 @@ const I18N = {
     hmMonthAvgRow: '月平均',
     hmLegLow: '低', hmLegHigh: '高',
     hmNoteColor: '色が濃いほど',
-    hmNoteIs: 'が多くなります。8年間平均で繁忙期は',
+    hmNoteIs: 'が多くなります。分析6年間平均で繁忙期は',
     hmNoteMonth: '月・',
     hmNoteOff: '月、閑散期は',
     hmNoteOffMonth: '月・',
@@ -340,15 +354,21 @@ const I18N = {
     ytVoyUnit: ' 名',
     ytLossUnit: '円',
     ytFcLossUnit: '円',
+    fc2018Rec: '2018年比 {p}% 回復',
 
     // monthTable()
     mtMonthSuffix: '月',
     mtSum: '合計', mtAvg: '月平均',
     mtSumUnit: ' 名',
     mtNoteYear: '年 月別実績です。平均行は実績がある月の算術平均です。',
-    mtNoteAll: '2015–2019 · 2023–2025 の8年間を同じ月ごとに合算した季節性表です（コロナ期間除外）。繁忙期・閑散期の判断にご活用ください。',
+    mtNoteAll: '分析6年間 (2015–2018·2024–2025) を同じ月ごとに合算した季節性表です。繁忙期・閑散期の判断にご活用ください。',
 
     // dayTable()
+    btnPrintDay: '🖨 表のみ印刷',
+    nearBandLabel: '影響圏',
+    dtNear2019: '不買運動',
+    dtNear2023: 'エンデミック前',
+
     dtCovBadge: 'コロナ',
     dtNoData: '該当条件のデータがありません。', dtFcOnly: '予想需要基準年度 — 実績データなし',
     dtSumSep: '日 · 旅客 ',
@@ -363,7 +383,7 @@ const I18N = {
     h2BarsAll: '年別260名超過人員',
     h2BarsYear: '月別260名超過人員',
     h2MonthSeason: '月別季節性',
-    h2MonthSeasonSpan: '8年間同月合算',
+    h2MonthSeasonSpan: '分析6年間同月合算',
     h2MonthYear: '月別集計',
     h2RawData: '原本データ',
     h2RawCov: ' · コロナ期間含む全日付',
@@ -377,12 +397,12 @@ const I18N = {
 
     // static HTML notes
     noteDistBody: '定員を少し超える航海と大きく超える航海を分けて見たものです。増船・大型化の判断には「何名超過が何回」かが核心的な根拠となります。',
-    noteYearBody: '超過率 = 260名超過航海 ÷ 全航海。損失率 = 超過人員 ÷ 旅客合計。年平均行は<b>コロナ期間を除いた8年間</b>の算術平均であり、表下の2020–2022年は参考表示のみです。<b>2026年行は予想需要173,825名</b>を2025年の航海別旅客分布に比例適用(×1.0616)して推定した値であり、実績ではないため合計・平均に含めていません。',
+    noteYearBody: '超過率 = 260名超過航海 ÷ 全航海。損失率 = 超過人員 ÷ 旅客合計。<b>合計·年平均行は分析対象6年間 (2015–2018·2024–2025) 基準</b>。2019·2023年(コロナ·不買運動 影響下)は参考行のみ表示。コロナ期間(2020–2022)はすべての集計から除外。<b>2026年行は予想需要173,825名</b>を2025年の航海別旅客分布に比例適用して推定した値であり、実績ではないため合計·平均に含めていません。',
     noteDayBody: '原本の日次輸送実績をそのまま転記した表です。旅客欄が「–」の日はその方向の実績がない日（欠航など）であり、260名を超えた値は色で表示しています。',
     capBody: '<b>注記</b> — 2020〜2022年はコロナにより運航がほぼ停止されたため（2021年はゼロ、2022年は16航海）、すべての合計・平均・チャートから除外しています。ドロップダウンで個別照会は可能です。超過人員は定員260名の船で運航した場合の<b>理論上の最大損失</b>であり、実際には予約段階で満席になるため、そのまま逃した需要ではありません。',
 
     // dropdown
-    ddAll: '統合 (2015–2019 · 2023–2025)',
+    ddAll: '統合 (集計基準: 2015–18·24–25)',
     ddActGroup: '── 分析対象年度 ──',
     ddCovGroup: '── コロナ期間 (集計除外) ──',
     ddYearSuffix: '年',

@@ -50,6 +50,12 @@ td.sum{font-weight:650;color:var(--ink)}
 tr.fcrow td{border-top:1px dashed var(--s3);background:var(--bg)}
 tr.fcrow td:first-child{color:var(--s3);font-weight:650}
 tr.xrow td{color:var(--faint)!important;background:repeating-linear-gradient(45deg,transparent,transparent 5px,var(--grid) 5px,var(--grid) 6px)}
+tr.excrow td{background:#fff59d!important}
+@media(prefers-color-scheme:dark){tr.excrow td{background:#3d3300!important}}
+:root[data-theme="dark"] tr.excrow td{background:#3d3300!important}
+.badge.nbadge{background:var(--s2);color:#fff;border-color:var(--s2)}
+@media print{tr.excrow td{background:#fff59d!important;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+}
 tr.xrow td .i,tr.xrow td .o,tr.xrow td{font-weight:400}
 tr.xrow td:first-child{color:var(--mut)!important}
 optgroup{font-size:12px;color:var(--mut);font-style:normal}
@@ -73,7 +79,7 @@ tr.sel td{background:#eef4fb}
 #hm tr.hsel td.l{font-weight:700}
 #hm tr.hsel td.cell{box-shadow:0 0 0 2px var(--card) inset,0 0 0 2px var(--ink)}
 #hm tr.hx td{opacity:.45}
-#hm tr.hnear td{opacity:.7}
+#hm tr.hnear td.cell.near-cell{opacity:.65}
 #hm tr.hsep td{padding:0;border-top:3px solid var(--mut);background:transparent!important}
 #hm tfoot td,#hm tr.hfoot td{border-top:2px solid var(--ink);font-weight:650}
 #hm tr.hfoot td.l{font-size:11px;color:var(--mut)}
@@ -119,11 +125,11 @@ svg{display:block;width:100%;height:auto}
 .ttab{font-size:12.5px;padding:5px 14px;border:1px solid var(--line);border-radius:7px 7px 0 0;background:var(--card);color:var(--mut);cursor:pointer;border-bottom:none;margin-bottom:-1px;position:relative;z-index:1}
 .ttab.on{background:var(--card);color:var(--ink);font-weight:650;border-bottom:1px solid var(--card)}
 .ttab-bar+div>.panel,.ttab-bar+div>.panel.scroll{border-top-left-radius:0}
-details#lossConf{margin:6px 0 10px;border:1px solid var(--line);border-radius:9px;background:var(--card)}
-details#lossConf>summary{padding:7px 14px;font-size:12.5px;font-weight:600;color:var(--mut);cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;user-select:none}
-details#lossConf>summary::before{content:'▶';font-size:9px;display:inline-block;transition:transform .15s}
-details#lossConf[open]>summary::before{transform:rotate(90deg)}
-details#lossConf>summary::-webkit-details-marker{display:none}
+details#lossConf,details#capConf{margin:6px 0 10px;border:1px solid var(--line);border-radius:9px;background:var(--card)}
+details#lossConf>summary,details#capConf>summary{padding:7px 14px;font-size:12.5px;font-weight:600;color:var(--mut);cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;user-select:none}
+details#lossConf>summary::before,details#capConf>summary::before{content:'▶';font-size:9px;display:inline-block;transition:transform .15s}
+details#lossConf[open]>summary::before,details#capConf[open]>summary::before{transform:rotate(90deg)}
+details#lossConf>summary::-webkit-details-marker,details#capConf>summary::-webkit-details-marker{display:none}
 .lconf{padding:6px 14px 12px;display:flex;flex-direction:column;gap:7px}
 .lconf-row{display:flex;align-items:center;gap:6px;font-size:12.5px}
 .lconf-lbl{color:var(--mut);min-width:90px;word-break:keep-all}
@@ -139,8 +145,8 @@ details#lossConf>summary::-webkit-details-marker{display:none}
 .lv-btn.on{background:var(--s1);color:#fff;border-color:var(--s1);font-weight:600}
 @media print{
 @page{size:A4 portrait;margin:12mm 15mm}
-.bar-top,.ctab-bar,.ttab-bar,#lossViewBar,.ctrls,details#lossConf>summary,.langbtn,#dysel-wrap{display:none!important}
-details#lossConf{border:none!important;background:transparent!important}
+.bar-top,.ctab-bar,.ttab-bar,#lossViewBar,.ctrls,details#lossConf>summary,details#capConf>summary,.langbtn,#dysel-wrap{display:none!important}
+details#lossConf,details#capConf{border:none!important;background:transparent!important}
 .lconf{display:flex!important;padding:0 0 8px!important}
 .lconf-inp{background:transparent!important;border:none!important}
 .wrap{max-width:none;padding:8px 0 16px}
@@ -151,6 +157,7 @@ table{font-size:11px!important;min-width:0!important}
 th,td{padding:4px 7px!important}
 #hm{min-width:0!important}
 #hm th,#hm td{padding:3px 2px!important;font-size:10px!important}
+#hm td.cell{print-color-adjust:exact;-webkit-print-color-adjust:exact}
 h1{font-size:16px}
 h2{font-size:13px;margin:12px 0 6px;page-break-after:avoid;break-after:avoid}
 .c .val{font-size:20px}
@@ -163,11 +170,22 @@ h2{font-size:13px;margin:12px 0 6px;page-break-after:avoid;break-after:avoid}
 #secDist{page-break-before:always;break-before:page}
 #secDay{page-break-before:always;break-before:page}
 .cap{display:none}
+/* 원본데이터 표만 인쇄 */
+body.print-day-only{print-color-adjust:exact;-webkit-print-color-adjust:exact}
+body.print-day-only .wrap>*:not(#secDay):not(#secYear){display:none!important}
+body.print-day-only #secYear{display:block!important;page-break-before:auto!important;break-before:auto!important}
+body.print-day-only #secDay{display:block!important;page-break-before:always!important;break-before:always!important}
+body.print-day-only #secDay .ctrls{display:none!important}
+body.print-day-only #dayPager{display:none!important}
+body.print-day-only #secDay .panel{max-height:none!important;overflow:visible!important}
+body.print-day-only table{font-size:inherit!important;min-width:0!important}
+body.print-day-only th,body.print-day-only td{padding:inherit!important;font-size:inherit!important}
+body.print-day-only h2{font-size:inherit!important;margin:inherit!important}
 }
 </style><script src="i18n.js"></script></head><body><div class="wrap">
 
 <h1 data-i18n="pageTitle">하마유 신조 여객정원 감소에 따른 예상손익 분석 (460→260)</h1>
-<p class="sub" data-i18n="pageSub">부관훼리 일일운송실적 · <b>2015–2019 · 2023–2025</b> 8개 연도 기반 (코로나 기간 2020–2022 제외)</p>
+<p class="sub" id="pageSub" data-i18n="pageSub">부관훼리 일일운송실적 · <b>2015–2019 · 2023–2025</b> 8개 연도 기반 (코로나 기간 2020–2022 제외)</p>
 
 <div class="bar-top">
   <label for="ysel" data-i18n="scopeLabel">조회 범위</label>
@@ -232,17 +250,17 @@ h2{font-size:13px;margin:12px 0 6px;page-break-after:avoid;break-after:avoid}
 <details id="capConf">
   <summary data-i18n="capCfgTitle">⚙ 초과 기준 인원 설정</summary>
   <div class="lconf">
-    <div class="lconf-row" style="flex-wrap:wrap;gap:8px">
+    <div class="lconf-row">
       <span class="lconf-lbl" data-i18n="capCfgLabel">최대 인원</span>
       <input class="lconf-inp lconf-wide" type="number" id="cfgCap" value="260" min="1" step="1">
       <span class="lconf-unit" data-i18n="capCfgUnit">명</span>
-      <span style="display:flex;gap:5px;flex-wrap:wrap">
-        <button class="lv-btn on" data-cap="260" id="cpBtn260" data-i18n="cpBtn260">260명</button>
-        <button class="lv-btn" data-cap="0" id="cpBtnAvg">-</button>
-        <button class="lv-btn" data-cap="0" id="cpBtn2017">-</button>
-        <button class="lv-btn" data-cap="460" id="cpBtn460" data-i18n="cpBtn460">460명</button>
-        <button class="lv-btn" data-cap="555" id="cpBtn555" data-i18n="cpBtn555">555명 (최대)</button>
-      </span>
+    </div>
+    <div class="lconf-row" style="flex-wrap:wrap;gap:5px">
+      <button class="lv-btn on" data-cap="260" id="cpBtn260" data-i18n="cpBtn260">260명</button>
+      <button class="lv-btn" data-cap="0" id="cpBtnAvg">-</button>
+      <button class="lv-btn" data-cap="0" id="cpBtn2017">-</button>
+      <button class="lv-btn" data-cap="460" id="cpBtn460" data-i18n="cpBtn460">460명</button>
+      <button class="lv-btn" data-cap="555" id="cpBtn555" data-i18n="cpBtn555">555명 (최대)</button>
     </div>
   </div>
 </details>
@@ -308,8 +326,8 @@ h2{font-size:13px;margin:12px 0 6px;page-break-after:avoid;break-after:avoid}
 <div id="secYear">
   <h2 data-i18n="h2Year">연도별 집계<span>코로나 기간 제외</span></h2>
   <div class="panel scroll"><table id="ytbl"><thead><tr>
-  <th class="l" data-i18n="thYear">연도</th><th data-i18n="thDays">운항일</th><th data-i18n="thVoys">항차</th><th data-i18n="thPaxSum">여객 합계</th><th data-i18n="thAvgPax">항차 평균</th><th data-i18n="thExVoy">초과 항차</th><th data-i18n="thExRate">초과 비율</th><th data-i18n="thExPaxCol">초과 인원</th><th data-i18n="thExPerVoy">초과 항차당</th><th data-i18n="thLossRate">손실률</th><th data-i18n="thEstLoss">추정 손해액</th></tr></thead><tbody></tbody></table></div>
-  <p class="note" data-i18n="noteYearBody">초과 비율 = 260명 초과 항차 ÷ 전체 항차. 손실률 = 초과 인원 ÷ 여객 합계. 연평균 행은 <b>코로나 기간을 뺀 8개 연도</b>의 산술평균이며, 표 아래 2020–2022년은 참고용으로만 표시합니다. <b>2026년 행은 예상 수요 173,825명</b>을 2025년 항차별 여객 분포에 비례 적용(×1.0616)해 추정한 값이며, 실적이 아니므로 합계·평균에 포함하지 않았습니다.</p>
+  <th class="l" data-i18n="thYear">연도</th><th data-i18n="thDays">운항일</th><th data-i18n="thVoys">항차</th><th data-i18n="thPaxSum">여객 합계</th><th data-i18n="thAvgPax">항차 평균</th><th data-i18n="thExVoy">초과 항차</th><th data-i18n="thExRate">초과 비율</th><th data-i18n="thExPaxCol">초과 인원</th><th data-i18n="thExPerVoy">초과 항차당</th><th data-i18n="thLossRate">손실률</th><th data-i18n="thEstLoss">추정 손해액</th><th data-i18n="thLossOut">부관방향 손해</th><th data-i18n="thLossIn">관부방향 손해</th></tr></thead><tbody></tbody></table></div>
+  <p class="note" data-i18n="noteYearBody">초과 비율 = 260명 초과 항차 ÷ 전체 항차. 손실률 = 초과 인원 ÷ 여객 합계. 연평균 행은 <b>분석 대상 6개 연도 (2015–2018·2024–2025)</b>의 산술평균이며, 표 아래 2020–2022년은 참고용으로만 표시합니다. <b>2026년 행은 예상 수요 173,825명</b>을 2025년 항차별 여객 분포에 비례 적용(×1.0616)해 추정한 값이며, 실적이 아니므로 합계·평균에 포함하지 않았습니다.</p>
 </div>
 <div id="secMonth" hidden>
   <h2 id="t3"></h2>
@@ -326,8 +344,8 @@ h2{font-size:13px;margin:12px 0 6px;page-break-after:avoid;break-after:avoid}
 <div id="secDay" hidden>
   <h2 id="t4"></h2>
   <div class="ctrls">
-    <button class="tab" data-v="over" aria-selected="true" data-i18n="tabOver">260명 초과 항차만</button>
-    <button class="tab" data-v="all" aria-selected="false" data-i18n="tabAll">전체 원본 데이터</button>
+    <button class="tab" data-v="all" aria-selected="true" data-i18n="tabAll">전체 원본 데이터</button>
+    <button class="tab" data-v="over" aria-selected="false" data-i18n="tabOver">260명 초과 항차만</button>
     <span id="dysel-wrap" style="display:none">
       <label for="dysel" style="margin-left:6px" data-i18n="thYear">연도</label>
       <select id="dysel"><option value="">전체</option></select>
@@ -335,9 +353,16 @@ h2{font-size:13px;margin:12px 0 6px;page-break-after:avoid;break-after:avoid}
     <label for="msel" style="margin-left:6px" data-i18n="thMonth">월</label>
     <select id="msel"><option value="" data-i18n="selMonth">전체</option></select>
     <span class="note" id="dsum" style="margin:0"></span>
+    <button class="sortbtn" id="btnOverStat">–</button>
+    <button class="sortbtn" id="btnPrintDay" data-i18n="btnPrintDay">🖨 표만 인쇄</button>
   </div>
   <div class="panel wrapbox"><table id="dtbl"><thead><tr>
   <th class="l" data-i18n="thDate">일자</th><th class="l" data-i18n="thShip">선명</th><th data-i18n="thInPax">입항 여객</th><th data-i18n="thInExCol" style="color:var(--s1)">입항 초과</th><th data-i18n="thOutPax">출항 여객</th><th data-i18n="thOutExCol" style="color:var(--s2)">출항 초과</th><th data-i18n="thExTot">초과 합계</th></tr></thead><tbody></tbody></table></div>
+  <div id="dayPager" style="display:none;align-items:center;gap:8px;margin:8px 0 4px;flex-wrap:wrap">
+    <button class="sortbtn" id="dayPrev">◀ 이전</button>
+    <span id="dayPageInfo" style="font-size:12px;color:var(--mut)"></span>
+    <button class="sortbtn" id="dayNext">다음 ▶</button>
+  </div>
   <p class="note" data-i18n="noteRawBody">원본 일일운송실적을 그대로 옮긴 표입니다. 여객 칸이 &ldquo;–&rdquo;인 날은 해당 방향 실적이 없는 날(미운항 등)이며, 260명을 넘은 값은 색으로 표시했습니다.</p>
 </div>
 
@@ -361,6 +386,8 @@ let FARE_OUT=45503;     // 부관 인당 운임 (설정 패널에서 변경 가�
 let FARE_IN =92575;     // 관부 인당 운임
 let RATIO_OUT=0.6662, RATIO_IN=0.3338; // 운임비중 (설정 패널 연동)
 const lossWon=y=>{const t=y.out_ex+y.in_ex;return t*RATIO_OUT*FARE_OUT+t*RATIO_IN*FARE_IN;};
+const lossWonOut=y=>lossWon(y)*RATIO_OUT;
+const lossWonIn =y=>lossWon(y)*RATIO_IN;
 const fmtLoss=v=>v>=1e8?(v/1e8).toFixed(2)+t('unitEok'):(v/1e4).toFixed(0)+t('unitMan');
 const zero=()=>Object.fromEntries(KEYS.map(k=>[k,0]));
 const addTo=(a,b)=>{KEYS.forEach(k=>a[k]+=b[k]);return a;};
@@ -542,7 +569,7 @@ fetch('fuel_price.json',{cache:'no-store'}).then(r=>r.json()).then(d=>{
 
 /* ---------- 버킷 ---------- */
 function buckets(){
-  if(MODE==='all') return YS.map(y=>Object.assign({label:y.y, short:y.y, x:isX(y.y)},y));
+  if(MODE==='all') return YS.map(y=>Object.assign({label:y.y, short:y.y, x:isX(y.y), near:isNearby(y.y)},y));
   if(YEAR==='2026'){
     const _ms25=MS.filter(m=>m.m.startsWith('2025'));
     const _base25=_ms25.reduce((a,m)=>a+m.in_sum+m.out_sum,0);
@@ -706,6 +733,11 @@ function cards(){
   const _sep3=CAP===260?t('scopeSep3'):`${LANG==='ja'?'名':'명'} · ${CAP}${LANG==='ja'?'名超過 ':'명 초과 '}`;
   document.getElementById('scope').textContent=_scopeLbl
     +t('scopeSep')+n(S.days)+t('scopeSep2')+n(tot)+_sep3+n(exT)+t('scopeSuffix');
+  const _subEl=document.getElementById('pageSub');
+  if(_subEl){
+    if(MODE==='all') _subEl.innerHTML=t(INC_FC?'pageSubAll9':'pageSubAll8');
+    else _subEl.innerHTML=t(isX(YEAR)?'pageSubYearCov':'pageSubYear').replace('{y}',YEAR);
+  }
   const _btn2026=document.getElementById('btn2026');
   if(_btn2026){_btn2026.classList.toggle('on',INC_FC);_btn2026.textContent=t(INC_FC?'btn2026on':'btn2026off');}
 }
@@ -736,7 +768,7 @@ function drawTrend(){
   const top=Math.ceil(hi/st)*st;
   /* Y축 하한: 전체 모드에서 비코로나 연도 입·출항 최솟값의 80% (시각 차이 부각) */
   const _actVals=B.filter(b=>!b.x&&(b.in_sum>0||b.out_sum>0)).flatMap(b=>[b.in_sum,b.out_sum]).filter(v=>v>0);
-  const _loRaw=_actVals.length&&FCon?Math.min(..._actVals)*0.85:0;
+  const _loRaw=_actVals.length?Math.min(..._actVals)*0.85:0;
   const lo=Math.floor(_loRaw/st)*st;
   const range=top-lo;
   const NX=B.length+(FCon?1:0);
@@ -745,7 +777,7 @@ function drawTrend(){
     svg.appendChild(el('line',{x1:M.l,x2:M.l+PW,y1:Y(v),y2:Y(v),stroke:g,'stroke-width':1}));
     svg.appendChild(tx(M.l-10,Y(v)+4,n(v),{'text-anchor':'end'}));}
   svg.appendChild(el('line',{x1:M.l,x2:M.l+PW,y1:M.t+PH,y2:M.t+PH,stroke:ln,'stroke-width':1}));
-  B.forEach((b,i)=>svg.appendChild(tx(X(i),M.t+PH+20,b.short,{'text-anchor':'middle','font-size':10.5,fill:b.x?css('--faint'):css('--mut')})));
+  B.forEach((b,i)=>{svg.appendChild(tx(X(i),M.t+PH+20,b.short,{'text-anchor':'middle','font-size':10.5,fill:b.x?css('--faint'):b.near?css('--s2'):css('--mut')}));if(b.near)svg.appendChild(tx(X(i),M.t+PH+31,t('nearBandLabel'),{'text-anchor':'middle','font-size':8.5,fill:css('--s2'),'fill-opacity':.85}));});
   if(FCon){
     const fi=B.length;
     svg.appendChild(tx(X(fi),M.t+PH+20,FC.y,{'text-anchor':'middle','font-size':10.5,fill:css('--s3')}));
@@ -787,6 +819,19 @@ function drawTrend(){
   ends.sort((a,b)=>a.y-b.y);
   for(let i=1;i<ends.length;i++) if(ends[i].x===ends[i-1].x && ends[i].y-ends[i-1].y<14) ends[i].y=ends[i-1].y+14;
   ends.forEach(e=>svg.appendChild(tx(e.x,e.y,e.name,{fill:mu,'font-weight':600,'text-anchor':e.anchor||'start'})));
+  /* 2026 예상 : 2018년 대비 회복률 어노테이션 */
+  if(FCon){
+    const b2018=B.find(b=>b.label==='2018');
+    if(b2018&&(b2018.in_sum+b2018.out_sum)>0){
+      const pct=((FC.tot/(b2018.in_sum+b2018.out_sum))*100).toFixed(1);
+      const fi=B.length, cy=Y(FC.tot), cx=X(fi);
+      const rw=118, rh=18;
+      const ry=Math.max(M.t+rh+2, cy-52);
+      svg.appendChild(el('line',{x1:cx,x2:cx,y1:ry+4,y2:cy-8,stroke:css('--s3'),'stroke-width':1,'stroke-dasharray':'3 2','stroke-opacity':.55}));
+      svg.appendChild(el('rect',{x:cx-rw/2,y:ry-rh+4,width:rw,height:rh,rx:5,fill:css('--s3'),'fill-opacity':.13,stroke:css('--s3'),'stroke-opacity':.4,'stroke-width':1}));
+      svg.appendChild(tx(cx,ry,t('fc2018Rec').replace('{p}',pct),{'text-anchor':'middle','font-size':10,'font-weight':650,fill:css('--s3')}));
+    }
+  }
   const cross=el('line',{y1:M.t,y2:M.t+PH,stroke:css('--faint'),'stroke-width':1,opacity:0});svg.appendChild(cross);
   const hit=el('rect',{x:M.l,y:M.t,width:PW,height:PH,fill:'transparent'});svg.appendChild(hit);
   hit.addEventListener('pointermove',e=>{
@@ -834,7 +879,7 @@ function drawBars(){
   const pos=tots.map((v,i)=>[v,i]).filter(([v])=>v>0);
   const mini=pos.length?pos.reduce((a,b)=>b[0]<a[0]?b:a)[1]:-1;
   B.forEach((b,i)=>{
-    svg.appendChild(tx(CX(i),M.t+PH+20,b.short,{'text-anchor':'middle','font-size':10.5,fill:b.x?css('--faint'):css('--mut')}));
+    svg.appendChild(tx(CX(i),M.t+PH+20,b.short,{'text-anchor':'middle','font-size':10.5,fill:b.x?css('--faint'):b.near?css('--s2'):css('--mut')}));if(b.near)svg.appendChild(tx(CX(i),M.t+PH+31,t('nearBandLabel'),{'text-anchor':'middle','font-size':8.5,fill:css('--s2'),'fill-opacity':.85}));
     const tot=b.in_ex+b.out_ex; if(!tot)return;
     const x=CX(i)-bw/2, hIn=b.in_ex/top*PH, hOut=b.out_ex/top*PH, yTop=Y(tot), r=4;
     const op=b.x?.35:1;
@@ -933,7 +978,7 @@ function heatmap(){
       const lbl=r.y==='2019'?t('hmNear2019'):t('hmNear2023');
       const gm={'2019':[7,8,9,10,11,12],'2023':[1,2,3,4,5]}[r.y]||[];
       const cellsOvr=r.cells.map((v,i)=>gm.includes(i+1)
-        ?`<td class="cell" style="background:var(--grid);color:var(--mut)">${fmt(v)}</td>`
+        ?`<td class="cell near-cell" style="background:var(--grid);color:var(--mut)">${fmt(v)}</td>`
         :cell(v));
       const excl=`<span style="font-size:9px;font-weight:700;color:var(--s2);border:1.5px solid var(--s2);border-radius:3px;padding:0 3px;margin-left:5px;vertical-align:1px">${t('hmExcl')}</span>`;
       const _tr=document.createElement('tr');
@@ -1031,10 +1076,12 @@ function yearTable(){
      <td class="o">${exT?n(exT):'<span class="dim">–</span>'}</td>
      <td>${ovN?n(exT/ovN)+t('ytVoyUnit'):'<span class="dim">–</span>'}</td>
      <td>${tot?f1(exT/tot*100)+'%':'<span class="dim">–</span>'}</td>
-     <td class="o">${lw?fmtLoss(lw)+t('ytLossUnit'):'<span class="dim">–</span>'}</td>`;
+     <td class="o">${lw?fmtLoss(lw)+t('ytLossUnit'):'<span class="dim">–</span>'}</td>
+     <td class="o">${lossWonOut(_ey)?'▲ '+fmtLoss(lossWonOut(_ey))+t('ytLossUnit'):'<span class="dim">–</span>'}</td>
+     <td class="i">${lossWonIn(_ey)?'▲ '+fmtLoss(lossWonIn(_ey))+t('ytLossUnit'):'<span class="dim">–</span>'}</td>`;
     tb.appendChild(tr);};
   const addSep=()=>{const s=document.createElement('tr');s.className='grp';
-    s.innerHTML='<td colspan="11" style="padding:0;border-top:3px solid var(--mut)"></td>';tb.appendChild(s);};
+    s.innerHTML='<td colspan="13" style="padding:0;border-top:3px solid var(--mut)"></td>';tb.appendChild(s);};
   let _prevCat=null;
   YS.forEach(y=>{
     const _cat=isX(y.y)?'x':isNearby(y.y)?'near':'core';
@@ -1050,21 +1097,6 @@ function yearTable(){
     }
     _prevCat=_cat;
   });
-  addSep();
-  /* 합계·평균은 핵심연도(계산제외 제외)만 — 2015-18, 2024-25 */
-  const _coreYs=YS.filter(y=>isCoreYear(y.y));
-  const _coreN=_coreYs.length;
-  const _coreTOT=_coreYs.reduce((a,y)=>addTo(a,y),zero());
-  const _coreAvg=zero(); KEYS.forEach(k=>_coreAvg[k]=_coreTOT[k]/_coreN);
-  const _ytN=_coreN+(INC_FC?1:0);
-  const _ytYrs='2015–18·24–25'+(INC_FC?'·26':'');
-  /* 합계행: CAP 변경 시 각 연도 효과 재계산 */
-  const _ytS_base=_coreYs.reduce((a,y)=>addTo(a,{...getEffY(y),in_sum:y.in_sum,out_sum:y.out_sum,in_n:y.in_n,out_n:y.out_n,days:y.days}),zero());
-  const _ytS=INC_FC?addTo({..._ytS_base},getFCYearObj()):_ytS_base;
-  const _ytAvg=Object.fromEntries(KEYS.map(k=>[k,_ytS[k]/_ytN]));
-  const _coreLabel='<span style="font-size:10px;color:var(--mut);font-weight:400;margin-left:5px">('+_ytYrs+' · '+_ytN+t('yrSpanLabel')+')</span>';
-  row(t('ytSum')+_coreLabel,_ytS,'tot');
-  row(t('ytAvg')+_coreLabel,_ytAvg,'avg');
   const fr=document.createElement('tr'); fr.className='fcrow';
   const fcLoss=lossWon({out_ex:FC.ex*RATIO_OUT,in_ex:FC.ex*RATIO_IN});
   /* 2026 운항일: H1=352(실적), H2=2025 H1:H2 비율로 추산 */
@@ -1080,8 +1112,27 @@ function yearTable(){
    <td class="i">${n(Math.round(FC.tot/FC.voy))}</td>
    <td>${n(FC.ov)}</td><td>${f1(FC.ov/FC.voy*100)}%</td>
    <td class="o">${n(FC.ex)}</td><td>${n(FC.ex/FC.ov)} ${t('unitPax')}</td><td>${f1(FC.ex/FC.tot*100)}%</td>
-   <td class="o">${fmtLoss(fcLoss)}${t('ytFcLossUnit')}<span class="badge">${t('badgeFc')}</span></td>`;
-  tb.appendChild(fr);
+   <td class="o">${fmtLoss(fcLoss)}${t('ytFcLossUnit')}<span class="badge">${t('badgeFc')}</span></td>
+   <td class="o">▲ ${fmtLoss(fcLoss*RATIO_OUT)}${t('ytFcLossUnit')}<span class="badge">${t('badgeFc')}</span></td>
+   <td class="i">▲ ${fmtLoss(fcLoss*RATIO_IN)}${t('ytFcLossUnit')}<span class="badge">${t('badgeFc')}</span></td>`;
+  /* 2026 포함 시 합계 위에 배치 */
+  if(INC_FC) tb.appendChild(fr);
+  addSep();
+  /* 합계·평균은 핵심연도(계산제외 제외)만 — 2015-18, 2024-25 */
+  const _coreYs=YS.filter(y=>isCoreYear(y.y));
+  const _coreN=_coreYs.length;
+  const _coreTOT=_coreYs.reduce((a,y)=>addTo(a,y),zero());
+  const _coreAvg=zero(); KEYS.forEach(k=>_coreAvg[k]=_coreTOT[k]/_coreN);
+  const _ytN=_coreN+(INC_FC?1:0);
+  const _ytYrs='2015–18·24–25'+(INC_FC?'·26':'');
+  /* 합계행: CAP 변경 시 각 연도 효과 재계산 */
+  const _ytS_base=_coreYs.reduce((a,y)=>addTo(a,{...getEffY(y),in_sum:y.in_sum,out_sum:y.out_sum,in_n:y.in_n,out_n:y.out_n,days:y.days}),zero());
+  const _ytS=INC_FC?addTo({..._ytS_base},getFCYearObj()):_ytS_base;
+  const _ytAvg=Object.fromEntries(KEYS.map(k=>[k,_ytS[k]/_ytN]));
+  const _coreLabel='<span style="font-size:10px;color:var(--mut);font-weight:400;margin-left:5px">('+_ytYrs+' · '+_ytN+t('yrSpanLabel')+')</span>';
+  row(t('ytSum')+_coreLabel,_ytS,'tot');
+  row(t('ytAvg')+_coreLabel,_ytAvg,'avg');
+  if(!INC_FC) tb.appendChild(fr);
 }
 
 /* ---------- 월별 표 ---------- */
@@ -1133,7 +1184,8 @@ function monthTable(){
 }
 
 /* ---------- 원본 데이터 ---------- */
-let VIEW='over', MONTH='';
+let VIEW='all', MONTH='', DAY_PAGE=0, _PRINT_ALL=false;
+const DAY_PER_PAGE=300;
 const msel=document.getElementById('msel');
 function buildMsel(){
   // Rebuild month selector with current language
@@ -1143,7 +1195,7 @@ function buildMsel(){
   if(cur)msel.value=cur;
 }
 buildMsel();
-msel.onchange=()=>{MONTH=msel.value;dayTable();};
+msel.onchange=()=>{MONTH=msel.value;DAY_PAGE=0;dayTable();};
 
 let DYEAR='';
 const dysel=document.getElementById('dysel');
@@ -1157,15 +1209,21 @@ function buildDysel(){
   if(cur)dysel.value=cur;
 }
 buildDysel();
-dysel.onchange=()=>{DYEAR=dysel.value;dayTable();};
+dysel.onchange=()=>{DYEAR=dysel.value;DAY_PAGE=0;dayTable();};
 document.querySelectorAll('.tab[data-v]').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('.tab[data-v]').forEach(x=>x.setAttribute('aria-selected','false'));
-  b.setAttribute('aria-selected','true'); VIEW=b.dataset.v; dayTable();});
+  b.setAttribute('aria-selected','true'); VIEW=b.dataset.v; DAY_PAGE=0; dayTable();});
+(function(){
+  const prev=document.getElementById('dayPrev'), next=document.getElementById('dayNext');
+  if(prev)prev.addEventListener('click',()=>{if(DAY_PAGE>0){DAY_PAGE--;dayTable();}});
+  if(next)next.addEventListener('click',()=>{DAY_PAGE++;dayTable();});
+})();
 function dayTable(){
   if(MODE==='year'&&YEAR==='2026'){
     document.querySelector('#dtbl tbody').innerHTML=
       `<tr><td class="l dim" colspan="7">2026${t('yrSpanLabel')} — ${t('dtFcOnly')}</td></tr>`;
     document.getElementById('dsum').textContent='';
+    const _b=document.getElementById('btnOverStat');if(_b)_b.textContent='–';
     return;
   }
   const _dyw=document.getElementById('dysel-wrap');
@@ -1174,26 +1232,117 @@ function dayTable(){
   if(MODE==='year') rows=rows.filter(r=>r[0].slice(0,4)===YEAR);
   else if(DYEAR) rows=rows.filter(r=>r[0].slice(0,4)===DYEAR);
   if(MONTH) rows=rows.filter(r=>r[0].slice(5,7)===MONTH);
+  const _allRows=rows;
+  const _overN=_allRows.filter(r=>(r[2]||0)>CAP||(r[3]||0)>CAP).length;
+  const _overPct=_allRows.length?_overN/_allRows.length*100:0;
   if(VIEW==='over') rows=rows.filter(r=>(r[2]||0)>CAP||(r[3]||0)>CAP);
   const tot=rows.reduce((a,r)=>a+ex(r[2])+ex(r[3]),0);
   const paxT=rows.reduce((a,r)=>a+(r[2]||0)+(r[3]||0),0);
   const pax=(v,c)=>v==null?'<span class="dim">–</span>':`<span class="${v>CAP?c:''}">${n(v)}</span>`;
   const exc=(v,c)=>ex(v)?`<span class="exc-badge ${c}">+${n(ex(v))}</span>`:'<span class="dim">–</span>';
-  document.querySelector('#dtbl tbody').innerHTML=rows.length?rows.map(r=>{
-    const cov=isX(r[0].slice(0,4));
-    return `<tr${cov?' class="xrow"':''}><td class="l">${r[0]}${cov?'<span class="badge">'+t('dtCovBadge')+'</span>':''}</td>
+  const totalRows=rows.length;
+  const usePager=totalRows>DAY_PER_PAGE&&!_PRINT_ALL;
+  const maxPage=usePager?Math.ceil(totalRows/DAY_PER_PAGE)-1:0;
+  if(DAY_PAGE>maxPage)DAY_PAGE=maxPage;
+  const pageRows=usePager?rows.slice(DAY_PAGE*DAY_PER_PAGE,(DAY_PAGE+1)*DAY_PER_PAGE):rows;
+  const pager=document.getElementById('dayPager');
+  if(pager){
+    pager.style.display=usePager?'flex':'none';
+    if(usePager){
+      document.getElementById('dayPageInfo').textContent=
+        (DAY_PAGE+1)+' / '+Math.ceil(totalRows/DAY_PER_PAGE)+'페이지 ('+n(DAY_PAGE*DAY_PER_PAGE+1)+'–'+n(Math.min((DAY_PAGE+1)*DAY_PER_PAGE,totalRows))+' / '+n(totalRows)+'건)';
+      document.getElementById('dayPrev').disabled=DAY_PAGE===0;
+      document.getElementById('dayNext').disabled=DAY_PAGE>=maxPage;
+    }
+  }
+  document.querySelector('#dtbl tbody').innerHTML=pageRows.length?pageRows.map(r=>{
+    const yr=r[0].slice(0,4);const mm=r[0].slice(5,7);const cov=isX(yr);const near=!cov&&((yr==='2019'&&mm>='07')||(yr==='2023'&&mm<='05'));
+    return `<tr${cov?' class="xrow"':((r[2]||0)>CAP||(r[3]||0)>CAP?' class="excrow"':near?' class="nearrow"':'')}><td class="l">${r[0]}${cov?'<span class="badge">'+t('dtCovBadge')+'</span>':near?'<span class="badge nbadge">'+t(yr==="2019"?'dtNear2019':'dtNear2023')+'</span>':''}</td>
     <td class="l">${RAW.ships[r[1]]||'<span class="dim">–</span>'}</td>
     <td>${pax(r[2],'i')}</td><td>${exc(r[2],'i')}</td>
     <td>${pax(r[3],'o')}</td><td>${exc(r[3],'o')}</td>
     <td class="sum">${ex(r[2])+ex(r[3])?n(ex(r[2])+ex(r[3]))+t('dtPaxUnit'):'<span class="dim">–</span>'}</td></tr>`;}).join('')
     :'<tr><td class="l dim" colspan="7">'+t('dtNoData')+'</td></tr>';
   document.getElementById('dsum').textContent=
-    n(rows.length)+t('dtSumSep')+n(paxT)+t('dtSumSep2')+n(tot)+t('dtSumSuffix') + (MODE==='all'?t('dtCovSuffix'):'');
+    n(totalRows)+t('dtSumSep')+n(paxT)+t('dtSumSep2')+n(tot)+t('dtSumSuffix') + (MODE==='all'?t('dtCovSuffix'):'');
+  const _btnOS=document.getElementById('btnOverStat');
+  if(_btnOS){
+    const _unit=LANG==='ja'?'便':'건';
+    const _lbl=LANG==='ja'?'超過航次':'초과항차';
+    _btnOS.textContent=_lbl+' '+n(_overN)+_unit+' ('+f1(_overPct)+'%)';
+    _btnOS.classList.toggle('on',VIEW==='over');
+  }
 }
 
 /* 평균/합계 토글 */
 document.querySelectorAll('#lossViewBar .lv-btn').forEach(b=>b.addEventListener('click',()=>{
   LOSS_VIEW=b.dataset.v; cards();}));
+
+/* 원본데이터 초과항차 필터 */
+(function(){
+  const btn=document.getElementById('btnOverStat');
+  if(!btn)return;
+  btn.addEventListener('click',function(){
+    VIEW=VIEW==='over'?'all':'over';
+    document.querySelectorAll('#secDay .ctrls .tab').forEach(function(b){
+      b.setAttribute('aria-selected',b.dataset.v===VIEW?'true':'false');
+    });
+    dayTable();
+  });
+})();
+
+/* 원본데이터 표만 인쇄 — 별도 팝업 창에서 인쇄 (미리보기 빠름) */
+(function(){
+  const btn=document.getElementById('btnPrintDay');
+  if(!btn)return;
+  btn.addEventListener('click',function(){
+    /* 1. 전체 행 HTML을 동기적으로 빌드 (메인 화면 repaint 없음) */
+    const savedPage=DAY_PAGE;
+    _PRINT_ALL=true; DAY_PAGE=0; dayTable();
+    const ytblHTML=document.getElementById('ytbl').outerHTML;
+    const dtblHTML=document.getElementById('dtbl').outerHTML;
+    const ctSVG=document.getElementById('ct').outerHTML;
+    const ctLegend=(document.querySelector('#pct .legend')||{}).outerHTML||'';
+    const _h1HTML=document.querySelector('h1')?document.querySelector('h1').innerHTML:'';
+    const _subHTML=document.getElementById('pageSub')?document.getElementById('pageSub').innerHTML:'';
+    _PRINT_ALL=false; DAY_PAGE=savedPage; dayTable();
+
+    /* 2. 필터 설명 문자열 */
+    const _vTab=document.querySelector('#secDay .ctrls .tab[aria-selected="true"]');
+    const _dysel=document.getElementById('dysel');
+    const _msel=document.getElementById('msel');
+    const _dy=_dysel&&_dysel.value?_dysel.options[_dysel.selectedIndex].text:'';
+    const _mo=_msel&&_msel.value?_msel.options[_msel.selectedIndex].text:'';
+    const _dsum=document.getElementById('dsum');
+    const _bos=document.getElementById('btnOverStat');
+    const _parts=[(_vTab?_vTab.textContent:'')];
+    if(_dy||_mo)_parts.push([_dy,_mo].filter(Boolean).join(' '));
+    if(_dsum&&_dsum.textContent)_parts.push(_dsum.textContent);
+    if(_bos&&_bos.textContent&&_bos.textContent!=='–')_parts.push(_bos.textContent);
+    const _desc=_parts.filter(Boolean).join(' | ');
+
+    /* 3. 팝업 창에 테이블만 담아 인쇄 */
+    const styleEl=document.head.querySelector('style');
+    const css=styleEl?styleEl.textContent:'';
+    const pw=window.open('','_blank','width=1060,height=740');
+    if(!pw){alert('팝업이 차단됐습니다. 이 사이트의 팝업을 허용해 주세요.');return;}
+    pw.document.write('<!doctype html><html><head><meta charset="utf-8"><style>'+css+'</style>'
+      +'<style>body{margin:0;font:13px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif}'
+      +'body>div{min-height:100vh;box-sizing:border-box;padding:20px 24px;display:flex;flex-direction:column;justify-content:center;align-items:center}'
+      +'body>div>*{width:100%}'
+      +'.wrapbox,.scroll{max-height:none!important;overflow:visible!important}'
+      +'table{min-width:0!important;width:100%;border-collapse:collapse}'
+      +'h2{font-size:14px;margin:0 0 10px;font-weight:650}'+'header.ph{width:100%;padding-bottom:16px;margin-bottom:20px;border-bottom:2px solid var(--line,#e3e0da)}'+'h1.ph-t{font-size:18px;font-weight:700;margin:0 0 5px;letter-spacing:-.01em}'+'p.ph-s{font-size:12px;color:var(--mut,#52514e);margin:0;line-height:1.6}'
+      +'@media print{@page{size:A4 landscape;margin:0}}'
+      +'</style></head><body>'
+      +'<div><header class="ph"><h1 class="ph-t">'+_h1HTML+'</h1><p class="ph-s">'+_subHTML+'</p></header><h2>연도별 집계</h2>'+ytblHTML+'</div>'
+      +'<div style="page-break-before:always;break-before:page"><h2>연도별 여객수 추이</h2><div style="max-width:860px">'+ctSVG+'</div>'+ctLegend+'</div>'
+      +'<div style="page-break-before:always;break-before:page"><h2>원본 데이터 <span style="font-size:11px;font-weight:400;color:#888">'+_desc+'</span></h2>'+dtblHTML+'</div>'
+      +'<script>window.onload=function(){window.print()}<\/script>'
+      +'</body></html>');
+    pw.document.close();
+  });
+})();
 
 /* 2026 포함/제외 토글 */
 (function(){
@@ -1273,7 +1422,7 @@ window.addEventListener('afterprint',function(){
 
 /* ---------- refresh ---------- */
 function refresh(){
-  const scope=MODE==='all'?'2015–2019 · 2023–2025':YEAR+t('yrSpanLabel');
+  const scope=MODE==='all'?'2015–18·24–25':YEAR+t('yrSpanLabel');
   // unit label handled inline in h2 titles
   document.getElementById('t1').innerHTML=(MODE==='all'?t('h2TrendAll'):t('h2TrendYear'))+`<span>${scope}</span>`;
   document.getElementById('t2').innerHTML=(MODE==='all'?t('h2BarsAll'):t('h2BarsYear'))+`<span>${scope}</span>`;
