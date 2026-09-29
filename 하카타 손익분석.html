@@ -548,6 +548,14 @@
   .hkpi .ic{border-color:#9FC2E4;color:#9FC2E4}
   .hkpi.kclk:focus-visible{outline:2px solid #9FC2E4;outline-offset:4px}
 
+  /* 툴팁 상자 — 모달(50)보다 위, 커서를 가리지 않게 pointer-events 를 끈다 */
+  .tipbox{position:fixed;z-index:200;max-width:330px;background:#17202B;color:#EAF1F8;
+    font-size:11px;font-weight:400;line-height:1.55;letter-spacing:-.01em;
+    padding:7px 10px;border-radius:4px;box-shadow:0 6px 22px rgba(10,26,46,.34);
+    pointer-events:none;white-space:normal;font-variant-numeric:tabular-nums}
+  .tipbox[hidden]{display:none}
+  .tip-on{cursor:help}
+
   .ov{position:fixed;inset:0;background:rgba(14,32,54,.5);z-index:50;
       display:none;align-items:center;justify-content:center;padding:28px}
   .ov[data-open="1"]{display:flex}
@@ -656,7 +664,7 @@
               <div class="fh">
                 <div class="r"><span>지상직 1인당</span><b id="hPerHead">—</b></div>
                 <div class="r"><span>월 환산</span><b id="hPerMon">—</b></div>
-                <div class="r"><span id="hOpHead">운항</span><b id="hOpPer">—</b></div>
+                <div class="r"><span id="hOpHead">해상직</span><b id="hOpPer">—</b></div>
                 <div class="r"><span>지상직 대비</span><b id="hOpRatio">—</b></div>
               </div>
             </div>
@@ -819,7 +827,7 @@
                 <div class="dep-sub">감가상각 (정액법)</div>
                 <div class="f">
                   <label>선가 <small style="color:#bbb;font-weight:normal">비우면 보고서 값</small></label>
-                  <div class="ib"><input type="number" step="1000000000" min="0" id="iShipPricePeer" value="50000000000"><span class="u">원</span></div>
+                  <div class="ib"><input type="number" step="1000" min="0" id="iShipPricePeer" value="50000"><span class="u">백만원</span></div>
                 </div>
                 <div class="f">
                   <label>내용연수</label>
@@ -836,7 +844,7 @@
                 <div class="dep-sub">차입금 · 이자비용</div>
                 <div class="f">
                   <label>차입금 <small style="color:#bbb;font-weight:normal">비우면 미적용</small></label>
-                  <div class="ib"><input type="number" step="1000000000" min="0" id="iLoanPeer" value="20000000000"><span class="u">원</span></div>
+                  <div class="ib"><input type="number" step="1000" min="0" id="iLoanPeer" value="20000"><span class="u">백만원</span></div>
                 </div>
                 <div class="f">
                   <label>이자율</label>
@@ -892,7 +900,7 @@
 
             <div class="sec">좌석 등급</div>
             <div class="f">
-              <label>이코노미 대인 편도 운임 (기준)</label>
+              <label>이코노미 대인 편도운임(기준)</label>
               <div class="ib"><input type="number" step="1000" min="0" id="iFarePeer" value="90000"><span class="u">원</span></div>
             </div>
             <div class="f">
@@ -1075,7 +1083,7 @@
       <!-- ══ ⑨ 출처 ══ -->
       <section class="card mtabPanel" data-mtab="src" hidden>
         <h2>한계 · 자료 출처 · 용어<em>이 페이지가 말하지 않는 것, 그리고 무엇으로 말하는가</em></h2>
-        <div class="body" style="max-width:1020px">
+        <div class="body">
 
           <div class="sec" style="margin-top:0">한계 — 왜 이 표본 하나인가</div>
           <table class="srcs lim">
@@ -1321,7 +1329,7 @@
 <div class="ov" id="ovLabor" role="dialog" aria-modal="true" aria-label="인건비 1인당 분해">
   <div class="modal">
     <header>
-      <div><h3>인건비 1인당 분해</h3><p>판관비 급여영역을 직원 수로, 운항원가 인건비를 선원+승무원 수로 나눈 결과</p></div>
+      <div><h3>인건비 1인당 분해</h3><p>판관비 급여영역을 지상직 수로, 운항원가 인건비를 해상직(선원+승무원) 수로 나눈 결과</p></div>
       <button class="x" data-close aria-label="닫기">✕</button>
     </header>
     <div class="mbody">
@@ -1339,12 +1347,12 @@
         </div>
       </section>
 <section class="card">
-        <h2>인건비 — 지상직 · 선원+승무원 분리<em>주석 15 · 단위: 원</em></h2>
+        <h2>인건비 — 지상직 · 해상직 분리<em>주석 15 · 단위: 원</em></h2>
         <div class="body">
           <table>
             <thead><tr>
-              <th>과목</th><th>지상직 (판관비)</th><th>선원+승무원 (운항원가)</th><th>합계</th>
-              <th>운항 비중</th><th>지상직 1인당 <span id="thH1"></span></th><th>운항 1인당 <span id="thH2"></span></th>
+              <th>과목</th><th>지상직 (판관비)</th><th>해상직 (운항원가)</th><th>합계</th>
+              <th>해상직 비중</th><th>지상직 1인당 <span id="thH1"></span></th><th>해상직 1인당 <span id="thH2"></span></th>
             </tr></thead>
             <tbody id="tCrew"></tbody>
           </table>
@@ -1366,7 +1374,7 @@
           <div class="body">
             <div class="minis c3">
               <div class="mini"><div class="k">판관비 인건비</div><div class="v" id="cSga">—</div><div class="s">직원급여·퇴직·복리</div></div>
-              <div class="mini"><div class="k">운항원가 인건비</div><div class="v" id="cOp">—</div><div class="s">운항 인력 — 주석 15</div></div>
+              <div class="mini"><div class="k">운항원가 인건비</div><div class="v" id="cOp">—</div><div class="s">해상직 — 주석 15</div></div>
               <div class="mini"><div class="k">전사 합계</div><div class="v" id="cAll">—</div><div class="s" id="cAllS">—</div></div>
             </div>
             <table>
@@ -1843,8 +1851,9 @@ const DEFAULTS  = { head:30, sailor:13, crew:7, fare:81000, vc:0, tgt:5, voy:498
                     mix:[100,0,0], fuel:7950, autoVoy:false,
                     farePeer:90000, fuelPeer:30000, mixPeer:[100,0,0],
                     cargoLoad:30, cargoBase:0, cargoPeer:0, cargoCase:4,
-                    shipPricePeer:50000000000, lifePeer:20, salvagePeer:10,
-                    loanPeer:20000000000, loanRatePeer:3.5,
+                    // 선가·차입금은 화면에서 백만원으로 받는다 (500억 = 50,000백만원)
+                    shipPricePeer:50000, lifePeer:20, salvagePeer:10,
+                    loanPeer:20000, loanRatePeer:3.5,
                     loanYears:15, loanGrace:0, loanMethod:'annuity',
                     tgtPeer:5,
                     opEtcPct:{fuel:83.78,port:10.81,ins:5.13,repair:0.00,store:0.27},
@@ -1989,7 +1998,9 @@ function model(){
   const opHeadPeer  = Math.max(1, sailorPeer + crewPeer);
   const sgaWagePeer  = headPeer * PER_HEAD;
   // 감가상각 — 선가를 넣었으면 정액법, 비우면 감사보고서 금액
-  const shipPricePeer = Math.max(0, num('iShipPricePeer', DEFAULTS.shipPricePeer));
+  // 입력은 백만원, 계산은 원 단위로 한다 — 손익계산서가 원으로 서 있기 때문이다.
+  // 칸을 비우면 0 이 되고, 아래에서 감사보고서 감가상각으로 되돌아간다 ("비우면 보고서 값").
+  const shipPricePeer = Math.max(0, num('iShipPricePeer', 0)) * 1e6;
   const lifePeer      = Math.max(1, num('iLifePeer',      DEFAULTS.lifePeer));
   const salvagePeer   = Math.min(100, Math.max(0, num('iSalvagePeer', DEFAULTS.salvagePeer)));
   const opDepPeer     = shipPricePeer > 0
@@ -2336,24 +2347,25 @@ function drawCrew(m){
     + line('퇴직급여 <span style="font-size:10px;margin-left:3px">(비현금)</span>', rows[1][1], rows[1][2], '', true)
     + line('인건비 합계', g(1), g(2), 'sum')
     + '<tr class="ck"><td colspan="7" style="text-align:left;white-space:normal">'
-    + '<b>인원</b> · 지상직 ' + m.head + '명 + 선원 ' + m.sailor + '명 + 승무원 ' + m.crew + '명 = '
+    + '<b>인원</b> · 지상직 ' + m.head + '명 + 해상직 ' + m.opHead
+    + '명(선원 ' + m.sailor + '·승무원 ' + m.crew + ') = '
     + '<b>' + (m.head + m.opHead) + '명</b> · 전사 인건비 1인당 <b>'
     + won((g(1)+g(2))*K/(m.head + m.opHead)) + '원</b></td></tr>'
     + '<tr class="ck"><td colspan="7" style="text-align:left;white-space:normal">'
     + '<b>구성비 점검</b> · 퇴직급여÷급여 — 지상직 <b>' + pct(rows[1][1]/gWage,2) + '</b> · '
-    + '운항 <b>' + pct(rows[1][2]/cWage,2) + '</b> (법정 1/12 = 8.33%)'
+    + '해상직 <b>' + pct(rows[1][2]/cWage,2) + '</b> (법정 1/12 = 8.33%)'
     + ' &nbsp;|&nbsp; 복리후생비÷급여 — 지상직 <b>' + pct(rows[2][1]/gWage,2) + '</b> · '
-    + '운항 <b style="color:var(--amber)">' + pct(rows[2][2]/cWage,2) + '</b></td></tr>';
+    + '해상직 <b style="color:var(--amber)">' + pct(rows[2][2]/cWage,2) + '</b></td></tr>';
 
   const impCrew = (g(2)*K) / PER_HEAD_CASH;
-  el('hOpHead').textContent   = `운항 ${m.opHead}명 1인당 (선원 ${m.sailor}·승무원 ${m.crew})`;
+  el('hOpHead').textContent   = `해상직 ${m.opHead}명 1인당 (선원 ${m.sailor}·승무원 ${m.crew})`;
   el('hOpPer').textContent    = won(g(2)*K/m.opHead) + '원';
   el('hOpRatio').textContent  = (g(2)*K/m.opHead/PER_HEAD_CASH).toFixed(2) + '배';
   el('crewNote').innerHTML =
-      R_('운항 비중', pct(g(2)/(g(1)+g(2))), '인건비 3과목 기준')
-    + R_('복리후생비 ÷ 급여', `지상직 ${pct(rows[2][1]/gWage,2)} · 운항 ${pct(rows[2][2]/cWage,2)}`,
+      R_('해상직 비중', pct(g(2)/(g(1)+g(2))), '인건비 3과목 기준')
+    + R_('복리후생비 ÷ 급여', `지상직 ${pct(rows[2][1]/gWage,2)} · 해상직 ${pct(rows[2][2]/cWage,2)}`,
          '승선 중 식비·숙식 추정')
-    + R_('운항 1인당', won(g(2)*K/m.opHead) + '원',
+    + R_('해상직 1인당', won(g(2)*K/m.opHead) + '원',
          `${m.opHead}명 · 지상직의 ${(g(2)*K/m.opHead/PER_HEAD_CASH).toFixed(2)}배`)
     + TAG_('<span class="tagv est">인원은 가정 — 보고서에 없다</span>',
            `<span class="tagv">지상직 단가 환산 ${impCrew.toFixed(1)}명분</span>`,
@@ -2886,7 +2898,7 @@ function drawPeer(m){
   el('hPeerHead').innerHTML =
       R_('가동율', _util.toFixed(1) + '%', won(m.voyPeer) + '항차 ÷ 730일')
     + R_('지상직', m.headPeer + '명', '판관 급여 ' + mil(m.sgaWagePeer) + '백만')
-    + R_('운항',   m.opHeadPeer + '명', `선원 ${m.sailorPeer} · 승무원 ${m.crewPeer}`);
+    + R_('해상직', m.opHeadPeer + '명', `선원 ${m.sailorPeer} · 승무원 ${m.crewPeer}`);
 
   // 목표기반 좌석 등급 표 업데이트
   SEATS.forEach((t,i) => {
@@ -2979,6 +2991,31 @@ function debtService(principal, ratePct, years, grace, method){
   return { year1:pmt, int1, prin1:pmt - int1, avg:pmt, total:pmt * nPay, nPay, r };
 }
 
+// 연도별 이자만 뽑아 낸다. 이자는 성장률이 아니라 잔액을 따라 움직인다 —
+// 원금을 갚을수록 줄고, 거치기간에는 그대로이며, 상환이 끝나면 0이 된다.
+// y = 0 이 1차연도(10개년 표의 y+0)다.
+function interestSeries(principal, ratePct, years, grace, method, n){
+  const r = ratePct / 100, out = new Array(n + 1).fill(0);
+  if (!(principal > 0) || !(ratePct > 0) || !(years > 0)) return out;
+  const nPay = Math.max(1, years - grace);
+  if (method === 'bullet') {                      // 기간 중 이자만, 만기에 원금 일시
+    for (let y = 0; y <= n; y++) out[y] = y < years ? principal * r : 0;
+    return out;
+  }
+  const pmt = method === 'annuity'
+    ? (r === 0 ? principal / nPay : principal * r / (1 - Math.pow(1 + r, -nPay)))
+    : 0;
+  const prinEq = principal / nPay;
+  let bal = principal;
+  for (let y = 0; y <= n; y++) {
+    if (bal <= 1e-6) { out[y] = 0; continue; }
+    out[y] = bal * r;
+    if (y < grace) continue;                      // 거치 — 원금은 그대로
+    bal = Math.max(0, bal - (method === 'annuity' ? Math.max(0, pmt - out[y]) : prinEq));
+  }
+  return out;
+}
+
 // 머리의 다섯 지표는 보고 있는 탭을 따른다 — 가정 탭에서는 감사보고서 실적을,
 // 목표기반 탭에서는 대조 선박으로 다시 세운 값을 보여야 한 화면 안에서 앞뒤가 맞는다.
 let ACTIVE_TAB = 'tabA';
@@ -2999,7 +3036,7 @@ const GROWTH_DEFAULTS = {
   gWage:2.71, gSev:2.71, gWelf:2.40,
   gDep:0, gTax:2.92, gRent2:0,
   // 운항기타 5개 세목 (m.etcPeer 순서 : 연료·항비·보험·수리·선용품)
-  gFuel:-0.89, gPort:7.85, gIns:0, gRepair:0, gStore:15,
+  gFuel:-0.89, gPort:7.85, gIns:3.82, gRepair:0, gStore:15,
   gSgaWage:5.68, gSgaTax:2.92, gSgaFee:2.34, gSgaEtc:2.7
 };
 let GROW = { ...GROWTH_DEFAULTS };
@@ -3185,7 +3222,7 @@ function drawPeerPL(m) {
         + `<td class="nil">-</td>${fp(opProfit, sales)}</tr>`;
 
   // Ⅵ. 영업외비용 — 이자비용 (입력 시)
-  const loanPeer     = parseFloat((el('iLoanPeer').value || '').replace(/,/g,'')) || 0;
+  const loanPeer     = (parseFloat((el('iLoanPeer').value || '').replace(/,/g,'')) || 0) * 1e6;
   const loanRatePeer = parseFloat(el('iLoanRatePeer').value) || 0;
   const loanYears  = Math.max(1, parseFloat(el('iLoanYears').value) || DEFAULTS.loanYears);
   const loanGrace  = Math.max(0, parseFloat(el('iLoanGrace').value) || 0);
@@ -3241,51 +3278,77 @@ function drawPeerPL(m) {
   const _alphaTag = (isSanta && selectedCase.extra && cargoRev > 0)
     ? ` <span class="amb" style="font-size:11px;margin-left:4px" title="${selectedCase.extra} — 특정 화물에 대한 운임이 미반영·미공시되어 있어, 남는 부분에 대한 이익 여분">+α</span>`
     : '';
-  PEER_PL_ROWS = [
-    /*  0 */ { cls:'r',    name:'Ⅰ. 매출액',              v:sales,   agg:[[1,1],[2,1],[3,1],[4,1]] },
-    /*  1 */ { cls:'d',    name:'여객수입',                v:paxRev,  gk:'gPax' },
-    /*  2 */ { cls:'d',    name:'화물수입'+_alphaTag,      v:cargoRev, gk:'gCargo' },
-    /*  3 */ { cls:'d',    name:'임대료수입',              v:rentRev, gk:'gRent' },
-    /*  4 */ { cls:'d',    name:'면세수입 <span class="tagv est" style="cursor:help" title="대저페리는 내항선이라 현재는 면세수입이 없지만, 외항선으로 취급하면 면세품 판매 수입을 기대해볼 수 있음. 잠재 매출로 감안 필요.">감안</span>', v:null, gk:'gDuty' },
-    /*  5 */ { cls:'r',    name:'Ⅱ. 운항원가 (−)',         v:opCost,  agg:[[6,1],[7,1],[8,1],[9,1],[10,1],[11,1],[12,1]] },
-    /*  6 */ { cls:'n',    name:'급여 (해상직원)',          v:opWage,  gk:'gWage' },
-    /*  7 */ { cls:'n',    name:'퇴직급여 (해상직원)',      v:opSev,   gk:'gSev' },
-    /*  8 */ { cls:'n',    name:'복리후생비 (해상직원)',    v:opWelf,  gk:'gWelf' },
-    /*  9 */ { cls:'n',    name:'감가상각비',              v:opDep,   gk:'gDep' },
-    /* 10 */ { cls:'n',    name:'세금과공과',              v:opTax,   gk:'gTax' },
-    /* 11 */ { cls:'n',    name:'임차료',                  v:opRent,  gk:'gRent2' },
-    /* 12 */ { cls:'n',    name:'운항기타',                v:opEtc,   agg:[[13,1],[14,1],[15,1],[16,1],[17,1]], collapsible:'op_etc' },
-    /* 13 */ { cls:'n sub2', name:'· '+(_ep[0]?.name||'연료비')+_fuelTag, v:_ep[0]?.amt||0, gk:'gFuel', tip:_ep[0]?.note,   groupIn:'op_etc' },
-    /* 14 */ { cls:'n sub2', name:'· '+(_ep[1]?.name||'항비'),     v:_ep[1]?.amt||0, gk:'gPort', tip:_ep[1]?.note,   groupIn:'op_etc' },
-    /* 15 */ { cls:'n sub2', name:'· '+(_ep[2]?.name||'보험료'),   v:_ep[2]?.amt||0, gk:'gIns', tip:_ep[2]?.note,    groupIn:'op_etc' },
-    /* 16 */ { cls:'n sub2', name:'· '+(_ep[3]?.name||'수리비'),   v:_ep[3]?.amt||0, gk:'gRepair', tip:_ep[3]?.note, groupIn:'op_etc' },
-    /* 17 */ { cls:'n sub2', name:'· '+(_ep[4]?.name||'선용품비'), v:_ep[4]?.amt||0, gk:'gStore', tip:_ep[4]?.note,  groupIn:'op_etc' },
-    /* 18 */ { cls:'t',    name:'Ⅲ. 매출총이익',           v:gross,   agg:[[0,1],[5,-1]] },
-    /* 19 */ { cls:'r',    name:'Ⅳ. 판매비와관리비',        v:sgaCost, agg:[[20,1],[21,1],[22,1],[23,1],[24,1],[25,1]] },
-    /* 20 */ { cls:'d',    name:_sgaNamed[0]?.[0] || '직원급여',   v:_sgaNamed[0]?.[1] || 0, gk:'gSgaWage' },
-    /* 21 */ { cls:'d',    name:_sgaNamed[1]?.[0] || '퇴직급여',   v:_sgaNamed[1]?.[1] || 0, gk:'gSgaWage' },
-    /* 22 */ { cls:'d',    name:_sgaNamed[2]?.[0] || '복리후생비', v:_sgaNamed[2]?.[1] || 0, gk:'gSgaWage' },
-    /* 23 */ { cls:'d',    name:_sgaTax?.[0] || '세금과공과',      v:_sgaTax?.[1] || 0,      gk:'gSgaTax' },
-    /* 24 */ { cls:'d',    name:_sgaFee?.[0] || '지급수수료',      v:_sgaFee?.[1] || 0,      gk:'gSgaFee' },
-    /* 25 */ { cls:'d',    name:'그 외<br><span style="font-size:9.5px;color:var(--muted);font-weight:400">(세금과공과·지급수수료 제외)</span>', v:_sgaRestSum, collapsible:'sga_etc' }
-  ];
-  // 판관비 '그 외' 도 세부 과목을 접었다 편다. agg 가 절대 인덱스를 쓰므로
-  // 세부 행은 배열 끝에 붙이고(앞 인덱스가 밀리지 않는다) 부모의 agg 를 그 자리에서 만든다.
-  {
-    const parent = PEER_PL_ROWS.length - 1, first = PEER_PL_ROWS.length;
-    _sgaRest.forEach(([name, v]) => PEER_PL_ROWS.push(
-      { cls:'d sub2', name:'· ' + name, v, gk:'gSgaEtc', groupIn:'sga_etc' }));
-    PEER_PL_ROWS[parent].agg = _sgaRest.length
-      ? _sgaRest.map((_, i) => [first + i, 1])
-      : null;
-    if (!PEER_PL_ROWS[parent].agg) {          // 세부가 없으면 그냥 리프로 둔다
-      delete PEER_PL_ROWS[parent].agg;
-      delete PEER_PL_ROWS[parent].collapsible;
-      PEER_PL_ROWS[parent].gk = 'gSgaEtc';
-      PEER_PL_ROWS[parent].v  = _sgaRestSum;
-    }
-    PEER_PL_ROWS.push({ cls:'lead', name:'Ⅴ. 영업이익(손실)', v:opProfit, agg:[[18,1],[19,-1]] });
+  // 인덱스를 손으로 세지 않는다 — add() 가 돌려주는 자리를 받아 agg 를 엮는다.
+  // 행 하나만 끼워 넣어도 뒤 인덱스가 전부 어긋나던 구조를 여기서 끊는다.
+  const R10 = [], add = row => (R10.push(row), R10.length - 1);
+
+  const iSales = add({ cls:'r', name:'Ⅰ. 매출액', v:sales });
+  const iPax   = add({ cls:'d', name:'여객수입',   v:paxRev,  gk:'gPax' });
+  const iCargo = add({ cls:'d', name:'화물수입'+_alphaTag, v:cargoRev, gk:'gCargo' });
+  const iRent  = add({ cls:'d', name:'임대료수입', v:rentRev, gk:'gRent' });
+  const iDuty  = add({ cls:'d', name:'면세수입 <span class="tagv est" style="cursor:help" title="대저페리는 내항선이라 현재는 면세수입이 없지만, 외항선으로 취급하면 면세품 판매 수입을 기대해볼 수 있음. 잠재 매출로 감안 필요.">감안</span>', v:null, gk:'gDuty' });
+  R10[iSales].agg = [[iPax,1],[iCargo,1],[iRent,1],[iDuty,1]];
+
+  const iOp     = add({ cls:'r', name:'Ⅱ. 운항원가 (−)', v:null });
+  const iOpWage = add({ cls:'n', name:'급여 (해상직원)',     v:opWage, gk:'gWage' });
+  const iOpSev  = add({ cls:'n', name:'퇴직급여 (해상직원)', v:opSev,  gk:'gSev' });
+  const iOpWelf = add({ cls:'n', name:'복리후생비 (해상직원)', v:opWelf, gk:'gWelf' });
+  const iOpDep  = add({ cls:'n', name:'감가상각비',          v:opDep,  gk:'gDep' });
+  const iOpTax  = add({ cls:'n', name:'세금과공과',          v:opTax,  gk:'gTax' });
+  const iOpRent = add({ cls:'n', name:'임차료',              v:opRent, gk:'gRent2' });
+  const iOpEtc  = add({ cls:'n', name:'운항기타', v:opEtc, collapsible:'op_etc' });
+  const _etcGk  = ['gFuel','gPort','gIns','gRepair','gStore'];
+  const _etcNm  = ['연료비','항비','보험료','수리비','선용품비'];
+  const iEtcKids = _etcGk.map((gk, k) => add({
+    cls:'n sub2', name:'· ' + (_ep[k]?.name || _etcNm[k]) + (k === 0 ? _fuelTag : ''),
+    v:_ep[k]?.amt || 0, gk, tip:_ep[k]?.note, groupIn:'op_etc' }));
+  R10[iOpEtc].agg = iEtcKids.map(x => [x, 1]);
+
+  // ── 선체이자 ──
+  // 우리 회사는 선박 차입 이자를 영업외비용이 아니라 운항원가에 '선체이자'로 넣는다.
+  // 단일연도 표(위 Ⅵ. 영업외비용)와 자리가 다른 것은 그 때문이고, 금액은 같은 차입
+  // 조건에서 나온다. 다만 이자는 성장률이 아니라 상환 스케줄을 따르므로 연도별
+  // 계열(series)을 그대로 실어 준다 — 원금이 줄면 이자도 함께 줄어든다.
+  const iHull = intExp > 0
+    ? add({ cls:'n', name:'선체이자',
+            v:intExp,
+            series:interestSeries(loanPeer, loanRatePeer, loanYears, loanGrace, loanMethod, 10),
+            tip:`차입 ${won(loanPeer/1e8)}억 · ${loanRatePeer}% · ${loanYears}년`
+               + (loanGrace > 0 ? ` · 거치 ${loanGrace}년` : '')
+               + ` · ${ {annuity:'원리금균등',equal:'원금균등',bullet:'만기일시'}[loanMethod] }`
+               + ' — 상환 스케줄에 따라 매년 달라진다. 성장률은 적용하지 않는다.'
+               + ' 단일연도 표에서는 같은 금액이 영업외비용 이자비용에 잡힌다.' })
+    : null;
+
+  const opKids = [iOpWage,iOpSev,iOpWelf,iOpDep,iOpTax,iOpRent,iOpEtc]
+    .concat(iHull === null ? [] : [iHull]);
+  R10[iOp].agg = opKids.map(x => [x, 1]);
+  R10[iOp].v   = opCost + (iHull === null ? 0 : intExp);
+
+  const iGross = add({ cls:'t', name:'Ⅲ. 매출총이익', v:null, agg:[[iSales,1],[iOp,-1]] });
+
+  const iSga  = add({ cls:'r', name:'Ⅳ. 판매비와관리비', v:sgaCost });
+  const iSg1  = add({ cls:'d', name:_sgaNamed[0]?.[0] || '직원급여',   v:_sgaNamed[0]?.[1] || 0, gk:'gSgaWage' });
+  const iSg2  = add({ cls:'d', name:_sgaNamed[1]?.[0] || '퇴직급여',   v:_sgaNamed[1]?.[1] || 0, gk:'gSgaWage' });
+  const iSg3  = add({ cls:'d', name:_sgaNamed[2]?.[0] || '복리후생비', v:_sgaNamed[2]?.[1] || 0, gk:'gSgaWage' });
+  const iSgTax= add({ cls:'d', name:_sgaTax?.[0] || '세금과공과',      v:_sgaTax?.[1] || 0,      gk:'gSgaTax' });
+  const iSgFee= add({ cls:'d', name:_sgaFee?.[0] || '지급수수료',      v:_sgaFee?.[1] || 0,      gk:'gSgaFee' });
+  const iSgEtc= add({ cls:'d', name:'그 외<br><span style="font-size:9.5px;color:var(--muted);font-weight:400">(세금과공과·지급수수료 제외)</span>',
+                      v:_sgaRestSum, collapsible:'sga_etc' });
+  R10[iSga].agg = [[iSg1,1],[iSg2,1],[iSg3,1],[iSgTax,1],[iSgFee,1],[iSgEtc,1]];
+
+  const iSgKids = _sgaRest.map(([name, v]) => add(
+    { cls:'d sub2', name:'· ' + name, v, gk:'gSgaEtc', groupIn:'sga_etc' }));
+  if (iSgKids.length) {
+    R10[iSgEtc].agg = iSgKids.map(x => [x, 1]);
+  } else {                                   // 세부가 없으면 그냥 리프로 둔다
+    delete R10[iSgEtc].collapsible;
+    R10[iSgEtc].gk = 'gSgaEtc';
   }
+
+  add({ cls:'lead', name:'Ⅴ. 영업이익(손실)', v:null, agg:[[iGross,1],[iSga,-1]] });
+
+  PEER_PL_ROWS = R10;
   drawPeerPL10();
 
   // ── 운항기타 산출 근거 모달 내용 갱신 ──
@@ -3439,7 +3502,9 @@ function drawPeerPL10() {
   const proj = new Array(PEER_PL_ROWS.length);
   PEER_PL_ROWS.forEach((r, i) => {
     if (r.agg) return;
-    if (r.gk) {
+    if (r.series) {                    // 상환 스케줄처럼 연도별 값이 정해진 행
+      proj[i] = Array.from({length: YN+1}, (_, k) => toMil(r.series[k] ?? 0));
+    } else if (r.gk) {
       const g = (GROW[r.gk] || 0) / 100;
       const base = toMil(r.v);
       proj[i] = Array.from({length: YN+1}, (_, k) =>
@@ -3501,9 +3566,22 @@ function drawPeerPL10() {
       drawPeerPL10();
     });
   });
+  // 이 표의 영업이익률은 단일연도 표와 다르다 — 여기서는 선체이자를 운항원가에
+  // 넣기 때문이다. 제목줄을 그대로 베끼면 두 숫자가 어긋나 보이므로 여기서 다시 쓴다.
   const _sub = document.getElementById('plPeerSub10');
-  const _srcSub = document.getElementById('plPeerSub');
-  if (_sub && _srcSub) _sub.textContent = _srcSub.textContent;
+  if (_sub) {
+    const _srcSub = document.getElementById('plPeerSub');
+    const head = _srcSub ? _srcSub.textContent.split(' · 영업이익률')[0] : '대조 선박';
+    const _op  = PEER_PL_ROWS.findIndex(r => /Ⅴ\. 영업이익/.test(r.name));
+    const _sl  = PEER_PL_ROWS.findIndex(r => /Ⅰ\. 매출액/.test(r.name));
+    const mg = (_op >= 0 && _sl >= 0 && proj[_sl] && proj[_sl][0])
+      ? proj[_op][0] / proj[_sl][0] : null;
+    const hasHull = PEER_PL_ROWS.some(r => r.name === '선체이자');
+    _sub.innerHTML = head
+      + (mg === null ? '' : ` · 영업이익률 ${pct(mg, 1)}`)
+      + (hasHull ? ' <span class="tagv est" style="cursor:help"'
+          + ' title="선체이자를 영업외비용이 아니라 운항원가에 넣은 기준이다. 단일연도 표보다 영업이익이 그만큼 낮게 나온다.">선체이자 운항원가 반영</span>' : '');
+  }
 }
 
 function drawCargo(m){
@@ -3806,7 +3884,7 @@ function render(){
   }
 
   // 감가상각 헬퍼
-  const _shipPrice = parseFloat((el('iShipPricePeer').value || '').replace(/,/g,'')) || 0;
+  const _shipPrice = (parseFloat((el('iShipPricePeer').value || '').replace(/,/g,'')) || 0) * 1e6;
   if (_shipPrice > 0) {
     const _life    = parseFloat(el('iLifePeer').value)    || 20;
     const _salvage = parseFloat(el('iSalvagePeer').value) || 0;
@@ -3819,7 +3897,7 @@ function render(){
   }
 
   // 이자비용 헬퍼
-  const _loan     = parseFloat((el('iLoanPeer').value || '').replace(/,/g,'')) || 0;
+  const _loan     = (parseFloat((el('iLoanPeer').value || '').replace(/,/g,'')) || 0) * 1e6;
   const _loanRate = parseFloat(el('iLoanRatePeer').value) || 0;
   if (_loan > 0 && _loanRate > 0) {
     el('hLoanPeer').innerHTML =
@@ -4192,6 +4270,57 @@ document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   document.querySelectorAll('.ov[data-open="1"]').forEach(closeOv);
 });
+
+// ── 툴팁 ───────────────────────────────────────────────────────────────────
+// 브라우저가 그려 주는 title 툴팁은 이 페이지에서 잘 안 뜬다. 설명을 달아 둔
+// 자리의 절반이 <tr> 인데 행에 붙은 title 은 브라우저마다 집어 주지 않고,
+// 뜨더라도 1초쯤 기다려야 하며 긴 문장이 한 줄로 늘어진다.
+// title 을 잠시 떼어 두고 같은 내용을 우리 상자로 그린다 — 두 개가 겹치지 않게.
+(function tooltips(){
+  const box = document.createElement('div');
+  box.className = 'tipbox';
+  box.hidden = true;
+  document.body.appendChild(box);
+  let host = null;
+
+  const hide = () => {
+    if (host) {
+      if (host.isConnected && host.dataset.tipSrc != null) host.setAttribute('title', host.dataset.tipSrc);
+      delete host.dataset.tipSrc;
+      host.classList.remove('tip-on');
+      host = null;
+    }
+    box.hidden = true;
+  };
+  const place = (x, y) => {
+    const pad = 16, w = box.offsetWidth, h = box.offsetHeight;
+    let L = x + pad, T = y + pad;
+    if (L + w > innerWidth  - 8) L = x - w - pad;
+    if (T + h > innerHeight - 8) T = y - h - pad;
+    box.style.left = Math.max(8, L) + 'px';
+    box.style.top  = Math.max(8, T) + 'px';
+  };
+
+  document.addEventListener('mouseover', e => {
+    // 보여 주는 동안에는 host 의 title 을 떼어 두므로 .tip-on 으로도 찾는다
+    const el = e.target.closest('[title],.tip-on');
+    if (!el) { hide(); return; }
+    if (el === host) return;
+    hide();
+    const txt = (el.getAttribute('title') || '').trim();
+    if (!txt) return;
+    host = el;
+    host.dataset.tipSrc = txt;
+    host.removeAttribute('title');
+    host.classList.add('tip-on');
+    box.textContent = txt;
+    box.hidden = false;
+    place(e.clientX, e.clientY);
+  });
+  document.addEventListener('mousemove', e => { if (!box.hidden) place(e.clientX, e.clientY); });
+  window.addEventListener('scroll', hide, true);
+  window.addEventListener('blur', hide);
+})();
 
 {
   let rzT = null;
