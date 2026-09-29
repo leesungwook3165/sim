@@ -992,6 +992,9 @@
           </div>
           <!-- Tab B: 대조 선박 손익계산서 (동적 생성) -->
           <div id="plBodyB" hidden>
+            <div class="plbar">
+              <button type="button" class="lnk" id="btnPeerAll">모두 펼치기</button>
+            </div>
             <div id="plBodyB-single">
               <table class="pl">
                 <caption>
@@ -3279,6 +3282,7 @@ function drawPeerPL(m) {
       const open = tr.classList.toggle('open');
       PEER_PL_OPEN[g] = open;                   // 다음 render 에서도 이 상태를 지킨다
       el('tPeerPL').querySelectorAll(`[data-in="${g}"]`).forEach(x => { x.hidden = !open; });
+      syncPeerAllLabel();
     });
   });
 
@@ -3580,6 +3584,7 @@ function drawPeerPL10() {
       const g = tr.dataset.grp;
       PL10_COLLAPSED[g] = !PL10_COLLAPSED[g];
       drawPeerPL10();
+      syncPeerAllLabel();
     });
   });
   // 이 표의 영업이익률은 단일연도 표와 다르다 — 여기서는 선체이자를 운항원가에
@@ -4138,6 +4143,7 @@ function applyPLView(){
   el('plCardH2').dataset.modal = (!multi && !isPeer) ? 'ovRef' : '';
 
   if (multi) drawPeerPL10();
+  if (typeof syncPeerAllLabel === 'function') syncPeerAllLabel();
 }
 
 // 설정 탭 (기준 자료 / 목표기반)
@@ -4206,6 +4212,31 @@ function printPL() {
   // 제목줄 자체가 모달 트리거라, 버튼 클릭이 h2 로 올라가면 주석 대조창이 같이 열린다
   const _b = document.getElementById('btnPrintPL');
   if (_b) _b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); printPL(); });
+}
+
+// 대조 선박 · 10개년 모두 펼치기 / 접기
+function peerAllCollapsed(){
+  return PL10_MODE === 'multi'
+    ? Object.keys(PL10_COLLAPSED).some(k => PL10_COLLAPSED[k])   // 하나라도 접혀 있으면
+    : Object.keys(PEER_PL_OPEN).some(k => !PEER_PL_OPEN[k]);
+}
+function syncPeerAllLabel(){
+  const b = document.getElementById('btnPeerAll');
+  if (b) b.textContent = peerAllCollapsed() ? '모두 펼치기' : '모두 접기';
+}
+{
+  const b = document.getElementById('btnPeerAll');
+  if (b) b.addEventListener('click', () => {
+    const open = peerAllCollapsed();            // 접힌 게 남아 있으면 편다
+    if (PL10_MODE === 'multi') {
+      Object.keys(PL10_COLLAPSED).forEach(k => { PL10_COLLAPSED[k] = !open; });
+      drawPeerPL10();
+    } else {
+      Object.keys(PEER_PL_OPEN).forEach(k => { PEER_PL_OPEN[k] = open; });
+      render();                                  // drawPeerPL 이 표를 다시 세운다
+    }
+    syncPeerAllLabel();
+  });
 }
 
 // 손익계산서 모두 펼치기 / 접기
