@@ -44,8 +44,19 @@
   .hkpi .s{font-size:10.5px;color:#C3D8EF;margin-top:4px;font-variant-numeric:tabular-nums}
 
   /* ── 배치 ── */
-  #row{display:grid;grid-template-columns:clamp(330px,23%,420px) 1fr;gap:14px;min-width:0;align-items:start}
+  #row{display:grid;grid-template-columns:clamp(330px,23%,420px) 1fr;gap:14px;min-width:0;align-items:stretch}
   #right{display:flex;flex-direction:column;gap:14px;min-width:0}
+  /* 상단 3-탭 (손익계산서 / 목표지표 / CVP) — 활성 패널이 남는 세로 공간을 채워 좌측 설정 카드 높이와 맞춤 */
+  .mtabs{display:flex;gap:3px;background:var(--paper);border:1px solid var(--rule);
+         border-radius:4px;padding:3px}
+  .mtab{flex:1;padding:8px 12px;border:0;background:transparent;color:var(--muted);
+        font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;
+        border-radius:3px;transition:background .12s,color .12s;letter-spacing:-.01em}
+  .mtab:hover{background:var(--canvas);color:var(--navy)}
+  .mtab.on{background:var(--navy);color:#fff}
+  #right .mtabPanel[hidden]{display:none !important}
+  #right .mtabPanel:not([hidden]){display:flex;flex-direction:column;flex:1;min-height:0}
+  #right .mtabPanel:not([hidden])>.body{flex:1;overflow-y:auto;min-height:0}
   .pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;min-width:0;align-items:start}
   @media (max-width:1100px){ #row{grid-template-columns:1fr} .pair{grid-template-columns:1fr} }
 
@@ -244,6 +255,95 @@
   .plbar .lnk{background:#fff;border:1px solid var(--rule);border-radius:3px;padding:4px 9px;
     font-family:inherit;font-size:11px;color:var(--muted);cursor:pointer}
   .plbar .lnk:hover{border-color:var(--navy);color:var(--navy)}
+  .plbar #btnPrintA,.plbar #btnPrintB{margin-left:auto}
+  .plbar #btnPrintA:hover,.plbar #btnPrintB:hover{border-color:var(--navy);color:var(--navy);background:#F5F9FE}
+  /* ── 10개년 뷰 모드 스위치 ── */
+  .plModeBar{justify-content:flex-start}
+  .plModeBtn.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .plModeBtn.on:hover{background:var(--navy);color:#fff}
+  /* ── 10개년 예상 손익계산서 표 ── */
+  .pl10Wrap{overflow-x:auto;border:1px solid var(--rule);border-radius:4px;background:#fff}
+  table.pl.pl10{min-width:100%;font-size:10.5px;border-collapse:separate;border-spacing:0}
+  table.pl.pl10 caption{padding:8px 12px;text-align:left}
+  table.pl.pl10 thead th{background:var(--navy);color:#fff;font-weight:600;
+    padding:5px 6px;font-size:10px;text-align:right;line-height:1.28;
+    position:sticky;top:0;z-index:2;border-right:1px solid rgba(255,255,255,.14)}
+  table.pl.pl10 thead tr.grouprow th{background:#0E3767;font-weight:500;text-align:center}
+  table.pl.pl10 thead th.lead{text-align:left;padding-left:9px;min-width:158px;
+    position:sticky;left:0;z-index:5}
+  table.pl.pl10 thead th small{font-weight:400;opacity:.78;display:block;
+    font-size:9px;margin-top:1px;letter-spacing:0}
+  table.pl.pl10 thead th.base,table.pl.pl10 thead th.avg{background:#0E3767}
+  table.pl.pl10 tbody th{text-align:left;font-weight:400;padding:4px 8px;
+    background:#fff;position:sticky;left:0;z-index:1;
+    border-right:1px solid var(--rule);border-bottom:1px solid #EEF1F6;min-width:158px}
+  table.pl.pl10 tbody td{text-align:right;padding:4px 6px;border-bottom:1px solid #EEF1F6;
+    font-variant-numeric:tabular-nums;white-space:nowrap;color:#33415A}
+  table.pl.pl10 tbody td.base{border-right:1px solid var(--rule);background:#F7FAFC}
+  table.pl.pl10 tbody td.avg{border-left:1px solid var(--rule);background:#F5F7FB}
+  table.pl.pl10 tbody td.nil{color:#A9B4C4;text-align:center}
+  table.pl.pl10 tbody td.neg{color:var(--warn)}
+  /* 행 스타일 : rowR(합계/헤더), rowT(중간합), rowD(하위), rowN(비용 하위), 영업이익 */
+  table.pl.pl10 tr.r th,table.pl.pl10 tr.r td{background:#EDF1F7;font-weight:600;color:var(--ink)}
+  table.pl.pl10 tr.r th{background:#E4EBF4}
+  table.pl.pl10 tr.r td.base{background:#E4EBF4}
+  table.pl.pl10 tr.r td.avg{background:#DCE4EF}
+  table.pl.pl10 tr.t th,table.pl.pl10 tr.t td{background:#DEEAF6;font-weight:700;color:var(--navy);
+    border-top:1px solid #8CB4DC;border-bottom:1px solid #8CB4DC}
+  table.pl.pl10 tr.t th{background:#D3E5F6}
+  table.pl.pl10 tr.t td.base{background:#D3E5F6}
+  table.pl.pl10 tr.t td.avg{background:#C7DAEE}
+  table.pl.pl10 tr.lead th,table.pl.pl10 tr.lead td{background:#DEEAF6;font-weight:700;color:var(--navy);
+    border-top:1px solid #8CB4DC;border-bottom:1px solid #8CB4DC}
+  table.pl.pl10 tr.lead th{background:#D3E5F6}
+  table.pl.pl10 tr.lead td.base{background:#D3E5F6}
+  table.pl.pl10 tr.lead td.avg{background:#C7DAEE}
+  table.pl.pl10 tr.d th,table.pl.pl10 tr.n th{padding-left:20px;color:var(--muted);font-size:10.5px}
+  /* 좌측 설정 카드의 성장률 입력 : dirty 상태(기본값에서 벗어남) 시각 강조 */
+  #growSection input.dirty{border-color:var(--navy);background:#EBF2FB;font-weight:600;color:var(--navy)}
+  /* ── 인쇄 ── */
+  @media print {
+    @page{size:A4 landscape;margin:8mm}
+    body{background:#fff !important;font-size:9pt;
+         -webkit-print-color-adjust:exact;print-color-adjust:exact}
+    /* 인쇄 대상만 남기기 : visibility 기반 → 조상 layout 유지 */
+    body.printMode *{visibility:hidden !important}
+    body.printMode #plCard, body.printMode #plCard *{visibility:visible !important}
+    body.printMode #plCard{
+      position:absolute !important;left:0;top:0;width:100%;margin:0;padding:0;
+      box-shadow:none;border:0;background:#fff}
+    body.printMode #plCard .plbar,
+    body.printMode #plCard .note,
+    body.printMode #plCard h2 .ic,
+    body.printMode #plCard h2 em{display:none !important}
+    body.printMode #plCard h2{border-bottom:2px solid var(--navy);padding:6px 0;margin:0 0 8px;
+                              font-size:12pt;color:var(--navy)}
+    body.printMode #plCard .body{padding:0}
+    body.printMode #plCard table.pl{width:100%;border-collapse:collapse}
+    body.printMode #plCard table.pl caption{font-size:11pt;font-weight:700;padding:4px 0 8px;text-align:left}
+    body.printMode #plCard table.pl caption .unit{float:right;font-size:9pt;font-weight:400;color:#555}
+    body.printMode #plCard table.pl th,
+    body.printMode #plCard table.pl td{padding:2.5px 5px;border-bottom:1px solid #D0D0D0}
+    body.printMode #plCard table.pl thead th{background:#154B8C !important;color:#fff !important;font-size:8.5pt}
+    body.printMode #plCard table.pl thead tr.grouprow th{background:#0E3767 !important;color:#fff !important}
+    body.printMode #plCard tr[hidden]{display:none !important}
+    /* 접힘 상태 자식 행 강제 노출 (인쇄엔 다 보이게) */
+    body.printMode.printExpand tr[data-in]{display:table-row !important;visibility:visible !important}
+    body.printMode tr{page-break-inside:avoid}
+  }
+  /* 성장률 가정 : 참고 자료 스타일 접이식 그룹 */
+  details.grp{border-bottom:1px solid var(--rule)}
+  details.grp:last-of-type{border-bottom:0}
+  details.grp>summary{padding:8px 10px;cursor:pointer;font-size:11px;font-weight:700;
+    color:var(--muted);list-style:none;display:flex;align-items:center;
+    justify-content:space-between;user-select:none;transition:background .12s}
+  details.grp>summary::-webkit-details-marker{display:none}
+  details.grp>summary::after{content:"+";color:var(--muted);font-weight:400;font-size:14px;line-height:1;
+    margin-left:8px}
+  details.grp:hover>summary{color:var(--navy)}
+  details.grp[open]>summary{color:var(--navy);background:#EDF3F9}
+  details.grp[open]>summary::after{content:"−";color:var(--navy)}
+  details.grp .fields{padding:8px 10px 10px;margin:0}
 
   /* ── 근거 팝업 ──
      카드가 열세 장까지 늘어나 한 화면에 안 들어왔다. 늘 봐야 하는 것만 남기고,
@@ -638,9 +738,12 @@
               <div class="fh" id="hCargoCmp">—</div>
             </div>
 
-
           </div>
         </div>
+
+        <!-- 10개년 성장률 가정 : 우측 손익계산서가 '10개년 (백만원)' 모드일 때
+             .tabs 와 .tabp 전체를 대체해서 이 영역만 표시 -->
+        <div id="growSection" hidden></div>
 
         <button type="button" class="btn" id="btnReset">감사보고서 기준안으로 되돌리기</button>
       </div>
@@ -649,8 +752,15 @@
     <!-- ══ 우 ══ -->
     <div id="right">
 
+      <!-- 상단 3-탭 : 손익계산서 / 목표지표 / CVP -->
+      <div class="mtabs">
+        <button type="button" class="mtab on" data-mtab="pl">손익계산서</button>
+        <button type="button" class="mtab"    data-mtab="tgt">목표이익율 도달 지표</button>
+        <button type="button" class="mtab"    data-mtab="cvp">승객수–손익 구조</button>
+      </div>
+
       <!-- ══ ① 손익계산서 (탭에 따라 원본 ↔ 대조선박) ══ -->
-      <section class="card">
+      <section class="card mtabPanel" id="plCard" data-mtab="pl">
         <h2 class="clk" id="plCardH2" data-modal="ovRef" role="button" tabindex="0" aria-haspopup="dialog">
           <span class="tt" id="plCardTitle">손익계산서 — 감사보고서 원본<span class="ic">?</span></span>
           <em id="plCardSub">제목을 누르면 주석 대조·검산</em>
@@ -659,8 +769,11 @@
           <!-- Tab A: 원본 -->
           <div id="plBodyA">
             <div class="plbar">
-              <button type="button" class="lnk" id="btnPlAll">모두 펼치기</button>
-              <button type="button" class="lnk" data-modal="ovPrev">전기 비교 (제 2 기) ▸</button>
+              <div>
+                <button type="button" class="lnk" id="btnPlAll">모두 펼치기</button>
+                <button type="button" class="lnk" data-modal="ovPrev">전기 비교 (제 2 기) ▸</button>
+              </div>
+              <button type="button" class="lnk" id="btnPrintA" title="이 손익계산서만 인쇄">🖨 인쇄</button>
             </div>
             <div id="plWrap">
               <table class="pl">
@@ -679,24 +792,65 @@
           </div>
           <!-- Tab B: 대조 선박 손익계산서 (동적 생성) -->
           <div id="plBodyB" hidden>
-            <table class="pl">
-              <caption>
-                <span class="unit">(단위 : 원)</span>
-                <b>손 익 계 산 서</b>
-                <span id="plPeerSub">대조 선박</span>
-              </caption>
-              <thead><tr>
-                <th>과 목</th><th>금액</th><th>구성비</th><th>매출 대비</th>
-              </tr></thead>
-              <tbody id="tPeerPL"></tbody>
-            </table>
+            <div class="plbar plModeBar">
+              <div>
+                <button type="button" class="lnk plModeBtn on" data-plmode="single">단일연도 (원)</button>
+                <button type="button" class="lnk plModeBtn"    data-plmode="multi">10개년 (백만원)</button>
+              </div>
+              <button type="button" class="lnk" id="btnPrintB" title="이 손익계산서만 인쇄">🖨 인쇄</button>
+            </div>
+            <div id="plBodyB-single">
+              <table class="pl">
+                <caption>
+                  <span class="unit">(단위 : 원)</span>
+                  <b>손 익 계 산 서</b>
+                  <span id="plPeerSub">대조 선박</span>
+                </caption>
+                <thead><tr>
+                  <th>과 목</th><th>금액</th><th>구성비</th><th>매출 대비</th>
+                </tr></thead>
+                <tbody id="tPeerPL"></tbody>
+              </table>
+            </div>
+            <div id="plBodyB-multi" hidden>
+              <div class="pl10Wrap">
+                <table class="pl pl10">
+                  <caption>
+                    <span class="unit">(단위 : 백만원)</span>
+                    <b>10개년 예상 손 익 계 산 서</b>
+                    <span id="plPeerSub10">대조 선박</span>
+                  </caption>
+                  <thead>
+                    <tr class="grouprow">
+                      <th class="lead" rowspan="2">과 목</th>
+                      <th class="base" rowspan="2">58기<br><small>y+0 <br> 2025</small></th>
+                      <th colspan="10">향후 10개년 예상</th>
+                      <th class="avg" rowspan="2">y+1~y+10<br>평균</th>
+                    </tr>
+                    <tr>
+                      <th>59기<br><small>y+1<br>2026</small></th>
+                      <th>60기<br><small>y+2<br>2027</small></th>
+                      <th>61기<br><small>y+3<br>2028</small></th>
+                      <th>62기<br><small>y+4<br>2029</small></th>
+                      <th>63기<br><small>y+5<br>2030</small></th>
+                      <th>64기<br><small>y+6<br>2031</small></th>
+                      <th>65기<br><small>y+7<br>2032</small></th>
+                      <th>66기<br><small>y+8<br>2033</small></th>
+                      <th>67기<br><small>y+9<br>2034</small></th>
+                      <th>68기<br><small>y+10<br>2035</small></th>
+                    </tr>
+                  </thead>
+                  <tbody id="tPeerPL10"></tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
 
       <!-- ══ ⑥ 목표 달성 지표 + 원가 비중 ══ -->
-      <section class="card">
+      <section class="card mtabPanel" data-mtab="tgt" hidden>
         <h2 class="clk" data-modal="ovCost" role="button" tabindex="0" aria-haspopup="dialog"><span class="tt">목표 영업이익률 도달 지표<span class="ic">?</span></span><em id="tgtCap">—</em></h2>
         <div class="body">
           <div class="minis">
@@ -722,7 +876,7 @@
       </section>
 
       <!-- ══ ⑦ CVP ══ -->
-      <section class="card">
+      <section class="card mtabPanel" data-mtab="cvp" hidden>
         <h2>승객수–손익 구조<em>가로축 승객수, 세로축 금액(백만원)</em></h2>
         <div class="body">
           <div id="cvp"></div>
@@ -2548,8 +2702,52 @@ function debtService(principal, ratePct, years, grace, method){
 // 목표기반 탭에서는 대조 선박으로 다시 세운 값을 보여야 한 화면 안에서 앞뒤가 맞는다.
 let ACTIVE_TAB = 'tabA';
 let PEER_PL = null;
+let PEER_PL_ROWS = null;      // 10개년 뷰용 행별 데이터
+let PL10_MODE = 'single';     // 'single' | 'multi'
+let PL10_COLLAPSED = { op_etc: true };  // 10개년 뷰의 접기 상태 (기본 접힘)
 let PAX_SRC = 'perVoy';      // 인원 직접입력 때 어느 칸을 방금 만졌는가
 let PEER_DS = null;
+
+/* ── 10개년 성장률 가정 ── */
+const GROWTH_DEFAULTS = {
+  gPax:2.7, gCargo:1.8, gRent:0,
+  gWage:2.71, gSev:2.71, gWelf:2.40,
+  gDep:0, gTax:2.92, gRent2:0,
+  // 운항기타 5개 세목 (m.etcPeer 순서 : 연료·항비·보험·수리·선용품)
+  gFuel:-0.89, gPort:7.85, gIns:0, gRepair:0, gStore:15,
+  gSgaWage:5.68, gSgaTax:2.92, gSgaFee:2.34, gSgaEtc:0
+};
+let GROW = { ...GROWTH_DEFAULTS };
+const GROWTH_GROUPS = [
+  { t:'매출 성장률', open:true, f:[
+    ['gPax','여객수입'],
+    ['gCargo','화물수입'],
+    ['gRent','임대료수입']
+  ]},
+  { t:'매출원가 · 인건비 (해상직원)', f:[
+    ['gWage','급여'],
+    ['gSev','퇴직급여'],
+    ['gWelf','복리후생비']
+  ]},
+  { t:'매출원가 · 운항', f:[
+    ['gDep','감가상각비'],
+    ['gTax','세금과공과'],
+    ['gRent2','임차료']
+  ]},
+  { t:'매출원가 · 운항기타 세목', f:[
+    ['gFuel','연료비'],
+    ['gPort','항비'],
+    ['gIns','보험료'],
+    ['gRepair','수리비'],
+    ['gStore','선용품비']
+  ]},
+  { t:'판매관리비', f:[
+    ['gSgaWage','인건비 (직원급여·퇴직·복리)'],
+    ['gSgaTax','세금과공과'],
+    ['gSgaFee','지급수수료'],
+    ['gSgaEtc','그 외<br><small style="color:var(--muted);font-weight:400">(세금과공과·지급수수료 제외)</small>']
+  ]}
+];
 
 function drawPeerPL(m) {
   const cargoLoad   = Math.min(1, Math.max(0, num('iCargoLoad', DEFAULTS.cargoLoad) / 100));
@@ -2561,8 +2759,10 @@ function drawPeerPL(m) {
   // ── 매출 ──
   const paxRev   = m.paxPeer * m.farePeer;
   const cargoRev = cargoPeer * cargoLoad * m.voyPeer;
-  const rentRev  = A.nonCargoRev;
-  const sales    = paxRev + cargoRev + rentRev;
+  // 산타모니카호는 우리 회사 임대료수입 계정 대상이 아니라 표시 제외
+  const isSanta  = m.peer && m.peer.id === 'santamonica';
+  const rentRev  = isSanta ? null : A.nonCargoRev;
+  const sales    = paxRev + cargoRev + (rentRev || 0);
 
   // ── 운항원가 (주석 15 구조 그대로) ──
   const opWage = N.opWage * hR;
@@ -2585,7 +2785,7 @@ function drawPeerPL(m) {
     ['직원급여 (육상직원)',   cur('직원급여')   * sR],
     ['퇴직급여 (육상직원)',   cur('퇴직급여')   * sR],
     ['복리후생비 (육상직원)', cur('복리후생비') * sR],
-    ['여비교통비 (육상직원)', cur('여비교통비')],
+    ['여비교통비', cur('여비교통비')],
     ['접대비',     cur('접대비')],
     ['통신비',     cur('통신비')],
     ['수도광열비', cur('수도광열비')],
@@ -2629,7 +2829,13 @@ function drawPeerPL(m) {
   // Ⅰ. 매출액
   html += rowR('Ⅰ. 매출액', sales);
   html += rowD('여객수입',   paxRev,   sales);
-  html += rowD('화물수입',   cargoRev, sales);
+  // 산타모니카 : CARGO_CASES.extra 는 운임표 미산정 항목이라 계산 금액에 '+α' 표기
+  if (isSanta && selectedCase.extra && cargoRev > 0) {
+    const alpha = `<span class="amb" style="font-size:11px;margin-left:4px" title="${selectedCase.extra} — 특정 화물에 대한 운임이 미반영·미공시되어 있어, 남는 부분에 대한 이익 여분">+α</span>`;
+    html += `<tr class="d"><td>화물수입</td><td>${acc(Math.round(cargoRev))}${alpha}</td>${fp(cargoRev, sales)}${fp(cargoRev, sales)}</tr>`;
+  } else {
+    html += rowD('화물수입', cargoRev, sales);
+  }
   html += rowD('임대료수입', rentRev,  sales);
 
   // Ⅱ. 운항원가
@@ -2651,9 +2857,25 @@ function drawPeerPL(m) {
   // Ⅲ. 매출총이익
   html += rowT('Ⅲ. 매출총이익', gross);
 
-  // Ⅳ. 판관비
+  // Ⅳ. 판관비 : 인건비 3개 + 세금과공과 + 지급수수료 + '그 외' (접기/펼치기)
   html += rowR('Ⅳ. 판매비와관리비', sgaCost);
-  SGA_ITEMS.forEach(([name, v]) => { html += rowD(name, v, sgaCost); });
+  const _SGA_NAMED = ['직원급여','퇴직급여','복리후생비'];
+  const _sgaNamed = SGA_ITEMS.filter(([n]) => _SGA_NAMED.some(k => n.startsWith(k)));
+  const _sgaTax   = SGA_ITEMS.find(([n]) => n.startsWith('세금과공과'));
+  const _sgaFee   = SGA_ITEMS.find(([n]) => n.startsWith('지급수수료'));
+  const _SGA_TOP  = [..._SGA_NAMED, '세금과공과', '지급수수료'];
+  const _sgaRest  = SGA_ITEMS.filter(([n]) => !_SGA_TOP.some(k => n.startsWith(k)));
+  const _sgaRestSum = _sgaRest.reduce((a,[,v]) => a + (v||0), 0);
+  _sgaNamed.forEach(([name, v]) => { html += rowD(name, v, sgaCost); });
+  if (_sgaTax) { html += rowD(_sgaTax[0], _sgaTax[1], sgaCost); }
+  if (_sgaFee) { html += rowD(_sgaFee[0], _sgaFee[1], sgaCost); }
+  html += `<tr class="d" data-grp="sga_etc" style="cursor:pointer">`
+        + `<td><span class="caret">▶</span> 그 외 <span class="tagv">${_sgaRest.length}</span></td>`
+        + `${fv(_sgaRestSum)}${fp(_sgaRestSum, sgaCost)}${fp(_sgaRestSum, sales)}</tr>`;
+  _sgaRest.forEach(([name, v]) => {
+    html += `<tr class="d sub2" data-in="sga_etc" hidden>`
+          + `<td>· ${name}</td>${fv(v)}${fp(v, sgaCost)}${fp(v, sales)}</tr>`;
+  });
 
   // Ⅴ. 영업이익(손실)
   const profColor = opProfit < 0 ? ' style="color:var(--warn)"' : '';
@@ -2694,6 +2916,58 @@ function drawPeerPL(m) {
   }
 
   el('tPeerPL').innerHTML = html;
+
+  // 판관비 '그 외' 접기/펼치기
+  el('tPeerPL').querySelectorAll('[data-grp]').forEach(tr => {
+    const g = tr.dataset.grp;
+    tr.querySelector('td').addEventListener('click', () => {
+      const open = tr.classList.toggle('open');
+      el('tPeerPL').querySelectorAll(`[data-in="${g}"]`).forEach(x => { x.hidden = !open; });
+    });
+  });
+
+  // ── 10개년 뷰용 행 데이터 저장 ──
+  // agg : [[하위idx, sign], ...] 형태로 매 연도별 재합산 · gk : 성장률 키
+  // _sgaNamed / _sgaRestSum 은 위 판관비 렌더 블록에서 이미 선언됨 (재사용)
+  // 운항기타 세목 (m.etcPeer : 연료비·항비·보험료·수리비·선용품비)
+  const _ep = m.etcPeer || [];
+  // 연료비에는 이미 유가상승 배율(m.escRate)이 amt 에 반영돼 있음 → 이름 뒤에 태그로 표기
+  const _fuelTag = (m.fuelEsc && m.escRate)
+    ? ` <span class="tagv est" style="cursor:help" title="현재 유가 · 환율 기준 배율 ×${m.escRate.toFixed(3)}이 y+0 값에 이미 반영됨. 10개년 예상은 이 값을 시작점으로 연료비 성장률(gFuel)이 매년 추가로 복리 적용됩니다. 두 계수의 성격이 다르므로(레벨 shift vs 연간 변화율) 이중 반영이 아닙니다.">×${m.escRate.toFixed(2)}</span>` : '';
+  // 화물수입 : 산타모니카 케이스에 운임표 미기재 항목이 있으면 +α 태그
+  const _alphaTag = (isSanta && selectedCase.extra && cargoRev > 0)
+    ? ` <span class="amb" style="font-size:11px;margin-left:4px" title="${selectedCase.extra} — 특정 화물에 대한 운임이 미반영·미공시되어 있어, 남는 부분에 대한 이익 여분">+α</span>`
+    : '';
+  PEER_PL_ROWS = [
+    /*  0 */ { cls:'r',    name:'Ⅰ. 매출액',              v:sales,   agg:[[1,1],[2,1],[3,1],[4,1]] },
+    /*  1 */ { cls:'d',    name:'여객수입',                v:paxRev,  gk:'gPax' },
+    /*  2 */ { cls:'d',    name:'화물수입'+_alphaTag,      v:cargoRev, gk:'gCargo' },
+    /*  3 */ { cls:'d',    name:'임대료수입',              v:rentRev, gk:'gRent' },
+    /*  4 */ { cls:'d',    name:'면세수입 <span class="tagv est" style="cursor:help" title="대저페리는 내항선이라 현재는 면세수입이 없지만, 외항선으로 취급하면 면세품 판매 수입을 기대해볼 수 있음. 잠재 매출로 감안 필요.">감안</span>', v:null, gk:'gDuty' },
+    /*  5 */ { cls:'r',    name:'Ⅱ. 운항원가 (−)',         v:opCost,  agg:[[6,1],[7,1],[8,1],[9,1],[10,1],[11,1],[12,1]] },
+    /*  6 */ { cls:'n',    name:'급여 (해상직원)',          v:opWage,  gk:'gWage' },
+    /*  7 */ { cls:'n',    name:'퇴직급여 (해상직원)',      v:opSev,   gk:'gSev' },
+    /*  8 */ { cls:'n',    name:'복리후생비 (해상직원)',    v:opWelf,  gk:'gWelf' },
+    /*  9 */ { cls:'n',    name:'감가상각비',              v:opDep,   gk:'gDep' },
+    /* 10 */ { cls:'n',    name:'세금과공과',              v:opTax,   gk:'gTax' },
+    /* 11 */ { cls:'n',    name:'임차료',                  v:opRent,  gk:'gRent2' },
+    /* 12 */ { cls:'n',    name:'운항기타',                v:opEtc,   agg:[[13,1],[14,1],[15,1],[16,1],[17,1]], collapsible:'op_etc' },
+    /* 13 */ { cls:'n sub2', name:'· '+(_ep[0]?.name||'연료비')+_fuelTag, v:_ep[0]?.amt||0, gk:'gFuel',   groupIn:'op_etc' },
+    /* 14 */ { cls:'n sub2', name:'· '+(_ep[1]?.name||'항비'),     v:_ep[1]?.amt||0, gk:'gPort',   groupIn:'op_etc' },
+    /* 15 */ { cls:'n sub2', name:'· '+(_ep[2]?.name||'보험료'),   v:_ep[2]?.amt||0, gk:'gIns',    groupIn:'op_etc' },
+    /* 16 */ { cls:'n sub2', name:'· '+(_ep[3]?.name||'수리비'),   v:_ep[3]?.amt||0, gk:'gRepair', groupIn:'op_etc' },
+    /* 17 */ { cls:'n sub2', name:'· '+(_ep[4]?.name||'선용품비'), v:_ep[4]?.amt||0, gk:'gStore',  groupIn:'op_etc' },
+    /* 18 */ { cls:'t',    name:'Ⅲ. 매출총이익',           v:gross,   agg:[[0,1],[5,-1]] },
+    /* 19 */ { cls:'r',    name:'Ⅳ. 판매비와관리비',        v:sgaCost, agg:[[20,1],[21,1],[22,1],[23,1],[24,1],[25,1]] },
+    /* 20 */ { cls:'d',    name:_sgaNamed[0]?.[0] || '직원급여',   v:_sgaNamed[0]?.[1] || 0, gk:'gSgaWage' },
+    /* 21 */ { cls:'d',    name:_sgaNamed[1]?.[0] || '퇴직급여',   v:_sgaNamed[1]?.[1] || 0, gk:'gSgaWage' },
+    /* 22 */ { cls:'d',    name:_sgaNamed[2]?.[0] || '복리후생비', v:_sgaNamed[2]?.[1] || 0, gk:'gSgaWage' },
+    /* 23 */ { cls:'d',    name:_sgaTax?.[0] || '세금과공과',      v:_sgaTax?.[1] || 0,      gk:'gSgaTax' },
+    /* 24 */ { cls:'d',    name:_sgaFee?.[0] || '지급수수료',      v:_sgaFee?.[1] || 0,      gk:'gSgaFee' },
+    /* 25 */ { cls:'d',    name:'그 외<br><span style="font-size:9.5px;color:var(--muted);font-weight:400">(세금과공과·지급수수료 제외)</span>', v:_sgaRestSum, gk:'gSgaEtc' },
+    /* 26 */ { cls:'lead', name:'Ⅴ. 영업이익(손실)',       v:opProfit, agg:[[18,1],[19,-1]] }
+  ];
+  drawPeerPL10();
 
   // ── 운항기타 산출 근거 모달 내용 갱신 ──
   const _voyR = m.voy > 0 ? m.voyPeer / m.voy : 1;
@@ -2805,6 +3079,137 @@ function drawRebuy(m){
      <b class="${gap < 0 ? 'bad' : ''}">${gap < 0 ? mil(-gap) + '백만 모자란다' : mil(gap) + '백만 남는다'}</b>
      <br><span style="color:var(--muted)">배를 20년 굴린 뒤 같은 배를 다시 앉히려면 이만큼은 벌어야 한다는 뜻이다.
      원금만 갚는 수준(DSCR 1.0)은 빚을 터는 것이지 재투자가 되는 것이 아니다.</span>`;
+}
+
+/* ── 10개년 성장률 UI 빌더 (참고 자료 스타일의 접이식 그룹) ── */
+function buildGrowGroups() {
+  const wrap = document.getElementById('growSection');
+  if (!wrap) return;
+  const groups = GROWTH_GROUPS.map((g, i) => {
+    const fields = g.f.map(([k,l]) => `
+      <div class="f">
+        <label>${l}</label>
+        <div class="ib"><input type="number" step="0.1" id="in_${k}" data-gk="${k}" value="${GROW[k]}"><span class="u">%/년</span></div>
+      </div>`).join('');
+    const openAttr = (i === 0) ? ' open' : '';   // 첫 그룹만 기본 열림
+    return `<details class="grp"${openAttr}>
+      <summary>${g.t}</summary>
+      <div class="fields">${fields}</div>
+    </details>`;
+  }).join('');
+  wrap.innerHTML = `
+    <div class="sec" style="margin-top:12px">10개년 성장률 가정</div>
+    ${groups}
+    <div style="margin-top:10px">
+      <button type="button" class="btn" id="btnResetGrow" style="width:100%">성장률 가정 초기화</button>
+    </div>`;
+  wrap.querySelectorAll('input[data-gk]').forEach(inp => {
+    const k = inp.dataset.gk;
+    const markDirty = () => inp.classList.toggle('dirty',
+      Math.abs((GROW[k]||0) - (GROWTH_DEFAULTS[k]||0)) > 1e-9);
+    markDirty();
+    inp.addEventListener('focus', () => inp.select());
+    inp.addEventListener('input', () => {
+      const v = parseFloat(inp.value);
+      if (isNaN(v)) return;
+      GROW[k] = v;
+      markDirty();
+      drawPeerPL10();
+    });
+    inp.addEventListener('blur', () => {
+      if (isNaN(parseFloat(inp.value))) { inp.value = GROW[k]; markDirty(); }
+    });
+  });
+  // 성장률 초기화 버튼 (buildGrowGroups 재호출 시마다 새 요소가 생기므로 여기서 바인딩)
+  const btn = wrap.querySelector('#btnResetGrow');
+  if (btn) btn.addEventListener('click', () => {
+    GROW = { ...GROWTH_DEFAULTS };
+    buildGrowGroups();
+    drawPeerPL10();
+  });
+}
+
+/* ── 10개년 예상 손익계산서 (백만원 단위) ── */
+/* y+0 = 현재 계산값 · y+n = y+0 × (1+g)ⁿ (계정별 성장률 적용)
+ * 집계행(agg)은 [[하위idx, sign], ...] 로 정의해 각 연도별 재합산 */
+function drawPeerPL10() {
+  const tb = document.getElementById('tPeerPL10');
+  if (!tb) return;
+  if (!PEER_PL_ROWS) { tb.innerHTML = ''; return; }
+  const YN = 10;                                    // y+1 ~ y+10
+  const toMil = v => (v == null || !isFinite(v)) ? null : v / 1e6;
+  const fmtM  = v => v == null ? '<span class="nil">–</span>'
+                              : (v < 0 ? '(' + Math.round(-v).toLocaleString('ko-KR') + ')'
+                                       : Math.round(v).toLocaleString('ko-KR'));
+  const cellCls = v => v == null ? 'nil' : (v < 0 ? 'neg' : '');
+
+  // 1-a) 리프(비집계) 행 먼저 계산
+  const proj = new Array(PEER_PL_ROWS.length);
+  PEER_PL_ROWS.forEach((r, i) => {
+    if (r.agg) return;
+    if (r.gk) {
+      const g = (GROW[r.gk] || 0) / 100;
+      const base = toMil(r.v);
+      proj[i] = Array.from({length: YN+1}, (_, k) =>
+        base == null ? null : base * Math.pow(1 + g, k));
+    } else {
+      const base = toMil(r.v);
+      proj[i] = new Array(YN+1).fill(base);
+    }
+  });
+  // 1-b) 집계행 : 하위 의존성이 모두 준비될 때까지 반복 (다층 집계 대응)
+  for (let pass = 0; pass < 6; pass++) {
+    let progressed = false;
+    PEER_PL_ROWS.forEach((r, i) => {
+      if (!r.agg || proj[i] != null) return;
+      const ready = r.agg.every(([ci]) => proj[ci] != null);
+      if (!ready) return;
+      proj[i] = Array.from({length: YN+1}, (_, k) => {
+        let s = 0, has = false;
+        r.agg.forEach(([ci, sign]) => {
+          const v = proj[ci][k];
+          if (v != null) { s += sign * v; has = true; }
+        });
+        return has ? s : null;
+      });
+      progressed = true;
+    });
+    if (!progressed) break;
+  }
+
+  // 2) 렌더
+  const rows = PEER_PL_ROWS.map((r, i) => {
+    const p = proj[i];
+    const validProj = p.slice(1).filter(v => v != null && isFinite(v));
+    const avg = validProj.length ? validProj.reduce((a,b)=>a+b,0) / validProj.length : null;
+    // 접기/펼치기 : 자식 행은 hidden, 부모 행은 caret + 클릭 핸들러
+    const isChildHidden = r.groupIn && PL10_COLLAPSED[r.groupIn];
+    const isParent = !!r.collapsible;
+    const openCls  = isParent && !PL10_COLLAPSED[r.collapsible] ? ' open' : '';
+    const dataAttr = isParent  ? ` data-grp="${r.collapsible}"`
+                   : r.groupIn ? ` data-in="${r.groupIn}"` : '';
+    const styleAttr = isParent ? ' style="cursor:pointer"' : '';
+    const hiddenAttr = isChildHidden ? ' hidden' : '';
+    const caret = isParent ? '<span class="caret">▶</span> ' : '';
+    return `<tr class="${r.cls}${openCls}"${dataAttr}${styleAttr}${hiddenAttr}>
+      <th>${caret}${r.name}</th>
+      <td class="base ${cellCls(p[0])}">${fmtM(p[0])}</td>
+      ${p.slice(1).map(v => `<td class="${cellCls(v)}">${fmtM(v)}</td>`).join('')}
+      <td class="avg ${cellCls(avg)}">${fmtM(avg)}</td>
+    </tr>`;
+  }).join('');
+  tb.innerHTML = rows;
+  // 접기/펼치기 클릭 핸들러
+  tb.querySelectorAll('[data-grp]').forEach(tr => {
+    tr.addEventListener('click', () => {
+      const g = tr.dataset.grp;
+      PL10_COLLAPSED[g] = !PL10_COLLAPSED[g];
+      drawPeerPL10();
+    });
+  });
+  const _sub = document.getElementById('plPeerSub10');
+  const _srcSub = document.getElementById('plPeerSub');
+  if (_sub && _srcSub) _sub.textContent = _srcSub.textContent;
 }
 
 function drawCargo(m){
@@ -3329,6 +3734,14 @@ document.querySelectorAll('.tab').forEach(b => {
     const isPeer = b.dataset.tab === 'tabB';
     el('plBodyA').hidden = isPeer;
     el('plBodyB').hidden = !isPeer;
+    // 탭 이동 시 : 10개년 모드는 강제 해제, 성장률 섹션 숨김
+    PL10_MODE = 'single';
+    document.querySelectorAll('.plModeBtn').forEach(x =>
+      x.classList.toggle('on', x.dataset.plmode === 'single'));
+    el('plBodyB-single').hidden = false;
+    el('plBodyB-multi' ).hidden = true;
+    const _gs = document.getElementById('growSection');
+    if (_gs) _gs.hidden = true;
     el('plCardTitle').innerHTML = isPeer
       ? '손익계산서 — 대조 선박'
       : '손익계산서 — 감사보고서 원본<span class="ic">?</span>';
@@ -3338,6 +3751,55 @@ document.querySelectorAll('.tab').forEach(b => {
     el('plCardH2').dataset.modal = isPeer ? '' : 'ovRef';
   });
 });
+
+// 10개년 뷰 모드 스위치 (단일연도 원 ↔ 10개년 백만원)
+document.querySelectorAll('.plModeBtn').forEach(b => {
+  b.addEventListener('click', () => {
+    PL10_MODE = b.dataset.plmode;
+    document.querySelectorAll('.plModeBtn').forEach(x => x.classList.toggle('on', x === b));
+    el('plBodyB-single').hidden = (PL10_MODE !== 'single');
+    el('plBodyB-multi' ).hidden = (PL10_MODE !== 'multi');
+    // 좌측 설정 카드 : 10개년 모드에선 .tabs·.tabp 전체 숨기고 성장률 섹션만 표시
+    const _isMulti = (PL10_MODE === 'multi');
+    document.querySelector('.tabs').hidden = _isMulti;
+    document.querySelectorAll('.tabp').forEach(x =>
+      x.hidden = _isMulti ? true : (x.id !== ACTIVE_TAB));
+    const _gs = document.getElementById('growSection');
+    if (_gs) _gs.hidden = !_isMulti;
+    if (_isMulti) drawPeerPL10();
+  });
+});
+
+// 10개년 성장률 UI 초기화 (좌측 설정 카드 안에 렌더)
+buildGrowGroups();
+
+// 우측 상단 3-탭 (손익계산서 / 목표지표 / CVP)
+document.querySelectorAll('.mtab').forEach(b => {
+  b.addEventListener('click', () => {
+    const t = b.dataset.mtab;
+    document.querySelectorAll('.mtab').forEach(x => x.classList.toggle('on', x === b));
+    document.querySelectorAll('.mtabPanel').forEach(x => { x.hidden = (x.dataset.mtab !== t); });
+  });
+});
+
+// 손익계산서 인쇄 : plBodyA / plBodyB 각각의 버튼
+function printPL() {
+  document.body.classList.add('printMode', 'printExpand');
+  const _cleanup = () => {
+    document.body.classList.remove('printMode', 'printExpand');
+    window.removeEventListener('afterprint', _cleanup);
+  };
+  window.addEventListener('afterprint', _cleanup);
+  window.print();
+  // afterprint 미지원 브라우저 대비
+  setTimeout(_cleanup, 1500);
+}
+{
+  const _bA = document.getElementById('btnPrintA');
+  const _bB = document.getElementById('btnPrintB');
+  if (_bA) _bA.addEventListener('click', printPL);
+  if (_bB) _bB.addEventListener('click', printPL);
+}
 
 // 손익계산서 모두 펼치기 / 접기
 el('btnPlAll').addEventListener('click', () => {
@@ -3418,6 +3880,52 @@ document.addEventListener('keydown', e => {
 });
 
 buildInputs();   // 드롭다운·좌석표를 먼저 세워야 model() 이 그 값을 읽을 수 있다
+
+// 설정 탭 내부 .sec 섹션을 접이식 details.grp 로 감싸기 (10년 성장률 스타일과 동일)
+// clksec(모달 트리거)은 그대로 두고, 일반 .sec 만 details 로 래핑
+(function collapsifySettings(){
+  document.querySelectorAll('.tabp').forEach(tab => {
+    const fields = tab.querySelector(':scope > .fields');
+    if (!fields) return;
+    const children = [...fields.children];
+    // 그룹핑
+    const output = [];  // {type:'group',header,items} | {type:'raw',el}
+    let current = null;
+    children.forEach(el => {
+      const isSec = el.tagName === 'DIV' && el.classList.contains('sec');
+      const isClksec = isSec && el.classList.contains('clksec');
+      if (isSec && !isClksec) {
+        current = { type:'group', header:el, items:[] };
+        output.push(current);
+      } else if (isClksec) {
+        current = null;
+        output.push({ type:'raw', el });
+      } else {
+        if (current) current.items.push(el);
+        else output.push({ type:'raw', el });
+      }
+    });
+    // 재조립
+    fields.innerHTML = '';
+    fields.style.display = 'block';
+    fields.style.gap = '0';
+    let openCnt = 0;
+    output.forEach(item => {
+      if (item.type === 'raw') { fields.appendChild(item.el); return; }
+      const det = document.createElement('details');
+      det.className = 'grp';
+      if (openCnt < 2) { det.open = true; openCnt++; }
+      const sum = document.createElement('summary');
+      sum.innerHTML = item.header.innerHTML;
+      det.appendChild(sum);
+      const inner = document.createElement('div');
+      inner.className = 'fields';
+      item.items.forEach(f => inner.appendChild(f));
+      det.appendChild(inner);
+      fields.appendChild(det);
+    });
+  });
+})();
 // 실적 역산 승객수의 초깃값도 좌석 가중평균 운임 기준이라야 앞뒤가 맞는다
 {
   const w = SEATS.reduce((a,t,i) => a + t.mult*DEFAULTS.mix[i], 0)
