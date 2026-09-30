@@ -501,6 +501,66 @@
     /* 접힘 상태 자식 행 강제 노출 (인쇄엔 다 보이게) */
     body.printMode.printExpand tr[data-in]{display:table-row !important;visibility:visible !important}
     body.printMode tr{page-break-inside:avoid}
+
+    /* 설정값 인쇄 : 좌측 첫 카드만 남기고, 모든 details 를 강제로 펼쳐서 컴팩트 레이아웃 */
+    body.printModeSettings *{visibility:hidden !important}
+    body.printModeSettings #row > .card:first-of-type,
+    body.printModeSettings #row > .card:first-of-type *{visibility:visible !important}
+    body.printModeSettings #row > .card:first-of-type{
+      position:absolute !important;left:0;top:0;width:100%;margin:0;padding:0;
+      box-shadow:none;border:0;background:#fff}
+    body.printModeSettings #row > .card:first-of-type > h2{
+      border-bottom:2px solid var(--navy);padding:4px 0 3px;margin:0 0 6px;
+      font-size:11pt;color:var(--navy)}
+    body.printModeSettings #row > .card:first-of-type > h2 em{font-size:8pt;font-weight:400}
+    body.printModeSettings #row > .card:first-of-type .body{padding:0}
+    /* 탭 헤더/버튼/성장률/리셋 숨김 */
+    body.printModeSettings .tabs,
+    body.printModeSettings #growSection,
+    body.printModeSettings #btnReset,
+    body.printModeSettings #btnPrintSettings{display:none !important}
+    /* 두 탭 나란히 : 좌 tabA, 우 tabB */
+    body.printModeSettings .card > .body{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
+    body.printModeSettings .tabp{display:block !important}
+    body.printModeSettings .tabp[hidden]{display:block !important}
+    body.printModeSettings .tabp::before{
+      display:block;font-size:9pt;font-weight:700;color:var(--navy);
+      padding:2px 0 4px;margin-bottom:4px;border-bottom:1px solid var(--rule)}
+    body.printModeSettings #tabA::before{content:'가정 (감사보고서 기준)'}
+    body.printModeSettings #tabB::before{content:'목표기반 설정 (대조 선박)'}
+    /* details 강제 열림 · summary 는 단순 헤더로 */
+    body.printModeSettings details.grp,
+    body.printModeSettings details.dep-block{border-bottom:1px solid #ddd;margin-bottom:2px}
+    body.printModeSettings details.grp > summary,
+    body.printModeSettings details.dep-block > summary{
+      padding:3px 4px;font-size:8pt;font-weight:700;color:var(--navy);
+      background:#F4F7FC !important;cursor:default;list-style:none}
+    body.printModeSettings details.grp > summary::after,
+    body.printModeSettings details.dep-block > summary::after,
+    body.printModeSettings details.grp > summary::before,
+    body.printModeSettings summary::-webkit-details-marker{display:none !important}
+    body.printModeSettings .sec.clksec .ic,
+    body.printModeSettings .fh,
+    body.printModeSettings .ast{display:none !important}
+    body.printModeSettings .sec.clksec{padding:3px 4px;font-size:8pt;font-weight:700;
+      color:#666;background:#FAFAFA;border-bottom:1px solid #eee;cursor:default}
+    /* 필드 컴팩트화 */
+    body.printModeSettings .fields{display:grid;grid-template-columns:1fr 1fr;
+      gap:2px 6px;padding:4px 2px !important}
+    body.printModeSettings .f{padding:1px 0}
+    body.printModeSettings .f.wide{grid-column:1/-1}
+    body.printModeSettings .f label{font-size:7pt;color:#444;margin-bottom:0;line-height:1.15}
+    body.printModeSettings .ib{border:1px solid #ccc;padding:0 4px;border-radius:2px;background:#fff}
+    body.printModeSettings .ib input{border:0;font-size:8.5pt;font-weight:600;color:#000;padding:1px 0}
+    body.printModeSettings .ib .u{font-size:6.5pt;color:#666}
+    body.printModeSettings .dep-fields,body.printModeSettings .dep-sub{margin-top:2px}
+    body.printModeSettings .dep-sub{font-size:7pt;color:#666;padding:2px 0}
+    /* 좌석 등급·화물 케이스 테이블 */
+    body.printModeSettings table.seat{width:100%;font-size:7pt;border-collapse:collapse;margin:2px 0}
+    body.printModeSettings table.seat th,body.printModeSettings table.seat td{
+      padding:1px 3px;border:1px solid #ddd}
+    /* 페이지 넘김 방지 */
+    body.printModeSettings details{page-break-inside:avoid}
   }
   /* 성장률 가정 : 참고 자료 스타일 접이식 그룹 */
   details.grp{border-bottom:1px solid var(--rule)}
@@ -629,6 +689,7 @@
         <div class="setbar">
           <button type="button" class="lnk" id="btnSecAll">모두 펼치기</button>
           <button type="button" class="lnk" id="btnSecNone">모두 접기</button>
+          <button type="button" class="lnk" id="btnPrintSettings" style="margin-left:auto" title="설정값을 한 페이지에 인쇄">🖨 인쇄</button>
         </div>
 
         <!-- ── 탭 A · 기준 자료 (대저페리 3기) ──
@@ -856,7 +917,7 @@
                 </div>
                 <div class="f">
                   <label>거치기간</label>
-                  <div class="ib"><input type="number" step="1" min="0" max="20" id="iLoanGrace" value="0"><span class="u">년</span></div>
+                  <div class="ib"><input type="number" step="1" min="0" max="20" id="iLoanGrace" value="3"><span class="u">년</span></div>
                 </div>
                 <div class="f wide">
                   <label>상환방식</label>
@@ -1122,11 +1183,11 @@
               </tr>
               <tr>
                 <td><b>산타모니카호 — 현 항로 적자</b><span class="sub">제주–추자–진도</span></td>
-                <td class="lft">현재 항로에서 연 <b class="neg">약 18억원</b>의 적자를 내고 있고,
+                <td class="lft">현재 항로에서 연 <b class="neg">약 15억원</b>의 적자를 내고 있고,
                   엔젤호로 대체하려는 움직임이 있는 것으로 보인다.
                   이 페이지의 대조 선박은 <b>이 배를 하카타 항로에 투입한다는 가정</b>이지
                   지금의 운항 실적이 아니다 — 현 항로의 적자는 반영돼 있지 않다.</td>
-                <td><span class="tagv est">기사 — 링크 미확보</span></td>
+                <td><a class="dl ext" href="https://v.daum.net/v/qptPsmUZCY" target="_blank" rel="noopener">뉴시스 ↗</a></td>
               </tr>
               <tr>
                 <td><b>퀸비틀 — 분석 불가</b><span class="sub">JR큐슈고속선</span></td>
@@ -1873,7 +1934,7 @@ const DEFAULTS  = { head:30, sailor:13, crew:7, fare:81000, vc:0, tgt:5, voy:498
                     // 선가·차입금은 화면에서 백만원으로 받는다 (500억 = 50,000백만원)
                     shipPricePeer:50000, lifePeer:20, salvagePeer:10,
                     loanPeer:20000, loanRatePeer:3.5,
-                    loanYears:15, loanGrace:0, loanMethod:'annuity',
+                    loanYears:15, loanGrace:3, loanMethod:'annuity',
                     tgtPeer:5,
                     opEtcPct:{fuel:83.78,port:10.81,ins:5.13,repair:0.00,store:0.27},
                     fuelBase:820, fuelNow:1490, fxBase:1360, fxNow:1346.24, fuelEsc:true,
@@ -4130,9 +4191,13 @@ function applyPLView(){
   const gs = document.getElementById('growSection');
   if (gs) gs.hidden = !multi;
 
+  const peerShipName = (() => {
+    try { return (model().peer?.name || '').split(' · ')[0] || '대조 선박'; }
+    catch(_) { return '대조 선박'; }
+  })();
   el('plCardTitle').innerHTML = multi
-    ? '손익계산서 — 대조 선박 10개년'
-    : (isPeer ? '손익계산서 — 대조 선박'
+    ? `손익계산서 — ${peerShipName} 10개년`
+    : (isPeer ? `손익계산서 — ${peerShipName}`
               : '손익계산서 — 감사보고서 원본<span class="ic">?</span>');
   const hold = isPeer ? peerHold() : '';
   el('plCardSub').innerHTML = (multi
@@ -4212,6 +4277,129 @@ function printPL() {
   // 제목줄 자체가 모달 트리거라, 버튼 클릭이 h2 로 올라가면 주석 대조창이 같이 열린다
   const _b = document.getElementById('btnPrintPL');
   if (_b) _b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); printPL(); });
+}
+
+// 설정값 인쇄 : 팝업 창에 [기준자료 · 대조선박 · 10개년 성장률] 통합 노출 후 인쇄
+function printSettings() {
+  // 성장률 UI 가 아직 렌더 안 됐다면 렌더
+  const growSection = document.getElementById('growSection');
+  if (growSection && !growSection.innerHTML.trim()) buildGrowGroups();
+
+  // clone + 현재 input 값 복사 (cloneNode 는 .value 프로퍼티를 복사하지 않음)
+  const cloneWithValues = (src) => {
+    const c = src.cloneNode(true);
+    const orig = src.querySelectorAll('input, select, textarea');
+    const dup  = c.querySelectorAll('input, select, textarea');
+    orig.forEach((inp, i) => {
+      const d = dup[i]; if (!d) return;
+      if (inp.type === 'checkbox' || inp.type === 'radio') {
+        d.checked = inp.checked;
+        if (d.checked) d.setAttribute('checked','checked'); else d.removeAttribute('checked');
+      } else if (inp.tagName === 'SELECT') {
+        [...d.options].forEach(o => o.selected = (o.value === inp.value));
+      } else {
+        d.setAttribute('value', inp.value);
+        d.value = inp.value;
+      }
+    });
+    // details 모두 열림 상태로
+    c.querySelectorAll('details').forEach(det => { det.open = true; det.setAttribute('open',''); });
+    c.removeAttribute('hidden');
+    return c;
+  };
+
+  const tabA = cloneWithValues(document.getElementById('tabA'));
+  const tabB = cloneWithValues(document.getElementById('tabB'));
+  const grow = cloneWithValues(growSection);
+
+  // 페이지 스타일 전체 복사
+  const inlineStyles = [...document.querySelectorAll('style')].map(s => s.innerHTML).join('\n');
+
+  const w = window.open('', '_blank', 'width=1000,height=1000');
+  if (!w) { alert('팝업이 차단되었습니다. 브라우저 팝업 허용 후 다시 시도하세요.'); return; }
+
+  const html = `<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8"><title>설정값 인쇄</title>
+<style>${inlineStyles}</style>
+<style>
+@page{size:A4 portrait;margin:10mm}
+body{padding:14px 18px;background:#fff;font-size:9pt;max-width:none}
+h1{font-size:13pt;margin:0 0 10px;color:var(--navy);
+   border-bottom:2px solid var(--navy);padding-bottom:5px;letter-spacing:-.01em}
+h2.sect{font-size:10.5pt;margin:16px 0 6px;color:var(--navy);
+   border-bottom:1px solid #bbb;padding-bottom:3px;letter-spacing:-.01em}
+h2.sect:first-of-type{margin-top:4px}
+/* 탭/버튼/도움말/부가 컨트롤 숨김 */
+.tabs,.setbar,.btn,button,.fh,#btnReset,#btnPrintSettings,.mtabs,
+.tabp .lnk,#growSection>div:last-child{display:none !important}
+/* 모든 details 강제 열림 · 캐럿/토글 제거 */
+details{display:block !important}
+details>summary{list-style:none !important;cursor:default !important;pointer-events:none}
+details>summary::-webkit-details-marker,
+details>summary::marker,
+details>summary::before,
+details>summary::after{display:none !important;content:'' !important}
+/* 탭 패널 강제 노출 */
+.tabp,.tabp[hidden]{display:block !important}
+/* 섹션 헤더 (details.grp summary) */
+details.grp>summary,details.dep-block>summary{
+  padding:5px 8px;font-size:9pt;font-weight:700;color:var(--navy);
+  background:#EEF3F9 !important;border-radius:2px;margin-bottom:3px}
+/* 모달 트리거 sec 는 헤더만 노출 (클릭 안내 span 은 숨김) */
+.sec.clksec .secx,.sec.clksec .ic{display:none !important}
+.sec.clksec{cursor:default;color:var(--muted)}
+/* 필드 컴팩트화 */
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:3px 10px;padding:4px 0}
+.f{padding:1px 0}
+.f.wide{grid-column:1/-1}
+.f label{font-size:8pt;color:#333;line-height:1.15}
+.ib{border:1px solid #bbb;padding:0 5px;border-radius:2px;background:#fff}
+.ib input{border:0;font-size:9pt;font-weight:600;color:#000;padding:2px 0}
+.ib .u{font-size:7.5pt;color:#666}
+.dep-fields{display:grid;grid-template-columns:1fr 1fr;gap:3px 10px;margin-top:3px}
+.dep-sub{grid-column:1/-1;font-size:7.5pt;font-weight:700;color:#666;padding:3px 0 1px}
+table.seat{width:100%;font-size:7.5pt;border-collapse:collapse;margin:2px 0}
+table.seat th,table.seat td{padding:2px 4px;border:1px solid #ddd}
+.printCloseBar{position:fixed;top:0;left:0;right:0;background:#154B8C;color:#fff;
+   padding:8px 14px;display:flex;justify-content:space-between;align-items:center;z-index:9999}
+.printCloseBar button{background:#fff;color:#154B8C;border:0;padding:5px 12px;
+   border-radius:3px;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;margin-left:6px}
+.spacer{height:44px}
+@media print{
+  .printCloseBar,.spacer{display:none !important}
+  body{padding:0}
+  section,details.grp,details.dep-block{page-break-inside:avoid}
+  /* 각 섹션(기준자료·대조선박·10개년 성장률)을 별도 페이지로 */
+  h2.sect{page-break-before:always;break-before:page;margin-top:0}
+  h2.sect:first-of-type{page-break-before:auto;break-before:auto}
+}
+</style></head>
+<body>
+<div class="printCloseBar">
+  <span>설정값 인쇄 미리보기</span>
+  <span>
+    <button onclick="window.print()">🖨 인쇄</button>
+    <button onclick="window.close()">닫기</button>
+  </span>
+</div>
+<div class="spacer"></div>
+<h1>손익 분석 설정값 · ${new Date().toLocaleDateString('ko-KR')}</h1>
+<h2 class="sect">기준 자료 설정 (감사보고서 기반)</h2>
+${tabA.innerHTML}
+<h2 class="sect">대조 선박 설정 (목표기반 시나리오)</h2>
+${tabB.innerHTML}
+<h2 class="sect">10개년 성장률 가정</h2>
+${grow.innerHTML}
+</body></html>`;
+
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  w.addEventListener('load', () => setTimeout(() => w.print(), 400));
+}
+{
+  const _bS = document.getElementById('btnPrintSettings');
+  if (_bS) _bS.addEventListener('click', printSettings);
 }
 
 // 대조 선박 · 10개년 모두 펼치기 / 접기
