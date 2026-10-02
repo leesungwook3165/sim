@@ -48,6 +48,37 @@ margin:8px 0;font-size:12px;color:#6b4a12}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin:10px 0 0;align-items:center}
 .legend i{display:inline-block;width:12px;height:12px;border:1px solid var(--line2);vertical-align:-2px;margin-right:4px}
 .panel[hidden]{display:none}
+/* 서브탭 — 항로선사별요약 내부 표별 전환 */
+.subnav{display:flex;gap:3px;flex-wrap:wrap;margin:14px 0 0;border-bottom:2px solid var(--line2);padding-bottom:0}
+.subnav button{font:inherit;font-size:12px;padding:6px 12px;border:1px solid var(--line);border-bottom:none;
+background:var(--sub);color:var(--muted);border-radius:4px 4px 0 0;cursor:pointer;margin-bottom:-2px;white-space:nowrap}
+.subnav button:hover{background:var(--hover);color:var(--fg)}
+.subnav button[aria-selected=true]{background:#fff;color:var(--accent);font-weight:700;border-color:var(--line2);
+border-bottom:2px solid #fff}
+.subpanel[hidden]{display:none}
+.subpanel>h3.sech:first-of-type{margin-top:12px}
+/* 통합분석 */
+.analysis-wrap{display:grid;gap:22px}
+.chart-box{background:#fafbfc;border:1px solid var(--line);border-radius:6px;padding:14px}
+.chart-box h4{font-size:13px;margin:0 0 6px;color:var(--accent)}
+.chart-box p.sub{margin:0 0 10px}
+.chart-svg{width:100%;height:auto;display:block;overflow:visible}
+.chart-svg .ax{stroke:#c9ced6;stroke-width:1}
+.chart-svg .axlbl{font:11px/1 "Malgun Gothic",system-ui,sans-serif;fill:#6b7280}
+.chart-svg .vlbl{font:10.5px/1 "Malgun Gothic",system-ui,sans-serif;fill:#1a1d21}
+.chart-svg .grd{stroke:#eef2f7;stroke-width:1}
+.chart-controls{display:flex;gap:8px;align-items:center;margin-bottom:10px;font-size:12px}
+.chart-controls select{font:inherit;font-size:12px;padding:3px 6px;border:1px solid var(--line2);border-radius:4px;background:#fff}
+.pie-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:4px}
+.pie-item{background:#fff;border:1px solid var(--line);border-radius:5px;padding:12px 10px 10px}
+.pie-item h5{font-size:12.5px;margin:0 0 4px;color:var(--accent);text-align:center}
+.pie-item .pie-sub{font-size:10.5px;color:var(--muted);text-align:center;margin:0 0 8px}
+.pie-svg{width:150px;height:150px;margin:0 auto;display:block}
+.pie-legend{font-size:10.5px;color:#4a5158;margin:8px 0 0;padding:0;list-style:none}
+.pie-legend li{padding:1.5px 0;display:flex;align-items:center;gap:5px;justify-content:space-between}
+.pie-legend .nm{display:flex;align-items:center;gap:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pie-legend .sw{width:9px;height:9px;flex:none;border-radius:2px;border:1px solid rgba(0,0,0,.08)}
+.pie-legend .pct{font-variant-numeric:tabular-nums;color:#1a1d21;font-weight:600}
 @media (max-width:640px){main{padding:14px 10px 50px}header{padding:14px 10px 0}}
 </style>
 </head>
@@ -58,11 +89,14 @@ margin:8px 0;font-size:12px;color:#6b4a12}
 <nav>
 <button data-t="p1" aria-selected="true">항로선사별요약</button>
 <button data-t="p2" aria-selected="false">항공기(FSC+LCC)</button>
+<button data-t="p3" aria-selected="false">통합분석</button>
 </nav>
 </header>
 <main>
 <div class="legend"><span><i style="background:#e6e6e6"></i>회색 = 특수요인 연도(2019 No Japan / 2020·2022 코로나 / 2026 반기) — 추세 분석 제외 권장</span><span><i style="background:#fffbe6"></i>연노랑 = 2026E 연환산 추정치(실적 아님)</span></div>
-<section class="panel" id="p1" ><h3 class="sech">항로 × 선사 × 연도 총수송인원 (합계_계, 단위: 名)</h3><p class="sub">집계 기준: 역년(1~12월) · 2018년 5월 구본 제외 · 2026E는 연간 추정치</p>
+<section class="panel" id="p1" >
+<nav class="subnav" id="p1-subnav" aria-label="항로선사별요약 서브 탭"></nav>
+<div id="p1-body"><h3 class="sech">항로 × 선사 × 연도 총수송인원 (합계_계, 단위: 名)</h3><p class="sub">집계 기준: 역년(1~12월) · 2018년 5월 구본 제외 · 2026E는 연간 추정치</p>
 <div class="tw"><table id="t3-main">
 <thead><tr>
 <th class="l">항로</th>
@@ -3119,9 +3153,8 @@ margin:8px 0;font-size:12px;color:#6b4a12}
 <td class="c" data-v="66">66</td>
 <td class="c warnyr" data-v="36">36</td>
 </tr>
-</tbody></table></div></section>
+</tbody></table></div></div></section>
 <section class="panel" id="p2" hidden><h3 class="sech">일본 노선 항공 여객 실적 (FSC + LCC) — 여객_계(명)</h3><p class="sub">후쿠오카·키타큐슈 노선 / 2026년은 1~6월 실적, 2026E는 연환산 추정치(총합계에 포함)</p>
-<div class="warn">⚠ 원본 시트의 <b>비고</b> 열은 <b>키타큐슈 블록(스타플라이어~총합계)</b>에서 한 행씩 아래로 밀려 있습니다. 원본 그대로 옮겼으니 VSCode에서 필요 시 한 칸 위로 당겨 쓰세요.</div>
 <div class="tw"><table id="t4-main">
 <thead><tr>
 <th class="l">행 레이블</th>
@@ -3410,6 +3443,28 @@ margin:8px 0;font-size:12px;color:#6b4a12}
 </tr>
 </tbody></table></div>
 <div class="notebox"><ul><li>■ 연도 열 표시 지침 (표시는 유지, 추세 분석에서는 미사용)</li><li>⚠ 회색 = 특수요인 연도 → 연도간 추세 분석에서 제외 권장</li><li>2019년 : No Japan(일본 불매운동) → 하반기부터 수요 급감</li><li>2020·2022년 : 코로나19 운항 중단·부분 운항 (2021년은 원자료 없음)</li><li>2026년 : 1~6월 실적만 집계 → 연간 단순 비교 불가</li><li>연노랑 = 2026E 연환산 추정치 (실적 아님)</li><li>무색 = 정상 연도 → 추세 분석 사용 권장 (2017·2018·2023·2024·2025)</li></ul></div></section>
+<section class="panel" id="p3" hidden>
+  <h3 class="sech">연도별 수요 추이 (항로 × 모드)</h3>
+  <p class="sub">2017~2026E 전구간을 선형으로 — 특수요인 연도(2019·2020·2022)는 X축에 회색 음영. 2026E는 연환산 추정치.</p>
+  <div class="chart-box">
+    <div class="chart-controls">
+      <label><input type="checkbox" id="demandShowShip" checked> 선박</label>
+      <label style="margin-left:10px"><input type="checkbox" id="demandShowAir" checked> 항공편</label>
+      <label style="margin-left:14px"><input type="checkbox" id="demandAgg"> 모드별 합산 (전체 선박 vs 전체 항공)</label>
+    </div>
+    <div id="demandChart"></div>
+  </div>
+
+  <h3 class="sech" style="margin-top:28px">항로별 회사 점유율</h3>
+  <p class="sub">기준 연도의 각 항로 수송인원 중 회사별 비중 — 좌: 선박 / 우: 항공사</p>
+  <div class="chart-box">
+    <div class="chart-controls">
+      <label>기준 연도 <select id="pieYear"></select></label>
+      <span style="color:var(--muted);font-size:11.5px">— 상위 7개사 + 기타로 묶음</span>
+    </div>
+    <div class="pie-grid" id="pieGrid"></div>
+  </div>
+</section>
 </main>
 <script type="application/json" id="rawdata">
 {
@@ -6604,11 +6659,287 @@ margin:8px 0;font-size:12px;color:#6b4a12}
 }
 </script>
 <script>
-const tabs=[...document.querySelectorAll('nav button')];
-tabs.forEach(b=>b.onclick=()=>{
-  tabs.forEach(x=>{x.setAttribute('aria-selected',x===b);
-    document.getElementById(x.dataset.t).hidden=(x!==b);});
+// ── 데이터 ──
+const RAW = JSON.parse(document.getElementById('rawdata').textContent);
+const SHIP_ROUTES = ['시모노세키(下關)','오사카(大阪)','후쿠오카(福岡)','쓰시마(對馬)'];
+const AIR_ROUTES  = ['후쿠오카','키타큐슈'];
+const YEARS = ['2017','2018','2019','2020','2022','2023','2024','2025','2026E'];
+const WARN_YEARS = new Set(['2019','2020','2022']);  // 특수요인 — 색만 흐리게
+const fmtN = n => n==null ? '—' : Math.round(n).toLocaleString('ko-KR');
+
+// ── 상단 탭 ──
+const topTabs = [...document.querySelectorAll('header > nav button')];
+topTabs.forEach(b => b.onclick = () => {
+  topTabs.forEach(x => { x.setAttribute('aria-selected', x===b);
+    document.getElementById(x.dataset.t).hidden = (x !== b); });
+  if (b.dataset.t === 'p3') renderAnalysis();
 });
+
+// ── 항로선사별요약 서브탭 — h3.sech 로 끊어 패널로 묶는다 ──
+(function buildSubTabs(){
+  const body = document.getElementById('p1-body');
+  const nav  = document.getElementById('p1-subnav');
+  const sections = [];
+  let cur = null;
+  [...body.children].forEach(el => {
+    if (el.tagName === 'H3' && el.classList.contains('sech')) {
+      cur = { title: el.textContent.trim(), elements: [el] };
+      sections.push(cur);
+    } else if (cur) {
+      cur.elements.push(el);
+    }
+  });
+  // 각 섹션을 .subpanel div 로 감싸고 서브탭 버튼 생성
+  sections.forEach((s, i) => {
+    const panel = document.createElement('div');
+    panel.className = 'subpanel';
+    panel.id = 'p1-sub-' + i;
+    if (i > 0) panel.hidden = true;
+    s.elements.forEach(el => panel.appendChild(el));
+    body.appendChild(panel);
+    // 서브탭 라벨은 title 에서 긴 설명 떼고 짧게
+    const label = s.title.replace(/\(.*?\)|—.*$|▼\s*/g,'').trim() || s.title;
+    const btn = document.createElement('button');
+    btn.textContent = label;
+    btn.setAttribute('aria-selected', i===0 ? 'true' : 'false');
+    btn.dataset.sub = 'p1-sub-' + i;
+    btn.onclick = () => {
+      [...nav.children].forEach(x => x.setAttribute('aria-selected', x===btn));
+      sections.forEach((_, j) => document.getElementById('p1-sub-'+j).hidden = (j !== i));
+    };
+    nav.appendChild(btn);
+  });
+})();
+
+// ── 통합분석 — 데이터 추출 ──
+function getShipRows(){
+  const sec = RAW['항로선사별요약'].find(s => s.id === '총수송인원');
+  return sec ? sec.rows : [];
+}
+function getAirRows(){
+  const sec = RAW['항공기(FSC+LCC)'].find(s => s.id === '항공여객실적');
+  return sec ? sec.rows : [];
+}
+// 항로별 선박 소계 (한 행)
+function shipRouteTotal(route, year){
+  const rows = getShipRows();
+  const sub = rows.find(r => r['항로'] === route && r['선사'] === '소계');
+  return sub ? (sub[year] || 0) : 0;
+}
+// 항로별 항공사 요약 (요약 행)
+function airRouteTotal(route, year){
+  const rows = getAirRows();
+  const sub = rows.find(r => r['행 레이블'] === route + ' 요약');
+  return sub ? (sub[year] || 0) : 0;
+}
+// 선박 : 항로의 개별 선사 (소계 제외)
+function shipCompanies(route, year){
+  return getShipRows()
+    .filter(r => r['항로'] === route && r['선사'] !== '소계' && (r[year] || 0) > 0)
+    .map(r => ({ name: r['선사(국문)'] || r['선사'], value: r[year] || 0 }));
+}
+// 항공 : 두 노선의 블록을 "후쿠오카/키타큐슈 요약" 경계로 끊어 추출
+function airCompanies(route, year){
+  const rows = getAirRows();
+  const out = [];
+  let inside = false;
+  for (const r of rows) {
+    const lbl = r['행 레이블'];
+    if (lbl === route) { inside = true; continue; }                 // 블록 시작
+    if (!inside) continue;
+    if (lbl === route + ' 요약' || lbl === '총합계') break;         // 블록 끝
+    if (lbl === '후쿠오카' || lbl === '키타큐슈') continue;        // 다른 블록 머리
+    if ((r[year] || 0) > 0) out.push({ name: lbl, value: r[year] || 0 });
+  }
+  return out;
+}
+
+// ── SVG 유틸 ──
+const NS = 'http://www.w3.org/2000/svg';
+const svg = (tag, attrs={}) => {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+};
+
+// ── 그래프 : 연도별 수요 추이 (라인) ──
+// 각 라인 = (항로, 모드) 조합. 모드별 합산 모드에서는 전체 선박 · 전체 항공 두 라인만 그린다.
+const LINE_COLORS = ['#1f4e79','#c25e2e','#4b8b3b','#8d4ea8','#c3a92e','#2d8f8f','#b23a3a','#7a8290'];
+const SHIP_DASH = '', AIR_DASH = '5 3';
+function renderDemandChart(){
+  const host = document.getElementById('demandChart');
+  host.innerHTML = '';
+  const showShip = document.getElementById('demandShowShip').checked;
+  const showAir  = document.getElementById('demandShowAir').checked;
+  const agg      = document.getElementById('demandAgg').checked;
+
+  // 시리즈 구성
+  const series = [];
+  if (agg) {
+    if (showShip) series.push({ name:'선박 전체',   mode:'ship',
+      values: YEARS.map(y => SHIP_ROUTES.reduce((a,r) => a + shipRouteTotal(r, y), 0)) });
+    if (showAir)  series.push({ name:'항공편 전체', mode:'air',
+      values: YEARS.map(y => AIR_ROUTES.reduce((a,r) => a + airRouteTotal(r, y), 0)) });
+  } else {
+    if (showShip) SHIP_ROUTES.forEach(r => series.push({ name:r.split('(')[0] + '(선박)',  mode:'ship',
+      values: YEARS.map(y => shipRouteTotal(r, y)) }));
+    if (showAir)  AIR_ROUTES .forEach(r => series.push({ name:r + '(항공)',               mode:'air',
+      values: YEARS.map(y => airRouteTotal(r, y)) }));
+  }
+  // 색상 : 선박은 LINE_COLORS 앞쪽, 항공은 뒤쪽으로 겹치지 않게
+  series.forEach((s, i) => { s.color = LINE_COLORS[i % LINE_COLORS.length]; });
+
+  const maxV = Math.max(1, ...series.flatMap(s => s.values.map(v => v || 0)));
+  const W = 820, H = 360, PL = 60, PR = 24, PT = 22, PB = 46;
+  const iw = W - PL - PR, ih = H - PT - PB;
+  const xAt = i => PL + (YEARS.length === 1 ? iw/2 : iw * i / (YEARS.length - 1));
+  const yAt = v => PT + ih - (v / maxV) * ih;
+  const s = svg('svg', { class:'chart-svg', viewBox:`0 0 ${W} ${H}` });
+
+  // 특수요인 연도 X축 음영
+  YEARS.forEach((y, i) => {
+    if (!WARN_YEARS.has(y)) return;
+    const prev = i > 0 ? xAt(i - 0.5) : xAt(0);
+    const next = i < YEARS.length - 1 ? xAt(i + 0.5) : xAt(i);
+    s.appendChild(svg('rect', { x:prev, y:PT, width:next-prev, height:ih, fill:'#e6e6e6', opacity:'0.4' }));
+  });
+
+  // Y 눈금 (5단계)
+  const ticks = 5;
+  for (let i = 0; i <= ticks; i++) {
+    const y = PT + ih - (ih * i / ticks);
+    const v = maxV * i / ticks;
+    s.appendChild(svg('line', { class:'grd', x1:PL, y1:y, x2:PL+iw, y2:y }));
+    const t = svg('text', { class:'axlbl', x:PL-6, y:y+3, 'text-anchor':'end' });
+    t.textContent = v >= 1e6 ? (v/1e6).toFixed(1)+'M'
+                   : v >= 1e3 ? Math.round(v/1e3)+'K' : Math.round(v);
+    s.appendChild(t);
+  }
+  // 축
+  s.appendChild(svg('line', { class:'ax', x1:PL, y1:PT, x2:PL, y2:PT+ih }));
+  s.appendChild(svg('line', { class:'ax', x1:PL, y1:PT+ih, x2:PL+iw, y2:PT+ih }));
+  // X 레이블
+  YEARS.forEach((y, i) => {
+    const t = svg('text', { class:'axlbl', x:xAt(i), y:PT+ih+16, 'text-anchor':'middle' });
+    t.textContent = y;
+    if (WARN_YEARS.has(y)) t.setAttribute('fill', '#999');
+    s.appendChild(t);
+  });
+
+  // 라인 그리기
+  series.forEach(ser => {
+    const pts = ser.values.map((v, i) => (v > 0 ? { x: xAt(i), y: yAt(v), v } : null));
+    const d = pts.filter(Boolean).map((p, i) => (i === 0 ? 'M' : 'L') + p.x + ' ' + p.y).join(' ');
+    if (d) s.appendChild(svg('path', { d, fill:'none', stroke:ser.color, 'stroke-width':'2',
+                                       'stroke-dasharray': ser.mode === 'air' ? AIR_DASH : SHIP_DASH }));
+    pts.forEach(p => {
+      if (!p) return;
+      s.appendChild(svg('circle', { cx:p.x, cy:p.y, r:3, fill:ser.color, stroke:'#fff', 'stroke-width':'1' }));
+    });
+  });
+
+  // 범례 (우측 상단, 열 지정 자동 줄바꿈)
+  const lg = svg('g', { transform:`translate(${PL},${PT-14})` });
+  let lgX = 0, lgY = 0, maxLineW = iw;
+  series.forEach(ser => {
+    const text = ser.name;
+    const estW = text.length * 7.5 + 32;
+    if (lgX + estW > maxLineW) { lgX = 0; lgY += 16; }
+    const g = svg('g', { transform:`translate(${lgX},${lgY})` });
+    g.appendChild(svg('line', { x1:0, y1:0, x2:16, y2:0, stroke:ser.color, 'stroke-width':'2',
+                                 'stroke-dasharray': ser.mode === 'air' ? AIR_DASH : SHIP_DASH }));
+    g.appendChild(svg('circle', { cx:8, cy:0, r:2.5, fill:ser.color }));
+    const t = svg('text', { class:'axlbl', x:22, y:3 }); t.textContent = text; g.appendChild(t);
+    lg.appendChild(g);
+    lgX += estW;
+  });
+  s.appendChild(lg);
+
+  // 아무 시리즈도 없으면 안내
+  if (series.length === 0) {
+    const t = svg('text', { class:'axlbl', x:W/2, y:H/2, 'text-anchor':'middle', fill:'#b23a3a' });
+    t.textContent = '선박 · 항공편 체크를 하나 이상 선택하세요';
+    s.appendChild(t);
+  }
+  host.appendChild(s);
+}
+
+// ── 파이 : 항로별 회사 점유율 ──
+const PIE_COLORS = ['#1f4e79','#c25e2e','#4b8b3b','#8d4ea8','#c3a92e','#2d8f8f','#b23a3a','#7a8290'];
+function renderPie(container, title, sub, items){
+  // 상위 7개 + 기타
+  const sorted = items.slice().sort((a,b) => b.value - a.value);
+  const top = sorted.slice(0, 7);
+  const rest = sorted.slice(7);
+  const restSum = rest.reduce((a,x) => a+x.value, 0);
+  if (restSum > 0) top.push({ name:'기타('+rest.length+')', value: restSum });
+  const total = top.reduce((a,x) => a+x.value, 0);
+  const wrap = document.createElement('div');
+  wrap.className = 'pie-item';
+  wrap.innerHTML = `<h5>${title}</h5><p class="pie-sub">${sub} · 합계 ${fmtN(total)}명</p>`;
+  if (!(total > 0)) { wrap.innerHTML += '<p class="pie-sub" style="color:#b23a3a">해당 연도 실적 없음</p>';
+                      container.appendChild(wrap); return; }
+  const s = svg('svg', { class:'pie-svg', viewBox:'0 0 100 100' });
+  const cx = 50, cy = 50, R = 44;
+  let acc = 0;
+  top.forEach((it, i) => {
+    const frac = it.value / total;
+    const a0 = acc * 2 * Math.PI - Math.PI/2;
+    const a1 = (acc + frac) * 2 * Math.PI - Math.PI/2;
+    const large = frac > 0.5 ? 1 : 0;
+    const x0 = cx + R*Math.cos(a0), y0 = cy + R*Math.sin(a0);
+    const x1 = cx + R*Math.cos(a1), y1 = cy + R*Math.sin(a1);
+    const path = (frac >= 0.999)
+      ? `M ${cx} ${cy-R} A ${R} ${R} 0 1 1 ${cx-0.01} ${cy-R} Z`
+      : `M ${cx} ${cy} L ${x0} ${y0} A ${R} ${R} 0 ${large} 1 ${x1} ${y1} Z`;
+    s.appendChild(svg('path', { d:path, fill: PIE_COLORS[i % PIE_COLORS.length],
+                                stroke:'#fff', 'stroke-width':'1' }));
+    acc += frac;
+  });
+  wrap.appendChild(s);
+  const ul = document.createElement('ul');
+  ul.className = 'pie-legend';
+  top.forEach((it, i) => {
+    const pct = (it.value / total * 100).toFixed(1) + '%';
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="nm"><span class="sw" style="background:${PIE_COLORS[i%PIE_COLORS.length]}"></span>${it.name}</span>`
+                  + `<span class="pct">${pct}</span>`;
+    ul.appendChild(li);
+  });
+  wrap.appendChild(ul);
+  container.appendChild(wrap);
+}
+function renderPies(year){
+  const grid = document.getElementById('pieGrid');
+  grid.innerHTML = '';
+  // 선박 — 4개 항로
+  SHIP_ROUTES.forEach(r => {
+    const items = shipCompanies(r, year);
+    renderPie(grid, '[선박] ' + r.split('(')[0], '선박 ' + year, items);
+  });
+  // 항공 — 2개 노선
+  AIR_ROUTES.forEach(r => {
+    const items = airCompanies(r, year);
+    renderPie(grid, '[항공] ' + r, '항공 ' + year, items);
+  });
+}
+
+// ── 통합분석 초기화 (옵션 채우기 + 첫 렌더) ──
+let analysisInited = false;
+function renderAnalysis(){
+  if (!analysisInited) {
+    const pieSel = document.getElementById('pieYear');
+    YEARS.forEach(y => pieSel.add(new Option(WARN_YEARS.has(y) ? y + ' (특수)' : y, y)));
+    pieSel.value = '2025';
+    pieSel.onchange = () => renderPies(pieSel.value);
+    // 라인 차트 — 체크박스 조작 시 즉시 재렌더
+    ['demandShowShip','demandShowAir','demandAgg'].forEach(id =>
+      document.getElementById(id).onchange = renderDemandChart);
+    analysisInited = true;
+  }
+  renderDemandChart();
+  renderPies(document.getElementById('pieYear').value);
+}
 </script>
 </body>
 </html>
