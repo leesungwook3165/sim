@@ -11,7 +11,7 @@
 *{box-sizing:border-box}
 body{margin:0;font-family:"Malgun Gothic","맑은 고딕","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
 background:var(--bg);color:var(--fg);font-size:13px;line-height:1.5}
-header{padding:18px 20px 0;border-bottom:1px solid var(--line)}
+header{position:relative;padding:18px 20px 0;border-bottom:1px solid var(--line)}
 h1{font-size:17px;margin:0 0 2px;letter-spacing:-.2px}
 .meta{color:var(--muted);font-size:11.5px;margin:0 0 12px}
 nav{display:flex;gap:4px}
@@ -80,12 +80,50 @@ border-bottom:2px solid #fff}
 .pie-legend .sw{width:9px;height:9px;flex:none;border-radius:2px;border:1px solid rgba(0,0,0,.08)}
 .pie-legend .pct{font-variant-numeric:tabular-nums;color:#1a1d21;font-weight:600}
 @media (max-width:640px){main{padding:14px 10px 50px}header{padding:14px 10px 0}}
+/* ── 인쇄 ── */
+.prt{position:absolute;right:20px;bottom:9px;display:flex;gap:6px}
+.prt button{font:inherit;font-size:12px;padding:5px 11px;border:1px solid var(--line2);
+background:#fff;color:var(--accent);border-radius:5px;cursor:pointer;white-space:nowrap}
+.prt button:hover{background:var(--hover)}
+@media (max-width:860px){.prt{position:static;margin:0 0 8px;justify-content:flex-end}}
+@media print{
+  @page{size:A4 landscape;margin:8mm}
+  body{font-size:8pt;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  header{padding:0 0 6px;border-bottom:1px solid #999}
+  h1{font-size:12.5pt;margin:0 0 2px}
+  .meta{font-size:7.5pt;margin:0}
+  nav,.subnav,.prt,.chart-controls{display:none !important}
+  main{padding:8px 0 0;zoom:.86}   /* 최대 폭 표 1,204px → A4 가로 인쇄폭 1,062px 안에 */
+  .legend{font-size:7pt;margin:6px 0 0}
+  .sech{font-size:10pt;margin:12px 0 4px;page-break-after:avoid}
+  p.sub{font-size:7.5pt;margin:0 0 5px}
+  .tw{max-height:none !important;overflow:visible !important;border:1px solid #bbb;border-radius:0}
+  table{width:100% !important;min-width:0 !important}
+  thead{display:table-header-group}
+  th{position:static !important}
+  th,td{padding:1.5px 3px;font-size:7pt;border-right:1px solid #ddd;border-bottom:1px solid #e8e8e8}
+  td.note{font-size:7pt;min-width:0;max-width:300px;white-space:normal}
+  tr{page-break-inside:avoid}
+  .notebox,.warn,.chart-box,.pie-item{page-break-inside:avoid}
+  .notebox li{font-size:7.5pt}
+  .chart-box{background:#fff;border:1px solid #ddd;padding:8px}
+  .pie-grid{grid-template-columns:repeat(3,1fr)}
+  /* 보고 있는 화면만 */
+  body.printOne .panel[hidden],body.printOne .subpanel[hidden]{display:none !important}
+  /* 전체 — 모든 탭·표를 이어서 */
+  body.printAll .panel,body.printAll .subpanel{display:block !important}
+  body.printAll .panel+.panel,body.printAll .subpanel+.subpanel{page-break-before:always}
+}
 </style>
 </head>
 <body>
 <header>
 <h1>타선사 월별수송실적 2017–2026</h1>
 <p class="meta">원본: 타선사_월별수송실적_2017-2026 1.xlsx · 시트 「항로선사별요약」, 「항공기(FSC+LCC)」 · 변환일 2026-09-14</p>
+<div class="prt">
+<button type="button" id="btnPrint" title="지금 보고 있는 탭·표만 인쇄">🖨 인쇄</button>
+<button type="button" id="btnPrintAll" title="모든 탭·표를 한 번에 인쇄">🖨 전체</button>
+</div>
 <nav>
 <button data-t="p1" aria-selected="true">항로선사별요약</button>
 <button data-t="p2" aria-selected="false">항공기(FSC+LCC)</button>
@@ -6940,6 +6978,30 @@ function renderAnalysis(){
   renderDemandChart();
   renderPies(document.getElementById('pieYear').value);
 }
+
+// ── 인쇄 ── 현재 화면만 / 전체. 통합분석은 지연 렌더라 인쇄 전에 한 번 그려 둔다.
+(function printSetup(){
+  const panes = () => [...document.querySelectorAll(".panel, .subpanel")];
+  let saved = null;
+  function begin(all){
+    if (all){
+      saved = panes().map(el => [el, el.hidden]);
+      panes().forEach(el => el.hidden = false);
+      renderAnalysis();
+    } else if (!document.getElementById("p3").hidden) {
+      renderAnalysis();
+    }
+    document.body.classList.add(all ? "printAll" : "printOne");
+  }
+  function end(){
+    document.body.classList.remove("printAll", "printOne");
+    if (saved){ saved.forEach(([el, h]) => { el.hidden = h; }); saved = null; }
+  }
+  const run = all => { begin(all); window.print(); end(); };
+  document.getElementById("btnPrint").onclick    = () => run(false);
+  document.getElementById("btnPrintAll").onclick = () => run(true);
+  window.addEventListener("afterprint", end);   // print() 가 즉시 반환하는 브라우저 대비
+})();
 </script>
 </body>
 </html>
