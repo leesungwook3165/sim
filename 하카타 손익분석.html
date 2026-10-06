@@ -120,7 +120,7 @@
   .sec:first-child{margin-top:0}
   .fields{display:grid;grid-template-columns:1fr 1fr;gap:7px 10px}
   /* 한 줄형 입력 — 라벨을 위가 아니라 왼쪽에 둬 세로를 아낀다.
-     성장률 가정처럼 "숫자 한 칸"짜리 항목이 길게 늘어서는 곳에 쓴다. */
+     증감률 가정처럼 "숫자 한 칸"짜리 항목이 길게 늘어서는 곳에 쓴다. */
   .fields.rowy{grid-template-columns:1fr;gap:4px}
   .fields.rowy .f{display:grid;grid-template-columns:1fr 108px;align-items:center;gap:8px}
   .fields.rowy .f label{margin:0;line-height:1.3}
@@ -470,7 +470,7 @@
   table.pl.pl10 tr.lead td.avg{background:#C7DAEE}
   table.pl.pl10 tr.d th,table.pl.pl10 tr.n th{padding-left:20px;color:var(--muted);font-size:10.5px}
   table.pl.pl10 tr.sub2 th{padding-left:34px}
-  /* 좌측 설정 카드의 성장률 입력 : dirty 상태(기본값에서 벗어남) 시각 강조 */
+  /* 좌측 설정 카드의 증감률 입력 : dirty 상태(기본값에서 벗어남) 시각 강조 */
   #growSection input.dirty{border-color:var(--navy);background:#EBF2FB;font-weight:600;color:var(--navy)}
   details.grp>summary .badge{font-size:9px;font-weight:700;padding:0 5px;border-radius:8px;
     background:var(--soft);color:var(--navy);flex:none}
@@ -522,7 +522,7 @@
       font-size:11pt;color:var(--navy)}
     body.printModeSettings #row > .card:first-of-type > h2 em{font-size:8pt;font-weight:400}
     body.printModeSettings #row > .card:first-of-type .body{padding:0}
-    /* 탭 헤더/버튼/성장률/리셋 숨김 */
+    /* 탭 헤더/버튼/증감률/리셋 숨김 */
     body.printModeSettings .tabs,
     body.printModeSettings #growSection,
     body.printModeSettings #btnReset,
@@ -570,7 +570,7 @@
     /* 페이지 넘김 방지 */
     body.printModeSettings details{page-break-inside:avoid}
   }
-  /* 성장률 가정 : 참고 자료 스타일 접이식 그룹 */
+  /* 증감률 가정 : 참고 자료 스타일 접이식 그룹 */
   details.grp{border-bottom:1px solid var(--rule)}
   details.grp:last-of-type{border-bottom:0}
   details.grp>summary{padding:6px 8px;cursor:pointer;font-size:11px;font-weight:700;
@@ -703,6 +703,7 @@
         <div class="tabs">
           <button type="button" class="tab on" data-tab="tabA">기준 자료 (대저페리 3기)</button>
           <button type="button" class="tab"    data-tab="tabB">대조 선박 설정</button>
+          <button type="button" class="tab"    data-tab="tabGrow" hidden>증감률 가정</button>
         </div>
         <div class="setbar">
           <button type="button" class="lnk" id="btnSecAll">모두 펼치기</button>
@@ -768,7 +769,7 @@
             </div>
 
             <div class="sec clksec" data-modal="ovCost" role="button" tabindex="0" aria-haspopup="dialog">
-              원가 구성 — 고정 · 준변동 · 변동 <span class="ic">?</span>
+              원가 구성 — 고정 · 변동(항차) · 변동(승객) <span class="ic">?</span>
               <span class="secx">누르면 원가 구조</span>
             </div>
             <div class="f wide">
@@ -792,7 +793,7 @@
               <label class="chk">
                 <input type="checkbox" id="iAutoVoy">
                 <span>승객이 정원을 넘으면 <b>항차를 늘린다</b><br>
-                  <span style="color:var(--muted)">준변동비는 승객이 아니라 항차에 붙는다</span></span>
+                  <span style="color:var(--muted)">변동비(항차)는 승객이 아니라 항차에 비례해 늘어난다</span></span>
               </label>
             </div>
             <div class="f">
@@ -840,138 +841,6 @@
               <div class="fh" id="hCmpShip">—</div>
             </div>
 
-            <div class="sec">인력</div>
-            <div class="f">
-              <label>지상직 (판관비)</label>
-              <div class="ib"><input type="number" step="1" min="1" max="999" id="iHeadPeer" value="3"><span class="u">명</span></div>
-            </div>
-            <div class="f">
-              <label>선원 <span class="ast">가정</span></label>
-              <div class="ib"><input type="number" step="1" min="0" max="999" id="iSailorPeer" value="13"><span class="u">명</span></div>
-            </div>
-            <div class="f">
-              <label>승무원 <span class="ast">가정</span></label>
-              <div class="ib"><input type="number" step="1" min="0" max="999" id="iCrewPeer" value="7"><span class="u">명</span></div>
-            </div>
-            <div class="f">
-              <label>대리점비(일본현지) <small style="color:#888;font-weight:normal">매출액 대비</small></label>
-              <div class="ib"><input type="number" step="0.5" min="0" max="99" id="iAgencyPeer" value="15"><span class="u">%</span></div>
-            </div>
-            <div class="f">
-              <label>연간 편도 항차수 <span class="ast">가정</span></label>
-              <div class="ib"><input type="number" step="10" min="1" max="9999" id="iVoyPeer" value="600"><span class="u">항차</span></div>
-            </div>
-            <div class="f wide">
-              <label class="chk">
-                <input type="checkbox" id="iVoyRatio" checked>
-                <span>항차 배율 <b id="hVoyRatioR">—</b>을 <b>변동비·준변동비</b>에 적용<br>
-                  <span style="color:var(--muted)">참조 대비 운항 증가분을 비용에 곱한다 · 연료비는 유가 증가율이 추가로 얹힌다</span>
-                </span>
-              </label>
-              <div class="fh" id="hVoyRatio">—</div>
-            </div>
-            <div class="f wide">
-              <div class="fh" id="hPeerHead">—</div>
-            </div>
-
-            <div class="sec" data-open>목표 영업이익률</div>
-            <div class="f wide">
-              <label>목표 영업이익률</label>
-              <div class="ib"><input type="number" step="0.5" min="-99" max="99" id="iTgtPeer" value="5"><span class="u">%</span></div>
-            </div>
-            <div class="f wide">
-              <label class="chk">
-                <input type="checkbox" id="iTgtPeerAuto">
-                <span>50% 승선율 영업이익률에 자동으로 맞추기<br>
-                  <span style="color:var(--muted)">체크 해제 시 수동 입력 가능 · 자동일 때 위 칸은 읽기 전용</span>
-                </span>
-              </label>
-            </div>
-
-            <div class="sec">연료 단가 — 현재 시세 반영</div>
-            <div class="f">
-              <label>2024 기준 단가</label>
-              <div class="ib"><input type="number" step="10" min="0" id="iFuelBase" value="820"><span class="u">$/MT</span></div>
-            </div>
-            <div class="f">
-              <label>현재 단가</label>
-              <div class="ib"><input type="number" step="10" min="0" id="iFuelNow" value="1490"><span class="u">$/MT</span></div>
-            </div>
-            <div class="f">
-              <label>2024 기준 환율</label>
-              <div class="ib"><input type="number" step="10" min="0" id="iFxBase" value="1360"><span class="u">원/$</span></div>
-            </div>
-            <div class="f">
-              <label>현재 환율</label>
-              <div class="ib"><input type="number" step="10" min="0" id="iFxNow" value="1346.24"><span class="u">원/$</span></div>
-            </div>
-            <div class="f wide">
-              <button type="button" class="lnk" id="btnFuelLive">fuel_price.json 에서 현재값 불러오기</button>
-              <div class="fh" id="hFuelLive">—</div>
-            </div>
-            <div class="f wide">
-              <label class="chk">
-                <input type="checkbox" id="iFuelEsc" checked>
-                <span>연료비에 <b>현재 증가율</b> 반영<br>
-                  <span style="color:var(--muted)">연료비에만 적용 · 항비·보험료·수리비 제외</span></span>
-              </label>
-              <div class="fh" id="hFuelEsc">—</div>
-            </div>
-
-            <details class="dep-block" open>
-              <summary class="sec">
-                선가 · 감가상각 · 이자비용
-                <span class="secx dep-arrow"></span>
-              </summary>
-              <div class="dep-fields">
-                <div class="dep-sub">감가상각 (정액법)</div>
-                <div class="f">
-                  <label>선가 <small style="color:#bbb;font-weight:normal">비우면 보고서 값</small></label>
-                  <div class="ib"><input type="number" step="1000" min="0" id="iShipPricePeer" value="50000"><span class="u">백만원</span></div>
-                </div>
-                <div class="f">
-                  <label>내용연수</label>
-                  <div class="ib"><input type="number" step="1" min="1" max="50" id="iLifePeer" value="20"><span class="u">년</span></div>
-                </div>
-                <div class="f wide">
-                  <label>잔존가치</label>
-                  <div class="ib"><input type="number" step="1" min="0" max="100" id="iSalvagePeer" value="10"><span class="u">%</span></div>
-                </div>
-                <div class="f wide">
-                  <div class="fh" id="hDepPeer">—</div>
-                </div>
-
-                <div class="dep-sub">차입금 · 이자비용</div>
-                <div class="f">
-                  <label>차입금 <small style="color:#bbb;font-weight:normal">비우면 미적용</small></label>
-                  <div class="ib"><input type="number" step="1000" min="0" id="iLoanPeer" value="20000"><span class="u">백만원</span></div>
-                </div>
-                <div class="f">
-                  <label>이자율</label>
-                  <div class="ib"><input type="number" step="0.1" min="0" max="30" id="iLoanRatePeer" value="3.5"><span class="u">%</span></div>
-                </div>
-                <div class="f">
-                  <label>상환기간</label>
-                  <div class="ib"><input type="number" step="1" min="1" max="40" id="iLoanYears" value="15"><span class="u">년</span></div>
-                </div>
-                <div class="f">
-                  <label>거치기간</label>
-                  <div class="ib"><input type="number" step="1" min="0" max="20" id="iLoanGrace" value="3"><span class="u">년</span></div>
-                </div>
-                <div class="f wide">
-                  <label>상환방식</label>
-                  <select id="iLoanMethod" class="shipsel">
-                    <option value="annuity" selected>원리금균등 — 매년 같은 금액</option>
-                    <option value="equal">원금균등 — 원금 일정, 이자 체감</option>
-                    <option value="bullet">만기일시 — 기간 중 이자만</option>
-                  </select>
-                </div>
-                <div class="f wide">
-                  <div class="fh" id="hLoanPeer">—</div>
-                </div>
-              </div>
-            </details>
-
             <div class="sec">시뮬레이션 승객수</div>
             <div class="f wide">
               <label>항차당 승선율 <small style="color:#888;font-weight:normal">정원 대비</small></label>
@@ -991,7 +860,7 @@
               <div class="fh" id="hPerVoyPeer">—</div>
             </div>
 
-            <div class="sec">좌석 등급</div>
+            <div class="sec">좌석 등급 — 여객 운임</div>
             <div class="f">
               <label>이코노미 대인 편도운임(기준)</label>
               <div class="ib"><input type="number" step="1000" min="0" id="iFarePeer" value="90000"><span class="u">원</span></div>
@@ -1030,10 +899,189 @@
               <div class="fh" id="hCargoCmp">—</div>
             </div>
 
+            <div class="sec">인력</div>
+            <div class="f">
+              <label>지상직 (판관비)</label>
+              <div class="ib"><input type="number" step="1" min="1" max="999" id="iHeadPeer" value="3"><span class="u">명</span></div>
+            </div>
+            <div class="f">
+              <label>선원 <span class="ast">가정</span></label>
+              <div class="ib"><input type="number" step="1" min="0" max="999" id="iSailorPeer" value="13"><span class="u">명</span></div>
+            </div>
+            <div class="f">
+              <label>승무원 <span class="ast">가정</span></label>
+              <div class="ib"><input type="number" step="1" min="0" max="999" id="iCrewPeer" value="7"><span class="u">명</span></div>
+            </div>
+            <div class="f">
+              <label>대리점비(일본현지) <small style="color:#888;font-weight:normal">매출액 대비</small></label>
+              <div class="ib"><input type="number" step="0.5" min="0" max="99" id="iAgencyPeer" value="15"><span class="u">%</span></div>
+            </div>
+            <div class="f">
+              <label>연간 편도 항차수 <span class="ast">가정</span></label>
+              <div class="ib"><input type="number" step="10" min="1" max="9999" id="iVoyPeer" value="600"><span class="u">항차</span></div>
+            </div>
+            <div class="f wide">
+              <label class="chk">
+                <input type="checkbox" id="iVoyRatio" checked>
+                <span>항차 배율 <b id="hVoyRatioR">—</b>을 <b>변동비(항차)</b>에 적용<br>
+                  <span style="color:var(--muted)">참조 대비 운항 증가분을 연료·항비에 곱한다 · 연료비는 유가 증가율이 추가로 얹힌다</span>
+                </span>
+              </label>
+              <div class="fh" id="hVoyRatio">—</div>
+            </div>
+            <div class="f wide">
+              <div class="fh" id="hPeerHead">—</div>
+            </div>
+
+            <div class="sec" data-open>목표 영업이익률</div>
+            <div class="f wide">
+              <label>목표 영업이익률</label>
+              <div class="ib"><input type="number" step="0.5" min="-99" max="99" id="iTgtPeer" value="5"><span class="u">%</span></div>
+            </div>
+            <div class="f wide">
+              <label class="chk">
+                <input type="checkbox" id="iTgtPeerAuto">
+                <span>50% 승선율 영업이익률에 자동으로 맞추기<br>
+                  <span style="color:var(--muted)">체크 해제 시 수동 입력 가능 · 자동일 때 위 칸은 읽기 전용</span>
+                </span>
+              </label>
+            </div>
+
+            <div class="sec">세무 — 법인세 vs 톤세</div>
+            <div class="f wide">
+              <label class="chk">
+                <input type="checkbox" id="iTonnageTax">
+                <span>톤세 적용 <a href="https://www.law.go.kr/법령/조세특례제한법/제104조의10"
+                   target="_blank" rel="noopener"
+                   style="font-size:10px;color:var(--sky);margin-left:4px"
+                   title="조세특례제한법 §104-10 — 해운기업 과세표준 계산의 특례(톤세)">근거↗</a><br>
+                  <span style="color:var(--muted)">외항선 특례 — 순톤수 × 운항일수로 의제이익 계산 후 법인세율 적용. 체크 해제 시 통상 법인세(누진).</span>
+                </span>
+              </label>
+            </div>
+            <div class="f">
+              <label>순톤수 (NT)</label>
+              <div class="ib"><input type="number" step="10" min="0" id="iNetTon" value="800"><span class="u">톤</span></div>
+            </div>
+            <div class="f">
+              <label>연간 운항일수</label>
+              <div class="ib"><input type="number" step="1" min="1" max="365" id="iOpDays" value="300"><span class="u">일</span></div>
+            </div>
+            <div class="f wide">
+              <div class="fh" id="hTonnageTax">—</div>
+            </div>
+
+            <div class="sec">연료 단가 — 현재 시세 반영</div>
+            <div class="f">
+              <label>2024 기준 단가 <a href="https://shipandbunker.com/news/world/424013-annual-average-bunker-price-at-key-hubs-mostly-flat-in-2024"
+                 target="_blank" rel="noopener"
+                 style="font-size:10px;color:var(--sky);margin-left:4px"
+                 title="Ship &amp; Bunker — 2024년 주요 항만 벙커유 연평균 가격 기사">근거↗</a></label>
+              <div class="ib"><input type="number" step="10" min="0" id="iFuelBase" value="820"><span class="u">$/MT</span></div>
+            </div>
+            <div class="f">
+              <label>현재 단가 <span id="hFuelNowMode" style="font-size:10px;color:var(--muted);margin-left:4px">수동</span></label>
+              <div class="ib"><input type="number" step="10" min="0" id="iFuelNow" value="1325"><span class="u">$/MT</span></div>
+            </div>
+            <div class="f wide">
+              <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:11px;color:var(--muted)">
+                <span>수동 단가 <b id="hManualFuel" style="color:var(--navy)">1,325</b>$/MT · <b id="hManualFx" style="color:var(--navy)">1,346.24</b>원/$</span>
+                <button type="button" id="btnSwapFuel" class="lnk" style="font-size:10.5px;padding:2px 8px"
+                  title="수동 단가(1,325)와 실시간 단가를 서로 바꾼다 — 체크박스가 그 결과를 결정">↔ 바꾸기</button>
+              </div>
+            </div>
+            <div class="f">
+              <label>2024 기준 환율</label>
+              <div class="ib"><input type="number" step="10" min="0" id="iFxBase" value="1360"><span class="u">원/$</span></div>
+            </div>
+            <div class="f">
+              <label>현재 환율</label>
+              <div class="ib"><input type="number" step="10" min="0" id="iFxNow" value="1346.24"><span class="u">원/$</span></div>
+            </div>
+            <div class="f wide">
+              <label class="chk">
+                <input type="checkbox" id="iFuelLiveMode">
+                <span>시가 반영 <small style="color:var(--muted);font-weight:normal">↔ 초기값 (2024 기준 820$/MT)</small><br>
+                  <span style="color:var(--muted)">체크 : 현재 단가로 escalation 반영 · 해제(기본) : 2024 초기값 그대로 (escRate=1)</span>
+                </span>
+              </label>
+              <button type="button" class="lnk" id="btnFuelLive" style="margin-top:4px">지금 불러오기 ↻</button>
+              <div class="fh" id="hFuelLive">—</div>
+            </div>
+            <!-- iFuelEsc 는 과거 호환용 (항상 ON으로 가정) -->
+            <input type="checkbox" id="iFuelEsc" checked hidden>
+            <!-- iFuelManualMode : 손익계산서 체크박스에서 토글되는 '수동 1,325' 상태.
+                 기본값 checked — 1,325달러 escalation 이 처음부터 걸린 상태로 시작한다. -->
+            <input type="checkbox" id="iFuelManualMode" checked hidden>
+            <div class="f wide" hidden>
+              <div class="fh" id="hFuelEsc">—</div>
+            </div>
+
+            <details class="dep-block" open>
+              <summary class="sec">
+                선가 · 감가상각 · 이자비용
+                <span class="secx dep-arrow"></span>
+              </summary>
+              <div class="dep-fields">
+                <div class="dep-sub">감가상각 (정액법)</div>
+                <div class="f">
+                  <label>선가 <small style="color:#bbb;font-weight:normal">비우면 보고서 값</small></label>
+                  <div class="ib"><input type="number" step="1000" min="0" id="iShipPricePeer" value="50000"><span class="u">백만원</span></div>
+                </div>
+                <div class="f">
+                  <label>내용연수</label>
+                  <div class="ib"><input type="number" step="1" min="1" max="50" id="iLifePeer" value="15"><span class="u">년</span></div>
+                </div>
+                <div class="f wide">
+                  <label>잔존가치</label>
+                  <div class="ib">
+                    <input type="number" step="1" min="0" id="iSalvagePeer" value="1">
+                    <select id="iSalvageUnit" class="u" title="단위 선택 — % 는 선가 대비 비율, 백만원 은 금액"
+                            style="border:none;background:transparent;font-family:inherit;cursor:pointer;padding:0;font-size:10.5px;color:var(--muted);margin-left:4px">
+                      <option value="krw" selected>백만원</option>
+                      <option value="pct">%</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="f wide">
+                  <div class="fh" id="hDepPeer">—</div>
+                </div>
+
+                <div class="dep-sub">차입금 · 이자비용</div>
+                <div class="f">
+                  <label>차입금 <small style="color:#bbb;font-weight:normal">비우면 미적용</small></label>
+                  <div class="ib"><input type="number" step="1000" min="0" id="iLoanPeer" value="20000"><span class="u">백만원</span></div>
+                </div>
+                <div class="f">
+                  <label>이자율</label>
+                  <div class="ib"><input type="number" step="0.1" min="0" max="30" id="iLoanRatePeer" value="3.5"><span class="u">%</span></div>
+                </div>
+                <div class="f">
+                  <label>상환기간</label>
+                  <div class="ib"><input type="number" step="1" min="1" max="40" id="iLoanYears" value="15"><span class="u">년</span></div>
+                </div>
+                <div class="f">
+                  <label>거치기간</label>
+                  <div class="ib"><input type="number" step="1" min="0" max="20" id="iLoanGrace" value="3"><span class="u">년</span></div>
+                </div>
+                <div class="f wide">
+                  <label>상환방식</label>
+                  <select id="iLoanMethod" class="shipsel">
+                    <option value="annuity" selected>원리금균등 — 매년 같은 금액</option>
+                    <option value="equal">원금균등 — 원금 일정, 이자 체감</option>
+                    <option value="bullet">만기일시 — 기간 중 이자만</option>
+                  </select>
+                </div>
+                <div class="f wide">
+                  <div class="fh" id="hLoanPeer">—</div>
+                </div>
+              </div>
+            </details>
+
           </div>
         </div>
 
-        <!-- 10개년 성장률 가정 : 우측 손익계산서가 '10개년 (백만원)' 모드일 때
+        <!-- 10개년 증감률 가정 : 우측 손익계산서가 '10개년 (백만원)' 모드일 때
              .tabs 와 .tabp 전체를 대체해서 이 영역만 표시 -->
         <div id="growSection" hidden></div>
 
@@ -1051,7 +1099,7 @@
         <button type="button" class="mtab"    data-mtab="plPeer"
                 title="대조 선박 설정으로 다시 세운 손익계산서">손익계산서<small>대조 선박</small></button>
         <button type="button" class="mtab"    data-mtab="pl10"
-                title="대조 선박 시나리오를 10개년으로 편 표 — 좌측이 성장률 가정으로 바뀐다">10개년 예상<small>대조 선박 · 백만원</small></button>
+                title="대조 선박 시나리오를 10개년으로 편 표 — 좌측이 증감률 가정으로 바뀐다">10개년 예상<small>대조 선박 · 백만원</small></button>
         <button type="button" class="mtab"    data-mtab="tgt">목표이익율<small>도달 지표</small></button>
         <button type="button" class="mtab"    data-mtab="cvp">승객수<small>손익분기 그래프</small></button>
         <button type="button" class="mtab"    data-mtab="src">자료 출처<small>한계</small></button>
@@ -1210,9 +1258,55 @@
                 <td><b>수리비 — 미반영</b><span class="sub">운항기타 세목</span></td>
                 <td class="lft">엘도라도호는 선령이 낮아 <b>보증기간·보험금 청구</b>로 처리돼 수리비가 잡히지 않았다.
                   산타모니카호는 선령 5년을 넘겨 곧 발생할 것으로 보이나, 금액을 추정할 근거가 없어
-                  <b class="amb">현재 0으로 두었다</b>. 두 배 모두 지금까지의 수리는 보험 청구로 처리된 것으로 보인다.
+                  <b class="amb">현재 0으로 두었다</b>. 두 배 모두(산타모니카, 엘도라도호) 지금까지의 수리는 보험 청구로 처리된 것으로 보인다.
                   실제 수리비가 붙으면 운항원가가 그만큼 올라간다.</td>
                 <td><a class="dl" href="%5B%EB%8C%80%EC%A0%80%ED%8E%98%EB%A6%AC%5D%EA%B0%90%EC%82%AC%EB%B3%B4%EA%B3%A0%EC%84%9C%282025.04.09%29.pdf" download>감사보고서 ↓</a></td>
+              </tr>
+              <tr>
+                <td><b>운항중단 리스크</b><span class="sub">수리·검사 장기화</span></td>
+                <td class="lft">실제로 엘도라도호는 2025년 4월 엔진 1기 결함으로 멈춰 선 뒤 <b class="neg">약 1년간 운항 중단</b> 후 2026년 4월 재취항했다.
+                  산타모니카호도 2025년 10월 추자항 접안 중 <b>버킷 파손</b>으로 휴항, 해외 부품 수급 문제로 수리가 장기화됐다.
+                  정기검사(DD/SS) · 엔진·기계 고장 · 선체 손상이 겹치면 <b class="neg">수개월~1년 운항불능</b>이 현실화되고,
+                  <b>그 기간 매출은 0, 고정비(인건비·감가상각·보험·이자)는 그대로 유출</b>된다.
+                  운항손실이 수개월만 쌓여도 <b class="neg">누적손익이 수십억 단위</b>로 벌어진다.</td>
+                <td><a class="dl ext" href="https://tk.newdaily.co.kr/site/data/html/2025/05/01/2025050100108.html" target="_blank" rel="noopener">뉴데일리 ↗</a>
+                    <a class="dl ext" href="https://www.seoul.co.kr/news/society/2025/01/26/20250126500008" target="_blank" rel="noopener">서울신문 ↗</a>
+                    <a class="dl ext" href="https://v.daum.net/v/20251104121734030" target="_blank" rel="noopener">제주일보 ↗</a></td>
+              </tr>
+              <tr>
+                <td><b>엔진 오버홀 비용</b><span class="sub">주기 돌출 지출</span></td>
+                <td class="lft">엘도라도호의 경우 결함이 있는 엔진 1기만 교체하려 했으나 정밀진단 결과 <b>기관 전체 교체</b>로 번졌고,
+                  엔진(캐터필러 C280-16) 신규 주문·납품에 <b class="neg">약 80억원</b>이 들었다 — 이는 하카타 노선 <b>연간 영업이익(흑자 가정)의 수년치</b>에 해당한다.
+                  현재 모델의 수리비 0% 가정은 <b>이 돌출 지출을 전혀 반영하지 않은 상태</b>라,
+                  정기검사·오버홀 주기에 맞춰 별도 충당금(연간 10~15억원 수준)으로 분해해 넣어 보는 것이
+                  장기 손익을 읽는 데 가깝다. 10개년 뷰에서 수리비 증감률을 올려 민감도를 보는 것도 한 방법.</td>
+                <td><a class="dl ext" href="https://namu.wiki/w/%EC%97%98%EB%8F%84%EB%9D%BC%EB%8F%84%20%EC%9D%B5%EC%8A%A4%ED%94%84%EB%A0%88%EC%8A%A4" target="_blank" rel="noopener">나무위키 ↗</a>
+                    <a class="dl ext" href="https://www.hidomin.com/news/articleView.html?idxno=615197" target="_blank" rel="noopener">경북도민일보 ↗</a></td>
+              </tr>
+              <tr>
+                <td><b>보증기간 · 보험 청구</b><span class="sub">선박 인수 시 확인 필요</span></td>
+                <td class="lft">엘도라도호 엔진 교체 80억원은 "보통 <b>보험처리</b>된다"고 알려져 있다. 즉 두 배 모두(산타모니카, 엘도라도호)
+                  지금까지의 수리는 <b>조선소 보증(통상 1~2년) · 선체보험</b>으로 흡수된 정황이 있다.
+                  <b class="amb">해당 선박을 인수할 경우</b> — 보증기간이 이미 만료됐을 가능성이 높고,
+                  <b>인수 후 발생한 고장이 보험 청구가 되는지, 담보 범위가 어디까지인지</b>를 반드시 파악해야 한다.
+                  보증 만료 + 보험 적용 불가 상황이 겹치면 수리비 전액이 인수 측 운항원가로 전가되고,
+                  이는 손익계산서에 <b class="neg">큰 음(-)의 충격</b>으로 바로 반영된다.</td>
+                <td><a class="dl ext" href="https://namu.wiki/w/%EC%97%98%EB%8F%84%EB%9D%BC%EB%8F%84%20%EC%9D%B5%EC%8A%A4%ED%94%84%EB%A0%88%EC%8A%A4" target="_blank" rel="noopener">나무위키 ↗</a>
+                    <a class="dl ext" href="https://www.kookjeilbo.com/news/article.html?no=91690" target="_blank" rel="noopener">국제일보 ↗</a></td>
+              </tr>
+              <tr>
+                <td><b>LSMGO 가격 민감도</b><span class="sub">유가 안정 시 수익 개선 여지</span></td>
+                <td class="lft">연료비는 운항원가의 <b>83%</b>를 차지해 유가 1배 변동이 영업손익을 좌우한다.
+                  LSMGO(저유황 경유)는 디젤 범용 수요와 연동되어 <b>민감도가 특히 높다</b>.
+                  2026년 들어 <b class="neg">이란·우크라이나 전쟁 → 러시아 정유시설 피격 → 중국 디젤·휘발유 수출 중단</b>이
+                  겹쳐 미국 디젤가가 사상 처음 갤런당 6달러를 돌파, LSMGO도 급등했다.
+                  <b>트럼프 대통령</b>이 젤렌스키에 러시아 정유시설 공격 중단을 요구한 것도 유가 급등 때문이다 —
+                  이들 지정학 변수가 해소되어 <b>유가가 안정화되면</b> 현재 1.6배로 반영된 escalation 계수가 1.0 근처로 돌아오고,
+                  연간 <b class="pos">수십억 원 규모의 영업이익 개선</b>이 가능하다. 지금 모델의 영업손실은 상당 부분이
+                  이 "일시적 고유가" 몫이며, 유가가 2024 수준(820$/MT)으로 돌아오면 수익구조가 대폭 바뀐다.</td>
+                <td><a class="dl ext" href="https://www.fnnews.com/news/202609140048207033" target="_blank" rel="noopener">파이낸셜뉴스 — 트럼프, 젤렌스키에 "러 정유시설 공격 멈춰라" ↗</a>
+                    <a class="dl ext" href="https://www.hankyung.com/article/2026100210541" target="_blank" rel="noopener">한국경제 — 中, 기름 수출 중단 ↗</a>
+                    <a class="dl ext" href="https://www.g-enews.com/article/Global-Biz/2026/09/2026092207533196829a1f309431_1" target="_blank" rel="noopener">글로벌이코노믹 — 美 경유 갤런당 6달러 ↗</a></td>
               </tr>
               <tr>
                 <td><b>지표 갱신</b><span class="sub">2026년 이후</span></td>
@@ -1320,9 +1414,9 @@
               <tr><td><b>항차</b></td><td class="lft">편도 한 번의 운항. 왕복하면 2항차다.</td></tr>
               <tr><td><b>승선율</b></td><td class="lft">승객수 ÷ (정원 × 항차수). 정원을 몇 % 채웠는가.</td></tr>
               <tr><td><b>고정비</b></td><td class="lft">승객·항차와 무관하게 나가는 돈 (인건비 · 감가상각비).</td></tr>
-              <tr><td><b>준변동비</b></td><td class="lft">항차에 붙는 돈. 배를 더 띄워야 늘고, 같은 배에 사람을 더 태운다고 늘지 않는다 (연료 · 항비).</td></tr>
-              <tr><td><b>변동비</b></td><td class="lft">승객 한 명에 붙는 돈 (예약·결제 수수료).</td></tr>
-              <tr><td><b>공헌이익률</b></td><td class="lft">운임에서 변동비를 뺀 몫의 비율. 고정비·준변동비를 메우러 가는 돈이다.</td></tr>
+              <tr><td><b>변동비(항차)</b></td><td class="lft">항차에 비례해 늘어나는 변동비. 배를 더 띄우면 늘고, 같은 배에 사람을 더 태운다고 늘지 않는다 (연료 · 항비).</td></tr>
+              <tr><td><b>변동비(승객)</b></td><td class="lft">승객 한 명에 비례해 늘어나는 변동비 (예약·결제 수수료).</td></tr>
+              <tr><td><b>공헌이익률</b></td><td class="lft">운임에서 변동비(승객)를 뺀 몫의 비율. 고정비·변동비(항차)를 메우러 가는 돈이다.</td></tr>
               <tr><td><b>손익분기 (BEP)</b></td><td class="lft">영업이익이 0이 되는 승객수. 이보다 적으면 적자다.</td></tr>
               <tr><td><b>EBITDA</b></td><td class="lft">영업이익 + 감가상각비. 현금이 나가지 않는 비용을 되돌린 값으로, 현금흐름에 가깝다.</td></tr>
               <tr><td><b>DSCR</b></td><td class="lft">EBITDA ÷ 연간 원리금. 1.0 미만이면 그해 빚을 못 갚는다는 뜻이다.</td></tr>
@@ -1590,6 +1684,82 @@
     <div class="mbody">
       <section class="card">
         <div class="body" id="opEtcCalcBody" style="font-size:12px">—</div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="ovLoanSchedule" role="dialog" aria-modal="true" aria-label="선체이자 — 상환표">
+  <div class="modal" style="width:min(820px,95vw)">
+    <header>
+      <div><h3>선체이자 — 상환표</h3>
+        <p id="loanScheduleSub">—</p>
+      </div>
+      <button class="x" data-close aria-label="닫기">✕</button>
+    </header>
+    <div class="mbody">
+      <section class="card">
+        <div class="body" style="font-size:12px">
+          <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px;padding:8px 10px;background:#F5F9FE;border-radius:4px">
+            <label style="font-size:11.5px">상환방식 변경:
+              <select id="iLoanMethodPopup" style="font:inherit;font-size:12px;padding:3px 6px;border:1px solid var(--line2);border-radius:3px;background:#fff;margin-left:4px">
+                <option value="annuity">원리금균등 — 매년 같은 금액</option>
+                <option value="equal">원금균등 — 원금 일정, 이자 체감</option>
+                <option value="bullet">만기일시 — 기간 중 이자만</option>
+              </select>
+            </label>
+            <span style="color:var(--muted);font-size:11px">— 설정 패널과 즉시 동기화</span>
+          </div>
+          <div id="loanScheduleBody">—</div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="ovDepSchedule" role="dialog" aria-modal="true" aria-label="감가상각 — 상각표">
+  <div class="modal" style="width:min(760px,95vw)">
+    <header>
+      <div><h3>감가상각 — 상각표</h3>
+        <p id="depScheduleSub">—</p>
+      </div>
+      <button class="x" data-close aria-label="닫기">✕</button>
+    </header>
+    <div class="mbody">
+      <section class="card">
+        <div class="body" id="depScheduleBody" style="font-size:12px">—</div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="ovCapexSchedule" role="dialog" aria-modal="true" aria-label="우발수리유보금 — 연차표">
+  <div class="modal" style="width:min(680px,95vw)">
+    <header>
+      <div><h3>우발수리유보금 — 10개년 연차표</h3>
+        <p id="capexScheduleSub">—</p>
+      </div>
+      <button class="x" data-close aria-label="닫기">✕</button>
+    </header>
+    <div class="mbody">
+      <section class="card">
+        <div class="body" id="capexScheduleBody" style="font-size:12px">—</div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="ovSinkingSchedule" role="dialog" aria-modal="true" aria-label="선박대체유보금 — 연차표">
+  <div class="modal" style="width:min(780px,95vw)">
+    <header>
+      <div><h3>선박대체유보금 — 10개년 연차표</h3>
+        <p id="sinkingScheduleSub">—</p>
+      </div>
+      <button class="x" data-close aria-label="닫기">✕</button>
+    </header>
+    <div class="mbody">
+      <section class="card">
+        <div class="body" id="sinkingScheduleBody" style="font-size:12px">—</div>
       </section>
     </div>
   </div>
@@ -1934,41 +2104,34 @@ const OPETC_ITEMS = [
        + '• 단가 820$/MT — 2024년 평균 LSMGO (Bunker Index 부산항)\n'
        + '• 소비량 49.5kg/km × 217km × 498항차 ≈ 5,349MT\n'
        + '• 환율 1,360원/$ — 2024년 평균\n'
-       + '• 항차수 498 — 기준자료 iVoy 와 일치\n'
-       + '성격: 항차에 붙는 준변동비 — 활동량 비례(1인당이 아니라 1항차당 발생)' },
+       + '성격: 항차에 비례하는 변동비' },
   { id:'port',   name:'항비',     grp:'운항비', kind:'semi', pct:11.15,
     note:'항비 11.15% ≈ 797,188,000원\n'
-       + '산출: 운항원가 잔액에서 연료·보험·선용품·수리를 뺀 나머지\n'
+       + '산출: 운항원가 잔액 중 연료·보험·선용품·수리를 뺀 나머지\n'
        + '• 포항·울릉 양항 입출항료·접안료·도선료·터미널 사용료\n'
-       + '• 보고서 세목 미공시 → 잔액 처리 (산출식 없이 역산)\n'
-       + '성격: 항차에 붙는 준변동비 — 입출항·접안 횟수 비례(1인당 아님)' },
+       + '성격: 항차에 비례하는 변동비' },
   { id:'ins',    name:'보험료',   grp:'선비',   kind:'fix',  pct:5.13,
     note:'보험료 5.13% ≈ 366,892,500원\n'
-       + '산출: 주석 4 선박보험 부보액 × 통상 요율\n'
-       + '• 부보액 73,378,500천원 (주석 4)\n'
-       + '• 요율 0.5% — 중소 연안여객선 통상치\n'
-       + '• 73,378,500천원 × 0.5% = 366,892,500원\n'
-       + '• P&amp;I(선주책임보험)·여객배상책임보험은 별도 · 여기 미포함\n'
+       + '산출: 선박보험 부보액 73,378,500천원 × 요율 0.5% ≈ 367백만원\n'
+       + '• P&amp;I·여객배상책임보험은 별도\n'
        + '성격: 선체에 붙는 선비 (고정)' },
   { id:'repair', name:'수리비',   grp:'선비',   kind:'fix',  pct:0.00,
-    note:'수리비 0% — 당기 계상액 없음\n'
-       + '근거:\n'
-       + '• 2023년 중반 취항 (주석 3 감가상각이 반년치만 반영)\n'
-       + '• 2024년은 2년차 — 조선소 보증기간 (통상 1~2년) 안\n'
-       + '• 판관비 수선비도 당기 0원 → 자체 수리비 발생 없음을 교차확인\n'
-       + '• 5년차 정기검사(DD/SS, Dry Dock & Special Survey)부터 뭉텅이로 발생\n'
-       + '성격: 선체에 붙는 선비 — 장기적으로는 선령·검사주기에 비례' },
+    note:'수리비 0% — 단일연도 손익계산서(2024 보고서 기준)에는 반영 안 함.\n'
+       + '회계상 미래 수리비는 손익계산서 비용으로 못 넣는다 (충당부채 요건 미충족).\n'
+       + '10개년 손익계산서에서는 "증감률 가정 → 수지 가정"의 10년 수리비(기본 7억·연 5% 증감)가 별도로 적용된다.\n'
+       + '돌발 큰 수리(엔진 오버홀 등)는 수지분석의 우발수리유보금에서 CapEx로 다룬다.' },
   { id:'store',  name:'선용품비', grp:'선비',   kind:'fix',  pct:0.27,
     note:'선용품비 0.27% ≈ 19,484,659원\n'
-       + '산출: 저장품 계정 당기 감소분 (BS 재무상태표에서 뽑는다)\n'
-       + '• 전기말 저장품 53,922,777원\n'
-       + '• 당기말 저장품 34,438,118원\n'
-       + '• 감소분 19,484,659원 ≈ 당기 소비액\n'
-       + '• 품목: 윤활유 · 청수 · 조명·전기 소모품 · 선내 비품\n'
-       + '성격: 선체에 붙는 선비 (운항량·선령에 완만히 비례)' },
+       + '산출: 저장품 계정 당기 감소분\n'
+       + '• 전기말 53,922,777원 → 당기말 34,438,118원 = 감소 19,484,659원\n'
+       + '• 품목: 윤활유 · 청수 · 소모품 · 비품\n'
+       + '성격: 선체에 붙는 선비' },
 ];
 
-const COST_KINDS = { fix:'고정', semi:'준변동', var:'변동' };
+// 둘 다 '변동비' 지만 어느 활동에 비례하는지가 다르다 — 라벨에 그 축을 명시한다.
+//   semi : 항차에 비례 (연료·항비) — 승객을 더 태워도 늘지 않는다
+//   var  : 승객에 비례 (지급수수료) — 같은 항차 안에서 승객이 늘면 늘어난다
+const COST_KINDS = { fix:'고정', semi:'변동(항차)', var:'변동(승객)' };
 const COSTS = [
   { id:'opLabor', grp:'op',  kind:'fix',  name:'운항 인건비 (급여·퇴직·복리)',
     note:'선원+승무원 · 승객수 무관' },
@@ -1983,7 +2146,7 @@ const COSTS = [
   // 비례해 움직인다. BEP·CVP 는 vc(승객당)를 쓰므로 var 로 두면 fuel 이 과소/과대로
   // 반영돼 손익분기점이 비현실적으로 낮게 나온다. 라벨은 '활동 비례'로 완화한다.
   { id:'opEtcSemi', grp:'op', kind:'semi', name:'운항기타 — 운항비 (연료·항비)',
-    note:'활동 비례 준변동 · 항차·거리에 붙음 · OPETC 세목 중 kind=semi 합계' },
+    note:'항차·거리에 비례하는 변동비 · OPETC 세목 중 kind=semi 합계' },
   { id:'opEtcFix',  grp:'op', kind:'fix',  name:'운항기타 — 선비 (보험·수리·선용품)',
     note:'선체·연간 고정 · OPETC 세목 중 kind=fix 합계' },
   { id:'sgaWage', grp:'sga', kind:'fix',  name:'판관 급여영역',
@@ -2013,6 +2176,7 @@ const PER_HEAD_SEV   = cur('퇴직급여') / BASE_HEAD;       // 퇴직급여(�
 const FEE_RATE  = A.fee / (A.paxRev / 81000);             // 승객 1인당 환산 (정상운임 기준)
 const DEFAULTS  = { head:30, sailor:13, crew:7, fare:81000, vc:0, tgt:5, voy:498, voyPeer:600,
                     headPeer:3, sailorPeer:13, crewPeer:7, paxPeer:212812, agencyPeer:15,
+                    tonnageTax:false, netTon:800, opDays:300,
                     feeVar:false, ebitda:false, base:'eldorado', peer:'santamonica',
                     mix:[100,0,0], fuel:7950, autoVoy:false,
                     farePeer:90000, fuelPeer:30000, mixPeer:[100,0,0],
@@ -2021,12 +2185,12 @@ const DEFAULTS  = { head:30, sailor:13, crew:7, fare:81000, vc:0, tgt:5, voy:498
                     // 부산-하카타는 213km 라 운항 거리가 2.51배 → 화물 수입에 그만큼 가산.
                     cargoDist:2.51,
                     // 선가·차입금은 화면에서 백만원으로 받는다 (500억 = 50,000백만원)
-                    shipPricePeer:50000, lifePeer:20, salvagePeer:10,
+                    shipPricePeer:50000, lifePeer:15, salvagePeer:1, salvageUnit:'krw',
                     loanPeer:20000, loanRatePeer:3.5,
                     loanYears:15, loanGrace:3, loanMethod:'annuity',
                     tgtPeer:5, tgtPeerAuto:false,
                     opEtcPct:{fuel:83.45,port:11.15,ins:5.13,repair:0.00,store:0.27},
-                    fuelBase:820, fuelNow:1490, fxBase:1360, fxNow:1346.24, fuelEsc:true,
+                    fuelBase:820, fuelNow:1325, fxBase:1360, fxNow:1346.24, fuelEsc:true, fuelLive:false,
                     voyRatio:true,
                     kinds:{opLabor:'fix',opDep:'fix',opTR:'fix',
                            opEtcSemi:'semi',opEtcFix:'fix',
@@ -2139,7 +2303,12 @@ function model(){
   const fxNow    = Math.max(1, num('iFxNow',    DEFAULTS.fxNow));
   const krwBase  = fuelBase * fxBase;          // 원/MT
   const krwNow   = fuelNow  * fxNow;
-  const fuelEsc  = el('iFuelEsc').checked;
+  // 유가 escalation 은 두 모드 중 하나가 켜졌을 때만 걸린다 — 둘 다 꺼지면 초기값(820).
+  //   실제 시가 (iFuelLiveMode)   → fuel_price.json 의 라이브 단가 사용
+  //   수동 단가 (iFuelManualMode) → 1,325$/MT 사용
+  //   둘 다 OFF (기본)             → 820$/MT 초기값 그대로 (escRate = 1)
+  const fuelEsc  = el('iFuelEsc').checked
+    && (el('iFuelLiveMode')?.checked || el('iFuelManualMode')?.checked);
   const escRate  = fuelEsc ? krwNow / krwBase : 1;
 
   // 운항기타 소계 — 세목 kind 로 묶어서 둘로 가른다. 합은 언제나 A.opEtc 와 같다.
@@ -2176,14 +2345,24 @@ function model(){
   // 대리점비 — 매출액 비례. 운항원가에 들어가고 BEP/목표에도 같은 비율로 반영된다.
   // 매출(여객+화물+임대료) 전체에 걸리므로 승객당 변동비가 아니라 "매출 할인" 성격.
   const agencyPct   = Math.min(0.99, Math.max(0, num('iAgencyPeer', DEFAULTS.agencyPeer) / 100));
+  // 톤세 적용 여부 — 체크 시 preProfit 기준 법인세 대신 톤세(의제이익 기반) 사용.
+  const tonnageTax  = el('iTonnageTax')?.checked ?? false;
+  const netTon      = Math.max(0, num('iNetTon',  DEFAULTS.netTon));
+  const opDays      = Math.max(1, Math.min(365, num('iOpDays', DEFAULTS.opDays)));
+  const tonnageAmt  = tonnageTax ? tonnageTaxKR(netTon, opDays) : 0;    // 과세표준 ≤ 0 이어도 톤세는 발생
   // 감가상각 — 선가를 넣었으면 정액법, 비우면 감사보고서 금액
   // 입력은 백만원, 계산은 원 단위로 한다 — 손익계산서가 원으로 서 있기 때문이다.
   // 칸을 비우면 0 이 되고, 아래에서 감사보고서 감가상각으로 되돌아간다 ("비우면 보고서 값").
   const shipPricePeer = Math.max(0, num('iShipPricePeer', 0)) * 1e6;
   const lifePeer      = Math.max(1, num('iLifePeer',      DEFAULTS.lifePeer));
-  const salvagePeer   = Math.min(100, Math.max(0, num('iSalvagePeer', DEFAULTS.salvagePeer)));
+  // 잔존가치 — 단위를 선택할 수 있다. 'pct' : 선가 대비 % · 'krw' : 백만원 금액
+  const salvageUnit   = (el('iSalvageUnit')?.value) || DEFAULTS.salvageUnit;
+  const salvagePeerIn = Math.max(0, num('iSalvagePeer', DEFAULTS.salvagePeer));
+  const salvageWon    = salvageUnit === 'pct'
+    ? shipPricePeer * Math.min(100, salvagePeerIn) / 100
+    : salvagePeerIn * 1e6;
   const opDepPeer     = shipPricePeer > 0
-    ? shipPricePeer * (1 - salvagePeer / 100) / lifePeer : DEP;
+    ? Math.max(0, shipPricePeer - salvageWon) / lifePeer : DEP;
   // 여객 외 수입 — 화물 시뮬레이션(적재 케이스 × 선적율 × 항차)과 임대료
   const cargoLoadP  = Math.min(1, Math.max(0, num('iCargoLoad', DEFAULTS.cargoLoad) / 100));
   const cargoCaseP  = CARGO_CASES.find(c => c.id === +(el('iCargoCase')?.value)) || CARGO_CASES[3];
@@ -2311,9 +2490,10 @@ function model(){
            r, voy, voyPeer, feeVar, ebitda, DEP, sgaWageT, sgaFixed, fixed, O,
            etcBase, etcSum, fuelBase, fuelNow, fxBase, fxNow, krwBase, krwNow,
            fuelEsc, escRate, etcPeer, opEtcEsc, voyRatio, applyVoyRatio, voyR, agencyPct,
+           tonnageTax, netTon, opDays, tonnageAmt,
            headPeer, sailorPeer, crewPeer, opHeadPeer, sgaWagePeer, opLaborPeer, opEtcPeer,
            costFpeer, costSVpeer, svPerVoyPeer, svPerVoy_ofPeer, itemsPeer, Opeer, opDepPeer,
-           shipPricePeer, lifePeer, salvagePeer, cargoRevP, isSantaP,
+           shipPricePeer, lifePeer, salvageWon, salvageUnit, cargoRevP, isSantaP,
            voyForPeer, qForPeer, simPeer, pForPeer, fixedAtPeer,
            fareEcoPeer, mixPeer, mixSumPeer, fareSeatPeer, fuelPeer, farePeer,
            paxAct, pax, paxPeer, qFor, pFor, sim, cur: sim(pax) };
@@ -2354,10 +2534,23 @@ function drawPL(){
         <td id="pl_amt_${t.id}">—</td>
         <td class="rt" id="pl_pct_${t.id}">—</td>
         <td class="rtm" id="pl_sal_${t.id}">—</td></tr>`).join('');
+    // 영업이익(손실) 소계행에는 영업이익률을 라벨 옆에 붙여 한눈에 읽히게 한다
+    const _isOpProfit = k === 't' && /영업이익/.test(name);
+    const _opMarginTag = (_isOpProfit && salesC && c !== null)
+      ? ` <span class="tagv ${c < 0 ? 'est' : 'ok'}">영업이익률 ${(c/salesC*100).toFixed(1)}%</span>`
+      : '';
     const tag = k === 'n'
       ? (key === 'op_기타' ? '<span class="tagv est">차액</span>'
-                          : '<span class="tagv est">주석 15</span>')
-      : (k === 'e' || k === 'eb') ? '<span class="tagv ok">보완</span>' : '';
+        // 해상직 급여계열은 '주석 15' 와 함께 선원+승무원 인원 뱃지도 노출
+        : (key === 'op_급여' || key === 'op_퇴직급여' || key === 'op_복리후생비')
+          ? `<span class="tagv est">주석 15</span><span class="tagv">${DEFAULTS.sailor + DEFAULTS.crew}명</span>`
+        : '<span class="tagv est">주석 15</span>')
+      : (k === 'e' || k === 'eb') ? '<span class="tagv ok">보완</span>'
+      // 지상직(판관비) 인원 뱃지는 d 행에 걸린다
+      : (key === '직원급여' || key === '퇴직급여' || key === '복리후생비'
+          ? `<span class="tagv">${BASE_HEAD}명</span>`
+        : '')
+        + _opMarginTag;
     const own = key || name;
     const nk  = (k === 'r' || k === 't') ? kids(own) : 0;
     // 운항기타는 매출원가 안에 한 겹 더 접힌다 — 다섯 세목이 늘 펼쳐져 있을 값은 아니다
@@ -2894,7 +3087,7 @@ function drawTgt(m){
   const tiers = [0, 0.03, 0.05, 0.08, 0.10, 0.15];
   if (!tiers.includes(m.r)) { tiers.push(m.r); tiers.sort((a,b) => a-b); }
   { const th = el('thTgtGap'); if (th) th.textContent = `${V.tag} 대비`; }
-  el('tTgt').innerHTML = tiers.map(rr => {
+  const tierRows = tiers.map(rr => {
     const q = V.qFor(rr), hit = Math.abs(rr-m.r) < 1e-9;
     const tag = (hit?'<span class="tagv">목표</span>':'') + (rr===0?'<span class="tagv">손익분기</span>':'');
     if (q === null)
@@ -2906,6 +3099,19 @@ function drawTgt(m){
       <td>${p===null?'—':won(p)+'원'}</td><td>${won(q/V.voy)}명</td></tr>`;
   }).join('');
 
+  // 고정 승객수(235,246명) 시나리오 — 그 승객수에서 나오는 영업이익률을 역산한다
+  const _qFix = 235246;
+  const _fixSim = V.sim(_qFix);
+  const _fixMar = _fixSim.margin;
+  const _fixGap = _qFix - V.paxAct;
+  const fixRow = `<tr style="background:#F5F9FE">
+    <td>${pct(_fixMar, 1)}<span class="tagv est">고정 ${won(_qFix)}명</span></td>
+    <td>${won(_qFix)}명</td>
+    <td class="${_fixGap>0?'fail':'pass'}">${dlt(_fixGap)}명</td>
+    <td>${won(V.fare)}원<span style="color:var(--muted);font-size:9.5px"> 현재</span></td>
+    <td>${won(Math.round(_qFix/V.voy))}명</td></tr>`;
+
+  el('tTgt').innerHTML = tierRows + fixRow;
 }
 
 // ── ⑦ 원가 구조 ────────────────────────────────────────────────────────────
@@ -3001,6 +3207,23 @@ function drawCVP(m){
 // ── 원가 구성표 ────────────────────────────────────────────────────────────
 // 체크박스는 "이 원가를 계산에 넣을지", 드롭다운은 "승객·항차와 어떻게 물리는지"다.
 // 금액 자체는 보고서 값이라 못 바꾼다 — 바꿀 수 있는 것은 취급뿐이다.
+// 연료비 모드 토글 — 손익계산서 · 10개년에 공통으로 두 개 체크박스 노출.
+// (1) 실제 시가 반영 : fuel_price.json 에서 자동 갱신 (iFuelLiveMode)
+// (2) 수동 단가 1,325  : 사용자 기본 설정 (iFuelManualMode)
+// 둘 다 끄면 '초기값(2024 기준 820$/MT)' 로 escalation 없음.
+// 두 체크박스는 상호 배타적 (한쪽이 켜지면 다른쪽은 자동 해제).
+function fuelToggleHTML(){
+  const live = el('iFuelLiveMode')?.checked;
+  const manu = el('iFuelManualMode')?.checked;
+  const sty = (on, color) =>
+    `display:inline-flex;align-items:center;gap:3px;cursor:pointer;margin-left:4px;`
+    + `font-size:10.5px;color:${on?color:'var(--muted)'};font-weight:${on?'600':'400'}`;
+  return ` <label data-fuel-toggle="1" style="${sty(manu, 'var(--amber)')}" title="수동 단가 1,325$/MT 적용 — 기본값 · 체크 시 1,325 기준 escalation 반영">`
+    + `<input type="checkbox" data-fuel-chk-manu="1" ${manu?'checked':''} style="margin:0;cursor:pointer">수동 1,325</label>`
+    + ` <label data-fuel-toggle="1" style="${sty(live, 'var(--sky)')}" title="fuel_price.json 의 실시간 시세 — 체크 시 자동 갱신">`
+    + `<input type="checkbox" data-fuel-chk-live="1" ${live?'checked':''} style="margin:0;cursor:pointer">실제 시가</label>`;
+}
+
 // ── 운항기타 세목표 ────────────────────────────────────────────────────────
 // 금액이 아니라 비율을 입력받는다. 보고서 잔액은 확정된 값이고 우리가 모르는 것은
 // 그 속의 배분뿐이라, 비율을 만지는 쪽이 사실에 가깝다.
@@ -3015,7 +3238,38 @@ function buildOpEtc(){
       <td id="voy_etc_${t.id}" style="color:var(--muted);font-size:9.5px">—</td></tr>`).join('')
     + `<tr class="sum"><td>합계</td><td></td><td id="hPctSum">—</td>
         <td id="amt_etc_sum">—</td><td id="voy_etc_sum"></td></tr>`;
-  OPETC_ITEMS.forEach(t => el('iPct'+t.id).addEventListener('input', render));
+  // 한 세목을 올리면 나머지가 비례적으로 줄어 합계는 100% 로 유지된다.
+  // 올렸는데 다른 세목들 합이 0이면(모두 0) 균등하게 나눠 가진다.
+  OPETC_ITEMS.forEach(t => el('iPct'+t.id).addEventListener('input', () => {
+    rebalanceOpEtc(t.id);
+    render();
+  }));
+}
+function rebalanceOpEtc(changedId){
+  const ids  = OPETC_ITEMS.map(t => t.id);
+  const vals = ids.map(id => Math.max(0, parseFloat(el('iPct'+id).value) || 0));
+  const k    = ids.indexOf(changedId);
+  if (k < 0) return;
+  const newV = Math.min(100, Math.max(0, vals[k]));
+  vals[k] = newV;
+  const others = ids.map((_, i) => i).filter(i => i !== k);
+  const sumOth = others.reduce((s, i) => s + vals[i], 0);
+  const target = Math.max(0, 100 - newV);
+  if (sumOth > 0) {
+    const scale = target / sumOth;
+    others.forEach(i => { vals[i] = vals[i] * scale; });
+  } else if (others.length) {
+    const each = target / others.length;
+    others.forEach(i => { vals[i] = each; });
+  }
+  // 변경 중인 칸은 커서가 튀지 않도록 두고, 나머지만 갱신한다.
+  ids.forEach((id, i) => {
+    if (id === changedId) return;
+    const inp = el('iPct'+id);
+    // 1e-3 미만 차이는 지나친 소수점 노출을 피해 그대로 둔다.
+    const next = +vals[i].toFixed(2);
+    if (Math.abs((parseFloat(inp.value)||0) - next) > 0.01) inp.value = next;
+  });
 }
 
 function buildCostMix(){
@@ -3196,7 +3450,7 @@ function debtService(principal, ratePct, years, grace, method){
   return { year1:pmt, int1, prin1:pmt - int1, avg:pmt, total:pmt * nPay, nPay, r };
 }
 
-// 연도별 이자만 뽑아 낸다. 이자는 성장률이 아니라 잔액을 따라 움직인다 —
+// 연도별 이자만 뽑아 낸다. 이자는 증감률이 아니라 잔액을 따라 움직인다 —
 // 원금을 갚을수록 줄고, 거치기간에는 그대로이며, 상환이 끝나면 0이 된다.
 // y = 0 이 1차연도(10개년 표의 y+0)다.
 function interestSeries(principal, ratePct, years, grace, method, n){
@@ -3221,32 +3475,67 @@ function interestSeries(principal, ratePct, years, grace, method, n){
   return out;
 }
 
+// 전 기간 상환표 — 모달에서 보여 줄 '년차 · 기초잔액 · 이자 · 원금상환 · 기말잔액 · 원리금 합계'
+function loanSchedule(principal, ratePct, years, grace, method){
+  const out = [];
+  const r = ratePct / 100;
+  if (!(principal > 0) || !(years > 0)) return out;
+  const nPay = Math.max(1, years - grace);
+  let bal = principal;
+  const pmt = method === 'annuity'
+    ? (r === 0 ? principal / nPay : principal * r / (1 - Math.pow(1 + r, -nPay)))
+    : 0;
+  const prinEq = principal / nPay;
+  for (let y = 1; y <= years; y++) {
+    const open = bal;
+    const int  = bal * r;
+    let prin = 0;
+    if (method === 'bullet') {
+      prin = (y === years) ? principal : 0;
+    } else if (y > grace) {
+      prin = method === 'annuity' ? Math.max(0, pmt - int) : prinEq;
+    }
+    bal = Math.max(0, bal - prin);
+    out.push({ year:y, open, int, prin, close:bal, pay:int + prin,
+               grace: y <= grace });
+  }
+  return out;
+}
+
 // 머리의 다섯 지표는 보고 있는 탭을 따른다 — 가정 탭에서는 감사보고서 실적을,
 // 목표기반 탭에서는 대조 선박으로 다시 세운 값을 보여야 한 화면 안에서 앞뒤가 맞는다.
 let ACTIVE_TAB = 'tabA';
 let PEER_PL = null;
 let PEER_PL_ROWS = null;      // 10개년 뷰용 행별 데이터
+let PEER_PL_PROJ = null;      // 10개년 뷰 행별 연차 투영값 (팝업 모달에서 재사용)
+let PEER_PL_IDX  = {};        // 특정 행의 인덱스 (iNet, iCapex, iSinking 등)
 let PL10_MODE = 'single';     // 'single' | 'multi'
-let PL10_COLLAPSED = { op_etc: true, sga_etc: true };  // 10개년 뷰의 접기 상태 (기본 접힘)
+let PL10_PANEL = 'grow';      // 10개년 모드일 때 좌측 설정 영역에 어느 뷰를 노출할지 ('peer' | 'grow')
+let PL10_COLLAPSED = { op_etc: true, sga_etc: true, post_tax: true };  // 10개년 뷰의 접기 상태 (기본 접힘)
 // 대조 선박 단일연도 표의 접기 상태. drawPeerPL 은 입력이 바뀔 때마다 표를 새로
 // 만들기 때문에, 이걸 들고 있지 않으면 세목을 펴 놓고 값을 만지는 순간 도로 접힌다.
-let PEER_PL_OPEN = { op_etc: false, sga_etc: false };
+let PEER_PL_OPEN = { op_etc: false, sga_etc: false, post_tax: false };
 let PAX_SRC = 'load';        // 승선율/항차당 인원/연간 승객수 중 사용자가 방금 만진 칸
 let LAST_M  = null;          // CVP 재그리기용 (탭 전환·창 크기 변경)
 let PEER_DS = null;
 
-/* ── 10개년 성장률 가정 ── */
+/* ── 10개년 증감률 가정 ── */
 const GROWTH_DEFAULTS = {
   gPax:2.7, gCargo:1.8, gRent:0,
   gWage:2.71, gSev:2.71, gWelf:2.40,
   gDep:0, gTax:2.92, gRent2:0,
   // 운항기타 5개 세목 (m.etcPeer 순서 : 연료·항비·보험·수리·선용품)
-  gFuel:-0.89, gPort:7.85, gIns:3.82, gRepair:0, gStore:15,
+  gFuel:-0.89, gPort:7.85, gIns:3.82, gRepair:5, gStore:15,
+  repair10yBase:700,
+  // 우발수리유보금·선박대체유보금은 '매년 정액' 적립이 원칙 — 기본 증감률 0.
+  // 선박대체유보금은 선가 × (sinkingPctOfPrice%) ÷ 내용연수 로 자동 산출 (매년 백만원/년).
+  // 기본 : 선가 500억 × 20% ÷ 15년 ≈ 667백만/년.
+  capexBase:700, gCapex:0, sinkingPctOfPrice:20, gSinking:0,
   gSgaWage:5.68, gSgaTax:2.92, gSgaFee:2.34, gSgaEtc:2.7
 };
 let GROW = { ...GROWTH_DEFAULTS };
 const GROWTH_GROUPS = [
-  { t:'매출 성장률', open:true, f:[
+  { t:'매출 증감률', open:true, f:[
     ['gPax','여객수입'],
     ['gCargo','화물수입'],
     ['gRent','면세점(수입임대료)']
@@ -3265,7 +3554,8 @@ const GROWTH_GROUPS = [
     ['gFuel','연료비'],
     ['gPort','항비'],
     ['gIns','보험료'],
-    ['gRepair','수리비'],
+    ['repair10yBase','수리비 (10년) 첫해 금액<br><small style="color:var(--muted);font-weight:400">단일연도 손익계산서에는 미반영 · 10년에서만 노출</small>', '백만원'],
+    ['gRepair','수리비 증감률<br><small style="color:var(--muted);font-weight:400">10년 수리비 매년 복리</small>'],
     ['gStore','선용품비']
   ]},
   { t:'판매관리비', f:[
@@ -3273,6 +3563,14 @@ const GROWTH_GROUPS = [
     ['gSgaTax','세금과공과'],
     ['gSgaFee','지급수수료'],
     ['gSgaEtc','그 외<br><small style="color:var(--muted);font-weight:400">(세금과공과·지급수수료 제외)</small>']
+  ]},
+  // 수지분석 — 손익계산서에는 안 들어가지만 통장 흐름(FCFE)에는 꼭 반영돼야 하는 라인.
+  // 회계상 '미래 수리비·대체유보금'을 손익에 비용 처리할 수 없기에, 수지쪽에서만 차감한다.
+  { t:'수지 가정 <small style="color:var(--muted);font-weight:400">(매년 정액 적립 · 손익계산서 아닌 현금흐름에 반영)</small>', f:[
+    ['capexBase','우발수리유보금<br><small style="color:var(--muted);font-weight:400">엔진 오버홀·돌발 수리 등 · 매년 정액</small>', '백만원'],
+    ['gCapex','우발수리유보금 증감률<br><small style="color:var(--muted);font-weight:400">기본 0% · 필요 시 복리</small>'],
+    ['sinkingPctOfPrice','선박 대체 유보금 (선가 대비 %)<br><small style="color:var(--muted);font-weight:400">선가 × 비율 ÷ 내용연수 = 연 적립액 자동 산출</small>'],
+    ['gSinking','선박 대체 유보금 증감률<br><small style="color:var(--muted);font-weight:400">기본 0% · 필요 시 복리</small>']
   ]}
 ];
 
@@ -3318,10 +3616,12 @@ function drawPeerPL(m) {
     : m.applyVoyRatio       ? m.voyRatio
     : 1;
 
+  // 지상직 인원 뱃지 — 세 급여계 행에 공통으로 달아 두어 어느 분모로 1인당이 나오는지 못박는다
+  const _landHeadTag = `<span class="tagv">${m.headPeer}명</span>`;
   const SGA_ITEMS = [
-    ['직원급여 (육상직원)',   cur('직원급여')   * sR],
-    ['퇴직급여 (육상직원)',   cur('퇴직급여')   * sR],
-    ['복리후생비 (육상직원)', cur('복리후생비') * sR],
+    [`직원급여 (육상직원) `   + _landHeadTag, cur('직원급여')   * sR],
+    [`퇴직급여 (육상직원) `   + _landHeadTag, cur('퇴직급여')   * sR],
+    [`복리후생비 (육상직원) ` + _landHeadTag, cur('복리후생비') * sR],
     ['여비교통비', cur('여비교통비')],
     ['접대비',     cur('접대비')],
     ['통신비',     cur('통신비')],
@@ -3365,25 +3665,34 @@ function drawPeerPL(m) {
 
   // Ⅰ. 매출액
   html += rowR('Ⅰ. 매출액', sales);
-  html += rowD('여객수입',   paxRev,   sales);
+  // 승선율·선적율을 괄호로 명시 — 어느 가정으로 집계된 매출인지 한눈에
+  const _loadPct   = (m.peer && m.peer.pax > 0 && m.voyPeer > 0)
+    ? (m.paxPeer / (m.peer.pax * m.voyPeer) * 100).toFixed(1) + '%' : '—';
+  const _cargoLoad = (num('iCargoLoad', DEFAULTS.cargoLoad)).toFixed(1) + '%';
+  html += rowD(`여객수입 <span class="tagv est">승선율 ${_loadPct}</span>`,   paxRev,   sales);
   // 산타모니카 : CARGO_CASES.extra 는 운임표 미산정 항목이라 계산 금액에 '+α' 표기
   if (isSanta && selectedCase.extra && cargoRev > 0) {
     const alpha = `<span class="amb" style="font-size:11px;margin-left:4px" title="${selectedCase.extra} — 특정 화물에 대한 운임이 미반영·미공시되어 있어, 남는 부분에 대한 이익 여분">+α</span>`;
-    html += `<tr class="d"><td>화물수입</td><td>${acc(Math.round(cargoRev))}${alpha}</td>${fp(cargoRev, sales)}${fp(cargoRev, sales)}</tr>`;
+    html += `<tr class="d"><td>화물수입 <span class="tagv est">선적율 ${_cargoLoad}</span></td><td>${acc(Math.round(cargoRev))}${alpha}</td>${fp(cargoRev, sales)}${fp(cargoRev, sales)}</tr>`;
   } else {
-    html += rowD('화물수입', cargoRev, sales);
+    html += rowD(`화물수입 <span class="tagv est">선적율 ${_cargoLoad}</span>`, cargoRev, sales);
   }
   html += `<tr class="d tip" title="하카타 외항선로 가정 — 선내 면세점(수입임대료) 3개년 평균(성희) ${won(A.dutyFreeRent)}원. 대저페리 임대료수입 계정과는 별개."><td>면세점(수입임대료)<span class="tagv est">3개년 평균(성희)</span></td>${fv(rentRev)}${fp(rentRev, sales)}${fp(rentRev, sales)}</tr>`;
 
   // Ⅱ. 운항원가
   html += rowR('Ⅱ. 운항원가 (−)', opCost);
-  html += rowN('급여 (해상직원)',      opWage, opCost);
-  html += rowN('퇴직급여 (해상직원)', opSev,  opCost);
-  html += rowN('복리후생비 (해상직원)', opWelf, opCost);
+  // 해상직 인원 뱃지 — 선원+승무원 (설정에서 조정 가능)
+  const _opHeadTag = `<span class="tagv">${m.opHeadPeer}명</span>`;
+  html += rowN('급여 (해상직원) '      + _opHeadTag, opWage, opCost);
+  html += rowN('퇴직급여 (해상직원) '  + _opHeadTag, opSev,  opCost);
+  html += rowN('복리후생비 (해상직원) '+ _opHeadTag, opWelf, opCost);
   // 대리점비 — 매출액 × 설정 비율. 복리후생비 바로 아래에 둔다.
   const _agencyTag = ` <span class="tagv est" title="설정 — 매출액의 ${(m.agencyPct*100).toFixed(1)}%">×${(m.agencyPct*100).toFixed(1)}% 매출</span>`;
   html += `<tr class="n"><td>대리점비(일본현지)${_agencyTag}</td>${fv(agency)}${fp(agency, opCost)}${fp(agency, sales)}</tr>`;
-  html += rowN('감가상각비',                    opDep,  opCost);
+  // 감가상각비 — 클릭하면 상각표(ovDepSchedule) 팝업
+  html += `<tr class="n" data-ov="ovDepSchedule" style="cursor:pointer">`
+        + `<td>감가상각비 <span class="tagv" style="cursor:pointer">상각표 ↗</span></td>`
+        + `${fv(opDep)}${fp(opDep, opCost)}${fp(opDep, sales)}</tr>`;
   html += rowN('세금과공과',                    opTax,  opCost);
   html += rowN('임차료',                        opRent, opCost);
   // 운항기타 — 다섯 세목을 접었다 폈다 (기본 접힘)
@@ -3399,15 +3708,19 @@ function drawPeerPL(m) {
   const _vrApplied = m.applyVoyRatio && Math.abs(m.voyRatio - 1) > 1e-9;
   m.etcPeer.forEach(t => {
     const tags = [];
-    if (t.kind === 'semi')      tags.push('<span class="tagv">준변동</span>');
-    else if (t.kind === 'var')  tags.push('<span class="tagv">변동</span>');
+    if (t.kind === 'semi')      tags.push('<span class="tagv">변동(항차)</span>');
+    else if (t.kind === 'var')  tags.push('<span class="tagv">변동(승객)</span>');
     else                        tags.push('<span class="tagv">고정</span>');
     if ((t.kind === 'semi' || t.kind === 'var') && _vrApplied) {
       tags.push(`<span class="tagv est">×${m.voyRatio.toFixed(3)} 항차</span>`);
     }
+    // 유가 배율 뱃지는 model 의 fuelEsc 가 true 일 때만 노출된다
+    // (fuelEsc = iFuelEsc && iFuelLiveMode — 두 체크가 모두 켜져야 escalation 이 실제로 걸린다).
     if (t.id === 'fuel' && m.fuelEsc && Math.abs(m.escRate - 1) > 1e-9) {
       tags.push(`<span class="tagv est" style="color:var(--amber)">×${m.escRate.toFixed(3)} 실시간유가반영</span>`);
     }
+    // 연료비 행 : 수동 ↔ 실제 시가 토글 체크박스 (설정 패널 iFuelLiveMode 와 양방향 동기화)
+    if (t.id === 'fuel') tags.push(fuelToggleHTML());
     const nm = '&nbsp;&nbsp;· ' + t.name + (tags.length ? ' ' + tags.join(' ') : '');
     html += `<tr class="n${t.note ? ' tip' : ''}" data-in="op_etc"`
           + `${t.note ? ` title="${t.note}"` : ''}${_etcOpen ? '' : ' hidden'}>`
@@ -3438,9 +3751,12 @@ function drawPeerPL(m) {
           + `<td>· ${name}</td>${fv(v)}${fp(v, sgaCost)}${fp(v, sales)}</tr>`;
   });
 
-  // Ⅴ. 영업이익(손실)
+  // Ⅴ. 영업이익(손실) — 라벨 옆에 영업이익률 뱃지 (음수면 est, 양수면 ok)
   const profColor = opProfit < 0 ? ' style="color:var(--warn)"' : '';
-  html += `<tr class="lead"><td>Ⅴ. 영업이익(손실)</td>`
+  const _opMarTag = sales
+    ? ` <span class="tagv ${opProfit < 0 ? 'est' : 'ok'}">영업이익률 ${(opProfit/sales*100).toFixed(1)}%</span>`
+    : '';
+  html += `<tr class="lead"><td>Ⅴ. 영업이익(손실)${_opMarTag}</td>`
         + `<td${profColor}>${acc(Math.round(opProfit))}</td>`
         + `<td class="nil">-</td>${fp(opProfit, sales)}</tr>`;
 
@@ -3463,17 +3779,81 @@ function drawPeerPL(m) {
           + `<td${preColor}>${acc(Math.round(preProfit))}</td>`
           + `<td class="nil">-</td>${fp(preProfit, sales)}</tr>`;
 
-    // 여기부터는 손익이 아니라 수지다. 원금 상환은 비용이 아니라 손익계산서에
-    // 들어가지 않지만 통장에서는 빠진다 — 흑자인데 돈이 모자라는 일이 여기서 생긴다.
-    const cash = preProfit + opDep - DS.prin1;
+    // Ⅷ. 법인세 ~ 수지분석 — 하나의 접이 그룹(post_tax)으로 묶어 Ⅶ 아래로 접어 둔다.
+    // 기본 접힘(PEER_PL_OPEN.post_tax = false) — 요약만 보고 싶은 사용자를 방해하지 않는다.
+    // 톤세 체크 시 : 의제이익(순톤 × 운항일 × 톤당요율) 기반 — 손실이어도 톤세는 발생.
+    // 체크 해제   : 통상 법인세 (preProfit 누진).
+    const tax       = m.tonnageTax ? m.tonnageAmt : corpTaxKR(preProfit);
+    const netIncome = preProfit - tax;
+    const netColor  = netIncome < 0 ? ' style="color:var(--warn)"' : '';
+    const _effRate  = preProfit > 0 ? (tax / preProfit * 100) : 0;
+    const _taxNote  = m.tonnageTax
+      ? ` <span class="tagv ok" title="톤세 — 조세특례제한법 §104-10 · 순톤 ${won(m.netTon)}톤 × ${won(m.opDays)}일 × 구간별 톤당 요율 → 의제이익 → 통상 법인세율 적용. 손실이어도 발생.">톤세 · 의제이익 ${won(Math.round(tonnageNotionalKR(m.netTon, m.opDays)))}원</span>`
+      : (preProfit > 0
+        ? ` <span class="tagv est" title="한국 법인세율 (지방세 10% 포함) : 2억 이하 9.9% · 2억~200억 20.9% · 200억~3,000억 23.1% · 3,000억 초과 26.4%. 결손금 이월공제 미반영.">누진 ${_effRate.toFixed(1)}%</span>`
+        : ' <span class="tagv">손실 — 과세 없음</span>');
+    const cash      = netIncome + opDep - DS.prin1;
     const cashColor = cash < 0 ? ' style="color:var(--warn)"' : '';
-    html += `<tr class="r"><td>〔수지〕 현금 기준 <span class="tagv ok">보완</span></td>`
-          + `<td class="nil">-</td><td class="nil">-</td><td class="nil">-</td></tr>`;
-    html += rowN('(+) 감가상각비 되더하기', opDep, sales);
-    html += rowN('(−) 차입금 원금상환', -DS.prin1, sales);
-    html += `<tr class="lead"><td>= 순현금흐름</td>`
-          + `<td${cashColor}>${acc(Math.round(cash))}</td>`
-          + `<td class="nil">-</td>${fp(cash, sales)}</tr>`;
+    const dscr      = DS.year1 > 0 ? (PEER_PL ? PEER_PL.ebitda : opProfit + opDep) / DS.year1 : Infinity;
+    const dscrNote  = !isFinite(dscr) ? '—'
+                    : dscr < 1   ? `<b style="color:var(--warn)">${dscr.toFixed(2)}배 — 상환 부족</b>`
+                    : dscr < 1.3 ? `<b style="color:var(--amber)">${dscr.toFixed(2)}배 — 요구치 1.2~1.3 미달</b>`
+                    : `<b style="color:var(--good)">${dscr.toFixed(2)}배 — 여유</b>`;
+
+    // 접이 머리줄 : Ⅶ 바로 아래. 클릭하면 열려 Ⅷ·Ⅸ·수지분석까지 모두 노출.
+    const _ptOpen = !!PEER_PL_OPEN.post_tax;
+    const _hide   = _ptOpen ? '' : ' hidden';
+    html += `<tr class="r${_ptOpen ? ' open' : ''}" data-grp="post_tax" style="cursor:pointer">
+      <td><span class="caret">▶</span> 세무 · 수지 분석 <span class="tagv est">세후 · 자금흐름</span>
+        <span style="color:var(--muted);font-size:10.5px;margin-left:4px">누르면 Ⅷ 법인세 · Ⅸ 당기순이익 · 순현금흐름 · DSCR</span></td>
+      <td class="nil">-</td><td class="nil">-</td><td class="nil">-</td></tr>`;
+
+    // Ⅷ 법인세
+    html += `<tr class="r" data-in="post_tax"${_hide}><td>Ⅷ. 법인세비용 (−)${_taxNote}</td>${fv(tax)}<td class="nil">-</td>${fp(tax, sales)}</tr>`;
+    // Ⅸ 당기순이익
+    html += `<tr class="lead" data-in="post_tax"${_hide}>
+      <td>Ⅸ. 당기순이익(손실)</td>
+      <td${netColor}>${acc(Math.round(netIncome))}</td>
+      <td class="nil">-</td>${fp(netIncome, sales)}</tr>`;
+
+    // 수지분석 블록 — 손익 영역과 시각적으로 분리하기 위해 배경 색상 띠
+    html += `<tr class="r" data-in="post_tax"${_hide} style="background:#F0F4F9">
+      <td style="padding:8px 0 6px">
+        <span style="display:inline-block;padding:2px 8px;background:var(--navy);color:#fff;border-radius:3px;font-size:11px;letter-spacing:0.5px">수지 분석</span>
+        <span style="color:var(--muted);font-size:11px;margin-left:6px">자금 흐름 관점 — 손익과 별개</span>
+      </td>
+      <td colspan="3" class="nil">-</td></tr>`;
+    html += `<tr data-in="post_tax"${_hide} style="background:#F8FAFD"><td style="padding-left:14px">(+) 감가상각비 되더하기 <span style="color:var(--muted);font-size:10.5px">비현금 비용</span></td>${fv(opDep)}<td class="nil">-</td>${fp(opDep, sales)}</tr>`;
+    html += `<tr data-in="post_tax"${_hide} style="background:#F8FAFD"><td style="padding-left:14px">(−) 차입금 원금상환 <span style="color:var(--muted);font-size:10.5px">첫해 기준</span></td>${fv(-DS.prin1)}<td class="nil">-</td>${fp(-DS.prin1, sales)}</tr>`;
+    html += `<tr class="lead" data-in="post_tax"${_hide} style="background:#EDF1F7">
+      <td>= 영업 순현금흐름 <span style="color:var(--muted);font-size:10.5px">당기순이익 + 감가 − 원금</span></td>
+      <td${cashColor}>${acc(Math.round(cash))}</td>
+      <td class="nil">-</td>${fp(cash, sales)}</tr>`;
+    // CapEx & Sinking Fund — 매년 정액 적립 (좌측 '수지 가정'의 기본값).
+    // 손익계산서에 넣을 수 없는 돈이지만 통장에서는 빠지므로 가용현금 산정 전에 반드시 차감한다.
+    const _capex   = (GROW.capexBase   || 0) * 1e6;
+    const _sinking = (GROW.sinkingBase || 0) * 1e6;
+    const _fcfe    = cash - _capex - _sinking;
+    const _fcfeColor = _fcfe < 0 ? ' style="color:var(--warn)"' : '';
+    html += `<tr data-in="post_tax" data-ov="ovCapexSchedule"${_hide} style="background:#F8FAFD;cursor:pointer">
+      <td style="padding-left:14px">(−) 우발수리유보금
+        <span class="tagv est" title="첫해 ${won((GROW.capexBase||0))}백만원. 엔진 오버홀 등 돌발적 큰 수리를 위한 유보금. 손익계산서가 아닌 수지(현금흐름)에만 반영.">돌발 수리</span>
+        <span class="tagv" style="cursor:pointer">연차표 ↗</span></td>
+      ${fv(-_capex)}<td class="nil">-</td>${fp(-_capex, sales)}</tr>`;
+    html += `<tr data-in="post_tax" data-ov="ovSinkingSchedule"${_hide} style="background:#F8FAFD;cursor:pointer">
+      <td style="padding-left:14px">(−) 선박 대체 유보금
+        <span class="tagv est" title="K-GAAP/IFRS 상 미래 대체 유보는 손익 충당금으로 못 넣는다. 수지에서만 차감. 매년 정액 ${won(GROW.sinkingBase||0)}백만.">Sinking Fund · 매년 정액</span>
+        <span class="tagv" style="cursor:pointer">연차표 ↗</span></td>
+      ${fv(-_sinking)}<td class="nil">-</td>${fp(-_sinking, sales)}</tr>`;
+    html += `<tr class="lead" data-in="post_tax"${_hide} style="background:#EDF1F7">
+      <td>= 오너 가용현금</td>
+      <td${_fcfeColor}>${acc(Math.round(_fcfe))}</td>
+      <td class="nil">-</td>${fp(_fcfe, sales)}</tr>`;
+    html += `<tr data-in="post_tax"${_hide} style="background:#F8FAFD">
+      <td style="padding-left:14px">DSCR <span style="color:var(--muted);font-size:10.5px">EBITDA ÷ 연간 원리금 · 금융권 통상 1.2~1.3 요구</span></td>
+      <td colspan="3" style="text-align:left;padding-left:12px">${dscrNote}
+        <span style="color:var(--muted);font-size:10.5px;margin-left:6px">= ${mil((PEER_PL ? PEER_PL.ebitda : opProfit + opDep))}백만 ÷ ${mil(DS.year1)}백만</span>
+      </td></tr>`;
   }
 
   el('tPeerPL').innerHTML = html;
@@ -3483,6 +3863,7 @@ function drawPeerPL(m) {
     const g = tr.dataset.grp;
     tr.querySelector('td').addEventListener('click', e => {
       if (e.target.closest('.ic')) return;      // 근거 아이콘은 여닫기가 아니다
+      if (e.target.closest('[data-fuel-toggle]')) return;  // 연료비 토글 뱃지는 자체 핸들러
       const open = tr.classList.toggle('open');
       PEER_PL_OPEN[g] = open;                   // 다음 render 에서도 이 상태를 지킨다
       el('tPeerPL').querySelectorAll(`[data-in="${g}"]`).forEach(x => { x.hidden = !open; });
@@ -3490,8 +3871,37 @@ function drawPeerPL(m) {
     });
   });
 
+  // 특정 행 클릭 시 모달 (감가상각 · 선체이자 · 우발수리유보금 · 선박대체유보금)
+  el('tPeerPL').querySelectorAll('[data-ov]').forEach(tr => {
+    tr.addEventListener('click', () => {
+      const id = tr.dataset.ov;
+      if (id === 'ovDepSchedule')     populateDepSchedule();
+      if (id === 'ovLoanSchedule')    populateLoanSchedule();
+      if (id === 'ovCapexSchedule')   populateCapexSchedule();
+      if (id === 'ovSinkingSchedule') populateSinkingSchedule();
+      openOv(id);
+    });
+  });
+  // 연료비 두 체크박스 — '실제 시가' vs '수동 1,325' 상호 배타적 토글
+  el('tPeerPL').querySelectorAll('[data-fuel-chk-live]').forEach(chk => {
+    chk.addEventListener('change', e => {
+      e.stopPropagation();
+      el('iFuelLiveMode').checked = chk.checked;
+      if (chk.checked) el('iFuelManualMode').checked = false;
+      applyFuelLiveMode();
+    });
+  });
+  el('tPeerPL').querySelectorAll('[data-fuel-chk-manu]').forEach(chk => {
+    chk.addEventListener('change', e => {
+      e.stopPropagation();
+      el('iFuelManualMode').checked = chk.checked;
+      if (chk.checked) el('iFuelLiveMode').checked = false;
+      applyFuelLiveMode();
+    });
+  });
+
   // ── 10개년 뷰용 행 데이터 저장 ──
-  // agg : [[하위idx, sign], ...] 형태로 매 연도별 재합산 · gk : 성장률 키
+  // agg : [[하위idx, sign], ...] 형태로 매 연도별 재합산 · gk : 증감률 키
   // _sgaNamed / _sgaRestSum 은 위 판관비 렌더 블록에서 이미 선언됨 (재사용)
   // 운항기타 세목 (m.etcPeer : 연료비·항비·보험료·수리비·선용품비)
   const _ep = m.etcPeer || [];
@@ -3501,6 +3911,7 @@ function drawPeerPL(m) {
   const _voyTag = _vrOn10
     ? ` <span class="tagv est">×${m.voyRatio.toFixed(3)} 항차</span>`
     : '';
+  // m.fuelEsc 자체가 '실제 시가 체크 + 유가 반영 체크' 두 조건을 모두 포함한다
   const _escTag = (m.fuelEsc && Math.abs(m.escRate - 1) > 1e-9)
     ? ` <span class="tagv est" style="color:var(--amber)">×${m.escRate.toFixed(3)} 실시간유가반영</span>`
     : '';
@@ -3514,20 +3925,27 @@ function drawPeerPL(m) {
   const R10 = [], add = row => (R10.push(row), R10.length - 1);
 
   const iSales = add({ cls:'r', name:'Ⅰ. 매출액', v:sales });
-  const iPax   = add({ cls:'d', name:'여객수입',   v:paxRev,  gk:'gPax' });
-  const iCargo = add({ cls:'d', name:'화물수입'+_alphaTag, v:cargoRev, gk:'gCargo' });
-  const iRent  = add({ cls:'d', name:'면세점(수입임대료) <span class="tagv est" style="cursor:help" title="하카타 외항선로 가정 — 선내 면세점 임대료 3개년 평균(성희) 39,330,000원. 성장률 가정은 좌측 패널에서 조정 가능.">3개년 평균(성희)</span>', v:rentRev, gk:'gRent' });
+  // 승선율·선적율 뱃지 — 손익계산서 대조와 동일하게 매출 라인에 노출
+  const _load10    = (m.peer && m.peer.pax > 0 && m.voyPeer > 0)
+    ? (m.paxPeer / (m.peer.pax * m.voyPeer) * 100).toFixed(1) + '%' : '—';
+  const _cargoLd10 = (num('iCargoLoad', DEFAULTS.cargoLoad)).toFixed(1) + '%';
+  const iPax   = add({ cls:'d', name:`여객수입 <span class="tagv est">승선율 ${_load10}</span>`, v:paxRev, gk:'gPax' });
+  const iCargo = add({ cls:'d', name:`화물수입 <span class="tagv est">선적율 ${_cargoLd10}</span>${_alphaTag}`, v:cargoRev, gk:'gCargo' });
+  const iRent  = add({ cls:'d', name:'면세점(수입임대료) <span class="tagv est" style="cursor:help" title="하카타 외항선로 가정 — 선내 면세점 임대료 3개년 평균(성희) 39,330,000원. 증감률 가정은 좌측 패널에서 조정 가능.">3개년 평균(성희)</span>', v:rentRev, gk:'gRent' });
   const iDuty  = add({ cls:'d', name:'기타수입 <span class="tagv est" style="cursor:help" title="대저페리는 내항선이라 현재는 집계된 기타수입(면세품 판매 등) 이 없지만, 외항선으로 취급하면 면세품 판매 수입을 포함한 기타수입을 기대해볼 수 있음. 잠재 매출로 감안 필요.">감안</span>', v:null, gk:'gDuty' });
   R10[iSales].agg = [[iPax,1],[iCargo,1],[iRent,1],[iDuty,1]];
 
   const iOp     = add({ cls:'r', name:'Ⅱ. 운항원가 (−)', v:null });
-  const iOpWage = add({ cls:'n', name:'급여 (해상직원)',     v:opWage, gk:'gWage' });
-  const iOpSev  = add({ cls:'n', name:'퇴직급여 (해상직원)', v:opSev,  gk:'gSev' });
-  const iOpWelf = add({ cls:'n', name:'복리후생비 (해상직원)', v:opWelf, gk:'gWelf' });
+  // 해상직 인원 뱃지 — 선원+승무원 (설정에서 조정 가능)
+  const _opHeadTag10 = `<span class="tagv">${m.opHeadPeer}명</span>`;
+  const iOpWage = add({ cls:'n', name:'급여 (해상직원) '      + _opHeadTag10, v:opWage, gk:'gWage' });
+  const iOpSev  = add({ cls:'n', name:'퇴직급여 (해상직원) '  + _opHeadTag10, v:opSev,  gk:'gSev' });
+  const iOpWelf = add({ cls:'n', name:'복리후생비 (해상직원) '+ _opHeadTag10, v:opWelf, gk:'gWelf' });
   // 대리점비 — 복리후생비 바로 아래. 매출의 agencyPct 로 매년 매출을 추종한다.
   const iAgency = add({ cls:'n', name:`대리점비(일본현지) <span class="tagv est" title="매출액의 ${(m.agencyPct*100).toFixed(1)}%">×${(m.agencyPct*100).toFixed(1)}% 매출</span>`,
                         agg:[[iSales, m.agencyPct]], v:agency });
-  const iOpDep  = add({ cls:'n', name:'감가상각비',          v:opDep,  gk:'gDep' });
+  const iOpDep  = add({ cls:'n', name:'감가상각비 <span class="tagv" style="cursor:pointer">상각표 ↗</span>',
+                        v:opDep, gk:'gDep', clickOv:'ovDepSchedule' });
   const iOpTax  = add({ cls:'n', name:'세금과공과',          v:opTax,  gk:'gTax' });
   const iOpRent = add({ cls:'n', name:'임차료',              v:opRent, gk:'gRent2' });
   const iOpEtc  = add({ cls:'n', name:'운항기타', v:opEtc, collapsible:'op_etc' });
@@ -3539,36 +3957,48 @@ function drawPeerPL(m) {
     const kind = it?.kind;
     const t = [];
     if (kind === 'semi') {
-      t.push('<span class="tagv">준변동</span>');
+      t.push('<span class="tagv">변동(항차)</span>');
       if (_voyTag) t.push(_voyTag.trim());
     } else if (kind === 'var') {
-      t.push('<span class="tagv">변동</span>');
+      t.push('<span class="tagv">변동(승객)</span>');
       if (_voyTag) t.push(_voyTag.trim());
     } else if (kind === 'fix') {
       t.push('<span class="tagv">고정</span>');
     }
     if (k === 0 && _escTag) t.push(_escTag.trim());
+    // 연료비 세목에는 수동↔실제 시가 체크박스 토글을 함께 노출 (설정 패널 체크박스와 동기화)
+    if (k === 0) t.push(fuelToggleHTML());
     return t.length ? ' ' + t.join(' ') : '';
   };
-  const iEtcKids = _etcGk.map((gk, k) => add({
-    cls:'n sub2', name:'· ' + (_ep[k]?.name || _etcNm[k]) + _etcTag(k),
-    v:_ep[k]?.amt || 0, gk, tip:_ep[k]?.note, groupIn:'op_etc' }));
+  // 수리비(k=3)는 단일연도 손익계산서에서는 0 (보고서 기준) 이지만, 10년 뷰에서는
+  // GROW.repair10yBase (백만) 금액을 첫해로 적용하고 gRepair 로 매년 복리 증감.
+  const _repair10yWon = (GROW.repair10yBase || 0) * 1e6;
+  const iEtcKids = _etcGk.map((gk, k) => {
+    const isRepair = (k === 3);
+    const baseV = isRepair ? _repair10yWon : (_ep[k]?.amt || 0);
+    const nameTag = isRepair && _repair10yWon > 0
+      ? ' <span class="tagv est" title="단일연도 손익계산서에는 미반영 — 10개년 전용 (첫해 ' + won(GROW.repair10yBase||0) + '백만, 연 ' + (GROW.gRepair||0).toFixed(1) + '% 증감)">10년 전용</span>'
+      : '';
+    return add({ cls:'n sub2',
+      name:'· ' + (_ep[k]?.name || _etcNm[k]) + _etcTag(k) + nameTag,
+      v: baseV, gk, tip:_ep[k]?.note, groupIn:'op_etc' });
+  });
   R10[iOpEtc].agg = iEtcKids.map(x => [x, 1]);
 
   // ── 선체이자 ──
   // 우리 회사는 선박 차입 이자를 영업외비용이 아니라 운항원가에 '선체이자'로 넣는다.
   // 단일연도 표(위 Ⅵ. 영업외비용)와 자리가 다른 것은 그 때문이고, 금액은 같은 차입
-  // 조건에서 나온다. 다만 이자는 성장률이 아니라 상환 스케줄을 따르므로 연도별
+  // 조건에서 나온다. 다만 이자는 증감률이 아니라 상환 스케줄을 따르므로 연도별
   // 계열(series)을 그대로 실어 준다 — 원금이 줄면 이자도 함께 줄어든다.
   const iHull = intExp > 0
-    ? add({ cls:'n', name:'선체이자',
+    ? add({ cls:'n', name:'선체이자 <span class="tagv" style="cursor:pointer">상환표 ↗</span>',
             v:intExp,
             series:interestSeries(loanPeer, loanRatePeer, loanYears, loanGrace, loanMethod, 10),
+            clickOv:'ovLoanSchedule',
             tip:`차입 ${won(loanPeer/1e8)}억 · ${loanRatePeer}% · ${loanYears}년`
                + (loanGrace > 0 ? ` · 거치 ${loanGrace}년` : '')
                + ` · ${ {annuity:'원리금균등',equal:'원금균등',bullet:'만기일시'}[loanMethod] }`
-               + ' — 상환 스케줄에 따라 매년 달라진다. 성장률은 적용하지 않는다.'
-               + ' 단일연도 표에서는 같은 금액이 영업외비용 이자비용에 잡힌다.' })
+               + ' — 클릭하면 연차별 상환표(원금·이자·잔액).' })
     : null;
 
   const opKids = [iOpWage,iOpSev,iOpWelf,iAgency,iOpDep,iOpTax,iOpRent,iOpEtc]
@@ -3597,9 +4027,79 @@ function drawPeerPL(m) {
     R10[iSgEtc].gk = 'gSgaEtc';
   }
 
-  add({ cls:'lead', name:'Ⅴ. 영업이익(손실)', v:null, agg:[[iGross,1],[iSga,-1]] });
+  const iOpP = add({ cls:'lead', name:'Ⅴ. 영업이익(손실)', v:null, agg:[[iGross,1],[iSga,-1]] });
+  // 영업이익률 행 — 매년 opProfit ÷ sales 로 계산해 %로 표기. ratio 는 drawPeerPL10 이 전용 처리.
+  add({ cls:'d sub2', name:'· 영업이익률', ratio:{ num:iOpP, den:iSales }, isPct:true });
+
+  // ── Ⅷ 법인세 · Ⅸ 당기순이익 · 수지분석 ──────────────────────────────────
+  // 10개년 뷰에서는 iOpP(Ⅴ 영업이익)가 이미 선체이자를 뺀 "법인세차감전" 성격이다
+  // (선체이자가 운항원가 안에 들어가 있기 때문). 따라서 iOpP 를 과세표준으로 삼는다.
+  // 모든 행은 'post_tax' 접이 그룹에 묶여 기본 접힘 상태로 노출된다.
+  const iPostHdr = add({ cls:'r', name:'세무 · 수지 분석 <span class="tagv est">세후 · 자금흐름</span>',
+                         v:null, collapsible:'post_tax' });
+  // 톤세 적용 시 매년 동일한 톤세 금액 (의제이익 기반) · 아닐 때는 preProfit 누진세
+  // 산출 근거를 라벨 뱃지 툴팁으로 못박아 두고, 아래 '· 유효세율' 행에서 매년 실제 적용률을 노출.
+  const _tonTaxMil = m.tonnageAmt / 1e6;
+  const _taxLabel = m.tonnageTax
+    ? `Ⅷ. 법인세비용 (−) <span class="tagv ok" title="톤세(조세특례제한법 §104-10) — 매년 동일 금액. 순톤 ${won(m.netTon)}t × ${won(m.opDays)}일 → 의제이익 ${won(Math.round(tonnageNotionalKR(m.netTon, m.opDays)))}원 → 법인세율 적용 → ${won(Math.round(m.tonnageAmt))}원">톤세 · 매년 ${won(Math.round(_tonTaxMil))}백만</span>`
+    : `Ⅷ. 법인세비용 (−) <span class="tagv est" title="누진 법인세 (지방세 10% 포함) — 과세표준=법인세차감전순이익(Ⅶ) 가정. 세무조정 미반영. 세율표: 2억 이하 9.9% / 2억~200억 20.9% / 200억~3,000억 23.1% / 3,000억 초과 26.4%. 손실 시 과세 없음.">누진 · 매년 과세표준에 세율표 적용</span>`;
+  const iTax = add({ cls:'r', name:_taxLabel,
+                     transform:{ from:iOpP, fn: v => m.tonnageTax
+                                                      ? _tonTaxMil
+                                                      : corpTaxKR(v * 1e6) / 1e6 },
+                     groupIn:'post_tax' });
+  // 매년 실제 적용된 유효세율 (= 법인세 ÷ 과세표준) — 손실연도는 0, 톤세 모드는 과세표준에 상대적 비율
+  add({ cls:'d sub2',
+    name:'· 유효세율 <span class="tagv est" style="cursor:help" title="연도별 실제 적용된 세율 = Ⅷ 법인세비용 ÷ Ⅶ 법인세차감전순이익. 누진 모드에선 과세표준 구간에 따라, 톤세 모드에선 정액 톤세 ÷ 변동 과세표준이라 매년 다르게 보인다.">세율표 보기</span>',
+    ratio:{ num:iTax, den:iOpP }, isPct:true, groupIn:'post_tax' });
+  const iNet = add({ cls:'lead', name:'Ⅸ. 당기순이익(손실)',
+                     agg:[[iOpP,1],[iTax,-1]], groupIn:'post_tax' });
+  // 수지분석 — 세후이익에 감가상각 되더하고 원금상환 빼서 통장 흐름을 재현
+  // 원금상환 : loanSchedule 로 연차별 금액을 뽑아 series 로 전달
+  const _sched = loanSchedule(loanPeer, loanRatePeer, loanYears, loanGrace, loanMethod);
+  const prinSeries = Array.from({length: 11}, (_, k) =>
+    k < _sched.length ? _sched[k].prin : 0);
+  const iCashDep = add({ cls:'n', name:'(+) 감가상각비 되더하기 <span style="color:var(--muted);font-size:9.5px">비현금</span>',
+                         agg:[[iOpDep,1]], groupIn:'post_tax' });
+  const iPrin    = add({ cls:'n', name:'(−) 차입금 원금상환 <span style="color:var(--muted);font-size:9.5px">상환 스케줄</span>',
+                         series:prinSeries.map(v => -v), groupIn:'post_tax',
+                         tip:'상환 스케줄 기반 연차별 원금 — 성장률 미적용' });
+  const iOpCash = add({ cls:'n', name:'= 영업 순현금흐름 <span style="color:var(--muted);font-size:9.5px">당기순이익 + 감가 − 원금</span>',
+        agg:[[iNet,1],[iCashDep,1],[iPrin,1]], groupIn:'post_tax' });
+
+  // 우발수리유보금 — 엔진 오버홀·돌발 수리 등. 손익계산서에는 못 넣지만 통장에선 빠진다.
+  // 첫해 금액(백만) × (1+gCapex)^k 로 매년 증가.
+  const _capexBaseWon = (GROW.capexBase || 0) * 1e6;
+  const iCapex = add({ cls:'n', name:'(−) 우발수리유보금 <span class="tagv est" title="엔진 오버홀·돌발 수리 유보금. 손익계산서가 아닌 수지(현금흐름)에만 반영한다.">돌발 수리</span> <span class="tagv" style="cursor:pointer">연차표 ↗</span>',
+                       clickOv:'ovCapexSchedule',
+                       v: -_capexBaseWon, gk:'gCapex', groupIn:'post_tax' });
+  // 선박 대체 유보금 — 매년 정액 (기본 선가 20%÷내용연수 ≈ 667백만). gSinking 로 선택적 복리.
+  const _sinkingBaseWon = (GROW.sinkingBase || 0) * 1e6;
+  const iSinking = add({ cls:'n',
+    name:`(−) 선박 대체 유보금 <span class="tagv est" title="K-GAAP/IFRS 상 미래 대체 유보는 손익 충당금으로 못 넣는다. 수지에서만 차감한다. 매년 정액 ${won(GROW.sinkingBase||0)}백만.">Sinking Fund · 매년 정액</span> <span class="tagv" style="cursor:pointer">연차표 ↗</span>`,
+    v: -_sinkingBaseWon, gk:'gSinking',
+    clickOv:'ovSinkingSchedule',
+    groupIn:'post_tax' });
+  // 오너 가용현금 = 영업 순현금흐름 + CapEx(음수) + Sinking(음수)
+  add({ cls:'lead', name:'= 오너 가용현금',
+        agg:[[iOpCash,1],[iCapex,1],[iSinking,1]], groupIn:'post_tax' });
+
+  // DSCR : EBITDA ÷ 원리금 (이자+원금) — 차입금이 있을 때만 추가
+  if (iHull !== null) {
+    add({ cls:'n', name:'DSCR <span style="color:var(--muted);font-size:9.5px">EBITDA ÷ 원리금 · 1.2~1.3 요구</span>',
+          transform:{ from:[iOpP, iOpDep, iHull, iPrin],
+                      fn:(opp, dep, hull, prin) => {
+                        const ebitda = opp + dep + hull;      // iOpP 는 선체이자 뺀 뒤이므로 다시 더함
+                        const ds     = hull + Math.abs(prin); // 원리금 = 이자 + 원금
+                        return ds > 0 ? ebitda / ds : null;
+                      }},
+          isRatio:true, groupIn:'post_tax' });
+  }
+  R10[iPostHdr].v = null;      // 머리행 자체는 집계 없이 캡션만
 
   PEER_PL_ROWS = R10;
+  // 팝업에서 재사용할 핵심 행 인덱스를 저장해 둔다 (iNet·iCapex·iSinking)
+  PEER_PL_IDX = { iNet, iCapex, iSinking, iOpP, iSales, iOpDep };
   drawPeerPL10();
 
   // ── 운항기타 산출 근거 모달 내용 갱신 ──
@@ -3609,8 +4109,8 @@ function drawPeerPL(m) {
   const rows = m.etcPeer.map((t, i) => {
     const baseAmt   = m.etcBase[i].amt;
     const _rowVoyR  = t.kind === 'semi' ? _voyR : 1;
-    const _kindTag  = t.kind === 'semi' ? '<span class="tagv">준변동</span>'
-                    : t.kind === 'var'  ? '<span class="tagv">변동</span>'
+    const _kindTag  = t.kind === 'semi' ? '<span class="tagv">변동(항차)</span>'
+                    : t.kind === 'var'  ? '<span class="tagv">변동(승객)</span>'
                     :                     '<span class="tagv">고정</span>';
     return `<tr>
       <td style="padding:4px 8px">${t.name} ${_kindTag}</td>
@@ -3653,14 +4153,66 @@ function drawPeerPL(m) {
     </p>`;
 
   const peerName = m.peer ? m.peer.name.split(' · ')[0] : '대조 선박';
-  // 항차 배율 뱃지 — 참조 대비 몇 배를 변동·준변동비에 곱했는지 한눈에
+  // 항차 배율 뱃지 — 참조 대비 몇 배를 변동비에 곱했는지 한눈에
   const _ratioTxt = m.applyVoyRatio
-    ? ` · 배율 ×${m.voyRatio.toFixed(3)} (변동·준변동 반영)`
+    ? ` · 배율 ×${m.voyRatio.toFixed(3)} (변동(항차) 반영)`
     : ` · 배율 ×${m.voyRatio.toFixed(3)} 미적용`;
   _setTxt('plPeerSub', `${peerName} · ${won(m.voyPeer)}항차${_ratioTxt} · 승객 ${won(m.paxPeer)}명 · 영업이익률 ${pct(margin, 1)}`);
 }
 
 // ── 화물 수입 시뮬레이션 ──────────────────────────────────────────────────────
+// 법인세 (한국 누진세, 지방세 10% 포함) — 과세표준에 따라 구간별 세율 적용.
+// 손실(income ≤ 0) 이면 과세 없음. 결손금 이월공제는 단일연도 추정에서는 생략.
+// 2023 세법 기준 :
+//   2억원 이하        9% × 1.1 =  9.9%
+//   2억 ~ 200억       19% × 1.1 = 20.9%
+//   200억 ~ 3,000억   21% × 1.1 = 23.1%
+//   3,000억 초과      24% × 1.1 = 26.4%
+function corpTaxKR(income){
+  if (!(income > 0)) return 0;
+  const brackets = [
+    [2e8,       0.099],
+    [200e8,     0.209],
+    [3000e8,    0.231],
+    [Infinity,  0.264]
+  ];
+  let tax = 0, prev = 0;
+  for (const [upto, rate] of brackets) {
+    const inBracket = Math.min(income - prev, upto - prev);
+    if (inBracket <= 0) break;
+    tax += inBracket * rate;
+    prev += inBracket;
+    if (prev >= income) break;
+  }
+  return tax;
+}
+
+// 톤세 (조세특례제한법 §104-10) — 외항 해운기업 과세특례.
+// 순톤수 × 운항일수 × 톤당 요율 = 의제이익 → 통상 법인세율 적용.
+// 톤당 일일 요율 (구간 누진) :
+//   1,000 톤 이하       14원
+//   1,000 ~ 10,000      11원
+//   10,000 ~ 25,000      7원
+//   25,000 초과          4원
+function tonnageNotionalKR(netTon, days){
+  if (!(netTon > 0) || !(days > 0)) return 0;
+  const bands = [
+    [1000, 14], [10000, 11], [25000, 7], [Infinity, 4]
+  ];
+  let perDay = 0, prev = 0;
+  for (const [upto, rate] of bands) {
+    const seg = Math.min(netTon, upto) - prev;
+    if (seg <= 0) break;
+    perDay += seg * rate;
+    prev = upto;
+    if (prev >= netTon) break;
+  }
+  return perDay * days;    // 연간 의제이익 (원)
+}
+function tonnageTaxKR(netTon, days){
+  return corpTaxKR(tonnageNotionalKR(netTon, days));
+}
+
 // 기존 화물수입(실적)을 빼고 선박별 적재 상한 × 선적율로 교체한 O_new 로 BEP 를 재계산한다.
 // ── 차입금 원리금과 상환여력 ───────────────────────────────────────────────
 // EBITDA 로 원리금을 몇 배 덮는가(DSCR)가 수지의 핵심이다. 1.0 을 밑돌면 그 해에
@@ -3685,17 +4237,19 @@ function drawDebt(m){
     + R_('손익계산서 반영', mil(D.int1) + '백만', '이자만 · 원금은 현금유출');
 }
 
-/* ── 10개년 성장률 UI 빌더 (참고 자료 스타일의 접이식 그룹) ── */
+/* ── 10개년 증감률 UI 빌더 (참고 자료 스타일의 접이식 그룹) ── */
 function buildGrowGroups() {
   const wrap = document.getElementById('growSection');
   if (!wrap) return;
   const chgOf = ks => ks.filter(k =>
     Math.abs((GROW[k]||0) - (GROWTH_DEFAULTS[k]||0)) > 1e-9).length;
+  // 세 번째 원소에 단위를 넣으면 그 단위로 노출된다 (없으면 '%/년').
+  // 수지 가정 그룹의 'capexBase' 같은 금액 입력에 쓰인다.
   const groups = GROWTH_GROUPS.map((g, i) => {
-    const fields = g.f.map(([k,l]) => `
+    const fields = g.f.map(([k,l,u]) => `
       <div class="f">
         <label>${l}</label>
-        <div class="ib"><input type="number" step="0.1" id="in_${k}" data-gk="${k}" value="${GROW[k]}"><span class="u">%/년</span></div>
+        <div class="ib"><input type="number" step="${u === '백만원' ? '10' : '0.1'}" id="in_${k}" data-gk="${k}" value="${GROW[k]}"><span class="u">${u || '%/년'}</span></div>
       </div>`).join('');
     const openAttr = (i === 0) ? ' open' : '';   // 첫 그룹만 기본 열림
     const ks  = g.f.map(x => x[0]);
@@ -3710,10 +4264,10 @@ function buildGrowGroups() {
     </details>`;
   }).join('');
   wrap.innerHTML = `
-    <div class="sec" style="margin-top:0">10개년 성장률 가정</div>
+    <div class="sec" style="margin-top:0">10개년 증감률 가정</div>
     ${groups}
     <div style="margin-top:8px">
-      <button type="button" class="btn" id="btnResetGrow" style="width:100%;margin-top:0">성장률 가정 초기화</button>
+      <button type="button" class="btn" id="btnResetGrow" style="width:100%;margin-top:0">증감률 가정 초기화</button>
     </div>`;
   const syncBadges = () => GROWTH_GROUPS.forEach((g, i) => {
     const b = wrap.querySelector(`[data-gbadge="${i}"]`);
@@ -3733,13 +4287,15 @@ function buildGrowGroups() {
       if (isNaN(v)) return;
       GROW[k] = v;
       markDirty();
-      drawPeerPL10();
+      // 수지 가정(capexBase·gCapex·sinkingBase·gSinking)과 10년 수리비 base 는 R10 재빌드 필요 → render.
+      if (k === 'capexBase' || k === 'gCapex' || k === 'sinkingBase' || k === 'gSinking' || k === 'repair10yBase') render();
+      else drawPeerPL10();
     });
     inp.addEventListener('blur', () => {
       if (isNaN(parseFloat(inp.value))) { inp.value = GROW[k]; markDirty(); }
     });
   });
-  // 성장률 초기화 버튼 (buildGrowGroups 재호출 시마다 새 요소가 생기므로 여기서 바인딩)
+  // 증감률 초기화 버튼 (buildGrowGroups 재호출 시마다 새 요소가 생기므로 여기서 바인딩)
   const btn = wrap.querySelector('#btnResetGrow');
   if (btn) btn.addEventListener('click', () => {
     GROW = { ...GROWTH_DEFAULTS };
@@ -3749,7 +4305,7 @@ function buildGrowGroups() {
 }
 
 /* ── 10개년 예상 손익계산서 (백만원 단위) ── */
-/* y+0 = 현재 계산값 · y+n = y+0 × (1+g)ⁿ (계정별 성장률 적용)
+/* y+0 = 현재 계산값 · y+n = y+0 × (1+g)ⁿ (계정별 증감률 적용)
  * 집계행(agg)은 [[하위idx, sign], ...] 로 정의해 각 연도별 재합산 */
 function drawPeerPL10() {
   const tb = document.getElementById('tPeerPL10');
@@ -3760,12 +4316,16 @@ function drawPeerPL10() {
   const fmtM  = v => v == null ? '<span class="nil">–</span>'
                               : (v < 0 ? '(' + Math.round(-v).toLocaleString('ko-KR') + ')'
                                        : Math.round(v).toLocaleString('ko-KR'));
+  const fmtPct = v => v == null || !isFinite(v) ? '<span class="nil">–</span>'
+                                                : v.toFixed(1) + '%';
+  const fmtRatio = v => v == null || !isFinite(v) ? '<span class="nil">–</span>'
+                                                  : v.toFixed(2) + 'x';
   const cellCls = v => v == null ? 'nil' : (v < 0 ? 'neg' : '');
 
   // 1-a) 리프(비집계) 행 먼저 계산
   const proj = new Array(PEER_PL_ROWS.length);
   PEER_PL_ROWS.forEach((r, i) => {
-    if (r.agg) return;
+    if (r.agg || r.ratio || r.transform) return;
     if (r.series) {                    // 상환 스케줄처럼 연도별 값이 정해진 행
       proj[i] = Array.from({length: YN+1}, (_, k) => toMil(r.series[k] ?? 0));
     } else if (r.gk) {
@@ -3778,31 +4338,56 @@ function drawPeerPL10() {
       proj[i] = new Array(YN+1).fill(base);
     }
   });
-  // 1-b) 집계행 : 하위 의존성이 모두 준비될 때까지 반복 (다층 집계 대응)
+  // 1-b) 집계행 · 비율행 · 변환행 : 하위 의존성이 모두 준비될 때까지 반복 (다층 대응)
   for (let pass = 0; pass < 6; pass++) {
     let progressed = false;
     PEER_PL_ROWS.forEach((r, i) => {
-      if (!r.agg || proj[i] != null) return;
-      const ready = r.agg.every(([ci]) => proj[ci] != null);
-      if (!ready) return;
-      proj[i] = Array.from({length: YN+1}, (_, k) => {
-        let s = 0, has = false;
-        r.agg.forEach(([ci, sign]) => {
-          const v = proj[ci][k];
-          if (v != null) { s += sign * v; has = true; }
+      if (proj[i] != null) return;
+      if (r.agg) {
+        const ready = r.agg.every(([ci]) => proj[ci] != null);
+        if (!ready) return;
+        proj[i] = Array.from({length: YN+1}, (_, k) => {
+          let s = 0, has = false;
+          r.agg.forEach(([ci, sign]) => {
+            const v = proj[ci][k];
+            if (v != null) { s += sign * v; has = true; }
+          });
+          return has ? s : null;
         });
-        return has ? s : null;
-      });
-      progressed = true;
+        progressed = true;
+      } else if (r.ratio) {
+        const { num, den } = r.ratio;
+        if (proj[num] == null || proj[den] == null) return;
+        proj[i] = Array.from({length: YN+1}, (_, k) => {
+          const n = proj[num][k], d = proj[den][k];
+          return (n == null || d == null || !d) ? null : (n / d * 100);
+        });
+        progressed = true;
+      } else if (r.transform) {
+        // transform : 다른 행의 연간 값을 함수에 통과시켜 재구성 (예 : 법인세 계산)
+        // from 은 단일 인덱스 또는 인덱스 배열, fn 은 (v) 또는 (...vs) 를 받는다.
+        const fromIdx = Array.isArray(r.transform.from) ? r.transform.from : [r.transform.from];
+        const ready = fromIdx.every(ci => proj[ci] != null);
+        if (!ready) return;
+        proj[i] = Array.from({length: YN+1}, (_, k) => {
+          const args = fromIdx.map(ci => proj[ci][k]);
+          if (args.some(v => v == null)) return null;
+          return r.transform.fn(...args);
+        });
+        progressed = true;
+      }
     });
     if (!progressed) break;
   }
+  // 팝업에서 재사용 — proj 전체를 저장 (연차별 투영값)
+  PEER_PL_PROJ = proj;
 
   // 2) 렌더
   const rows = PEER_PL_ROWS.map((r, i) => {
     const p = proj[i];
     const validProj = p.slice(1).filter(v => v != null && isFinite(v));
     const avg = validProj.length ? validProj.reduce((a,b)=>a+b,0) / validProj.length : null;
+    const _fmt = r.isRatio ? fmtRatio : r.isPct ? fmtPct : fmtM;
     // 접기/펼치기 : 자식 행은 hidden, 부모 행은 caret + 클릭 핸들러
     const isChildHidden = r.groupIn && PL10_COLLAPSED[r.groupIn];
     const isParent = !!r.collapsible;
@@ -3813,12 +4398,14 @@ function drawPeerPL10() {
     const hiddenAttr = isChildHidden ? ' hidden' : '';
     const caret = isParent ? '<span class="caret">▶</span> ' : '';
     const tipAttr = r.tip ? ` title="${r.tip}"` : '';
-    return `<tr class="${r.cls}${openCls}${r.tip ? ' tip' : ''}"${dataAttr}${styleAttr}${tipAttr}${hiddenAttr}>
+    const clkAttr = r.clickOv ? ` data-ov="${r.clickOv}"` : '';
+    const clkStyle = r.clickOv ? ' style="cursor:pointer"' : styleAttr;
+    return `<tr class="${r.cls}${openCls}${r.tip ? ' tip' : ''}"${dataAttr}${clkAttr}${clkStyle}${tipAttr}${hiddenAttr}>
       <th>${caret}${r.name}</th>`
       + `
-      <td class="base ${cellCls(p[0])}">${fmtM(p[0])}</td>
-      ${p.slice(1).map(v => `<td class="${cellCls(v)}">${fmtM(v)}</td>`).join('')}
-      <td class="avg ${cellCls(avg)}">${fmtM(avg)}</td>
+      <td class="base ${cellCls(p[0])}">${_fmt(p[0])}</td>
+      ${p.slice(1).map(v => `<td class="${cellCls(v)}">${_fmt(v)}</td>`).join('')}
+      <td class="avg ${cellCls(avg)}">${_fmt(avg)}</td>
     </tr>`;
   }).join('');
   tb.innerHTML = rows;
@@ -3829,6 +4416,34 @@ function drawPeerPL10() {
       PL10_COLLAPSED[g] = !PL10_COLLAPSED[g];
       drawPeerPL10();
       syncPeerAllLabel();
+    });
+  });
+  // clickOv : 특정 행 클릭 시 모달 열기 (선체이자 → ovLoanSchedule)
+  tb.querySelectorAll('[data-ov]').forEach(tr => {
+    tr.addEventListener('click', () => {
+      const id = tr.dataset.ov;
+      if (id === 'ovLoanSchedule')    populateLoanSchedule();
+      if (id === 'ovDepSchedule')     populateDepSchedule();
+      if (id === 'ovCapexSchedule')   populateCapexSchedule();
+      if (id === 'ovSinkingSchedule') populateSinkingSchedule();
+      openOv(id);
+    });
+  });
+  // 연료비 두 체크박스 (10개년 뷰) — 상호 배타적 토글
+  tb.querySelectorAll('[data-fuel-chk-live]').forEach(chk => {
+    chk.addEventListener('change', e => {
+      e.stopPropagation();
+      el('iFuelLiveMode').checked = chk.checked;
+      if (chk.checked) el('iFuelManualMode').checked = false;
+      applyFuelLiveMode();
+    });
+  });
+  tb.querySelectorAll('[data-fuel-chk-manu]').forEach(chk => {
+    chk.addEventListener('change', e => {
+      e.stopPropagation();
+      el('iFuelManualMode').checked = chk.checked;
+      if (chk.checked) el('iFuelLiveMode').checked = false;
+      applyFuelLiveMode();
     });
   });
   // 이 표의 영업이익률은 단일연도 표와 다르다 — 여기서는 선체이자를 운항원가에
@@ -4193,14 +4808,14 @@ function render(){
     _setTxt('hPerVoyPeer', '—');
   }
 
-  // 감가상각 헬퍼
-  const _shipPrice = (parseFloat((el('iShipPricePeer').value || '').replace(/,/g,'')) || 0) * 1e6;
-  if (_shipPrice > 0) {
-    const _life    = parseFloat(el('iLifePeer').value)    || 20;
-    const _salvage = parseFloat(el('iSalvagePeer').value) || 0;
-    const _annDep  = _shipPrice * (1 - _salvage / 100) / _life;
+  // 감가상각 헬퍼 — 잔존가치는 모델에서 이미 won 단위로 환산해 둔 m.salvageWon 을 쓴다
+  if (m.shipPricePeer > 0) {
+    const _life = m.lifePeer;
+    const _salvDesc = m.salvageUnit === 'pct'
+      ? `${(m.salvageWon / m.shipPricePeer * 100).toFixed(1)}% · ${mil(m.salvageWon)}백만`
+      : `${mil(m.salvageWon)}백만 · ${(m.salvageWon / m.shipPricePeer * 100).toFixed(2)}%`;
     el('hDepPeer').innerHTML =
-      R_('연간 감가상각', mil(_annDep) + '백만', `정액 · ${_life}년 · 잔존 ${_salvage}%`);
+      R_('연간 감가상각', mil(m.opDepPeer) + '백만', `정액 · ${_life}년 · 잔존 ${_salvDesc}`);
   } else {
     el('hDepPeer').innerHTML =
       R_('연간 감가상각', mil(N.opDep) + '백만', '선가 미입력 · 감사보고서 값');
@@ -4229,12 +4844,12 @@ function render(){
   const off = m.items.filter(x => !x.on);
   el('hCostMix').innerHTML =
       R_('고정',   mil(m.costF)  + '백만')
-    + R_('준변동', mil(m.costSV) + '백만', won(m.svPerVoy) + '원/항차')
-    + R_('변동',   mil(m.costV)  + '백만', won(m.vPerPax) + '원/인'
+    + R_('변동(항차)', mil(m.costSV) + '백만', won(m.svPerVoy) + '원/항차')
+    + R_('변동(승객)', mil(m.costV)  + '백만', won(m.vPerPax) + '원/인'
          + (m.vcMan > 0 ? ' +수동 ' + won(m.vcMan) : ''))
     + RT_('합계',  mil(totCost)  + '백만')
     + R_('승객 1인 증가분', won(m.vc) + '원', '운임의 ' + pct(m.vc/m.fare,1))
-    + R_('공헌이익률', pct(1 - m.vc/m.fare,1), '고정·준변동 회수분')
+    + R_('공헌이익률', pct(1 - m.vc/m.fare,1), '고정·변동(항차) 회수분')
     + (off.length
         ? `<span class="warn">계산 제외 — ${off.map(x => x.name.split(' (')[0]).join(' · ')}`
           + `${m.ebitda ? ' · EBITDA 기준' : ''}</span>` : '');
@@ -4262,6 +4877,23 @@ function render(){
     + (Math.abs(m.etcSum - 100) > 0.01
         ? `<span class="warn">합 ${m.etcSum.toFixed(2)}% → 100%로 정규화</span>` : '');
 
+  // ── 톤세 요약 ──
+  // 체크 OFF : 통상 법인세 (preProfit 누진) — 손실이면 과세 없음
+  // 체크 ON  : 톤세 (의제이익 기반) — 손실이어도 발생
+  {
+    const _notional = tonnageNotionalKR(m.netTon, m.opDays);
+    const _tonTax   = corpTaxKR(_notional);
+    const _ht = el('hTonnageTax');
+    if (_ht) {
+      _ht.innerHTML = !m.tonnageTax
+        ? R_('적용', '통상 법인세', '체크 시 톤세로 전환 · 미리보기 금액은 아래 안내')
+          + R_('참고 — 톤세 적용 시', won(_tonTax) + '원', `의제이익 ${won(_notional)}원`)
+        : R_('적용', '톤세', `순톤 ${won(m.netTon)}t × ${won(m.opDays)}일`)
+          + R_('의제이익', won(_notional) + '원', '구간별 톤당 요율 합산')
+          + RT_('연간 톤세', won(_tonTax) + '원', '법인세율 × 의제이익');
+    }
+  }
+
   // ── 연료 단가 증가율 ──
   el('hFuelEsc').innerHTML = !m.fuelEsc
     ? R_('적용', '없음', '2024 단가 그대로 · 항차 비율만 반영')
@@ -4278,10 +4910,9 @@ function render(){
   el('hVoyRatio').innerHTML =
       R_('항차 배율', m.voyRatio.toFixed(4), `${won(m.voyPeer)} ÷ ${won(m.voy)}`)
     + R_('적용 여부', m.applyVoyRatio ? '적용' : '미적용',
-         m.applyVoyRatio ? '변동·준변동비에 반영' : '참조 금액 그대로')
+         m.applyVoyRatio ? '변동(항차)비에 반영' : '참조 금액 그대로')
     + (m.applyVoyRatio
-        ? TAG_('<span class="tagv ok">변동 ×' + m.voyRatio.toFixed(3) + '</span>',
-               '<span class="tagv ok">준변동 ×' + m.voyRatio.toFixed(3) + '</span>',
+        ? TAG_('<span class="tagv ok">변동(항차) ×' + m.voyRatio.toFixed(3) + '</span>',
                m.fuelEsc ? '<span class="tagv">연료는 추가로 ×' + m.escRate.toFixed(3) + '</span>' : '')
         : TAG_('<span class="warn">체크 해제 — 운항 증가분이 비용에 반영되지 않음</span>'));
 
@@ -4363,10 +4994,33 @@ function render(){
   // 50% 승선율 기본 승객수 — kTgt 의 '수동 입력' 뱃지 판정에 쓰이므로 kTgt 보다 먼저 계산한다
   const _peerCap = m.peer && m.peer.pax > 0 ? m.peer.pax : 0;
   const _pax50   = _peerCap ? Math.round(_peerCap * 0.5 * m.voyPeer) : null;
-  // 손익분기 승객수에서의 영업이익률은 정의상 0% 라 생략 — 승선율만 보여 준다
-  el('kBepS').textContent = bepV === null ? '달성 불가'
-    : `${tag} ${won(paxV)}명 대비 ${dlt(bepV - paxV)}명`
-      + (_capV ? ` · 승선율 ${pct(bepV / _capV)}` : ' · 승선율 —');
+  // 특정 승객수 q 에서의 매출 구성(여객·화물) 비중 — 세 타일(실적·손익분기·목표달성)에 공통 노출.
+  // onPeer : 대조선박의 운임·화물 시뮬레이션 기준.
+  // base   : 감사보고서의 화물수입·운임 기준.
+  const _revFare  = onPeer ? m.farePeer    : m.fare;
+  const _revCargo = onPeer ? m.cargoRevP   : A.cargoRev;
+  const _revOther = onPeer ? A.dutyFreeRent : A.nonCargoRev;
+  const _revMix = q => {
+    const _pr = q * _revFare;
+    const _tot = _pr + _revCargo + _revOther;
+    if (!_tot) return '';
+    const _pp = (_pr / _tot * 100).toFixed(1);
+    const _cp = (_revCargo / _tot * 100).toFixed(1);
+    return `여객 ${mil(_pr)}백만(${_pp}%) · 화물 ${mil(_revCargo)}백만(${_cp}%)`;
+  };
+  // 두 괄호의 뜻이 다른 수에 걸리게 한다 :
+  //   앞 괄호 — 현재 승객수의 '승선율' (정원 대비 몇 % 찼는가)
+  //   뒤 괄호 — 차이를 '현재 대비' % 로 (-6.6% 처럼 변동률)
+  const _curLoadPct = _capV ? pct(paxV / _capV, 1) : '—';
+  const _diffN   = (bepV !== null) ? bepV - paxV : null;
+  const _diffPct = (_diffN === null || !paxV) ? '—'
+                 : (_diffN > 0 ? '+' : '') + (_diffN / paxV * 100).toFixed(1) + '%';
+  el('kBepS').innerHTML = bepV === null ? '달성 불가'
+    : `${tag} ${won(paxV)}명(${_curLoadPct}승선율) 대비 ${dlt(bepV - paxV)}명(${_diffPct})`
+      + `<br><span style="color:#C3D8EF;font-size:9px">${_revMix(bepV)}</span>`;
+  // 두 괄호가 들어가 길어질 수 있으니 kBepS 는 줄바꿈을 허용한다 (다른 .s 는 그대로 nowrap)
+  el('kBepS').style.whiteSpace = 'normal';
+  el('kBepS').style.wordBreak  = 'keep-all';
 
   // 수동 입력 모드 판단 — 자동 50% 승선율 기본값에서 벗어나면 수동 설정으로 본다
   const _manualPax = onPeer && _pax50 !== null && Math.abs(paxV - _pax50) > 0.5;
@@ -4386,7 +5040,8 @@ function render(){
     el('kTgt').innerHTML = won(paxV) + '<small>명</small>';
     el('kTgtS').innerHTML = `항차당 ${won(paxV / (voyV||1))}명 · `
       + _marginSpan(_userSim.margin)
-      + `<br><span style="color:#F3C77A;font-weight:600">사용자 입력 — 50% 기준 대비 ${dlt(paxV - _pax50)}명</span>`;
+      + `<br><span style="color:#F3C77A;font-weight:600">사용자 입력 — 50% 기준 대비 ${dlt(paxV - _pax50)}명</span>`
+      + `<br><span style="color:#C3D8EF;font-size:9px">${_revMix(paxV)}</span>`;
     // 테두리로 수동 모드임을 표시
     _tgtTile.style.outline = '2px solid #F3C77A';
     _tgtTile.style.outlineOffset = '2px';
@@ -4402,11 +5057,15 @@ function render(){
     el('kTgtS').innerHTML = tgtV === null ? '달성 불가'
       : `항차당 ${won(tgtV / (voyV||1))}명`
         + (_capV ? ` · 승선율 ${pct(tgtV / _capV)}` : ' · 승선율 —')
-        + ' · ' + _marginSpan(m.r);
+        + ' · ' + _marginSpan(m.r)
+        + `<br><span style="color:#C3D8EF;font-size:9px">${_revMix(tgtV)}</span>`;
     _tgtTile.style.outline = '';
     _tgtTile.style.outlineOffset = '';
     _tgtTile.title = '';
   }
+  // kTgtS 는 두 줄 이상이 될 수 있으니 줄바꿈 허용
+  el('kTgtS').style.whiteSpace = 'normal';
+  el('kTgtS').style.wordBreak  = 'keep-all';
 
   const _utilPct = voyV / (365 * 2) * 100;
   _setTxt('kUtilT', (onPeer ? peerNm + ' ' : '') + '가동율 (편도항차)');
@@ -4443,7 +5102,10 @@ function render(){
       el('kActPax').innerHTML  = won(Math.round(m.paxAct)) + '<small>명</small>';
       el('kActPaxS').innerHTML = `항차당 ${won(Math.round(m.paxAct / (m.voy||1)))}명`
         + (_actCap ? ` · 승선율 ${pct(m.paxAct / _actCap)}` : '')
-        + ' · ' + _marginSpan(_actMargin);
+        + ' · ' + _marginSpan(_actMargin)
+        + `<br><span style="color:#C3D8EF;font-size:9px">${_revMix(m.paxAct)}</span>`;
+      el('kActPaxS').style.whiteSpace = 'normal';
+      el('kActPaxS').style.wordBreak  = 'keep-all';
     } else {
       _kActTile.hidden = true;           // 대조 탭에서는 숨긴다
     }
@@ -4474,8 +5136,10 @@ function render(){
  'iFarePeer','iFuelPeer',
  'iCargoLoad','iCargoDist',
  'iAgencyPeer',
+ 'iNetTon','iOpDays',
  'iShipPricePeer','iLifePeer','iSalvagePeer','iLoanPeer','iLoanRatePeer'].forEach(id =>
   el(id).addEventListener('input', render));
+el('iTonnageTax').addEventListener('change', render);
 el('iAutoVoy').addEventListener('change', render);
 ['iFuelBase','iFuelNow'].forEach(id => el(id).addEventListener('input', render));
 ['iFxBase','iFxNow'].forEach(id => el(id).addEventListener('input', render));
@@ -4483,6 +5147,7 @@ el('iFuelEsc').addEventListener('change', render);
 el('iVoyRatio').addEventListener('change', render);
 ['iLoanYears','iLoanGrace'].forEach(id => el(id).addEventListener('input', render));
 el('iLoanMethod').addEventListener('change', render);
+el('iSalvageUnit').addEventListener('change', render);
 el('iTgtPeer').addEventListener('input', render);
 el('iTgtPeerAuto').addEventListener('change', render);
 // 10개년 뷰 — 선사/항공사 수송실적 참고자료를 새 창으로. 창 하나만 띄우고 재사용한다.
@@ -4506,6 +5171,11 @@ async function loadFuelPrice(quiet){
     const d = await res.json();
     if (d.lsmgo_usd_per_mt) el('iFuelNow').value = d.lsmgo_usd_per_mt;
     if (d.usd_krw_rate)     el('iFxNow').value   = d.usd_krw_rate;
+    // 불러온 라이브 값은 swap 대비 보존 — FUEL_STATE 가 선언돼 있을 때만
+    if (typeof FUEL_STATE !== 'undefined') {
+      if (d.lsmgo_usd_per_mt) FUEL_STATE.liveUsd = d.lsmgo_usd_per_mt;
+      if (d.usd_krw_rate)     FUEL_STATE.liveFx  = d.usd_krw_rate;
+    }
     render();
     say(R_('LSMGO', won(d.lsmgo_usd_per_mt) + '$/MT', d.price_date || '?')
       + R_('환율', d.usd_krw_rate + '원/$')
@@ -4521,7 +5191,88 @@ async function loadFuelPrice(quiet){
   }
 }
 el('btnFuelLive').addEventListener('click', () => loadFuelPrice(false));
-loadFuelPrice(true);          // 열릴 때 한 번 조용히 시도
+
+// ── 수동 vs 실시간 단가 — 두 값을 서로 바꿔 적용할 수 있도록 분리 저장 ──
+// 체크박스는 "어느 쪽이 지금 iFuelNow 에 들어가 있는가" 를 결정한다.
+// MANUAL : 사용자가 수동으로 지정한 값 (기본 1,325$/MT · 1,346.24원/$)
+// LIVE   : fuel_price.json 에서 읽어 온 값 (처음엔 null, 라이브 모드 켜질 때 저장)
+const FUEL_STATE = {
+  manualUsd: 1325, manualFx: 1346.24,
+  liveUsd:   null, liveFx:   null,
+};
+function updateFuelSwapHint(){
+  _setTxt('hManualFuel', FUEL_STATE.manualUsd.toLocaleString('ko-KR'));
+  _setTxt('hManualFx',   FUEL_STATE.manualFx.toLocaleString('ko-KR'));
+}
+
+// ── 연료비 모드 토글 ──────────────────────────────────────────────────────
+// 세 가지 상태 중 하나:
+//   초기값 (둘 다 OFF) : 2024 기준 820$/MT · escRate = 1
+//   수동 1,325 (iFuelManualMode) : 1,325 수동 단가 · escRate 적용
+//   실제 시가 (iFuelLiveMode)    : fuel_price.json 라이브 · escRate 적용
+function applyFuelLiveMode(){
+  const live = el('iFuelLiveMode').checked;
+  const manu = el('iFuelManualMode').checked;
+  const readonly = live;    // 라이브일 때만 입력창 잠금, 수동은 사용자가 1325 조정 가능
+  el('iFuelNow').readOnly = readonly;
+  el('iFxNow').readOnly   = readonly;
+  el('iFuelNow').classList.toggle('ro', readonly);
+  el('iFxNow').classList.toggle('ro',   readonly);
+  _setTxt('hFuelNowMode', live ? '실제 시가' : manu ? '수동 1,325' : '초기값 820');
+  // 손익계산서/10개년의 체크박스들 상태 동기화
+  document.querySelectorAll('[data-fuel-chk-live]').forEach(c => { c.checked = live; });
+  document.querySelectorAll('[data-fuel-chk-manu]').forEach(c => { c.checked = manu; });
+  if (live) {
+    // 지금까지의 수동값은 저장해 두고 라이브로 교체
+    FUEL_STATE.manualUsd = parseFloat(el('iFuelNow').value) || FUEL_STATE.manualUsd;
+    FUEL_STATE.manualFx  = parseFloat(el('iFxNow').value)   || FUEL_STATE.manualFx;
+    updateFuelSwapHint();
+    loadFuelPrice(false);
+  } else if (manu) {
+    // 수동 1,325 로 세팅 (사용자가 그동안 바꾼 값이 있으면 FUEL_STATE 에 저장된 값 사용)
+    el('iFuelNow').value = FUEL_STATE.manualUsd;
+    el('iFxNow').value   = FUEL_STATE.manualFx;
+    render();
+  } else {
+    // 초기값 모드 — 입력창은 수동 1,325 로 두되 escalation 은 적용 안 됨 (fuelEsc=false)
+    el('iFuelNow').value = FUEL_STATE.manualUsd;
+    el('iFxNow').value   = FUEL_STATE.manualFx;
+    render();
+  }
+}
+el('iFuelLiveMode').addEventListener('change', applyFuelLiveMode);
+
+// ── 수동 ↔ 실시간 바꾸기 버튼 ─────────────────────────────────────────────
+// 수동으로 지정한 값과 라이브로 받아 둔 값을 swap. 체크박스가 그 결과를 결정한다.
+el('btnSwapFuel')?.addEventListener('click', () => {
+  const live = el('iFuelLiveMode').checked;
+  // 현재 입력된 값과 FUEL_STATE 의 반대편 값을 바꾼다
+  const curUsd = parseFloat(el('iFuelNow').value) || 0;
+  const curFx  = parseFloat(el('iFxNow').value)   || 0;
+  if (live) {
+    // 라이브가 활성 — curUsd/Fx 는 라이브로 간주. manual 에는 저장돼 있던 수동값.
+    FUEL_STATE.liveUsd = curUsd;
+    FUEL_STATE.liveFx  = curFx;
+    // 수동으로 전환
+    el('iFuelLiveMode').checked = false;
+    el('iFuelNow').value = FUEL_STATE.manualUsd;
+    el('iFxNow').value   = FUEL_STATE.manualFx;
+  } else {
+    // 수동이 활성 — curUsd/Fx 는 수동값. 라이브로 전환.
+    FUEL_STATE.manualUsd = curUsd;
+    FUEL_STATE.manualFx  = curFx;
+    el('iFuelLiveMode').checked = true;
+    if (FUEL_STATE.liveUsd !== null) {
+      el('iFuelNow').value = FUEL_STATE.liveUsd;
+      el('iFxNow').value   = FUEL_STATE.liveFx;
+    }
+  }
+  updateFuelSwapHint();
+  applyFuelLiveMode();          // readonly 상태·뱃지·render 재적용
+});
+
+// 초기 상태(수동 · 1,325$/MT)는 HTML 기본값으로 이미 맞춰져 있다.
+updateFuelSwapHint();
 
 let paxPeerManual = el('iPaxPeer').value;
 
@@ -4537,7 +5288,7 @@ el('btnTgt').addEventListener('click', () => {
 // ── 손익계산서 카드의 세 상태 ─────────────────────────────────────────────
 //   ① 가정 탭   → 감사보고서 원본 (plBodyA)
 //   ② 목표기반 탭 → 대조 선박 단일연도 (plBodyB-single)
-//   ③ 10개년 탭  → 대조 선박 10개년 (plBodyB-multi) · 좌측은 성장률 가정으로 바뀐다
+//   ③ 10개년 탭  → 대조 선박 10개년 (plBodyB-multi) · 좌측은 증감률 가정으로 바뀐다
 // ③ 은 대조 선박 시나리오 위에서만 성립하므로, 들어갈 때 설정 탭을 목표기반으로 끌고 간다.
 function applyPLView(){
   const multi  = (PL10_MODE === 'multi');
@@ -4550,12 +5301,37 @@ function applyPLView(){
   // 10개년 뷰에서만 외부 참고(항공기 수송실적) 버튼 노출
   { const b = el('btnTrafficRef'); if (b) b.hidden = !multi; }
 
-  // 좌측 설정 카드 : 10개년에서는 탭·입력을 접고 성장률 가정만 남긴다
-  document.querySelector('.tabs').hidden = multi;
-  document.querySelectorAll('.tabp').forEach(x =>
-    x.hidden = multi ? true : (x.id !== ACTIVE_TAB));
-  const gs = document.getElementById('growSection');
-  if (gs) gs.hidden = !multi;
+  // 좌측 설정 카드 : 10개년에서는 '대조 선박 설정' 과 '증감률 가정' 두 탭 사이를 전환한다.
+  // ACTIVE_TAB 은 model() 의 peer/base 분기와 연결돼 있어 10개년 모드에서도 'tabB' 로 유지한다.
+  // 시각적인 좌측 뷰만 PL10_PANEL ('peer' | 'grow') 로 토글한다.
+  document.querySelector('.tabs').hidden = false;
+  const btnA = document.querySelector('[data-tab="tabA"]');
+  const btnB = document.querySelector('[data-tab="tabB"]');
+  const btnG = document.querySelector('[data-tab="tabGrow"]');
+  const gs   = document.getElementById('growSection');
+  if (multi) {
+    if (btnA) btnA.hidden = true;
+    if (btnB) btnB.hidden = false;
+    if (btnG) btnG.hidden = false;
+    // PL10_PANEL 에 따라 .on 선택 · 패널 가시성
+    const showGrow = (PL10_PANEL === 'grow');
+    if (btnB) btnB.classList.toggle('on', !showGrow);
+    if (btnG) btnG.classList.toggle('on',  showGrow);
+    if (btnA) btnA.classList.remove('on');
+    document.querySelectorAll('.tabp').forEach(x =>
+      x.hidden = (x.id !== 'tabB') || showGrow);
+    if (gs) gs.hidden = !showGrow;
+  } else {
+    // 비 10개년 : 기존 동작 그대로 (tabA/tabB 노출, 증감률 숨김)
+    if (btnA) btnA.hidden = false;
+    if (btnB) btnB.hidden = false;
+    if (btnG) btnG.hidden = true;
+    document.querySelectorAll('.tab').forEach(b =>
+      b.classList.toggle('on', b.dataset.tab === ACTIVE_TAB));
+    document.querySelectorAll('.tabp').forEach(x =>
+      x.hidden = (x.id !== ACTIVE_TAB));
+    if (gs) gs.hidden = true;
+  }
 
   const peerShipName = (() => {
     try { return (model().peer?.name || '').split(' · ')[0] || '대조 선박'; }
@@ -4567,7 +5343,9 @@ function applyPLView(){
               : '손익계산서 — 감사보고서 원본<span class="ic">?</span>');
   const hold = isPeer ? peerHold() : '';
   el('plCardSub').innerHTML = (multi
-    ? '좌측 성장률 가정으로 편 y+0 ~ y+10'
+    ? (PL10_PANEL === 'grow'
+        ? '좌측 증감률 가정으로 편 y+0 ~ y+10'
+        : '좌측 대조 선박 설정으로 세운 y+0 — 증감률 가정은 "증감률 가정" 탭에서')
     : (isPeer ? peerShipName + ' 시나리오' : '제목을 누르면 주석 대조·검산'))
     + (hold ? ' ' + HOLD_TAG : '');
   el('plCardSub').title = hold || '';
@@ -4577,10 +5355,16 @@ function applyPLView(){
   if (typeof syncPeerAllLabel === 'function') syncPeerAllLabel();
 }
 
-// 설정 탭 (기준 자료 / 목표기반)
+// 설정 탭 (기준 자료 / 목표기반 / 증감률 가정)
 function setSetTab(id){
+  // 10개년 모드에서 tabB/tabGrow 는 ACTIVE_TAB 을 바꾸지 않고 PL10_PANEL 만 토글한다
+  if (PL10_MODE === 'multi' && (id === 'tabB' || id === 'tabGrow')) {
+    PL10_PANEL = (id === 'tabGrow') ? 'grow' : 'peer';
+    applyPLView();
+    return;
+  }
+  // 10개년에서 tabA 를 누르면 단일연도로 돌아오고 ACTIVE_TAB 도 그대로 반영
   ACTIVE_TAB = id;
-  // 10개년은 대조 선박 전용 화면이다 — 기준 자료로 돌아오면 함께 내려놓는다
   if (id === 'tabA' && PL10_MODE === 'multi') PL10_MODE = 'single';
   document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x.dataset.tab === id));
   render();                       // 머리 지표가 보고 있는 탭을 따라가게
@@ -4591,7 +5375,7 @@ document.querySelectorAll('.tab').forEach(b => {
   b.addEventListener('click', () => setSetTab(b.dataset.tab));
 });
 
-// 10개년 성장률 UI 초기화 (좌측 설정 카드 안에 렌더)
+// 10개년 증감률 UI 초기화 (좌측 설정 카드 안에 렌더)
 buildGrowGroups();
 
 // ── 우측 상단 탭 ─────────────────────────────────────────────────────────
@@ -4615,12 +5399,23 @@ function setMTab(t){
   const panel = (t === 'plPeer' || t === 'pl10') ? 'pl' : t;
   document.querySelectorAll('.mtabPanel').forEach(x => { x.hidden = (x.dataset.mtab !== panel); });
 
-  // 10개년을 떠나면 좌측도 성장률 가정에서 원래 설정으로 돌아와야 한다 —
+  // 10개년을 떠나면 좌측도 증감률 가정에서 원래 설정으로 돌아와야 한다 —
   // 표가 안 보이는데 가정만 남아 있으면 무엇을 만지는지 알 수 없다.
+  const prevMode = PL10_MODE;
   PL10_MODE = (t === 'pl10') ? 'multi' : 'single';
-  const want = MTAB_SET[t];
-  if (want && ACTIVE_TAB !== want) setSetTab(want);   // setSetTab 이 applyPLView 까지 한다
-  else applyPLView();
+  // 10개년에 처음 진입하면 좌측의 섹션(details.grp)을 모두 접고 증감률 탭을 디폴트로.
+  // model 분기(ACTIVE_TAB === 'tabB')는 그대로 유지해야 peer-기반 수치가 보존된다.
+  if (prevMode !== 'multi' && PL10_MODE === 'multi') {
+    document.querySelectorAll('#tabB details.grp').forEach(d => { d.open = false; });
+    PL10_PANEL = 'grow';
+    ACTIVE_TAB = 'tabB';            // peer 분기 유지
+    render();
+    applyPLView();
+  } else {
+    const want = MTAB_SET[t];
+    if (want && ACTIVE_TAB !== want) setSetTab(want);   // setSetTab 이 applyPLView 까지 한다
+    else applyPLView();
+  }
   if (t === 'cvp' && LAST_M) requestAnimationFrame(() => drawCVP(LAST_M));
 }
 document.querySelectorAll('.mtab').forEach(b => {
@@ -4645,9 +5440,9 @@ function printPL() {
   if (_b) _b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); printPL(); });
 }
 
-// 설정값 인쇄 : 팝업 창에 [기준자료 · 대조선박 · 10개년 성장률] 통합 노출 후 인쇄
+// 설정값 인쇄 : 팝업 창에 [기준자료 · 대조선박 · 10개년 증감률] 통합 노출 후 인쇄
 function printSettings() {
-  // 성장률 UI 가 아직 렌더 안 됐다면 렌더
+  // 증감률 UI 가 아직 렌더 안 됐다면 렌더
   const growSection = document.getElementById('growSection');
   if (growSection && !growSection.innerHTML.trim()) buildGrowGroups();
 
@@ -4735,7 +5530,7 @@ table.seat th,table.seat td{padding:2px 4px;border:1px solid #ddd}
   .printCloseBar,.spacer{display:none !important}
   body{padding:0}
   section,details.grp,details.dep-block{page-break-inside:avoid}
-  /* 각 섹션(기준자료·대조선박·10개년 성장률)을 별도 페이지로 */
+  /* 각 섹션(기준자료·대조선박·10개년 증감률)을 별도 페이지로 */
   h2.sect{page-break-before:always;break-before:page;margin-top:0}
   h2.sect:first-of-type{page-break-before:auto;break-before:auto}
 }
@@ -4754,7 +5549,7 @@ table.seat th,table.seat td{padding:2px 4px;border:1px solid #ddd}
 ${tabA.innerHTML}
 <h2 class="sect">대조 선박 설정 (목표기반 시나리오)</h2>
 ${tabB.innerHTML}
-<h2 class="sect">10개년 성장률 가정</h2>
+<h2 class="sect">10개년 증감률 가정</h2>
 ${grow.innerHTML}
 </body></html>`;
 
@@ -4818,6 +5613,9 @@ el('btnReset').addEventListener('click', () => {
   el('iVoyRatio').checked = DEFAULTS.voyRatio;
   el('iTgtPeerAuto').checked = DEFAULTS.tgtPeerAuto;
   el('iTgtPeer').value       = DEFAULTS.tgtPeer;
+  el('iTonnageTax').checked  = DEFAULTS.tonnageTax;
+  el('iNetTon').value        = DEFAULTS.netTon;
+  el('iOpDays').value        = DEFAULTS.opDays;
   el('iAutoVoy').checked = DEFAULTS.autoVoy;
   COSTS.forEach(c => { el('use_'+c.id).checked = true;
                        el('kind_'+c.id).value = DEFAULTS.kinds[c.id]; });
@@ -4843,10 +5641,257 @@ el('btnReset').addEventListener('click', () => {
   el('iShipPricePeer').value  = DEFAULTS.shipPricePeer;
   el('iLifePeer').value       = DEFAULTS.lifePeer;
   el('iSalvagePeer').value    = DEFAULTS.salvagePeer;
+  el('iSalvageUnit').value    = DEFAULTS.salvageUnit;
   el('iLoanPeer').value       = DEFAULTS.loanPeer;
   el('iLoanRatePeer').value   = DEFAULTS.loanRatePeer;
+  el('iFuelBase').value       = DEFAULTS.fuelBase;
+  el('iFuelNow').value        = DEFAULTS.fuelNow;
+  el('iFxBase').value         = DEFAULTS.fxBase;
+  el('iFxNow').value          = DEFAULTS.fxNow;
+  el('iFuelLiveMode').checked = DEFAULTS.fuelLive;
+  if (typeof applyFuelLiveMode === 'function') applyFuelLiveMode();
   render();
 });
+
+// ── 선체이자 상환표 모달 ───────────────────────────────────────────────────
+// 10개년 뷰에서 선체이자 행을 누르면 매 연차의 기초잔액·이자·원금·기말잔액·원리금을 보여준다.
+function populateLoanSchedule(){
+  const loan   = (parseFloat((el('iLoanPeer').value || '').replace(/,/g,'')) || 0) * 1e6;
+  const rate   = parseFloat(el('iLoanRatePeer').value) || 0;
+  const years  = Math.max(1, parseFloat(el('iLoanYears').value) || DEFAULTS.loanYears);
+  const grace  = Math.max(0, parseFloat(el('iLoanGrace').value) || 0);
+  const method = el('iLoanMethod').value || 'annuity';
+  const methodName = { annuity:'원리금균등', equal:'원금균등', bullet:'만기일시' }[method] || method;
+  // 팝업 안의 상환방식 셀렉트도 현재 값으로 동기화
+  { const _s = el('iLoanMethodPopup'); if (_s) _s.value = method; }
+
+  const sub = `차입 ${won(loan/1e8)}억 · 이자율 ${rate}% · ${years}년`
+    + (grace > 0 ? ` · 거치 ${grace}년` : '') + ` · ${methodName}`;
+  _setTxt('loanScheduleSub', sub);
+
+  if (!(loan > 0) || !(rate > 0)) {
+    el('loanScheduleBody').innerHTML =
+      '<p style="color:var(--muted)">차입금 · 이자율이 입력되지 않아 상환표가 비어 있다.</p>';
+    return;
+  }
+
+  const sched = loanSchedule(loan, rate, years, grace, method);
+  const totInt  = sched.reduce((a,x) => a+x.int,  0);
+  const totPrin = sched.reduce((a,x) => a+x.prin, 0);
+  const totPay  = sched.reduce((a,x) => a+x.pay,  0);
+
+  const num = v => '<td style="text-align:right;padding:4px 10px;font-variant-numeric:tabular-nums">'
+                 + (v <= 0 ? '—' : Math.round(v).toLocaleString('ko-KR')) + '</td>';
+  const rows = sched.map(s => `
+    <tr${s.grace ? ' style="color:var(--muted)"' : ''}>
+      <td style="text-align:center;padding:4px 10px">${s.year}년차${s.grace ? '<small style="color:var(--muted)"> · 거치</small>' : ''}</td>
+      ${num(s.open)}${num(s.int)}${num(s.prin)}${num(s.close)}${num(s.pay)}
+    </tr>`).join('');
+
+  el('loanScheduleBody').innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead>
+        <tr style="border-bottom:2px solid var(--rule);background:#F5F9FE">
+          <th style="padding:6px 10px;text-align:center">년차</th>
+          <th style="padding:6px 10px;text-align:right">기초 잔액</th>
+          <th style="padding:6px 10px;text-align:right">이자</th>
+          <th style="padding:6px 10px;text-align:right">원금 상환</th>
+          <th style="padding:6px 10px;text-align:right">기말 잔액</th>
+          <th style="padding:6px 10px;text-align:right">연간 원리금</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+      <tfoot>
+        <tr style="border-top:2px solid var(--rule);font-weight:700;background:#F5F9FE">
+          <td style="padding:6px 10px;text-align:center">합계</td>
+          <td style="text-align:right;padding:6px 10px">—</td>
+          ${num(totInt)}${num(totPrin)}
+          <td style="text-align:right;padding:6px 10px">—</td>
+          ${num(totPay)}
+        </tr>
+      </tfoot>
+    </table>
+    <p style="margin-top:10px;font-size:11px;color:var(--muted);line-height:1.6">
+      · <b>원금 상환</b>이 0인 행은 거치기간 — 이자만 지급한다.<br>
+      · <b>연간 원리금</b> = 이자 + 원금 상환. 실제 통장에서 매년 빠지는 돈이다.<br>
+      · 10개년 손익계산서의 '선체이자' 행은 이 표의 <b>이자</b> 열을 그대로 쓴다 (증감률 미적용).
+    </p>`;
+}
+
+// 팝업 안 상환방식 셀렉트 — 설정 패널 iLoanMethod 와 양방향 동기화, 즉시 재계산
+el('iLoanMethodPopup')?.addEventListener('change', e => {
+  el('iLoanMethod').value = e.target.value;
+  populateLoanSchedule();
+  render();
+});
+
+// ── 감가상각 상각표 모달 ───────────────────────────────────────────────────
+// 선가·잔존가치·내용연수로 세운 정액법 상각표. 매년 상각액은 동일하지만, 기초/기말 장부가액의
+// 흐름을 한 눈에 보려고 팝업으로 노출한다.
+function populateDepSchedule(){
+  const price   = (parseFloat((el('iShipPricePeer').value || '').replace(/,/g,'')) || 0) * 1e6;
+  const life    = Math.max(1, parseFloat(el('iLifePeer').value) || DEFAULTS.lifePeer);
+  const salvUnit = el('iSalvageUnit')?.value || DEFAULTS.salvageUnit;
+  const salvRaw  = Math.max(0, parseFloat(el('iSalvagePeer').value) || 0);
+  const salvage  = salvUnit === 'pct' ? price * Math.min(100, salvRaw) / 100 : salvRaw * 1e6;
+  const annDep  = price > 0 ? Math.max(0, price - salvage) / life : 0;
+
+  const _salvDesc = salvUnit === 'pct'
+    ? `${salvRaw.toFixed(1)}% · ${won(Math.round(salvage))}원`
+    : `${salvRaw.toFixed(0)}백만 · ${(salvage/price*100).toFixed(2)}%`;
+  _setTxt('depScheduleSub',
+    `선가 ${won(price/1e8)}억 · 내용연수 ${life}년 · 잔존가치 ${_salvDesc} · 정액법`);
+
+  if (!(price > 0)) {
+    el('depScheduleBody').innerHTML =
+      '<p style="color:var(--muted)">선가가 입력되지 않아 상각표가 비어 있다 — 감사보고서 감가상각 금액이 쓰이는 중.</p>';
+    return;
+  }
+
+  const num = v => '<td style="text-align:right;padding:4px 10px;font-variant-numeric:tabular-nums">'
+                 + Math.round(v).toLocaleString('ko-KR') + '</td>';
+  let book = price;
+  const rows = [];
+  for (let y = 1; y <= life; y++) {
+    const open = book;
+    const dep  = annDep;
+    book = Math.max(salvage, book - dep);
+    rows.push(`<tr>
+      <td style="text-align:center;padding:4px 10px">${y}년차</td>
+      ${num(open)}${num(dep)}${num(book)}
+    </tr>`);
+  }
+  const totDep = annDep * life;
+  el('depScheduleBody').innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead>
+        <tr style="border-bottom:2px solid var(--rule);background:#F5F9FE">
+          <th style="padding:6px 10px;text-align:center">년차</th>
+          <th style="padding:6px 10px;text-align:right">기초 장부가액</th>
+          <th style="padding:6px 10px;text-align:right">연간 감가상각</th>
+          <th style="padding:6px 10px;text-align:right">기말 장부가액</th>
+        </tr>
+      </thead>
+      <tbody>${rows.join('')}</tbody>
+      <tfoot>
+        <tr style="border-top:2px solid var(--rule);font-weight:700;background:#F5F9FE">
+          <td style="padding:6px 10px;text-align:center">${life}년 합계</td>
+          <td style="text-align:right;padding:6px 10px">—</td>
+          ${num(totDep)}
+          <td style="text-align:right;padding:6px 10px">잔존 ${Math.round(salvage).toLocaleString('ko-KR')}</td>
+        </tr>
+      </tfoot>
+    </table>
+    <p style="margin-top:10px;font-size:11px;color:var(--muted);line-height:1.6">
+      · <b>정액법</b> — 매년 같은 금액씩 상각. (선가 − 잔존가치) ÷ 내용연수.<br>
+      · 손익계산서 '감가상각비' 행은 매년 이 값 그대로 들어간다 (증감률 미적용 · 비현금).<br>
+      · 잔존가치는 상각이 끝나도 장부에 남는 몫 — 매각 시 회수 기대값에 가깝다.
+    </p>`;
+}
+
+// ── 우발수리유보금 연차표 ─────────────────────────────────────────────────
+// 첫해 금액(백만) × (1+gCapex)^k 로 매년 증가. 10년 누적을 함께 보여 준다.
+function populateCapexSchedule(){
+  const base = (GROW.capexBase || 0);     // 백만원
+  const g    = (GROW.gCapex || 0) / 100;  // 비율
+  _setTxt('capexScheduleSub',
+    `매년 정액 ${won(base)}백만원 · 연 ${(g*100).toFixed(1)}% 증감 · 10년 적립 — 수지분석에만 반영`);
+  if (!(base > 0)) {
+    el('capexScheduleBody').innerHTML =
+      '<p style="color:var(--muted)">첫해 금액이 0 이라 적립이 없다. "증감률 가정 → 수지 가정"에서 설정.</p>';
+    return;
+  }
+  const num = v => '<td style="text-align:right;padding:4px 10px;font-variant-numeric:tabular-nums">'
+                 + Math.round(v).toLocaleString('ko-KR') + '</td>';
+  let acc = 0;
+  const rows = Array.from({length: 10}, (_, k) => {
+    const yr = base * Math.pow(1+g, k);
+    acc += yr;
+    return `<tr>
+      <td style="text-align:center;padding:4px 10px">y+${k} (${2025+k}년)</td>
+      ${num(yr)}${num(acc)}
+    </tr>`;
+  }).join('');
+  el('capexScheduleBody').innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead>
+        <tr style="border-bottom:2px solid var(--rule);background:#F5F9FE">
+          <th style="padding:6px 10px;text-align:center">년차</th>
+          <th style="padding:6px 10px;text-align:right">연간 유보금 (백만)</th>
+          <th style="padding:6px 10px;text-align:right">누적 (백만)</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+      <tfoot>
+        <tr style="border-top:2px solid var(--rule);font-weight:700;background:#F5F9FE">
+          <td style="padding:6px 10px;text-align:center">10년 합계</td>
+          <td style="text-align:right;padding:6px 10px">—</td>
+          ${num(acc)}
+        </tr>
+      </tfoot>
+    </table>
+    <p style="margin-top:10px;font-size:11px;color:var(--muted);line-height:1.6">
+      · 엔진 오버홀·돌발 수리를 위한 유보금. <b>손익계산서가 아닌 수지(현금흐름)에만 반영</b>.<br>
+      · 10년 누적 ${won(Math.round(acc))}백만 — 돌발 수리 1회(70~80억) 대응 가능 여부 판단 기준.<br>
+      · 좌측 "증감률 가정 → 수지 가정"에서 금액·증감률 조정 가능.
+    </p>`;
+}
+
+// ── 선박대체유보금 연차표 ─────────────────────────────────────────────────
+// 매년 정액 적립 (sinkingBase 백만원 × (1+gSinking)^k). 10년 누적을 함께 노출.
+function populateSinkingSchedule(){
+  const base = (GROW.sinkingBase || 0);     // 백만원
+  const g    = (GROW.gSinking || 0) / 100;
+  const price = (parseFloat((el('iShipPricePeer').value || '').replace(/,/g,'')) || 0);  // 백만
+  const life  = Math.max(1, parseFloat(el('iLifePeer').value) || DEFAULTS.lifePeer);
+  const target = price * 0.20;    // 선가 20% (대체 유보 목표)
+  const yearlyTarget = target / life;
+
+  _setTxt('sinkingScheduleSub',
+    `매년 정액 ${won(base)}백만 · 연 ${(g*100).toFixed(1)}% 증감 · 선가 20%÷내용연수 참고 (연 ${won(Math.round(yearlyTarget))}백만)`);
+
+  if (!(base > 0)) {
+    el('sinkingScheduleBody').innerHTML =
+      '<p style="color:var(--muted)">적립 금액이 0이라 유보가 없다. "증감률 가정 → 수지 가정"에서 설정.</p>';
+    return;
+  }
+  const num = v => '<td style="text-align:right;padding:4px 10px;font-variant-numeric:tabular-nums">'
+                 + Math.round(v).toLocaleString('ko-KR') + '</td>';
+  let acc = 0;
+  const rows = Array.from({length: 10}, (_, k) => {
+    const yr = base * Math.pow(1+g, k);
+    acc += yr;
+    return `<tr>
+      <td style="text-align:center;padding:4px 10px">y+${k} (${2025+k}년)</td>
+      ${num(yr)}${num(acc)}
+    </tr>`;
+  }).join('');
+  const coverage = yearlyTarget > 0 ? (acc / target * 100).toFixed(1) + '%' : '—';
+  el('sinkingScheduleBody').innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead>
+        <tr style="border-bottom:2px solid var(--rule);background:#F5F9FE">
+          <th style="padding:6px 10px;text-align:center">년차</th>
+          <th style="padding:6px 10px;text-align:right">연간 유보금 (백만)</th>
+          <th style="padding:6px 10px;text-align:right">누적 (백만)</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+      <tfoot>
+        <tr style="border-top:2px solid var(--rule);font-weight:700;background:#F5F9FE">
+          <td style="padding:6px 10px;text-align:center">10년 합계</td>
+          <td style="text-align:right;padding:6px 10px">—</td>
+          ${num(acc)}
+        </tr>
+      </tfoot>
+    </table>
+    <p style="margin-top:10px;font-size:11px;color:var(--muted);line-height:1.6">
+      · <b>매년 정액 적립</b> — 당기순이익과 무관하게 매년 ${won(base)}백만을 유보 (증감률 ${(g*100).toFixed(1)}%).<br>
+      · <b>선박 대체 목표</b> = 선가 ${won(price)}백만 × 20% = ${won(Math.round(target))}백만 (내용연수 ${life}년 간 유보 → 연 ${won(Math.round(yearlyTarget))}백만/년).<br>
+      · 10년 누적 ${won(Math.round(acc))}백만 — 선가 20% 목표 대비 <b>${coverage}</b> 달성.<br>
+      · <b>회계상 손익에 반영 못 함 — 수지에만 차감</b>.
+    </p>`;
+}
 
 // ── 근거 팝업 열고 닫기 ────────────────────────────────────────────────────
 let lastFocus = null;
@@ -4942,7 +5987,7 @@ document.addEventListener('keydown', e => {
 buildInputs();   // 드롭다운·좌석표를 먼저 세워야 model() 이 그 값을 읽을 수 있다
 
 // ── 설정 탭을 접이식 그룹으로 ───────────────────────────────────────────────
-// 가정 탭의 칸이 열여섯 줄을 넘어 좌측 카드가 화면을 벗어났다. 10개년 성장률 가정과
+// 가정 탭의 칸이 열여섯 줄을 넘어 좌측 카드가 화면을 벗어났다. 10개년 증감률 가정과
 // 같은 방식으로, .sec 하나를 details.grp 하나로 접는다. 표(좌석 등급·원가 구성·
 // 운항기타·선박 대조·화물)를 끼고 있는 clksec 도 예외 없이 접는다 — 늘 펼쳐 둘
 // 이유가 없고, 세로를 가장 많이 먹는 것이 바로 그 표들이다.
