@@ -538,6 +538,29 @@
     body.printMode.printExpand tr[data-in]{display:table-row !important;visibility:visible !important}
     body.printMode tr{page-break-inside:avoid}
 
+    /* 탭 인쇄 : 지금 열려 있는 mtabPanel 하나만 (목표지표 · 그래프 · 출처) */
+    body.printPanel *{visibility:hidden !important}
+    body.printPanel .mtabPanel:not([hidden]),
+    body.printPanel .mtabPanel:not([hidden]) *{visibility:visible !important}
+    body.printPanel .mtabPanel:not([hidden]){
+      position:absolute !important;left:0;top:0;width:100%;margin:0;padding:0;
+      box-shadow:none;border:0;background:#fff}
+    body.printPanel .mtabPanel:not([hidden]) > .body{padding:0;overflow:visible !important}
+    body.printPanel .mtabPanel:not([hidden]) h2{border-bottom:2px solid var(--navy);
+      padding:4px 0;margin:0 0 7px;font-size:12pt;color:var(--navy)}
+    body.printPanel .mtabPanel:not([hidden]) h2 .ic,
+    body.printPanel .mtabPanel:not([hidden]) h2 .h2btn{display:none !important}
+    body.printPanel .mtabPanel:not([hidden]) table{width:100% !important;border-collapse:collapse}
+    body.printPanel .mtabPanel:not([hidden]) th,
+    body.printPanel .mtabPanel:not([hidden]) td{padding:2px 5px;font-size:8pt;
+      border-bottom:1px solid #D7DCE3}
+    body.printPanel .mtabPanel:not([hidden]) thead th{background:#154B8C !important;
+      color:#fff !important;font-size:8pt}
+    body.printPanel tr{page-break-inside:avoid}
+    body.printPanel .tgtbar .shipsw{display:none !important}
+    body.printPanel #cvp svg{width:100% !important;height:auto !important}
+    body.printPanel .srcs td{vertical-align:top}
+
     /* 설정값 인쇄 : 좌측 첫 카드만 남기고, 모든 details 를 강제로 펼쳐서 컴팩트 레이아웃 */
     body.printModeSettings *{visibility:hidden !important}
     body.printModeSettings #row > .card:first-of-type,
@@ -735,7 +758,8 @@
         <div class="setbar">
           <button type="button" class="lnk" id="btnSecAll">모두 펼치기</button>
           <button type="button" class="lnk" id="btnSecNone">모두 접기</button>
-          <button type="button" class="lnk" id="btnPrintSettings" style="margin-left:auto" title="설정값을 한 페이지에 인쇄">🖨 인쇄</button>
+          <button type="button" class="lnk" id="btnPrintSetSum" style="margin-left:auto" title="모든 설정값을 값만 추려 한 장에 인쇄">🖨 요약</button>
+          <button type="button" class="lnk" id="btnPrintSettings" title="설정 화면을 그대로 인쇄 (입력칸·설명 포함)">🖨 상세</button>
         </div>
 
         <!-- ── 탭 A · 기준 자료 (대저페리 3기) ──
@@ -1180,6 +1204,8 @@
               <button type="button" class="lnk" id="btnTrafficRef" hidden
                       style="margin-left:auto"
                       title="선사/항공사 수송실적 — 새 창으로 열기">선사/항공사 수송실적 ↗</button>
+              <button type="button" class="lnk" id="btnCapRef" hidden
+                      title="여객정원 260명 기준 분석 (2015~2025) — 새 창으로 열기">여객정원 260 분석 ↗</button>
             </div>
             <div id="plBodyB-single">
               <table class="pl">
@@ -1233,7 +1259,8 @@
 
       <!-- ══ ⑥ 목표 달성 지표 + 원가 비중 ══ -->
       <section class="card mtabPanel" data-mtab="tgt" hidden>
-        <h2 class="clk" data-modal="ovCost" role="button" tabindex="0" aria-haspopup="dialog"><span class="tt">목표 영업이익률 도달 지표<span class="ic">?</span></span><em id="tgtCap">—</em></h2>
+        <h2 class="clk" data-modal="ovCost" role="button" tabindex="0" aria-haspopup="dialog"><span class="tt">목표 영업이익률 도달 지표<span class="ic">?</span></span><em id="tgtCap">—</em>
+          <button type="button" class="h2btn" data-printpanel="tgt" title="이 탭을 인쇄">🖨 인쇄</button></h2>
         <div class="body">
           <div class="tgtbar">
             <span class="lbl">보고 있는 배</span>
@@ -1270,7 +1297,8 @@
 
       <!-- ══ ⑦ CVP ══ -->
       <section class="card mtabPanel" data-mtab="cvp" hidden>
-        <h2>승객수–손익 구조<em>가로축 승객수, 세로축 금액(백만원)</em></h2>
+        <h2>승객수–손익 구조<em>가로축 승객수, 세로축 금액(백만원)</em>
+          <button type="button" class="h2btn" data-printpanel="cvp" title="이 탭을 인쇄">🖨 인쇄</button></h2>
         <div class="body">
           <div id="cvp"></div>
           <div class="legend">
@@ -1284,7 +1312,8 @@
       </section>
       <!-- ══ ⑨ 출처 ══ -->
       <section class="card mtabPanel" data-mtab="src" hidden>
-        <h2>한계 · 자료 출처 · 용어<em>이 페이지가 말하지 않는 것, 그리고 무엇으로 말하는가</em></h2>
+        <h2>한계 · 자료 출처 · 용어<em>이 페이지가 말하지 않는 것, 그리고 무엇으로 말하는가</em>
+          <button type="button" class="h2btn" data-printpanel="src" title="이 탭을 인쇄">🖨 인쇄</button></h2>
         <div class="body">
 
           <div class="sec" style="margin-top:0">한계 — 왜 이 표본 하나인가</div>
@@ -3128,6 +3157,33 @@ function drawSim(m){
   }).join('');
 }
 
+// 10개년 표와 단일연도 표의 운항원가가 갈리는 두 가지 — 양쪽 표에서 같은 말로 표시한다.
+//   ① 수리비 : 단일연도는 감사보고서 기준 0, 10개년은 GROW.repair10yBase 를 첫해로 적용
+//   ② 선체이자 : 단일연도는 Ⅵ.영업외비용, 10개년은 우리 회사 관행대로 운항원가
+function opcGap(){
+  const loan = parseFloat((el('iLoanPeer').value || '').replace(/,/g,'')) || 0;   // 백만원
+  const rate = parseFloat(el('iLoanRatePeer').value) || 0;
+  const hull = loan * (rate / 100);            // 백만원 — 1차연도 이자
+  const rep  = GROW.repair10yBase || 0;        // 백만원
+  return { hull, rep, sum: hull + rep };
+}
+// 운항원가 행에 붙는 뱃지. side='single' 이면 "10개년에서 더해진다", 'ten' 이면 "여기에 더해져 있다".
+function opcGapTag(side){
+  const g = opcGap();
+  if (!(g.sum > 0)) return '';
+  const tip = side === 'ten'
+    ? '단일연도 손익계산서(대조 선박)보다 ' + won(Math.round(g.sum)) + '백만 크다 — '
+      + (g.rep > 0 ? '운항기타의 수리비 ' + won(Math.round(g.rep)) + '백만(감사보고서엔 0, 10개년 전용)과 ' : '')
+      + (g.hull > 0 ? '선체이자 ' + won(Math.round(g.hull)) + '백만(단일연도는 Ⅵ.영업외비용 자리)이 ' : '')
+      + '여기에 들어와 있다. 영업이익도 같은 금액만큼 작게 나온다.'
+    : '10개년 표에서는 여기에 ' + won(Math.round(g.sum)) + '백만이 더해진다 — '
+      + (g.rep > 0 ? '운항기타의 수리비 ' + won(Math.round(g.rep)) + '백만(10개년 전용)과 ' : '')
+      + (g.hull > 0 ? '선체이자 ' + won(Math.round(g.hull)) + '백만(이 표에서는 Ⅵ.영업외비용)이 ' : '')
+      + '운항원가로 들어가기 때문이다. 영업이익도 그만큼 갈린다.';
+  const label = side === 'ten' ? '수리비 · 선체이자 산입' : '수리비 · 선체이자 미산입';
+  return ' <span class="tagv est" style="cursor:help" title="' + tip + '">' + label + '</span>';
+}
+
 // ── ⑥ 목표 지표 ────────────────────────────────────────────────────────────
 // 목표지표와 CVP 는 보고 있는 탭의 배를 따라야 한다. 참조(엘도라도)와 대조(산타모니카)는
 // 운임·항차·정원·원가가 모두 달라서, 같은 그림에 두 배를 섞으면 읽을 수 없는 그림이 된다.
@@ -3841,7 +3897,7 @@ function drawPeerPL(m) {
   html += `<tr class="d tip" title="하카타 외항선로 가정 — 선내 면세점(수입임대료) 3개년 평균(성희) ${won(A.dutyFreeRent)}원. 대저페리 임대료수입 계정과는 별개."><td>면세점(수입임대료)<span class="tagv est">3개년 평균(성희)</span></td>${fv(rentRev)}${fp(rentRev, sales)}${fp(rentRev, sales)}</tr>`;
 
   // Ⅱ. 운항원가
-  html += rowR('Ⅱ. 운항원가 (−)', opCost);
+  html += rowR('Ⅱ. 운항원가 (−)' + opcGapTag('single'), opCost);
   // 해상직 인원 뱃지 — 선원+승무원 (설정에서 조정 가능)
   const _opHeadTag = `<span class="tagv">${m.opHeadPeer}명</span>`;
   html += rowN('급여 (해상직원) '      + _opHeadTag, opWage, opCost);
@@ -4018,7 +4074,7 @@ function drawPeerPL(m) {
         <span class="tagv" style="cursor:pointer">연차표 ↗</span></td>
       ${fv(-_sinking)}<td class="nil">-</td>${fp(-_sinking, sales)}</tr>`;
     html += `<tr class="lead" data-in="post_tax"${_hide} style="background:#EDF1F7">
-      <td>= 오너 가용현금 <span class="tagv est" title="프로젝트 파이낸스·선박금융의 현금 폭포(waterfall) 맨 아래 칸. CFADS에서 그 해 원리금을 빼고 남아 주주에게 배당할 수 있는 돈이다. DSCR이 1.0을 넘는 해에만 플러스가 된다 — 같은 값을 비율로 본 것이 DSCR이다.">상환 후 잉여현금</span>
+      <td>= 가용현금 <span class="tagv est" title="프로젝트 파이낸스·선박금융의 현금 폭포(waterfall) 맨 아래 칸. CFADS에서 그 해 원리금을 빼고 남아 주주에게 배당할 수 있는 돈이다. DSCR이 1.0을 넘는 해에만 플러스가 된다 — 같은 값을 비율로 본 것이 DSCR이다.">상환 후 잉여현금</span>
         <span style="color:var(--muted);font-size:10.5px">CFADS − 원리금</span></td>
       <td${_fcfeColor}>${acc(Math.round(_fcfe))}</td>
       <td class="nil">-</td>${fp(_fcfe, sales)}</tr>`;
@@ -4120,7 +4176,7 @@ function drawPeerPL(m) {
   const iDuty  = add({ cls:'d', name:'기타수입 <span class="tagv est" style="cursor:help" title="대저페리는 내항선이라 현재는 집계된 기타수입(면세품 판매 등) 이 없지만, 외항선으로 취급하면 면세품 판매 수입을 포함한 기타수입을 기대해볼 수 있음. 잠재 매출로 감안 필요.">감안</span>', v:null, gk:'gDuty' });
   R10[iSales].agg = [[iPax,1],[iCargo,1],[iRent,1],[iDuty,1]];
 
-  const iOp     = add({ cls:'r', name:'Ⅱ. 운항원가 (−)', v:null });
+  const iOp     = add({ cls:'r', name:'Ⅱ. 운항원가 (−)' + opcGapTag('ten'), v:null });
   // 해상직 인원 뱃지 — 선원+승무원 (설정에서 조정 가능)
   const _opHeadTag10 = `<span class="tagv">${m.opHeadPeer}명</span>`;
   const iOpWage = add({ cls:'n', name:'급여 (해상직원) '      + _opHeadTag10, v:opWage, gk:'gWage' });
@@ -4266,7 +4322,7 @@ function drawPeerPL(m) {
     clickOv:'ovSinkingSchedule',
     groupIn:'post_tax' });
   // 오너 가용현금 = 영업 순현금흐름 + CapEx(음수) + Sinking(음수)
-  add({ cls:'lead', name:'= 오너 가용현금 <span class="tagv est" title="프로젝트 파이낸스·선박금융의 현금 폭포(waterfall) 맨 아래 칸. CFADS에서 그 해 원리금을 빼고 남아 주주에게 배당할 수 있는 돈이다. DSCR이 1.0을 넘는 해에만 플러스가 된다 — 같은 값을 비율로 본 것이 DSCR이다.">상환 후 잉여현금</span>',
+  add({ cls:'lead', name:'= 가용현금 <span class="tagv est" title="프로젝트 파이낸스·선박금융의 현금 폭포(waterfall) 맨 아래 칸. CFADS에서 그 해 원리금을 빼고 남아 주주에게 배당할 수 있는 돈이다. DSCR이 1.0을 넘는 해에만 플러스가 된다 — 같은 값을 비율로 본 것이 DSCR이다.">상환 후 잉여현금</span>',
         agg:[[iOpCash,1],[iCapex,1],[iSinking,1]], groupIn:'post_tax' });
 
   // DSCR : CFADS ÷ 그 해 원리금 — 차입금이 있을 때만 추가.
@@ -4681,7 +4737,7 @@ function drawPeerPL10() {
     const _sl  = PEER_PL_ROWS.findIndex(r => /Ⅰ\. 매출액/.test(r.name));
     const mg = (_op >= 0 && _sl >= 0 && proj[_sl] && proj[_sl][0])
       ? proj[_op][0] / proj[_sl][0] : null;
-    const hasHull = PEER_PL_ROWS.some(r => r.name === '선체이자');
+    const hasHull = PEER_PL_ROWS.some(r => /^선체이자/.test(r.name));
     _sub.innerHTML = head
       + (mg === null ? '' : ` · 영업이익률 ${pct(mg, 1)}`)
       + (hasHull ? ' <span class="tagv est" style="cursor:help"'
@@ -5407,6 +5463,11 @@ el('btnTrafficRef')?.addEventListener('click', () => {
   window.open('타선사_수송실적_항로선사별요약_항공기.html', 'trafficRef',
               'width=1400,height=900,menubar=no,toolbar=no,location=no,resizable=yes');
 });
+// 같은 자리의 두 번째 참고자료 — 여객정원 260명 기준 2015~2025 분석.
+el('btnCapRef')?.addEventListener('click', () => {
+  window.open('여객정원260_분석_2015-2025.html', 'capRef',
+              'width=1400,height=900,menubar=no,toolbar=no,location=no,resizable=yes');
+});
 // 셋 중 가장 최근에 사용자가 만진 칸이 '주인' 이 된다 — 나머지 둘은 render 가 맞춘다
 el('iLoadPeer').addEventListener('input',   () => { PAX_SRC = 'load';   render(); });
 el('iPerVoyPeer').addEventListener('input', () => { PAX_SRC = 'perVoy'; render(); });
@@ -5579,7 +5640,8 @@ function applyPLView(){
   el('plBodyB-single').hidden = multi;
   el('plBodyB-multi' ).hidden = !multi;
   // 10개년 뷰에서만 외부 참고(항공기 수송실적) 버튼 노출
-  { const b = el('btnTrafficRef'); if (b) b.hidden = !multi; }
+  { const b = el('btnTrafficRef'); if (b) b.hidden = !multi;
+    const c = el('btnCapRef');     if (c) c.hidden = !multi; }
 
   // 좌측 설정 카드 : 10개년에서는 '대조 선박 설정' 과 '증감률 가정' 두 탭 사이를 전환한다.
   // ACTIVE_TAB 은 model() 의 peer/base 분기와 연결돼 있어 10개년 모드에서도 'tabB' 로 유지한다.
@@ -5724,6 +5786,155 @@ function printPL() {
   const _b = document.getElementById('btnPrintPL');
   if (_b) _b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); printPL(); });
 }
+
+
+// ── 탭 인쇄 ── 지금 열려 있는 mtabPanel 하나만. 손익계산서는 전용 경로(printPL)가 따로 있다.
+function printPanel(){
+  document.body.classList.add('printPanel');
+  const done = () => { document.body.classList.remove('printPanel');
+                       window.removeEventListener('afterprint', done); };
+  window.addEventListener('afterprint', done);
+  window.print();
+  setTimeout(done, 1500);          // afterprint 미지원 대비
+}
+document.querySelectorAll('[data-printpanel]').forEach(btn => {
+  btn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); printPanel(); });
+});
+
+// ── 설정값 요약 인쇄 ── 입력칸을 그대로 찍지 않고 '이름 : 값' 만 추려 한 장에 담는다.
+// 화면 라벨을 그대로 쓰되 설명·툴팁은 버린다 — 무엇을 어떤 값으로 돌렸는지만 남기면 된다.
+function printSettingsSummary(){
+  const gs = document.getElementById('growSection');
+  if (gs && !gs.innerHTML.trim()) buildGrowGroups();
+
+  const clean = t => (t || '').replace(/s+/g, ' ').trim();
+  const valueOf = el => {
+    if (el.type === 'checkbox') return el.checked ? '✔' : '–';
+    if (el.tagName === 'SELECT') return clean(el.options[el.selectedIndex]?.textContent).split(' — ')[0];
+    return el.value === '' ? '—' : el.value;
+  };
+  // 라벨 — 표 안의 입력은 그 행의 첫 칸이 이름이다. .f 안이면 label 의 텍스트 노드만.
+  // 컨테이너 textContent 를 통째로 쓰면 "쓰기항목욕금액성격" 같은 뭉개진 말이 나온다.
+  const NAME = { iBase:'참조 선박', iPeer:'대조 선박', iAutoVoy:'정원 초과 시 항차 증가',
+                 iTonnageTax:'톤세 적용', iFuelLiveMode:'연료 실제 시가 반영',
+                 iJpyLoan:'엔화대출 1.56%', iTgtPeerAuto:'50% 승선율 자동 맞추기',
+                 iVoyRatio:'항차 배율 적용', iCargoCase:'적재 케이스' };
+  const labelOf = el => {
+    if (NAME[el.id]) return NAME[el.id];
+    const lab = el.closest('label');
+    if (lab && lab.classList.contains('chk')) {
+      const sp = lab.querySelector('span');
+      const t = clean([...(sp ? sp.childNodes : [])].filter(n => n.nodeType === 3)
+                      .map(n => n.textContent).join(' '));
+      if (t) return t.slice(0, 30);
+    }
+    const fb = el.closest('.f');
+    const lb = fb && fb.querySelector('label');
+    let t = lb ? clean([...lb.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join(' ')) : '';
+    if (!t) t = el.id || '';
+    return t.replace(/s*비우면.*$/, '').replace(/s*근거s*↗?/, '').slice(0, 30);
+  };
+  const unitOf = el => {
+    const u = el.closest('.ib')?.querySelector('.u');
+    return (!u || u.tagName === 'SELECT') ? '' : clean(u.textContent).slice(0, 6);
+  };
+
+  // 섹션 단위로 모은다 — details.grp / .sec 제목을 머리로
+  const collect = root => {
+    const out = [];
+    if (!root) return out;
+    root.querySelectorAll('details.grp, .sec').forEach(sec => {
+      const head = clean(sec.tagName === 'DETAILS'
+        ? sec.querySelector('summary')?.childNodes[0]?.textContent
+        : sec.childNodes[0]?.textContent).slice(0, 30);
+      const scope = sec.tagName === 'DETAILS' ? sec : (() => {
+        const box = []; let n = sec.nextElementSibling;
+        while (n && !n.classList.contains('sec') && n.tagName !== 'DETAILS') { box.push(n); n = n.nextElementSibling; }
+        const d = document.createElement('div'); box.forEach(x => d.appendChild(x.cloneNode(true))); return d;
+      })();
+      const rows = [], seen = new Set();
+      const ok = el => !(el.type === 'hidden' || el.hidden
+                         || el.dataset.fuelChkManu || el.dataset.fuelChkLive);
+      // ① 표 : 행 하나 = 항목 하나. 같은 행의 입력 여러 개는 ' · ' 로 붙인다
+      scope.querySelectorAll('tr').forEach(tr => {
+        const ins = [...tr.querySelectorAll('input, select')].filter(ok);
+        if (!ins.length) return;
+        ins.forEach(x => seen.add(x));
+        const nameCell = [...tr.querySelectorAll('td, th')]
+          .find(c => clean(c.textContent) && !c.querySelector('input, select'));
+        const nm = clean(nameCell && nameCell.textContent).slice(0, 26);
+        if (nm) rows.push([nm, ins.map(valueOf).join(' · '), unitOf(ins[0])]);
+      });
+      // ② 그 밖의 입력 — 같은 .f 안의 입력들(값 + 단위 셀렉트)은 한 줄로 묶는다
+      const boxed = new Set();
+      scope.querySelectorAll('input, select').forEach(el => {
+        if (seen.has(el) || !ok(el)) return;
+        const box = el.closest('.f') || el;
+        if (boxed.has(box)) return;
+        boxed.add(box);
+        const ins = box === el ? [el]
+          : [...box.querySelectorAll('input, select')].filter(x => ok(x) && !seen.has(x));
+        if (!ins.length) return;
+        const lb = labelOf(ins[0]); if (!lb) return;
+        rows.push([lb, ins.map(valueOf).join(' · '), unitOf(ins[0])]);
+      });
+      if (rows.length) out.push([head || '설정', rows]);
+    });
+    return out;
+  };
+
+  const blocks = [
+    ['기준 자료 (대저페리 3기)', collect(document.getElementById('tabA'))],
+    ['대조 선박 설정',           collect(document.getElementById('tabB'))],
+    ['10개년 증감률 가정',       collect(gs)],
+  ];
+
+  const secHtml = ([head, rows]) =>
+    '<div class="g"><h3>' + head + '</h3><table>'
+    + rows.map(([k, v, u]) => '<tr><td class="k">' + k + '</td><td class="v">' + v
+        + (u ? '<span class="u">' + u + '</span>' : '') + '</td></tr>').join('')
+    + '</table></div>';
+
+  const body = blocks.filter(b => b[1].length).map(([title, secs]) =>
+    '<section><h2>' + title + '</h2><div class="cols">' + secs.map(secHtml).join('') + '</div></section>').join('');
+
+  const w = window.open('', '_blank', 'width=1000,height=1000');
+  if (!w) { alert('팝업이 차단되었습니다. 브라우저 팝업 허용 후 다시 시도하세요.'); return; }
+  const stamp = new Date().toLocaleString('ko-KR');
+  w.document.write('<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>설정값 요약</title><style>'
+  + '@page{size:A4 portrait;margin:9mm}'
+  + '*{box-sizing:border-box}'
+  + 'body{margin:0;padding:10px 12px;font-family:"Malgun Gothic","맑은 고딕",system-ui,sans-serif;'
+  + 'color:#13263C;font-size:8pt;line-height:1.3}'
+  + 'h1{font-size:12pt;margin:0 0 2px;color:#154B8C;border-bottom:2px solid #154B8C;padding-bottom:4px}'
+  + '.stamp{font-size:7pt;color:#777;margin:0 0 8px}'
+  + 'section{margin:0 0 7px;break-inside:avoid}'
+  + 'h2{font-size:9pt;margin:0 0 3px;color:#154B8C}'
+  + '.cols{column-count:3;column-gap:9px}'
+  + '.g{break-inside:avoid;margin:0 0 5px}'
+  + 'h3{font-size:7.5pt;margin:0 0 1px;color:#13263C;background:#EEF3F9;padding:2px 4px;border-radius:2px}'
+  + 'table{width:100%;border-collapse:collapse}'
+  + 'td{padding:1px 4px;border-bottom:1px solid #E6EAEF;vertical-align:top}'
+  + 'td.k{color:#55606E;font-size:7pt}'
+  + 'td.v{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}'
+  + 'td.v .u{font-weight:400;color:#888;font-size:6.5pt;margin-left:2px}'
+  + '.bar{position:fixed;top:0;left:0;right:0;background:#154B8C;color:#fff;padding:6px 12px;'
+  + 'display:flex;justify-content:space-between;align-items:center;z-index:9}'
+  + '.bar button{background:#fff;color:#154B8C;border:0;padding:4px 11px;border-radius:3px;'
+  + 'font-family:inherit;font-size:10px;font-weight:700;cursor:pointer;margin-left:5px}'
+  + '.sp{height:34px}'
+  + '@media print{.bar,.sp{display:none !important}body{padding:0}}'
+  + '</style></head><body>'
+  + '<div class="bar"><span>설정값 요약 — 한 장</span><span>'
+  + '<button onclick="window.print()">🖨 인쇄</button>'
+  + '<button onclick="window.close()">닫기</button></span></div><div class="sp"></div>'
+  + '<h1>하카타 항로 손익분석 — 설정값 요약</h1>'
+  + '<p class="stamp">' + stamp + ' 기준 · 값만 추린 것이라 근거·설명은 본 화면에서 본다</p>'
+  + body + '</body></html>');
+  w.document.close();
+}
+{ const _bS2 = document.getElementById('btnPrintSetSum');
+  if (_bS2) _bS2.addEventListener('click', e => { e.preventDefault(); printSettingsSummary(); }); }
 
 // 설정값 인쇄 : 팝업 창에 [기준자료 · 대조선박 · 10개년 증감률] 통합 노출 후 인쇄
 function printSettings() {
