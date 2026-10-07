@@ -1072,11 +1072,11 @@
             </div>
             <div class="f">
               <label>선원 <span class="ast">가정</span></label>
-              <div class="ib"><input type="number" step="1" min="0" max="999" id="iSailorPeer" value="13"><span class="u">명</span></div>
+              <div class="ib"><input type="number" step="1" min="0" max="999" id="iSailorPeer" value="8"><span class="u">명</span></div>
             </div>
             <div class="f">
               <label>승무원 <span class="ast">가정</span></label>
-              <div class="ib"><input type="number" step="1" min="0" max="999" id="iCrewPeer" value="7"><span class="u">명</span></div>
+              <div class="ib"><input type="number" step="1" min="0" max="999" id="iCrewPeer" value="2"><span class="u">명</span></div>
             </div>
             <div class="f wide" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
               <label class="lnk chkWage" title="당사기준 1인당 단가로 전환 (지상직 82.9M · 해상직 89.6M). 끄면 56~58기 3개년 평균 1인당 참고값 (지상직 70.8M · 해상직 83.5M)." style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;flex:1">
@@ -1086,8 +1086,12 @@
               <button type="button" class="lnk" data-modal="ovCompanyWage" title="당사기준 1인당 급여 분해표 보기">표 ↗</button>
             </div>
             <div class="f">
-              <label>대리점비(일본현지) <small style="color:#888;font-weight:normal">매출액 대비</small></label>
+              <label>대리점비(일본현지) <small style="color:#888;font-weight:normal" title="(여객수입 + 화물수입) × 일본비중 × 수수료율 — 임대료 제외">(여객+화물) × 일본비중 대비</small></label>
               <div class="ib"><input type="number" step="0.5" min="0" max="99" id="iAgencyPeer" value="15"><span class="u">%</span></div>
+            </div>
+            <div class="f">
+              <label>└ 일본 수입 비중 <small style="color:#888;font-weight:normal" title="여객+화물 매출 중 일본(현지) 쪽에서 발생하는 비중. 50% 는 한·일 반반, 60~70% 는 일본 발매 비중이 높을 때">양사 분담 비중</small></label>
+              <div class="ib"><input type="number" step="1" min="0" max="100" id="iAgencyJapanShare" value="50"><span class="u">%</span></div>
             </div>
             <div class="f">
               <label>연간 편도 항차수 <span class="ast">가정</span></label>
@@ -2582,7 +2586,7 @@ function _applyWageMode(){
 }
 const FEE_RATE  = A.fee / (A.paxRev / 81000);             // 승객 1인당 환산 (정상운임 기준)
 const DEFAULTS  = { head:30, sailor:13, crew:7, fare:81000, vc:0, tgt:15, voy:498, voyPeer:600,
-                    headPeer:3, sailorPeer:13, crewPeer:7, paxPeer:212812, agencyPeer:15,
+                    headPeer:3, sailorPeer:8, crewPeer:2, paxPeer:212812, agencyPeer:15, agencyJpnShare:50,
                     // 순톤수 — 국제톤수협약(ITC 1969)상 NT 는 0.30·GT 이상이어야 한다.
                     // GT 3,300톤이면 하한이 990톤이라 800톤은 그 아래다. 1,200톤(0.36·GT)이
                     // 여객선 통상 범위(0.3~0.5)에 든다 — 확정값은 국제톤수증서로 바꿔야 한다.
@@ -2759,6 +2763,8 @@ function model(){
   // 대리점비 — 매출액 비례. 운항원가에 들어가고 BEP/목표에도 같은 비율로 반영된다.
   // 매출(여객+화물+임대료) 전체에 걸리므로 승객당 변동비가 아니라 "매출 할인" 성격.
   const agencyPct   = Math.min(0.99, Math.max(0, num('iAgencyPeer', DEFAULTS.agencyPeer) / 100));
+  // 일본 수입 비중 — 여객+화물 매출 중 일본(현지) 쪽에서 발생하는 비중. 50% 가 반반(기본).
+  const agencyJpn   = Math.min(1, Math.max(0, num('iAgencyJapanShare', DEFAULTS.agencyJpnShare) / 100));
   // 톤세 적용 여부 — 체크 시 preProfit 기준 법인세 대신 톤세(의제이익 기반) 사용.
   const tonnageTax  = el('iTonnageTax')?.checked ?? false;
   const netTon      = Math.max(0, num('iNetTon',  DEFAULTS.netTon));
@@ -2840,24 +2846,32 @@ function model(){
   const vc       = vPerPax + vcMan;
   // 대조 쪽도 참조와 같은 꼴의 도구를 갖춰야 목표지표·CVP 를 그대로 돌려 쓸 수 있다.
   const fixedAtPeer = q => costFpeer + svPerVoyPeer * voyForPeer(q);
-  // 대리점비는 매출의 agencyPct — op = sales(1-agencyPct) - fixed - vc·q 로 섞인다.
-  // BEP·목표 승객수에서는 (1-r) 자리에 (1-agencyPct-r) 로 들어간다.
-  // Oo = 여객 외 수입(화물 + 면세점). 기본은 Opeer 지만, 화물을 뺀 지표를 같은 식으로
-  // 뽑아야 해서 바깥에서 갈아끼울 수 있게 열어 둔다.
+  // 대리점비 수식 : (여객 + 화물) × 일본비중 × agencyPct — 임대료 제외, 양사 분담 가정.
+  //   agency = agencyJpn × apc × (q·farePeer + cargo)   where cargo = Oo − rentRev
+  //   BEP·목표 승객수 유도 :
+  //     sales·(1-rr) = fixed + v·q + agency
+  //     (qa + Oo)(1-rr) = fx + vq + agencyJpn·apc·(qa + cR)        (cR = Oo − rentRev)
+  //     q·(a·kRpax − v) = fx − Oo·(1-rr) + agencyJpn·apc·cR         (kRpax = 1 - rr - agencyJpn·apc)
+  //   Oo 를 바꿔 넘기면(화물 제외 지표 등) rentRev 는 그대로 쓰이고 cR 만 변한다.
+  const rentRev = A.dutyFreeRent;
+  const apcH = agencyPct * agencyJpn;    // "매출 1단위에 대리점비가 걸리는 비율" = 일본비중 × apc
   const simPeer  = (q, Oo = Opeer) => {
-    const sales = q*farePeer + Oo;
-    const agency = sales * agencyPct;
+    const sales  = q*farePeer + Oo;
+    const cargo  = Math.max(0, Oo - rentRev);
+    const agency = (q*farePeer + cargo) * apcH;
     const cost = fixedAtPeer(q) + vc*q + agency;
     const op = sales - cost;
     return { q, sales, cost, op, agency, margin: sales ? op/sales : 0 };
   };
   const qForPeer = (rr, Oo = Opeer) => {
-    const kR = 1 - agencyPct - rr;
-    const den = kR*farePeer - vc;
-    if (den <= 0 || kR <= 0) return null;
+    const cargo = Math.max(0, Oo - rentRev);
+    const kRpax = 1 - rr - apcH;
+    const den   = kRpax*farePeer - vc;
+    if (den <= 0 || kRpax <= 0) return null;
     let v_ = voyPeer;
     for (let k = 0; k < 12; k++) {
-      const q = (costFpeer + svPerVoyPeer*v_ - kR*Oo) / den;
+      // 분자 = fx - Oo·(1-rr) + 0.5·apc·cargo
+      const q = (costFpeer + svPerVoyPeer*v_ - Oo*(1-rr) + apcH*cargo) / den;
       if (!(q > 0)) return 0;
       const need = voyForPeer(q);
       if (need === v_) return q;
@@ -2866,8 +2880,11 @@ function model(){
     return null;
   };
   const pForPeer = (rr, q, Oo = Opeer) => {
-    const kR = 1 - agencyPct - rr;
-    return (q > 0 && kR > 0) ? (((fixedAtPeer(q) + vc*q)/kR) - Oo) / q : null;
+    const cargo = Math.max(0, Oo - rentRev);
+    const kRpax = 1 - rr - apcH;
+    if (!(q > 0) || kRpax <= 0) return null;
+    // qa·kRpax = fx + vq − Oo·(1-rr) + 0.5·apc·cargo
+    return (fixedAtPeer(q) + vc*q - Oo*(1-rr) + apcH*cargo) / (q * kRpax);
   };
 
   const ebitda = !items.find(x => x.id === 'opDep').on;   // 감가상각비를 끄면 EBITDA 기준
@@ -2908,7 +2925,7 @@ function model(){
            vc, vcMan, vPerPax, svPerVoy, svPerVoy_of, costF, costSV, costV, items, autoVoy, voyFor, fixedAt,
            r, voy, voyPeer, feeVar, ebitda, DEP, sgaWageT, sgaFixed, fixed, O,
            etcBase, etcSum, fuelBase, fuelNow, fxBase, fxNow, krwBase, krwNow,
-           fuelEsc, escRate, etcPeer, opEtcEsc, voyRatio, applyVoyRatio, voyR, agencyPct,
+           fuelEsc, escRate, etcPeer, opEtcEsc, voyRatio, applyVoyRatio, voyR, agencyPct, agencyJpn,
            tonnageTax, netTon, opDays, tonnageAmt,
            headPeer, sailorPeer, crewPeer, opHeadPeer, sgaWagePeer, opLaborPeer, opEtcPeer,
            costFpeer, costSVpeer, svPerVoyPeer, svPerVoy_ofPeer, itemsPeer, Opeer, opDepPeer,
@@ -3705,18 +3722,41 @@ function fuelToggleHTML(){
   const sty = (on, color) =>
     `display:inline-flex;align-items:center;gap:3px;cursor:pointer;margin-left:4px;`
     + `font-size:10.5px;color:${on?color:'var(--muted)'};font-weight:${on?'600':'400'}`;
-  const _manualUsd = (typeof FUEL_STATE !== 'undefined' && FUEL_STATE.manualUsd) || 1285;
-  // 실제 시가 라벨 — 라이브 가격·날짜가 조회돼 있으면 '($N 날짜)' 로 노출하고 Bunker Index 로 링크.
-  const _liveUsd  = typeof FUEL_STATE !== 'undefined' ? FUEL_STATE.liveUsd  : null;
-  const _liveDate = typeof FUEL_STATE !== 'undefined' ? FUEL_STATE.liveDate : null;
+  // 수동 모드일 땐 입력란에 들어가 있는 현재 값(사용자 즉시 수정 반영), 다른 모드면 FUEL_STATE 에 보관된 값.
+  const _manualUsd = manu
+    ? (parseFloat(el('iFuelNow')?.value) || FUEL_STATE?.manualUsd || 1285)
+    : ((typeof FUEL_STATE !== 'undefined' && FUEL_STATE.manualUsd) || 1285);
+  const _manualFx  = manu
+    ? (parseFloat(el('iFxNow')?.value)   || FUEL_STATE?.manualFx  || 1400)
+    : ((typeof FUEL_STATE !== 'undefined' && FUEL_STATE.manualFx)  || 1400);
+  // 실제 시가 라벨 — '$1,330/MT · 1,338.78원/$' 형식. 취득일시·환율 기준일은 툴팁으로.
+  const _liveUsd       = typeof FUEL_STATE !== 'undefined' ? FUEL_STATE.liveUsd       : null;
+  const _liveFx        = typeof FUEL_STATE !== 'undefined' ? FUEL_STATE.liveFx        : null;
+  const _liveDate      = typeof FUEL_STATE !== 'undefined' ? FUEL_STATE.liveDate      : null;
+  const _liveFxDate    = typeof FUEL_STATE !== 'undefined' ? FUEL_STATE.liveFxDate    : null;
+  const _liveFetchedAt = typeof FUEL_STATE !== 'undefined' ? FUEL_STATE.liveFetchedAt : null;
   const _liveUrl  = (typeof FUEL_STATE !== 'undefined' && FUEL_STATE.liveUrl)
     || 'https://www.bunkerindex.com/prices/port.php?p=109&n=busan-republic-of-korea';
+  const _fmtFx = v => v == null ? '—' : Number(v).toLocaleString('ko-KR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  const _fetchedShort = _liveFetchedAt ? _liveFetchedAt.replace('T',' ').slice(0, 16) : null;
+  // 라이브 라벨 : $1,330/MT · 1,338.78원/$ (가격은 Bunker Index 로 링크)
   const _liveLabel = _liveUsd
-    ? `실제시가 (<a href="${_liveUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:inherit;text-decoration:underline">$${_liveUsd.toLocaleString('ko-KR')}${_liveDate ? ' · ' + _liveDate : ''}</a>)`
+    ? `실제시가 <a href="${_liveUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:inherit;text-decoration:underline">$${_liveUsd.toLocaleString('ko-KR')}/MT</a>`
+      + (_liveFx != null ? ` · ${_fmtFx(_liveFx)}원/$` : '')
     : '실제 시가';
-  return ` <label data-fuel-toggle="1" style="${sty(manu, 'var(--amber)')}" title="수동 단가 ${_manualUsd.toLocaleString('ko-KR')}$/MT 적용 — 기본값 · 체크 시 이 값으로 escalation 반영">`
-    + `<input type="checkbox" data-fuel-chk-manu="1" ${manu?'checked':''} style="margin:0;cursor:pointer">수동 ${_manualUsd.toLocaleString('ko-KR')}</label>`
-    + ` <label data-fuel-toggle="1" style="${sty(live, 'var(--sky)')}" title="fuel_price.json 의 실시간 시세 — 체크 시 자동 갱신. 괄호의 수치를 누르면 Bunker Index 로 이동.">`
+  // 라이브 라벨 툴팁 : 가격 기준일 · 환율 기준일 · 취득일시
+  const _liveTip = _liveUsd
+    ? `취득일시 ${_fetchedShort || '—'}`
+      + (_liveDate   ? ` · 가격 기준일 ${_liveDate}`     : '')
+      + (_liveFxDate ? ` · 환율 기준일 ${_liveFxDate}`   : '')
+      + ' · fuel_price.json 자동 갱신 · 가격 숫자를 누르면 Bunker Index 로 이동'
+    : 'fuel_price.json 의 실시간 시세 — 체크 시 자동 갱신. 괄호의 수치를 누르면 Bunker Index 로 이동.';
+  // 수동 라벨 : 실제시가 와 같은 포맷 — '수동 $1,285/MT · 1,400원/$'
+  const _manualLabel = `수동 $${_manualUsd.toLocaleString('ko-KR')}/MT · ${_fmtFx(_manualFx)}원/$`;
+  const _manualTip = `수동 단가 ${_manualUsd.toLocaleString('ko-KR')}$/MT · 환율 ${_fmtFx(_manualFx)}원/$ · 좌측 설정 패널에서 조정 가능 — 체크 시 이 값으로 escalation 반영`;
+  return ` <label data-fuel-toggle="1" style="${sty(manu, 'var(--amber)')}" title="${_manualTip}">`
+    + `<input type="checkbox" data-fuel-chk-manu="1" ${manu?'checked':''} style="margin:0;cursor:pointer">${_manualLabel}</label>`
+    + ` <label data-fuel-toggle="1" style="${sty(live, 'var(--sky)')}" title="${_liveTip}">`
     + `<input type="checkbox" data-fuel-chk-live="1" ${live?'checked':''} style="margin:0;cursor:pointer">${_liveLabel}</label>`;
 }
 
@@ -4124,8 +4164,9 @@ function drawPeerPL(m) {
   const opTax  = N.opTax;
   const opRent = N.opRent;
   const opEtc  = m.opEtcPeer;
-  // 대리점비 — 매출액 비례 (iAgencyPeer %). 운항원가 안에 둔다.
-  const agency = sales * m.agencyPct;
+  // 대리점비 — (여객수입 + 화물수입) × 일본비중 × iAgencyPeer %. 임대료는 제외.
+  //            (양사 분담 가정 : 일본 쪽 발생 매출에 대해서만 대리점 수수료)
+  const agency = (paxRev + cargoRev) * m.agencyJpn * m.agencyPct;
   const opCost = opWage + opSev + opWelf + opDep + opTax + opRent + opEtc + agency;
   const gross  = sales - opCost;
 
@@ -4220,7 +4261,7 @@ function drawPeerPL(m) {
   html += rowN((WAGE_MODE_COMPANY?'퇴직급여 (해상직원) ':'퇴직급여 (해상직원) ') + _opHeadTag, opSev,  opCost);
   html += rowN('복리후생비 (해상직원) '+ _opHeadTag, opWelf, opCost);
   // 대리점비 — 매출액 × 설정 비율. 복리후생비 바로 아래에 둔다.
-  const _agencyTag = ` <span class="tagv est" title="설정 — 매출액의 ${(m.agencyPct*100).toFixed(1)}%">×${(m.agencyPct*100).toFixed(1)}% 매출</span>`;
+  const _agencyTag = ` <span class="tagv est" title="(여객수입 + 화물수입) × 일본비중 ${(m.agencyJpn*100).toFixed(0)}% × 수수료율 ${(m.agencyPct*100).toFixed(1)}% — 임대료 제외">×${(m.agencyPct*100).toFixed(1)}% × (여객+화물)의 일본 ${(m.agencyJpn*100).toFixed(0)}%</span>`;
   html += `<tr class="n"><td>대리점비(일본현지)${_agencyTag}</td>${fv(agency)}${fp(agency, opCost)}${fp(agency, sales)}</tr>`;
   // 감가상각비 — 클릭하면 상각표(ovDepSchedule) 팝업
   html += `<tr class="n" data-ov="ovDepSchedule" style="cursor:pointer">`
@@ -4502,9 +4543,12 @@ function drawPeerPL(m) {
   const iOpWage = add({ cls:'n', name:'급여 (해상직원) '      + _opHeadTag10 + _wageInlineChk, v:opWage, gk:'gWage' });
   const iOpSev  = add({ cls:'n', name:'퇴직급여 (해상직원) '  + _opHeadTag10 + _sevNote10,     v:opSev,  gk:'gSev' });
   const iOpWelf = add({ cls:'n', name:'복리후생비 (해상직원) '+ _opHeadTag10, v:opWelf, gk:'gWelf' });
-  // 대리점비 — 복리후생비 바로 아래. 매출의 agencyPct 로 매년 매출을 추종한다.
-  const iAgency = add({ cls:'n', name:`대리점비(일본현지) <span class="tagv est" title="매출액의 ${(m.agencyPct*100).toFixed(1)}%">×${(m.agencyPct*100).toFixed(1)}% 매출</span>`,
-                        agg:[[iSales, m.agencyPct]], v:agency });
+  // 대리점비 — (여객수입 + 화물수입) × 일본비중 × agencyPct. 임대료 제외.
+  //            연차별로 iPax·iCargo 가 각각 증감률을 따라 움직이고, 대리점비는 그 둘에 (일본비중 × 수수료율) 적용.
+  const _agWeight = m.agencyPct * m.agencyJpn;
+  const iAgency = add({ cls:'n',
+    name:`대리점비(일본현지) <span class="tagv est" title="(여객수입 + 화물수입) × 일본비중 ${(m.agencyJpn*100).toFixed(0)}% × 수수료율 ${(m.agencyPct*100).toFixed(1)}% — 임대료 제외">×${(m.agencyPct*100).toFixed(1)}% × (여객+화물)의 일본 ${(m.agencyJpn*100).toFixed(0)}%</span>`,
+    agg:[[iPax, _agWeight], [iCargo, _agWeight]], v:agency });
   const iOpDep  = add({ cls:'n', name:'감가상각비 <span class="tagv" style="cursor:pointer">상각표 ↗</span>',
                         v:opDep, gk:'gDep', clickOv:'ovDepSchedule' });
   const iOpTax  = add({ cls:'n', name:'세금과공과',          v:opTax,  gk:'gTax' });
@@ -5754,7 +5798,7 @@ function render(){
  'iHeadPeer','iSailorPeer','iCrewPeer','iVoyPeer','iPaxPeer','iPerVoyPeer',
  'iFarePeer','iFuelPeer',
  'iCargoLoad','iCargoDist',
- 'iAgencyPeer',
+ 'iAgencyPeer','iAgencyJapanShare',
  'iNetTon','iOpDays',
  'iShipPricePeer','iLifePeer','iSalvagePeer','iLoanPeer','iLoanRatePeer'].forEach(id =>
   el(id).addEventListener('input', render));
@@ -5819,8 +5863,11 @@ async function loadFuelPrice(quiet){
       if (d.usd_krw_rate)     FUEL_STATE.liveFx   = d.usd_krw_rate;
       if (d.price_date)       FUEL_STATE.liveDate = d.price_date;
       if (d.source_url)       FUEL_STATE.liveUrl  = d.source_url;
+      if (d.fetched_at)       FUEL_STATE.liveFetchedAt = d.fetched_at;
+      if (d.fx_date)          FUEL_STATE.liveFxDate = d.fx_date;
     }
     if (el('iFuelLiveMode')?.checked) {
+      // 실제시가 모드 : USD 단가와 환율 모두 라이브로 교체 (fuel_price.json).
       if (d.lsmgo_usd_per_mt) el('iFuelNow').value = d.lsmgo_usd_per_mt;
       if (d.usd_krw_rate)     el('iFxNow').value   = d.usd_krw_rate;
     }
@@ -5848,6 +5895,7 @@ const FUEL_STATE = {
   manualUsd: 1285, manualFx: 1400,
   liveUsd:   null, liveFx:   null,
   liveDate:  null, liveUrl:  null,     // fuel_price.json 의 price_date · source_url
+  liveFetchedAt: null, liveFxDate: null,  // fetched_at (갱신 시각) · fx_date (환율 기준일)
 };
 // 2024 기준 · 실제 시가 · 수동을 한 표에 세운다. 원가에 들어가는 것은 원화(단가 × 환율)라
 // 달러만 보면 환율이 움직인 몫이 빠진다 — 세 칸을 같이 둬야 배율이 설명된다.
@@ -6443,6 +6491,7 @@ el('btnReset').addEventListener('click', () => {
   el('iCrewPeer').value   = DEFAULTS.crewPeer;
   el('iVoyPeer').value    = DEFAULTS.voyPeer;
   el('iAgencyPeer').value = DEFAULTS.agencyPeer;
+  el('iAgencyJapanShare').value = DEFAULTS.agencyJpnShare;
   el('iVoyRatio').checked = DEFAULTS.voyRatio;
   el('iTgtPeerAuto').checked = DEFAULTS.tgtPeerAuto;
   el('iTgtPeer').value       = DEFAULTS.tgtPeer;
