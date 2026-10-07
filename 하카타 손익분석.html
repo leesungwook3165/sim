@@ -1032,7 +1032,7 @@
             </div>
             <div class="f">
               <label>현재 단가 <span id="hFuelNowMode" style="font-size:10px;color:var(--muted);margin-left:4px">수동</span></label>
-              <div class="ib"><input type="number" step="10" min="0" id="iFuelNow" value="1325"><span class="u">$/MT</span></div>
+              <div class="ib"><input type="number" step="10" min="0" id="iFuelNow" value="1285"><span class="u">$/MT</span></div>
             </div>
             <div class="f wide">
               <table class="seat fuelcmp"><thead><tr>
@@ -1047,7 +1047,7 @@
             </div>
             <div class="f">
               <label>현재 환율</label>
-              <div class="ib"><input type="number" step="10" min="0" id="iFxNow" value="1346.24"><span class="u">원/$</span></div>
+              <div class="ib"><input type="number" step="10" min="0" id="iFxNow" value="1400"><span class="u">원/$</span></div>
             </div>
             <div class="f wide">
               <label class="chk">
@@ -2092,10 +2092,12 @@ const SHIPS_BUILTIN = [
     note:'감사보고서가 이 배의 실적이다' },
   { id:'santamonica', name:'산타모니카호 · 시월드고속훼리', gt:3300, loa:72.67, beam:21.0,
     pax:606, kts:45, route:'부산↔하카타 213km (구상)', src:'index.html',
-    note:'하카타 항로 투입 구상 선박', paxPeer:212812 },
+    note:'하카타 항로 투입 구상 선박', paxPeer:212812,
+    depart:'08:30', return_:'14:00' },
   { id:'queenbeetle', name:'퀸비틀 · JR큐슈고속선', gt:894, loa:83.5, beam:20.2,
     pax:502, kts:36, route:'부산↔하카타 213km', src:'index.html',
     note:'하카타 항로 기존 경쟁선',
+    depart:'08:30', return_:'14:00',
     hold:'원가 자료를 아직 확보하지 못했다 — 정원·속력만 있고 이 배의 운항원가 구조가 없다.' },
   { id:'koreapride', name:'코리아프라이드호 · 고려고속훼리', gt:1600, loa:null, beam:null,
     pax:556, kts:40, route:'인천 연안부두↔백령도 218km', src:'경인일보 2022.08',
@@ -2313,7 +2315,7 @@ const DEFAULTS  = { head:30, sailor:13, crew:7, fare:81000, vc:0, tgt:15, voy:49
                     loanYears:15, loanGrace:3, loanMethod:'equal',
                     tgtPeer:15, tgtPeerAuto:false,
                     opEtcPct:{fuel:83.45,port:11.15,ins:5.13,repair:0.00,store:0.27},
-                    fuelBase:820, fuelNow:1325, fxBase:1360, fxNow:1346.24, fuelEsc:true, fuelLive:false,
+                    fuelBase:820, fuelNow:1285, fxBase:1360, fxNow:1400, fuelEsc:true, fuelLive:false,
                     voyRatio:true,
                     kinds:{opLabor:'fix',opDep:'fix',opTR:'fix',
                            opEtcSemi:'semi',opEtcFix:'fix',
@@ -2334,16 +2336,20 @@ const dlt  = n => n===0 ? '—' : (n>0?'+':'') + won(n);
 // 좌석표처럼 innerHTML 로 만들어 낸 칸은 없을 수도 있어, 있을 때만 채운다.
 const _setTxt = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
 
-// 선박 제원 : 정원 · 속력 · 크기 · 항로. 없는 값은 줄을 만들지 않는다.
+// 선박 제원 : 정원 · 속력 · 크기 · 항로 · 운항시각. 없는 값은 줄을 만들지 않는다.
 function shipRows(v){
   if (!v) return '';
   const size = [v.gt ? `GT ${won(v.gt)}톤` : '', v.loa ? `전장 ${v.loa}m` : '',
                 v.beam ? `전폭 ${v.beam}m` : ''].filter(Boolean).join(' · ');
+  const sched = (v.depart || v.return_)
+    ? `${v.depart ? '출항 ' + v.depart : ''}${v.depart && v.return_ ? ' · ' : ''}${v.return_ ? '회항 ' + v.return_ : ''}`
+    : '';
   return (v.hold ? `<div class="holdbox"><b>분석 보류중</b> — ${v.hold}</div>` : '')
     + `<div class="r"><span>여객정원</span><b>${v.pax > 0 ? won(v.pax) + '명' : '<span class="amb">자료 없음</span>'}</b></div>`
     + (v.kts && v.kts !== '—' ? `<div class="r"><span>최고 속력</span><b>${v.kts}노트</b></div>` : '')
     + (size ? `<div class="r"><span>크기</span><b>${size}</b></div>` : '')
     + `<div class="r"><span>항로</span><b>${v.route}</b></div>`
+    + (sched ? `<div class="r"><span>운항시각</span><b>${sched}</b></div>` : '')
     + `<div class="tags"><span class="tagv">${v.src}</span>`
     + (v.note ? `<span class="tagv est">${v.note}</span>` : '') + `</div>`;
 }
@@ -3407,10 +3413,19 @@ function fuelToggleHTML(){
   const sty = (on, color) =>
     `display:inline-flex;align-items:center;gap:3px;cursor:pointer;margin-left:4px;`
     + `font-size:10.5px;color:${on?color:'var(--muted)'};font-weight:${on?'600':'400'}`;
-  return ` <label data-fuel-toggle="1" style="${sty(manu, 'var(--amber)')}" title="수동 단가 1,325$/MT 적용 — 기본값 · 체크 시 1,325 기준 escalation 반영">`
-    + `<input type="checkbox" data-fuel-chk-manu="1" ${manu?'checked':''} style="margin:0;cursor:pointer">수동 1,325</label>`
-    + ` <label data-fuel-toggle="1" style="${sty(live, 'var(--sky)')}" title="fuel_price.json 의 실시간 시세 — 체크 시 자동 갱신">`
-    + `<input type="checkbox" data-fuel-chk-live="1" ${live?'checked':''} style="margin:0;cursor:pointer">실제 시가</label>`;
+  const _manualUsd = (typeof FUEL_STATE !== 'undefined' && FUEL_STATE.manualUsd) || 1285;
+  // 실제 시가 라벨 — 라이브 가격·날짜가 조회돼 있으면 '($N 날짜)' 로 노출하고 Bunker Index 로 링크.
+  const _liveUsd  = typeof FUEL_STATE !== 'undefined' ? FUEL_STATE.liveUsd  : null;
+  const _liveDate = typeof FUEL_STATE !== 'undefined' ? FUEL_STATE.liveDate : null;
+  const _liveUrl  = (typeof FUEL_STATE !== 'undefined' && FUEL_STATE.liveUrl)
+    || 'https://www.bunkerindex.com/prices/port.php?p=109&n=busan-republic-of-korea';
+  const _liveLabel = _liveUsd
+    ? `실제시가 (<a href="${_liveUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:inherit;text-decoration:underline">$${_liveUsd.toLocaleString('ko-KR')}${_liveDate ? ' · ' + _liveDate : ''}</a>)`
+    : '실제 시가';
+  return ` <label data-fuel-toggle="1" style="${sty(manu, 'var(--amber)')}" title="수동 단가 ${_manualUsd.toLocaleString('ko-KR')}$/MT 적용 — 기본값 · 체크 시 이 값으로 escalation 반영">`
+    + `<input type="checkbox" data-fuel-chk-manu="1" ${manu?'checked':''} style="margin:0;cursor:pointer">수동 ${_manualUsd.toLocaleString('ko-KR')}</label>`
+    + ` <label data-fuel-toggle="1" style="${sty(live, 'var(--sky)')}" title="fuel_price.json 의 실시간 시세 — 체크 시 자동 갱신. 괄호의 수치를 누르면 Bunker Index 로 이동.">`
+    + `<input type="checkbox" data-fuel-chk-live="1" ${live?'checked':''} style="margin:0;cursor:pointer">${_liveLabel}</label>`;
 }
 
 // 법인세 행에 붙는 톤세 토글 — 연료비 토글과 같은 꼴로, 표 안에서 바로 켜고 끈다.
@@ -5127,7 +5142,7 @@ function render(){
       R_('고정',   mil(m.costF)  + '백만')
     + R_('변동(항차)', mil(m.costSV) + '백만', won(m.svPerVoy) + '원/항차')
     + R_('변동(승객)', mil(m.costV)  + '백만', won(m.vPerPax) + '원/인'
-         + (m.vcMan > 0 ? ' +수동 ' + won(m.vcMan) : ''))
+         + (m.vcMan > 0 ? ' +수동 $' + won(m.vcMan) : ''))
     + RT_('합계',  mil(totCost)  + '백만')
     + R_('승객 1인 증가분', won(m.vc) + '원', '운임의 ' + pct(m.vc/m.fare,1))
     + R_('공헌이익률', pct(1 - m.vc/m.fare,1), '고정·변동(항차) 회수분')
@@ -5482,12 +5497,17 @@ async function loadFuelPrice(quiet){
     const res = await fetch('fuel_price.json', { cache:'no-store' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const d = await res.json();
-    if (d.lsmgo_usd_per_mt) el('iFuelNow').value = d.lsmgo_usd_per_mt;
-    if (d.usd_krw_rate)     el('iFxNow').value   = d.usd_krw_rate;
-    // 불러온 라이브 값은 swap 대비 보존 — FUEL_STATE 가 선언돼 있을 때만
+    // 라이브 값은 항상 FUEL_STATE 에 보존 (라벨 '실제시가 ($N 날짜)' 표기에 쓰임).
+    // 입력창 교체는 '실제 시가' 모드가 켜져 있을 때만 — 수동 모드에서 조용히 불러와도 1,285 유지.
     if (typeof FUEL_STATE !== 'undefined') {
-      if (d.lsmgo_usd_per_mt) FUEL_STATE.liveUsd = d.lsmgo_usd_per_mt;
-      if (d.usd_krw_rate)     FUEL_STATE.liveFx  = d.usd_krw_rate;
+      if (d.lsmgo_usd_per_mt) FUEL_STATE.liveUsd  = d.lsmgo_usd_per_mt;
+      if (d.usd_krw_rate)     FUEL_STATE.liveFx   = d.usd_krw_rate;
+      if (d.price_date)       FUEL_STATE.liveDate = d.price_date;
+      if (d.source_url)       FUEL_STATE.liveUrl  = d.source_url;
+    }
+    if (el('iFuelLiveMode')?.checked) {
+      if (d.lsmgo_usd_per_mt) el('iFuelNow').value = d.lsmgo_usd_per_mt;
+      if (d.usd_krw_rate)     el('iFxNow').value   = d.usd_krw_rate;
     }
     render();
     say(R_('LSMGO', won(d.lsmgo_usd_per_mt) + '$/MT', d.price_date || '?')
@@ -5510,8 +5530,9 @@ el('btnFuelLive').addEventListener('click', () => loadFuelPrice(false));
 // MANUAL : 사용자가 수동으로 지정한 값 (기본 1,325$/MT · 1,346.24원/$)
 // LIVE   : fuel_price.json 에서 읽어 온 값 (처음엔 null, 라이브 모드 켜질 때 저장)
 const FUEL_STATE = {
-  manualUsd: 1325, manualFx: 1346.24,
+  manualUsd: 1285, manualFx: 1400,
   liveUsd:   null, liveFx:   null,
+  liveDate:  null, liveUrl:  null,     // fuel_price.json 의 price_date · source_url
 };
 // 2024 기준 · 실제 시가 · 수동을 한 표에 세운다. 원가에 들어가는 것은 원화(단가 × 환율)라
 // 달러만 보면 환율이 움직인 몫이 빠진다 — 세 칸을 같이 둬야 배율이 설명된다.
@@ -5559,7 +5580,7 @@ function applyFuelLiveMode(){
   el('iFxNow').readOnly   = readonly;
   el('iFuelNow').classList.toggle('ro', readonly);
   el('iFxNow').classList.toggle('ro',   readonly);
-  _setTxt('hFuelNowMode', live ? '실제 시가' : manu ? '수동 1,325' : '초기값 820');
+  _setTxt('hFuelNowMode', live ? '실제 시가' : manu ? ('수동 ' + (FUEL_STATE.manualUsd||1285).toLocaleString('ko-KR')) : '초기값 820');
   // 손익계산서/10개년의 체크박스들 상태 동기화
   document.querySelectorAll('[data-fuel-chk-live]').forEach(c => { c.checked = live; });
   document.querySelectorAll('[data-fuel-chk-manu]').forEach(c => { c.checked = manu; });
@@ -6737,6 +6758,10 @@ drawVA();      // 부가가치 계산 — 보고서 값만 쓴다
 drawVat();     // 부가세 역산 가능성 검증
 drawCheck();   // 보고서 내부 정합성 검증도 정적이다
 render();
+// fuel_price.json 을 조용히 조회해 FUEL_STATE 를 채운다 — '실제시가 ($N 날짜)' 라벨에 쓰임.
+// 수동 모드일 때는 iFuelNow 를 건드리지 않고 FUEL_STATE 만 갱신한다 (loadFuelPrice 내부에서 분기).
+// 성공하면 라벨에 숫자가 노출되도록 render 다시 한 번.
+loadFuelPrice(true).then(() => render()).catch(() => {});
 </script>
 </body>
 </html>
