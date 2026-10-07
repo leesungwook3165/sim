@@ -3981,11 +3981,11 @@ let simQBkts = 31.4; // 공식거리÷공식소요시간 역산값 31.4노트
 let simSMTurnMin = 60;
 let simQBTurnMin = 60;
 
-// 선종·총톤수 — 산타모니카호는 Incat社 76m급 고속카타마란(국제총톤수 3,500톤, 621명+차량 86대,
+// 선종·총톤수 — 산타모니카호는 Incat社 76m급 고속카타마란(국제총톤수 3,300톤, 621명+차량 86대,
 // 진도-제주 항로에 실제 운항 중인 동형 선박 기준). 퀸비틀은 호주 Austal 조선 트라이마란형
 // 고속선으로 배수량 약 2,582톤(⚠ 정확한 총톤수는 확인 필요) — 2024년 2월 선체 침수 사고로
 // 운항 중단 후 팬스타에 매각된 것으로 파악됨(경쟁 구도 변화 반영 필요).
-let simSMShipType = '고속선', simSMTonnage = 3500;
+let simSMShipType = '고속선', simSMTonnage = 3300;
 let simQBShipType = '고속선', simQBTonnage = 2582;
 let simSMColor = '#ffcc00', simSMColor2 = '#44ffdd', simQBColor = '#66ccff';
 
@@ -4078,8 +4078,8 @@ function _setSimPlayLabel(text) {
 // ── 선박별 출항시각 ──
 // 각 배는 자기 자신의 타임라인(0분 = 자신의 출항 시점) 위에서 움직이고,
 // 실제 화면 표시 시에만 "가장 이른 출항" 대비 지연분(_delay)만큼 대기 상태로 붙잡아 둔다.
-let simSMDepartHM = '09:00';
-let simQBDepartHM = '09:00';
+let simSMDepartHM = '08:30';
+let simQBDepartHM = '08:30';
 // 사용자가 등록하는 임의 선박 목록 (선석 확보 검토용)
 let customShips = [];
 let _customTL = {};       // id -> {outTL, retTL, totalOut, totalRet}
@@ -7272,6 +7272,11 @@ _loadCustomShips();
 _seedDefaultCompetitorShips();
 _drawCompetitorRoutes();
 
+rebuildSim();
+// 산타모니카·퀸비틀 회항시각 14:00 고정 — rebuildSim 결과의 _totalMinSM/_totalMinQB(=도착 분)에
+// 하카타 체류시간을 역산해 넣은 뒤 한 번 더 재계산한다.
+simSMTurnMin = _turnMinForReturnClock(_totalMinSM, '14:00');
+simQBTurnMin = _turnMinForReturnClock(_totalMinQB, '14:00');
 rebuildSim();
 _renderSimScopeTabs();
 _rebuildSimTimelapse();
