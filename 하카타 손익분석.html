@@ -3999,21 +3999,8 @@ function fuelToggleHTML(){
   const init = !live && !manu;                     // 둘 다 OFF = 초기값 활성
   const simpleOn = !!el('iFuelSimpleMode')?.checked;
   const engOn    = !!el('iFuelEngMode')?.checked;
-  // 단순 모드 : 가격은 산식에 안 쓰이므로 '초기값' 체크박스 하나만 노출.
-  //   체크/해제 가능하지만 단순 산식(편도단가×항차) 결과에는 영향 없음 — 상태 표시용.
-  if (simpleOn && !engOn) {
-    const _iu = (typeof FUEL_SRC !== 'undefined' && FUEL_SRC.base?.usd) || 820;
-    const _ix = (typeof FUEL_SRC !== 'undefined' && FUEL_SRC.base?.fx)  || 1360;
-    const _fmtFxLocal = v => v == null ? '—' : Number(v).toLocaleString('ko-KR', {minimumFractionDigits:2, maximumFractionDigits:2});
-    const sty0 = `display:inline-flex;align-items:center;gap:3px;cursor:pointer;margin-left:4px;`
-               + `font-size:10.5px;color:${init?'var(--good)':'var(--muted)'};font-weight:${init?'600':'400'}`;
-    const tip = `단순 모드는 '편도단가 × 항차' 로만 산출 — 가격은 산식에 미적용.\n`
-              + `체크 : 초기값(2024 평균 예측) 상태 유지\n`
-              + `해제 : 수동 단가 모드로 전환 (단순 산식엔 영향 없음, 다른 모드 전환 시 반영)`;
-    return ` <label data-fuel-toggle="1" style="${sty0}" title="${tip}">`
-      + `<input type="checkbox" data-fuel-chk-init="1" ${init?'checked':''} style="margin:0;cursor:pointer">`
-      + `초기값 $${_iu.toLocaleString('ko-KR')}/MT · ${_fmtFxLocal(_ix)}원/$</label>`;
-  }
+  // 단순 모드 : 가격은 산식에 안 쓰이므로 토글 자체를 완전히 숨긴다.
+  if (simpleOn && !engOn) return '';
   const sty = (on, color) =>
     `display:inline-flex;align-items:center;gap:3px;cursor:pointer;margin-left:4px;`
     + `font-size:10.5px;color:${on?color:'var(--muted)'};font-weight:${on?'600':'400'}`;
@@ -4936,33 +4923,17 @@ function drawPeerPL(m) {
       applyFuelLiveMode();
     });
   });
-  // 초기값 체크박스 — 모드별로 거동이 다르다 (명시적 분기).
-  //   · 단순 모드 : 가격이 산식에 안 쓰이므로 체크/해제가 가격 상태만 바꿀 뿐 단순 산식엔 영향 없음.
-  //                초기값 체크박스가 "유일한" UI 라 양방향 토글이 반드시 작동해야 함.
-  //   · 회계상/공학적 : 체크 → 둘 다 OFF (init). 해제 → 수동 자동 ON (수동/시세 토글 노출).
+  // 초기값 체크박스 — 체크 : 수동·시세 둘 다 OFF (init). 해제 : 수동 자동 ON (수동/시세 토글 노출).
+  //   (단순 모드에선 토글 자체가 렌더 안 되므로 이 핸들러는 회계상/공학적 모드에서만 작동)
   el('tPeerPL').querySelectorAll('[data-fuel-chk-init]').forEach(chk => {
     chk.addEventListener('change', e => {
       e.stopPropagation();
-      const simpleOn = !!el('iFuelSimpleMode')?.checked;
-      const engOn    = !!el('iFuelEngMode')?.checked;
-      if (simpleOn && !engOn) {
-        // 단순 모드 분기 — 양방향 토글 명시
-        if (chk.checked) {
-          el('iFuelManualMode').checked = false;
-          el('iFuelLiveMode').checked   = false;
-        } else {
-          el('iFuelManualMode').checked = true;
-          el('iFuelLiveMode').checked   = false;
-        }
+      if (chk.checked) {
+        el('iFuelManualMode').checked = false;
+        el('iFuelLiveMode').checked   = false;
       } else {
-        // 회계상/공학적 분기 — 기존 거동
-        if (chk.checked) {
-          el('iFuelManualMode').checked = false;
-          el('iFuelLiveMode').checked   = false;
-        } else {
-          el('iFuelManualMode').checked = true;
-          el('iFuelLiveMode').checked   = false;
-        }
+        el('iFuelManualMode').checked = true;
+        el('iFuelLiveMode').checked   = false;
       }
       applyFuelLiveMode();
     });
@@ -5641,30 +5612,16 @@ function drawPeerPL10() {
       applyFuelLiveMode();
     });
   });
-  // 초기값 (10개년 뷰) — 모드별 분기 (단일연도 핸들러와 동일 거동)
+  // 초기값 (10개년 뷰) — 단일연도와 동일 거동 (단순 모드엔 토글 렌더 안 됨)
   tb.querySelectorAll('[data-fuel-chk-init]').forEach(chk => {
     chk.addEventListener('change', e => {
       e.stopPropagation();
-      const simpleOn = !!el('iFuelSimpleMode')?.checked;
-      const engOn    = !!el('iFuelEngMode')?.checked;
-      if (simpleOn && !engOn) {
-        // 단순 모드 분기 — 양방향 토글
-        if (chk.checked) {
-          el('iFuelManualMode').checked = false;
-          el('iFuelLiveMode').checked   = false;
-        } else {
-          el('iFuelManualMode').checked = true;
-          el('iFuelLiveMode').checked   = false;
-        }
+      if (chk.checked) {
+        el('iFuelManualMode').checked = false;
+        el('iFuelLiveMode').checked   = false;
       } else {
-        // 회계상/공학적 분기
-        if (chk.checked) {
-          el('iFuelManualMode').checked = false;
-          el('iFuelLiveMode').checked   = false;
-        } else {
-          el('iFuelManualMode').checked = true;
-          el('iFuelLiveMode').checked   = false;
-        }
+        el('iFuelManualMode').checked = true;
+        el('iFuelLiveMode').checked   = false;
       }
       applyFuelLiveMode();
     });
