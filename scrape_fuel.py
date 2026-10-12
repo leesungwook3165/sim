@@ -89,7 +89,7 @@ def scrape() -> dict:
         "jpy_krw_rate": jpy_krw,
         "fx_date": fx_date,
         "source_url": URL,
-        "fx_source_url": "https://api.frankfurter.app",
+        "fx_source_url": "https://frankfurter.dev/",
     }
 
 

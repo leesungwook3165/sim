@@ -2172,7 +2172,10 @@ const osm = L.tileLayer(
 const map = L.map('map', {
   center: [34.0, 129.6],
   zoom: 8,
-  layers: [satellite, labels]
+  layers: [satellite, labels],
+  // 사용자가 자오선 너머로 자유롭게 끌 수 있게 둔다 — GFW 처럼. 대신 폴리라인을
+  // 세계 복제본 전체에 걸쳐 그리는 책임은 아래 _wrappedPolyline 이 진다.
+  worldCopyJump: false
 });
 
 // 미라클 버스 레이어 — 관광버스 노선 + 정류장·렌터카·공항 POI를 한 토글로 관리
@@ -7687,6 +7690,7 @@ const _AIS_VESSELS = {
   seonghee:    { label:'성희호',               file:'seonghee_track-data-2012-01-01,2027-01-01.csv',    color:'#cc88ff' },
   hamayuu:     { label:'하마유호',              file:'hamayuu_track-data-2012-01-01,2026-12-31.csv',     color:'#55ffdd' },
   panstarmiracle:{ label:'팬스타 미라클호',      sub:'팬스타·부산↔오사카', file:'panstarmiracle_track-data-2025-03-01,2026-09-01.csv', color:'#33ccaa' },
+  panstaracro:{ label:'팬스타 아크로호',        sub:'팬스타', file:'panstaracro_track-data-2026-07-09,2026-10-09.csv', color:'#44ddbb', openAll:true },
   tsushimalink:{ label:'팬스타 쓰시마링크호',  sub:'팬스타·부산↔쓰시마', file:'tushimalink_track-data-2023-01-01,2027-01-01.csv', color:'#8899ff' },
   santamonica: { label:'산타모니카호',          sub:'제주항로·중고매입 후보', file:'santamonica_track-data-2026-06-17,2026-08-06.csv', color:'#ffcc44' },
   eldorado:    { label:'엘도라도 익스프레스호', file:'eldorado_track-data-2026-06-17,2026-08-06.csv',    color:'#88ff55' },
@@ -9649,6 +9653,26 @@ function _aisDrawSpeedChart(pts, cursor) {
   }
 }
 
+// 폴리라인을 세계 복제본 ±N 벌로 그려 패닝/축소 중에도 끊기지 않게 한다 (GFW 방식).
+// zoom 2 이하에서는 뷰포트가 세계를 여러 번 담을 수 있어 ±2 copy(총 5벌) 로 넉넉히 깐다.
+// 다중 선(multi-polyline: [[[lat,lng],...], [[lat,lng],...]]) 도 지원한다.
+// L.featureGroup 을 돌려주므로 bindPopup / on('click') 등 상위 API 그대로 쓸 수 있다.
+const _WORLD_COPIES = 2;    // ±2 copy = 5벌. 지도 축소 한계에서도 커버.
+function _shiftLatLngs(lls, dx) {
+  return lls.map(p => {
+    if (Array.isArray(p) && Array.isArray(p[0])) return _shiftLatLngs(p, dx);     // 다중 선
+    if (Array.isArray(p)) return [p[0], p[1] + dx];                               // [lat, lng]
+    return L.latLng(p.lat, p.lng + dx);                                           // L.LatLng
+  });
+}
+function _polylineWrap(latlngs, opts) {
+  const fg = L.featureGroup();
+  for (let n = -_WORLD_COPIES; n <= _WORLD_COPIES; n++) {
+    L.polyline(n === 0 ? latlngs : _shiftLatLngs(latlngs, n * 360), opts).addTo(fg);
+  }
+  return fg;
+}
+
 // ── 포인트 목록 렌더링 (하루/한 시간 공용) ──
 function _renderAisPointSet(key, pts, labelStr, extraNote) {
   _clearAisLayer();
@@ -9679,16 +9703,16 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
     }
     if (landKm > 0.3) {
       landCount++;
-      L.polyline(latlngs, { color: '#ff2b2b', weight: 8, opacity: 0.3, interactive: false }).addTo(g);
+      _polylineWrap(latlngs, { color: '#ff2b2b', weight: 8, opacity: 0.3, interactive: false }).addTo(g);
     }
     // 원본 대조 — 보정·보간으로 모양이 바뀐 구간은 원본 직선을 회색으로 깔아
     // 무엇이 어떻게 달라졌는지 눈으로 바로 비교할 수 있게 한다 (편집 중에는 항상 켠다).
     if ((_aisShowRaw || _aisCorrEdit) && corr) {
-      L.polyline([[a.lat, a.lon], [b.lat, b.lon]], {
+      _polylineWrap([[a.lat, a.lon], [b.lat, b.lon]], {
         color: "#8899aa", weight: 1.5, opacity: 0.65, dashArray: "3 4", interactive: false
       }).addTo(g);
     }
-    L.polyline(latlngs, {
+    _polylineWrap(latlngs, {
       color: corr ? '#c07bff' : _aisSpeedColor((a.speed + b.speed) / 2),
       weight: corr ? 4 : (isBack ? 4 : 3),
       opacity: corr ? 0.95 : (isBack ? 0.75 : 0.9),
@@ -9700,7 +9724,7 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
     const segMin = (new Date(b.ts) - new Date(a.ts)) / 60000;
     const avgKts = _aisAvgKts(segKm, segMin);
     const nearPort = _nearestPortName(b.lat, b.lon, AIS_CALL_BUFFER_KM);
-    const hit = L.polyline(latlngs, { color: '#000', weight: 14, opacity: 0, interactive: true });
+    const hit = _polylineWrap(latlngs, { color: '#000', weight: 14, opacity: 0, interactive: true });
     if (_aisCorrEdit) {
       // 편집 모드 — 팝업 대신 이 구간을 보정 대상으로 고른다
       const segA = a, segB = b;
@@ -10042,9 +10066,9 @@ function _renderAisPeriod(key, prefix) {
       });
     }
   });
-  // 색깔별로 딱 한 겹씩만 그린다
+  // 색깔별로 딱 한 겹씩만 그린다 (전체 기간 집계 뷰 — 세계 복제본에 걸쳐 그린다)
   buckets.forEach(b => {
-    L.polyline(b.lines, {
+    _polylineWrap(b.lines, {
       color: b.color, weight: b.wt, opacity: b.op,
       smoothFactor: detailed ? 2 : 4, renderer, interactive: false
     }).addTo(g);
@@ -10726,6 +10750,11 @@ async function onAisVesselChange() {
       const want = (_AIS_VESSELS[key] || {}).openDay;
       if (want && days.includes(want)) pick = want;
       _aisSelYear = pick.slice(0, 4); _aisSelMonth = pick.slice(0, 7); _aisSelDay = pick;
+    }
+    // openAll:true 로 등록된 배는 '전체 기간' 상태로 열리도록 재정의
+    if ((_AIS_VESSELS[key] || {}).openAll) {
+      _aisSelYear = _aisSelMonth = _aisSelDay = null;
+      _aisViewLevel = 'all';
     }
     _aisTbRenderTl(key);
     _aisTlApply();

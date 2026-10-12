@@ -7,5 +7,5 @@
   "jpy_krw_rate": 8.4768,
   "fx_date": "2026-10-09",
   "source_url": "https://www.bunkerindex.com/prices/port.php?p=109&n=busan-republic-of-korea",
-  "fx_source_url": "https://api.frankfurter.app"
+  "fx_source_url": "https://frankfurter.dev/"
 }

@@ -1771,10 +1771,18 @@
                 </td>
               </tr>
               <tr>
-                <td><b>fuel_price.json</b><span class="sub">연료 시세 자동 갱신본</span></td>
-                <td class="lft">"현재값 불러오기"가 읽는 연료 단가 $/MT · 환율</td>
-                <td>JSON · 371 B</td>
-                <td><a class="dl" href="fuel_price.json" download>내려받기 ↓</a></td>
+                <td><b>fuel_price.json</b><span class="sub">연료 시세 + 환율 자동 갱신본</span></td>
+                <td class="lft">"현재값 불러오기"와 손익계산서 연료비 '실제시가' 모드가 읽는 값 — CI 가 매일 갱신.
+                  <b>연료 단가 $/MT</b> 는 <b>Bunker Index (부산항)</b>, <b>환율 원/$</b> 는 <b>Frankfurter API (ECB 유럽중앙은행 공시 환율 기반)</b> 에서 가져온다.
+                  손익계산서 연료비 라벨의 가격 숫자·환율 숫자를 누르면 각 출처로 바로 이동.</td>
+                <td>JSON</td>
+                <td class="two">
+                  <a class="dl" href="fuel_price.json" download>내려받기 ↓</a>
+                  <a class="dl ext" href="https://www.bunkerindex.com/prices/port.php?p=109&amp;n=busan-republic-of-korea" target="_blank" rel="noopener"
+                     title="Bunker Index 부산항 VLSFO·LSMGO 시세">Bunker Index ↗</a>
+                  <a class="dl ext" href="https://frankfurter.dev/" target="_blank" rel="noopener"
+                     title="Frankfurter — ECB(유럽중앙은행) 공시 환율 기반 공개 FX API">Frankfurter ↗</a>
+                </td>
               </tr>
               <tr>
                 <td><b>부산–일본 항로 자료 (index.html)</b><span class="sub">같은 저장소</span></td>
@@ -4078,20 +4086,28 @@ function fuelToggleHTML(){
   const _liveFetchedAt = typeof FUEL_STATE !== 'undefined' ? FUEL_STATE.liveFetchedAt : null;
   const _liveUrl  = (typeof FUEL_STATE !== 'undefined' && FUEL_STATE.liveUrl)
     || 'https://www.bunkerindex.com/prices/port.php?p=109&n=busan-republic-of-korea';
+  const _liveFxUrl = (typeof FUEL_STATE !== 'undefined' && FUEL_STATE.liveFxUrl)
+    || 'https://frankfurter.dev/';
   const _fmtFx = v => v == null ? '—' : Number(v).toLocaleString('ko-KR', {minimumFractionDigits:2, maximumFractionDigits:2});
   const _fetchedShort = _liveFetchedAt ? _liveFetchedAt.replace('T',' ').slice(0, 16) : null;
-  // 라이브 라벨 : $1,330/MT · 1,338.78원/$ (가격은 Bunker Index 로 링크)
+  // 라이브 라벨 : $1,330/MT · 1,338.78원/$
+  //   · 가격 숫자는 Bunker Index (부산항 시세) 로 링크
+  //   · 환율 숫자는 Frankfurter (ECB 공시 환율 기반) 로 링크
   const _liveLabel = _liveUsd
     ? `실제시가 <a href="${_liveUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:inherit;text-decoration:underline">$${_liveUsd.toLocaleString('ko-KR')}/MT</a>`
-      + (_liveFx != null ? ` · ${_fmtFx(_liveFx)}원/$` : '')
+      + (_liveFx != null
+          ? ` · <a href="${_liveFxUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:inherit;text-decoration:underline">${_fmtFx(_liveFx)}원/$</a>`
+          : '')
     : '실제 시가';
   // 라이브 라벨 툴팁 : 가격 기준일 · 환율 기준일 · 취득일시
   const _liveTip = _liveUsd
     ? `취득일시 ${_fetchedShort || '—'}`
       + (_liveDate   ? ` · 가격 기준일 ${_liveDate}`     : '')
       + (_liveFxDate ? ` · 환율 기준일 ${_liveFxDate}`   : '')
-      + ' · fuel_price.json 자동 갱신 · 가격 숫자를 누르면 Bunker Index 로 이동'
-    : 'fuel_price.json 의 실시간 시세 — 체크 시 자동 갱신. 괄호의 수치를 누르면 Bunker Index 로 이동.';
+      + ' · fuel_price.json 자동 갱신\n'
+      + '가격 숫자 → Bunker Index (부산항 시세) · 환율 숫자 → Frankfurter (ECB 공시 환율 기반)'
+    : 'fuel_price.json 의 실시간 시세 — 체크 시 자동 갱신.\n'
+      + '가격 숫자 → Bunker Index · 환율 숫자 → Frankfurter (ECB 공시 환율 기반)';
   // 수동 라벨 : 실제시가 와 같은 포맷 — '수동 $1,285/MT · 1,400원/$'
   const _manualLabel = `수동 $${_manualUsd.toLocaleString('ko-KR')}/MT · ${_fmtFx(_manualFx)}원/$`;
   const _manualTip = `수동 단가 ${_manualUsd.toLocaleString('ko-KR')}$/MT · 환율 ${_fmtFx(_manualFx)}원/$ · 좌측 설정 패널에서 조정 가능 — 체크 시 이 값으로 escalation 반영`;
@@ -6710,6 +6726,7 @@ async function loadFuelPrice(quiet){
       if (d.usd_krw_rate)     FUEL_STATE.liveFx   = d.usd_krw_rate;
       if (d.price_date)       FUEL_STATE.liveDate = d.price_date;
       if (d.source_url)       FUEL_STATE.liveUrl  = d.source_url;
+      if (d.fx_source_url)    FUEL_STATE.liveFxUrl = d.fx_source_url;
       if (d.fetched_at)       FUEL_STATE.liveFetchedAt = d.fetched_at;
       if (d.fx_date)          FUEL_STATE.liveFxDate = d.fx_date;
     }
@@ -6741,7 +6758,8 @@ el('btnFuelLive').addEventListener('click', () => loadFuelPrice(false));
 const FUEL_STATE = {
   manualUsd: 1285, manualFx: 1400,
   liveUsd:   null, liveFx:   null,
-  liveDate:  null, liveUrl:  null,     // fuel_price.json 의 price_date · source_url
+  liveDate:  null, liveUrl:  null,     // fuel_price.json 의 price_date · source_url (가격 출처)
+  liveFxUrl: null,                       // fuel_price.json 의 fx_source_url (환율 출처 — Frankfurter/ECB)
   liveFetchedAt: null, liveFxDate: null,  // fetched_at (갱신 시각) · fx_date (환율 기준일)
 };
 // 2024 기준 · 실제 시가 · 수동을 한 표에 세운다. 원가에 들어가는 것은 원화(단가 × 환율)라
