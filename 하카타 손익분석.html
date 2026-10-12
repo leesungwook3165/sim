@@ -1013,7 +1013,11 @@
             </div>
             <div class="f wide">
               <table class="seat"><thead><tr>
-                <th>구분</th><th>참조 · 엘도라도</th><th>대조 선박</th>
+                <th>구분</th>
+                <th>참조 · <span id="hCmpShipBaseNm">엘도라도</span>
+                  <span class="thsub" id="hCmpShipBaseSub">—</span></th>
+                <th>대조 · <span id="hCmpShipPeerNm">선박</span>
+                  <span class="thsub" id="hCmpShipPeerSub">—</span></th>
               </tr></thead><tbody id="tCmpShip"></tbody></table>
               <div class="fh" id="hCmpShip">—</div>
             </div>
@@ -4417,6 +4421,19 @@ function drawPeer(m){
       <td${bad(a)}>${pct(a)}</td>
       <td${b === null ? ' class="nil"' : bad(b)}>${b === null ? '–' : pct(b)}</td></tr>`;
   };
+  // 각 열이 쓰는 분모(정원 × 항차)를 서브라인으로 명시 — 같은 '필요 승객수'를
+  //   두 다른 공급 좌석 수(정원×항차)로 나눠 승선율로 보여주는 표라, 그 분모가
+  //   눈에 보여야 왜 두 열 숫자가 다른지 바로 이해된다.
+  { const baseNm = m.ship.name.split(' · ')[0];
+    const peerNm = pe.name.split(' · ')[0];
+    _setTxt('hCmpShipBaseNm',  baseNm);
+    _setTxt('hCmpShipBaseSub', `정원 ${won(m.ship.pax)}명 × ${won(m.voy)}항차 기준`);
+    _setTxt('hCmpShipPeerNm',  peerNm);
+    _setTxt('hCmpShipPeerSub', hasCap
+        ? `정원 ${won(pe.pax)}명 × ${won(m.voyPeer)}항차 기준`
+        : '정원 자료 없음 — 승선율 산출 불가');
+  }
+
   el('tCmpShip').innerHTML =
     `<tr><td>여객정원</td><td>${won(m.ship.pax)}명</td>
       <td${hasCap ? '' : ' class="nil"'}>${hasCap ? won(pe.pax) + '명' : '자료 없음'}</td></tr>`
