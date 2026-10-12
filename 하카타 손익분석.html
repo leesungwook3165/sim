@@ -2836,9 +2836,10 @@ const DEFAULTS  = { head:30, sailor:13, crew:7, fare:81000, vc:0, tgt:15, voy:49
                     feeVar:false, ebitda:false, base:'eldorado', peer:'santamonica',
                     mix:[100,0,0], fuel:7950, autoVoy:false,
                     farePeer:90000, fuelPeer:30000,
-                    // 대조 선박(산타모니카) 좌석 비중 — Incat 자료 좌석수 72/98/436 ÷ 606
-                    //   순서는 SEATS[eco, biz, fst] 기준 : 71.95 / 16.17 / 11.88
-                    mixPeer:[71.95, 16.17, 11.88],
+                    // 대조 선박 좌석 비중 — 운영안 구상 단계라 이코노미 100% 로 초기화.
+                    //   참고 : Incat 자료 좌석수 72/98/436 ÷ 606 = 11.88/16.17/71.95% 는
+                    //   좌석표 '좌석수' 열에 함께 노출되어 사용자가 참고 후 수동 조정 가능.
+                    mixPeer:[100, 0, 0],
                     cargoLoad:30, cargoBase:0, cargoPeer:0, cargoCase:4,
                     // 거리 배율 — seaworld 산타모니카 운임표는 진도-제주 ≈ 85km 기준.
                     // 부산-하카타는 213km 라 운항 거리가 2.51배 → 화물 수입에 그만큼 가산.
@@ -4330,27 +4331,31 @@ function drawPeer(m){
   _setTxt('hUnitPeer',     won(m.farePeer) + '원');
 
   // 좌석수 셀 — 대조 선박에 seats 데이터가 있을 때만 채운다 (산타모니카).
-  //   없으면 '—' 로 두어 모양만 유지.
+  //   없으면 '—' 로 두어 모양만 유지. 셀은 2줄 : 좌석수 윗줄, (n.nn%) 작은 아랫줄.
   { const _seats = pe && pe.seats ? pe.seats : null;
+    const _total = _seats ? SEATS.reduce((a,t) => a + (_seats[t.id] || 0), 0) : 0;
     SEATS.forEach(t => {
       const cell = document.getElementById('hSeatCntPeer'+t.id);
       if (!cell) return;
       if (_seats && _seats[t.id] != null) {
-        cell.textContent = won(_seats[t.id]) + '석';
+        const n = _seats[t.id];
+        const pct = _total > 0 ? (n / _total * 100) : 0;
+        cell.innerHTML = `${won(n)}석`
+          + `<div style="font-size:9.5px;color:var(--muted);line-height:1;margin-top:1px">(${pct.toFixed(2)}%)</div>`;
         cell.style.color = '';
       } else {
-        cell.textContent = '—';
+        cell.innerHTML = '—';
         cell.style.color = 'var(--muted)';
       }
     });
     const cellSum = document.getElementById('hSeatCntPeerSum');
     if (cellSum) {
       if (_seats) {
-        const total = SEATS.reduce((a,t) => a + (_seats[t.id] || 0), 0);
-        cellSum.textContent = won(total) + '석';
+        cellSum.innerHTML = `${won(_total)}석`
+          + `<div style="font-size:9.5px;color:var(--muted);line-height:1;margin-top:1px">(100%)</div>`;
         cellSum.style.color = '';
       } else {
-        cellSum.textContent = '—';
+        cellSum.innerHTML = '—';
         cellSum.style.color = 'var(--muted)';
       }
     }
