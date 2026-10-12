@@ -1051,7 +1051,13 @@
                 <th>등급</th><th>배율</th><th>운임</th><th>좌석수</th><th>구성비</th>
               </tr></thead><tbody id="tSeatPeer"></tbody></table>
               <div class="fh" id="hSeatPeer">—</div>
-              <div class="fh" id="hSeatSrcPeer" style="margin-top:4px;font-size:10.5px;color:var(--muted)">—</div>
+              <div class="fh" id="hSeatSrcPeer" style="margin-top:4px;font-size:10.5px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+                <span id="hSeatSrcPeerLink">—</span>
+                <label id="hSeatMixFromCntWrap" style="display:none;align-items:center;gap:4px;cursor:pointer;font-size:10.5px;color:var(--muted)"
+                       title="좌석수 비중(72/98/436 ÷ 606 = 11.88/16.17/71.95%) 를 구성비 입력에 그대로 반영. 해제 시 체크 전 비중으로 되돌림.">
+                  <input type="checkbox" id="iSeatMixFromCnt" style="margin:0;cursor:pointer">좌석수 비중대로 반영
+                </label>
+              </div>
             </div>
 
             <div class="sec" style="display:flex;justify-content:space-between;align-items:center">
@@ -4359,18 +4365,27 @@ function drawPeer(m){
         cellSum.style.color = 'var(--muted)';
       }
     }
-    // 좌석표 하단 출처 라인 — 산타모니카일 때만 Incat 링크 노출
-    const srcEl = document.getElementById('hSeatSrcPeer');
-    if (srcEl) {
+    // 좌석표 하단 출처 라인 + "좌석수 비중대로 반영" 체크박스 — 산타모니카일 때만
+    const srcEl   = document.getElementById('hSeatSrcPeer');
+    const linkEl  = document.getElementById('hSeatSrcPeerLink');
+    const chkWrap = document.getElementById('hSeatMixFromCntWrap');
+    if (srcEl && linkEl && chkWrap) {
       if (_seats && _seats.src) {
-        srcEl.innerHTML =
+        linkEl.innerHTML =
           `<span class="tagv">좌석 배치 출처</span> `
           + `<a href="${_seats.src}" target="_blank" rel="noopener" style="color:var(--sky)" `
           + `title="Incat Tasmania 공식 소개 자료 — 산타모니카호 좌석 배치 (72 Executive · 98 Reclining · 232 중앙 · 204 선미)">`
           + `${_seats.srcName || 'Incat 공식 자료'} ↗</a>`;
-        srcEl.style.display = '';
+        srcEl.style.display = 'flex';
+        chkWrap.style.display = 'inline-flex';
       } else {
         srcEl.style.display = 'none';
+        chkWrap.style.display = 'none';
+        // 좌석 데이터 없는 선박으로 전환됐는데 체크·disabled 가 남아있으면 사용자 혼란 →
+        //   체크박스를 click() 으로 해제시켜 핸들러가 memo 복원 + 입력 활성화를 수행하도록 함.
+        //   두 번째 render 에선 _seats null + _chk unchecked 상태라 재귀 발생 안 함.
+        const _chk = document.getElementById('iSeatMixFromCnt');
+        if (_chk && _chk.checked) _chk.click();
       }
     }
   }
@@ -5868,6 +5883,37 @@ function buildInputs(){
     + `<tr class="lead"><td>= 실현 단가</td><td id="hUnitMultPeer">—</td>
         <td id="hUnitPeer">—</td><td></td><td></td></tr>`;
   SEATS.forEach(t => el('iMix'+t.id+'Peer').addEventListener('input', makeMixRebalance('Peer')));
+
+  // "좌석수 비중대로 반영" 체크박스 — 체크 시 현재 입력값을 memo 로 저장하고
+  //   선박 seats 비중(좌석수 ÷ 총좌석)으로 교체·입력 비활성화. 해제 시 memo 복원.
+  //   선박이 바뀌어도 체크 상태는 유지되지만, seats 데이터가 없는 선박이면 체크박스 자체가 숨겨진다.
+  let _seatMixMemo = null;
+  const _chk = el('iSeatMixFromCnt');
+  if (_chk) {
+    _chk.addEventListener('change', e => {
+      e.stopPropagation();
+      const peerShip = SHIPS.find(x => x.id === el('iPeer').value);
+      const seats = peerShip && peerShip.seats;
+      if (!seats) return;
+      const total = SEATS.reduce((a,t) => a + (seats[t.id] || 0), 0);
+      if (_chk.checked) {
+        _seatMixMemo = SEATS.map(t => parseFloat(el('iMix'+t.id+'Peer').value) || 0);
+        SEATS.forEach(t => {
+          const pct = total > 0 ? (seats[t.id] || 0) / total * 100 : 0;
+          const inp = el('iMix'+t.id+'Peer');
+          inp.value = +pct.toFixed(2);
+          inp.disabled = true;
+        });
+      } else {
+        if (_seatMixMemo) {
+          SEATS.forEach((t,i) => { el('iMix'+t.id+'Peer').value = _seatMixMemo[i]; });
+          _seatMixMemo = null;
+        }
+        SEATS.forEach(t => { el('iMix'+t.id+'Peer').disabled = false; });
+      }
+      render();
+    });
+  }
 
   // 산타모니카 적재 케이스 드롭다운
   el('iCargoCase').innerHTML = CARGO_CASES.map(c =>
