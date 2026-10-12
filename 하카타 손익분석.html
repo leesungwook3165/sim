@@ -3824,7 +3824,10 @@ function view(m){
   const _peerNm = m.peer ? m.peer.name.split(' · ')[0] : '대조';
   const _baseNm = m.ship ? m.ship.name.split(' · ')[0] : '엘도라도호';
   return onPeer ? {
-    onPeer:true, tag:_peerNm, label:'현재 설정', ship:m.peer,
+    // 대조 탭엔 실적 숫자가 없다 — paxAct 자리에 iLoadPeer(승선율)·iPaxPeer 로 만든 가정값이 들어간다.
+    //   라벨만 '산타모니카호 대비' 로 두면 마치 실적 대비처럼 읽혀 혼동을 유발하므로 '가정' 수식어로 못박는다.
+    //   (참조 탭은 '엘도라도호 실적' 로 이미 못박혀 있어 비대칭이었다.)
+    onPeer:true, tag:_peerNm + ' 가정', label:'현재 설정', ship:m.peer,
     qFor:m.qForPeer, pFor:m.pForPeer, sim:m.simPeer, cur:m.simPeer(m.paxPeer),
     fare:m.farePeer, pax:m.paxPeer, paxAct:m.paxPeer, voy:m.voyPeer, head:m.headPeer,
     items:m.itemsPeer, svPerVoy_of:m.svPerVoy_ofPeer, voyFor:m.voyForPeer,
