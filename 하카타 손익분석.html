@@ -1621,13 +1621,20 @@
                   2026년 이후 실적이 쌓이면 그것을 기준선으로 바꾼다.</td>
                 <td><a class="dl ext" href="https://www.kyongbuk.co.kr/news/articleView.html?idxno=4082968" target="_blank" rel="noopener">경북일보 ↗</a></td>
               </tr>
-              <tr>
-                <td><b>산타모니카호 — 현 항로 적자</b><span class="sub">제주–추자–진도</span></td>
-                <td class="lft">현재 항로에서 연 <b class="neg">약 15억원</b>의 적자를 내고 있고,
-                  엔젤호로 대체하려는 움직임이 있는 것으로 보인다.
-                  이 페이지의 대조 선박은 <b>이 배를 하카타 항로에 투입한다는 가정</b>이지
-                  지금의 운항 실적이 아니다 — 현 항로의 적자는 반영돼 있지 않다.</td>
-                <td><a class="dl ext" href="https://v.daum.net/v/qptPsmUZCY" target="_blank" rel="noopener">뉴시스 ↗</a></td>
+              <tr class="star">
+                <td><b>산타모니카호 — <span class="neg">2026.12.31 운항 종료 통보</span></b><span class="sub">제주–추자–진도 · 선사 씨월드고속훼리</span></td>
+                <td class="lft"><b class="neg">씨월드고속훼리가 2026.10.01 제주도에 운항 종료 통보</b> —
+                  영업적자 부담을 이유로 산타모니카호를 <b>2026.12.31부로 운항 종료</b>하겠다고 통보.
+                  현 항로에서 연 <b class="neg">약 15억원</b>의 적자를 내고 있고 엔젤호로 대체하려는 움직임이 있는 것으로 보였으나,
+                  이제 선사가 공식적으로 철수 수순에 들어감.
+                  <br>→ 이 페이지의 대조 선박은 <b>이 배를 하카타 항로에 투입한다는 가정</b>이지
+                  지금의 운항 실적이 아니다 — 현 항로의 적자는 반영돼 있지 않다.
+                  현 상황에서 산타모니카호는 <b>중고선 매입 후보</b>로서의 분석 의의가 더 커졌다.</td>
+                <td class="two">
+                  <a class="dl ext" href="http://www.ilganjeju.com/news/articleView.html?idxno=150634" target="_blank" rel="noopener"
+                     title="일간제주 2026.10.12 — 추자 일일 생활권 또 중단 위기 .. 씨월드, 산타모니카 운항중단 통보">일간제주 ↗<br><small style="color:var(--muted);font-size:10px">2026.10.12</small></a>
+                  <a class="dl ext" href="https://v.daum.net/v/qptPsmUZCY" target="_blank" rel="noopener">뉴시스 ↗</a>
+                </td>
               </tr>
               <tr>
                 <td><b>퀸비틀 — 분석 불가</b><span class="sub">JR큐슈고속선</span></td>
@@ -5901,30 +5908,17 @@ function buildInputs(){
     + `<tr class="lead"><td>= 실현 단가</td><td id="hUnitMult">—</td>
         <td id="hUnit">—</td><td></td></tr>`;
 
-  // 좌석 구성비 자동 상계 — 한 등급을 바꾸면 나머지 둘이 남은 몫을 비례 배분해 합이 100%
-  //   · 변경 등급을 [0,100]으로 클램프
-  //   · 나머지 둘의 현재 비율을 유지한 채 (100 − v) 를 비례로 나눈다
-  //   · 둘 다 0이면 반반으로 가른다
-  // input 이벤트는 사용자 입력에서만 발생하므로, 코드에서 value 를 설정해도 재진입 없다.
+  // 좌석 구성비 — 세 등급을 각각 자유롭게 입력 가능. 합이 100% 가 아니어도 모델이
+  // 내부에서 비율로 정규화해 쓴다 (fareSeat = fareEco × Σ(배율·비중) / Σ(비중)).
+  // 즉, 10/20/30 과 20/40/60 은 운임 계산에선 같은 결과를 낸다.
+  // 과거엔 한 칸을 만지면 나머지 둘을 자동 상계했지만, 사용자가 세 값을 모두 임의로
+  // 조정하지 못하는 불편이 있어 현재는 "입력값 클램프 + render" 만 수행한다.
   function makeMixRebalance(suffix){
     return function(){
-      const ids  = SEATS.map(t => 'iMix' + t.id + suffix);
-      const vals = ids.map(id => parseFloat(el(id).value) || 0);
-      const idx  = ids.indexOf(this.id);
-      if (idx < 0) return render();
-      const v = Math.max(0, Math.min(100, vals[idx]));
-      if (v !== vals[idx]) { el(ids[idx]).value = v; vals[idx] = v; }
-      const remain   = 100 - v;
-      const others   = [0,1,2].filter(i => i !== idx);
-      const otherSum = vals[others[0]] + vals[others[1]];
-      if (otherSum > 0) {
-        others.forEach(i => {
-          el(ids[i]).value = +((remain * vals[i] / otherSum).toFixed(2));
-        });
-      } else {
-        const half = +(remain / 2).toFixed(2);
-        others.forEach(i => { el(ids[i]).value = half; });
-      }
+      const v = parseFloat(this.value);
+      if (isNaN(v)) { render(); return; }
+      const clamped = Math.max(0, Math.min(100, v));
+      if (clamped !== v) this.value = clamped;
       render();
     };
   }
