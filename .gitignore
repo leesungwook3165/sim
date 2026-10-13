@@ -13,3 +13,6 @@ desktop.ini
 # 아이콘 생성(build_icons.js)에만 쓰는 개발 의존성 — 배포에는 필요 없다
 node_modules/
 package-lock.json
+
+# Word 임시 잠금 파일
+~$*

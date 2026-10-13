@@ -940,9 +940,16 @@
             </div>
             <div class="f wide">
               <table class="seat"><thead><tr>
-                <th>등급</th><th>배율</th><th>운임</th><th>구성비</th>
+                <th>등급</th><th>배율</th><th>운임</th><th>좌석수</th><th>구성비</th>
               </tr></thead><tbody id="tSeat"></tbody></table>
               <div class="fh" id="hSeat">—</div>
+              <div class="fh" id="hSeatSrc" style="margin-top:4px;font-size:10.5px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+                <span id="hSeatSrcLink">—</span>
+                <label id="hSeatMixFromCntWrap" style="display:none;align-items:center;gap:4px;cursor:pointer;font-size:10.5px;color:var(--muted)"
+                       title="좌석수 비중을 구성비 입력에 그대로 반영. 해제 시 체크 전 비중으로 되돌림.">
+                  <input type="checkbox" id="iSeatMixFromCntBase" style="margin:0;cursor:pointer">좌석수 비중대로 반영
+                </label>
+              </div>
             </div>
 
             <div class="sec clksec" data-modal="ovCost" role="button" tabindex="0" aria-haspopup="dialog">
@@ -1085,6 +1092,12 @@
             <div class="f wide">
               <table hidden><tbody id="tCargoCmp"></tbody></table>
               <div class="fh" id="hCargoCmp">—</div>
+            </div>
+            <div class="f wide">
+              <div class="fh" style="padding-top:2px">
+                <a class="dl ext" href="https://www.xn--i49am21bhpd.com/bbs/?so_table=carcharge&amp;mode=VIEW&amp;num=86&amp;category=&amp;findType=&amp;findWord=&amp;sort1=&amp;sort2=&amp;page=5" target="_blank" rel="noopener"
+                   title="시월드고속훼리 차량운임 공시 원문 (여객선.com)">차량 운임표 공시 원문 ↗</a>
+              </div>
             </div>
 
             <div class="sec">인력</div>
@@ -1725,8 +1738,10 @@
               <tr>
                 <td><b>시월드고속훼리 차량 운임표 (2024)</b><span class="sub">진도↔제주 · 편도</span></td>
                 <td class="lft">산타모니카 적재 케이스의 화물 수입 산정</td>
-                <td>이 페이지에 수록</td>
-                <td><button type="button" class="dl" data-modal="ovFares">표 열기</button></td>
+                <td>이 페이지에 수록 · 웹페이지</td>
+                <td class="two"><button type="button" class="dl" data-modal="ovFares">표 열기</button>
+                    <a class="dl ext" href="https://www.xn--i49am21bhpd.com/bbs/?so_table=carcharge&amp;mode=VIEW&amp;num=86&amp;category=&amp;findType=&amp;findWord=&amp;sort1=&amp;sort2=&amp;page=5" target="_blank" rel="noopener"
+                       title="시월드고속훼리 차량운임 공시 원문">여객선.com ↗</a></td>
               </tr>
               <tr>
                 <td><b>엘도라도호 운항관리규정</b><span class="sub">참조 선박</span></td>
@@ -1877,7 +1892,8 @@
   <div class="modal" style="width:min(780px,96vw)">
     <header>
       <div><h3>시월드고속훼리 차량 운임표</h3>
-        <p>진도↔제주 노선 · 편도 기준 (원) · 출처: seaworld 운임표 2024 — 산타모니카 케이스 수입 산정에 적용</p></div>
+        <p>진도↔제주 노선 · 편도 기준 (원) · 출처: seaworld 운임표 2024 — 산타모니카 케이스 수입 산정에 적용
+          · <a href="https://www.xn--i49am21bhpd.com/bbs/?so_table=carcharge&amp;mode=VIEW&amp;num=86&amp;category=&amp;findType=&amp;findWord=&amp;sort1=&amp;sort2=&amp;page=5" target="_blank" rel="noopener" style="color:var(--navy)">공시 원문 ↗</a></p></div>
       <button class="x" data-close aria-label="닫기">✕</button>
     </header>
     <div class="mbody">
@@ -2542,7 +2558,12 @@ A.opEtc    = A.opCost - A.opNoted;                        // 7,148,774,749
 const SHIPS_BUILTIN = [
   { id:'eldorado', name:'엘도라도호 · 대저페리', gt:3158, loa:76.70, beam:20.60,
     pax:970, kts:50.2, route:'포항↔울릉 217km', src:'대저페리 공식 선박정보',
-    note:'감사보고서가 이 배의 실적이다' },
+    note:'감사보고서가 이 배의 실적이다',
+    // 좌석 배치 — 이코노미 526(1층) · 비즈니스 352(2층) · 퍼스트 92(2층 선미).
+    //   합 970석으로 선박 정원과 일치. 비중 54.23 / 36.29 / 9.48%.
+    seats:{ eco:526, biz:352, fst:92,
+            srcName:'엘도라도호 좌석 배치',
+            note:'이코노미 526 (1층) · 비즈니스 352 (2층) · 퍼스트 92 (2층 선미) = 970석' } },
   { id:'santamonica', name:'산타모니카호 · 시월드고속훼리', gt:3300, loa:72.67, beam:21.0,
     pax:606, kts:45, route:'부산↔하카타 213km (구상)', src:'index.html',
     note:'하카타 항로 투입 구상 선박', paxPeer:212812,
@@ -5900,13 +5921,14 @@ function buildInputs(){
   el('tSeat').innerHTML = SEATS.map((t,i) =>
     `<tr><td>${t.name}</td><td>${(+t.mult.toFixed(4))}배</td>
       <td id="hSeat${t.id}">—</td>
+      <td id="hSeatCnt${t.id}" class="num" style="color:var(--muted);font-size:11px">—</td>
       <td><input type="number" step="5" min="0" max="100" id="iMix${t.id}" value="${DEFAULTS.mix[i]}"></td></tr>`).join('')
     + `<tr class="sum"><td>가중평균 운임</td><td id="hSeatMult">—</td>
-        <td id="hSeatFare">—</td><td id="hSeatMix">—</td></tr>`
+        <td id="hSeatFare">—</td><td id="hSeatCntSum" class="num" style="color:var(--muted);font-size:11px">—</td><td id="hSeatMix">—</td></tr>`
     + `<tr><td>(+) 유류할증료</td><td id="hFuelMult">—</td>
-        <td id="hFuelAmt">—</td><td style="color:var(--muted);font-size:10px">원/인</td></tr>`
+        <td id="hFuelAmt">—</td><td></td><td style="color:var(--muted);font-size:10px">원/인</td></tr>`
     + `<tr class="lead"><td>= 실현 단가</td><td id="hUnitMult">—</td>
-        <td id="hUnit">—</td><td></td></tr>`;
+        <td id="hUnit">—</td><td></td><td></td></tr>`;
 
   // 좌석 구성비 — 세 등급을 각각 자유롭게 입력 가능. 합이 100% 가 아니어도 모델이
   // 내부에서 비율로 정규화해 쓴다 (fareSeat = fareEco × Σ(배율·비중) / Σ(비중)).
@@ -5941,33 +5963,37 @@ function buildInputs(){
   // "좌석수 비중대로 반영" 체크박스 — 체크 시 현재 입력값을 memo 로 저장하고
   //   선박 seats 비중(좌석수 ÷ 총좌석)으로 교체·입력 비활성화. 해제 시 memo 복원.
   //   선박이 바뀌어도 체크 상태는 유지되지만, seats 데이터가 없는 선박이면 체크박스 자체가 숨겨진다.
-  let _seatMixMemo = null;
-  const _chk = el('iSeatMixFromCnt');
-  if (_chk) {
-    _chk.addEventListener('change', e => {
+  //   기준(엘도라도)·대조(산타모니카) 두 표가 같은 동작이라 한 틀로 묶었다.
+  function bindSeatMixFromCnt(chkId, selId, suffix){
+    let memo = null;
+    const chk = el(chkId);
+    if (!chk) return;
+    chk.addEventListener('change', e => {
       e.stopPropagation();
-      const peerShip = SHIPS.find(x => x.id === el('iPeer').value);
-      const seats = peerShip && peerShip.seats;
+      const ship  = SHIPS.find(x => x.id === el(selId).value);
+      const seats = ship && ship.seats;
       if (!seats) return;
       const total = SEATS.reduce((a,t) => a + (seats[t.id] || 0), 0);
-      if (_chk.checked) {
-        _seatMixMemo = SEATS.map(t => parseFloat(el('iMix'+t.id+'Peer').value) || 0);
+      if (chk.checked) {
+        memo = SEATS.map(t => parseFloat(el('iMix'+t.id+suffix).value) || 0);
         SEATS.forEach(t => {
           const pct = total > 0 ? (seats[t.id] || 0) / total * 100 : 0;
-          const inp = el('iMix'+t.id+'Peer');
+          const inp = el('iMix'+t.id+suffix);
           inp.value = +pct.toFixed(2);
           inp.disabled = true;
         });
       } else {
-        if (_seatMixMemo) {
-          SEATS.forEach((t,i) => { el('iMix'+t.id+'Peer').value = _seatMixMemo[i]; });
-          _seatMixMemo = null;
+        if (memo) {
+          SEATS.forEach((t,i) => { el('iMix'+t.id+suffix).value = memo[i]; });
+          memo = null;
         }
-        SEATS.forEach(t => { el('iMix'+t.id+'Peer').disabled = false; });
+        SEATS.forEach(t => { el('iMix'+t.id+suffix).disabled = false; });
       }
       render();
     });
   }
+  bindSeatMixFromCnt('iSeatMixFromCnt',     'iPeer', 'Peer');
+  bindSeatMixFromCnt('iSeatMixFromCntBase', 'iBase', '');
 
   // 산타모니카 적재 케이스 드롭다운
   el('iCargoCase').innerHTML = CARGO_CASES.map(c =>
@@ -6157,6 +6183,53 @@ function render(){
   _setTxt('hFuelAmt',  won(m.fuel) + '원');
   _setTxt('hUnitMult', (m.fare/m.fareEco).toFixed(3) + '배');
   _setTxt('hUnit',     won(m.fare) + '원');
+
+  // 좌석수 칸 — 참조 선박에 seats 데이터가 있을 때만 채운다 (엘도라도).
+  //   없으면 '—' 로 두어 모양만 유지. 셀은 2줄 : 좌석수 윗줄, (n.nn%) 작은 아랫줄.
+  { const _seats = v && v.seats ? v.seats : null;
+    const _total = _seats ? SEATS.reduce((a,t) => a + (_seats[t.id] || 0), 0) : 0;
+    SEATS.forEach(t => {
+      const cell = document.getElementById('hSeatCnt'+t.id);
+      if (!cell) return;
+      if (_seats && _seats[t.id] != null) {
+        const n = _seats[t.id];
+        cell.innerHTML = `${won(n)}석`
+          + `<div style="font-size:9.5px;color:var(--muted);line-height:1;margin-top:1px">`
+          + `(${(_total > 0 ? n/_total*100 : 0).toFixed(2)}%)</div>`;
+        cell.style.color = '';
+      } else {
+        cell.innerHTML = '—';
+        cell.style.color = 'var(--muted)';
+      }
+    });
+    { const cellSum = document.getElementById('hSeatCntSum');
+      if (cellSum) {
+        cellSum.innerHTML = _seats
+          ? `${won(_total)}석<div style="font-size:9.5px;color:var(--muted);line-height:1;margin-top:1px">(100%)</div>`
+          : '—';
+        cellSum.style.color = _seats ? '' : 'var(--muted)';
+      } }
+    const srcEl   = document.getElementById('hSeatSrc');
+    const linkEl  = document.getElementById('hSeatSrcLink');
+    const chkWrap = document.getElementById('hSeatMixFromCntWrap');
+    if (srcEl && linkEl && chkWrap) {
+      if (_seats) {
+        const _t = _seats.note || '';
+        linkEl.innerHTML = `<span class="tagv">좌석 배치</span> `
+          + (_seats.src
+              ? `<a href="${_seats.src}" target="_blank" rel="noopener" style="color:var(--sky)"`
+                + (_t ? ` title="${_t}"` : '') + `>${_seats.srcName || '출처'} ↗</a>`
+              : `<span${_t ? ` class="tip-on" title="${_t}"` : ''}>${won(_total)}석</span>`);
+        srcEl.style.display = 'flex';
+        chkWrap.style.display = 'inline-flex';
+      } else {
+        srcEl.style.display = 'none';
+        chkWrap.style.display = 'none';
+        const _c = document.getElementById('iSeatMixFromCntBase');
+        if (_c && _c.checked) _c.click();
+      }
+    }
+  }
 
   // 가중평균·유류할증·실현 단가는 바로 위 표에 이미 서 있다. 여기서는 출처와 경고만.
   el('hSeat').innerHTML =
