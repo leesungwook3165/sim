@@ -935,8 +935,16 @@
               <div class="ib"><input type="number" step="1000" min="0" id="iFare" value="81000"><span class="u">원</span></div>
             </div>
             <div class="f">
-              <label>유류할증료 <span class="ast">미공시</span></label>
-              <div class="ib"><input type="number" step="500" min="0" id="iFuel" value="7950"><span class="u">원</span></div>
+              <label class="tip-on" title="대저페리 공시 운임표는 유류할증료 금액을 적지 않고 '별도' 라고만 쓴다. 여기 값은 할증운임 − 정상운임 차액(각 등급의 약 9.8%)을 그대로 쓴 것이다.">유류할증료 · 이코노미 <span class="ast">미공시</span></label>
+              <div class="ib"><input type="number" step="500" min="0" id="iFueleco" value="7950"><span class="u">원</span></div>
+            </div>
+            <div class="f">
+              <label>· 비즈니스</label>
+              <div class="ib"><input type="number" step="500" min="0" id="iFuelbiz" value="12000"><span class="u">원</span></div>
+            </div>
+            <div class="f">
+              <label>· 퍼스트</label>
+              <div class="ib"><input type="number" step="500" min="0" id="iFuelfst" value="17000"><span class="u">원</span></div>
             </div>
             <div class="f wide">
               <table class="seat"><thead><tr>
@@ -945,7 +953,7 @@
               <div class="fh" id="hSeat">—</div>
               <div class="fh" id="hSeatSrc" style="margin-top:4px;font-size:10.5px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
                 <span id="hSeatSrcLink">—</span>
-                <label id="hSeatMixFromCntWrap" style="display:none;align-items:center;gap:4px;cursor:pointer;font-size:10.5px;color:var(--muted)"
+                <label id="hSeatMixFromCntWrapBase" style="display:none;align-items:center;gap:4px;cursor:pointer;font-size:10.5px;color:var(--muted)"
                        title="좌석수 비중을 구성비 입력에 그대로 반영. 해제 시 체크 전 비중으로 되돌림.">
                   <input type="checkbox" id="iSeatMixFromCntBase" style="margin:0;cursor:pointer">좌석수 비중대로 반영
                 </label>
@@ -2914,7 +2922,7 @@ const DEFAULTS  = { head:30, sailor:13, crew:7, fare:81000, vc:0, tgt:15, voy:49
                     // 여객선 통상 범위(0.3~0.5)에 든다 — 확정값은 국제톤수증서로 바꿔야 한다.
                     tonnageTax:true, netTon:1200, opDays:300,
                     feeVar:false, ebitda:false, base:'eldorado', peer:'santamonica',
-                    mix:[100,0,0], fuel:7950, autoVoy:false,
+                    mix:[100,0,0], fuel:7950, fuelMix:[7950,12000,17000], autoVoy:false,
                     farePeer:90000, fuelPeer:30000,
                     // 대조 선박 좌석 비중 — 운영안 구상 단계라 이코노미 100% 로 초기화.
                     //   참고 : Incat 자료 좌석수 72/98/436 ÷ 606 = 11.88/16.17/71.95% 는
@@ -3005,7 +3013,11 @@ function model(){
   const fareSeat = wsum > 0 ? fareEco * wsum / mixSum : fareEco;
   // 유류할증료는 운임과 별도로 붙지만 회계상 여객수입에 함께 들어간다. 그래서 모델이
   // 쓰는 단가는 둘을 더한 값이어야 하고, 승객수 역산도 이 단가로 나눠야 앞뒤가 맞는다.
-  const fuel   = num('iFuel', DEFAULTS.fuel);
+  // 등급마다 금액이 달라 구성비로 가중평균한다 — 구성비가 전부 비면 이코노미 값으로 둔다.
+  const fuelMix = SEATS.map((t,i) => Math.max(0, num('iFuel'+t.id, DEFAULTS.fuelMix[i])));
+  const fuel    = mixSum > 0
+    ? SEATS.reduce((a,t,i) => a + fuelMix[i]*mix[i], 0) / mixSum
+    : fuelMix[0];
   const fare   = fareSeat + fuel;
   const ship   = SHIPS.find(x => x.id === el('iBase').value) || SHIPS[0];
   const peer   = SHIPS.find(x => x.id === el('iPeer').value) || peerList()[0] || SHIPS[0];
@@ -3292,7 +3304,7 @@ function model(){
     ? Math.round(paxPeerTarget) : null;
   const paxPeer = paxPeerManualInput;
 
-  return { head, sailor, crew, opHead, fareEco, mix, mixSum, fareSeat, fuel, fare, ship, peer,
+  return { head, sailor, crew, opHead, fareEco, mix, mixSum, fareSeat, fuel, fuelMix, fare, ship, peer,
            vc, vcMan, vPerPax, svPerVoy, svPerVoy_of, costF, costSV, costV, items, autoVoy, voyFor, fixedAt,
            r, voy, voyPeer, feeVar, ebitda, DEP, sgaWageT, sgaFixed, fixed, O,
            etcBase, etcSum, fuelBase, fuelNow, fxBase, fxNow, krwBase, krwNow,
@@ -5935,7 +5947,7 @@ function buildInputs(){
       <td><input type="number" step="5" min="0" max="100" id="iMix${t.id}" value="${DEFAULTS.mix[i]}"></td></tr>`).join('')
     + `<tr class="sum"><td>가중평균 운임</td><td id="hSeatMult">—</td>
         <td id="hSeatFare">—</td><td id="hSeatCntSum" class="num" style="color:var(--muted);font-size:11px">—</td><td id="hSeatMix">—</td></tr>`
-    + `<tr><td>(+) 유류할증료</td><td id="hFuelMult">—</td>
+    + `<tr><td class="tip-on" title="등급별 유류할증료를 좌석 구성비로 가중평균한 값">(+) 유류할증료 <span style="color:var(--muted);font-weight:400">(가중)</span></td><td id="hFuelMult">—</td>
         <td id="hFuelAmt">—</td><td></td><td style="color:var(--muted);font-size:10px">원/인</td></tr>`
     + `<tr class="lead"><td>= 실현 단가</td><td id="hUnitMult">—</td>
         <td id="hUnit">—</td><td></td><td></td></tr>`;
@@ -6181,9 +6193,13 @@ function render(){
   const v = m.ship;
   el('hShip').innerHTML = shipRows(v);
 
-  // 좌석 등급 — 배율로 편 운임과 가중평균
+  // 좌석 등급 — 배율로 편 운임과 가중평균. 유류할증료가 등급마다 달라 같은 칸에 붙인다.
   SEATS.forEach((t,i) => {
-    _setTxt('hSeat'+t.id, won(m.fareEco * t.mult) + '원');
+    const cell = document.getElementById('hSeat'+t.id);
+    if (!cell) return;
+    cell.innerHTML = won(m.fareEco * t.mult) + '원'
+      + `<div style="font-size:9.5px;color:var(--muted);line-height:1;margin-top:1px">`
+      + `+${won(m.fuelMix[i])}</div>`;
   });
   const wMult = m.mixSum > 0 ? SEATS.reduce((a,t,i) => a + t.mult*m.mix[i], 0) / m.mixSum : 1;
   _setTxt('hSeatMult', wMult.toFixed(3) + '배');
@@ -6221,7 +6237,7 @@ function render(){
       } }
     const srcEl   = document.getElementById('hSeatSrc');
     const linkEl  = document.getElementById('hSeatSrcLink');
-    const chkWrap = document.getElementById('hSeatMixFromCntWrap');
+    const chkWrap = document.getElementById('hSeatMixFromCntWrapBase');
     if (srcEl && linkEl && chkWrap) {
       if (_seats) {
         const _t = _seats.note || '';
@@ -6630,7 +6646,7 @@ function render(){
   // 좌석등급 섹션 미러 입력 시각화 동기화 (정상 흐림 · 최악 강조)
 }
 
-['iHead','iSailor','iCrew','iFare','iFuel','iVc','iTgt','iVoy','iPax',
+['iHead','iSailor','iCrew','iFare','iFueleco','iFuelbiz','iFuelfst','iVc','iTgt','iVoy','iPax',
  'iHeadPeer','iSailorPeer','iCrewPeer','iVoyPeer','iPaxPeer','iPerVoyPeer',
  'iFarePeer','iFuelPeer',
  'iCargoLoad','iCargoDist',
@@ -7449,7 +7465,7 @@ el('btnReset').addEventListener('click', () => {
   el('iAutoVoy').checked = DEFAULTS.autoVoy;
   COSTS.forEach(c => { el('use_'+c.id).checked = true;
                        el('kind_'+c.id).value = DEFAULTS.kinds[c.id]; });
-  el('iFuel').value = DEFAULTS.fuel;
+  SEATS.forEach((t,i) => { el('iFuel'+t.id).value = DEFAULTS.fuelMix[i]; });
   if (SHIPS.some(v => v.id === DEFAULTS.base)) el('iBase').value = DEFAULTS.base;
   if (SHIPS.some(v => v.id === DEFAULTS.peer)) el('iPeer').value = DEFAULTS.peer;
   el('iBase').dataset.last = el('iBase').value;
