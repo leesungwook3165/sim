@@ -9658,17 +9658,38 @@ function _aisDrawSpeedChart(pts, cursor) {
 // 다중 선(multi-polyline: [[[lat,lng],...], [[lat,lng],...]]) 도 지원한다.
 // L.featureGroup 을 돌려주므로 bindPopup / on('click') 등 상위 API 그대로 쓸 수 있다.
 const _WORLD_COPIES = 2;    // ±2 copy = 5벌. 지도 축소 한계에서도 커버.
+const _llLat = p => Array.isArray(p) ? p[0] : p.lat;
+const _llLng = p => Array.isArray(p) ? p[1] : p.lng;
+const _llMake = (ref, lat, lng) => Array.isArray(ref) ? [lat, lng] : L.latLng(lat, lng);
 function _shiftLatLngs(lls, dx) {
   return lls.map(p => {
     if (Array.isArray(p) && Array.isArray(p[0])) return _shiftLatLngs(p, dx);     // 다중 선
-    if (Array.isArray(p)) return [p[0], p[1] + dx];                               // [lat, lng]
-    return L.latLng(p.lat, p.lng + dx);                                           // L.LatLng
+    return _llMake(p, _llLat(p), _llLng(p) + dx);
   });
+}
+// 반자오선(180°) 을 건너뛰는 구간을 연속으로 펴 준다 — 179°→-179° 처럼 lng 가 급변하면
+// 뒤 점에 ±360 을 더해 "짧은 쪽" 으로 이어지게 한다. Leaflet 기본 폴리라인은 좌표를 그대로
+// 선형 연결해서 반대쪽 경로(세계 반대편) 를 가로지르는 긴 가로선을 그리는데, 이 전처리로 그걸 없앤다.
+function _unwrapLngs(lls) {
+  if (!lls || !lls.length) return lls;
+  if (Array.isArray(lls[0]) && Array.isArray(lls[0][0])) return lls.map(_unwrapLngs);
+  const out = [lls[0]];
+  for (let i = 1; i < lls.length; i++) {
+    const prev = out[out.length - 1];
+    const cur  = lls[i];
+    let ln = _llLng(cur);
+    const diff = ln - _llLng(prev);
+    if (diff > 180) ln -= 360;
+    else if (diff < -180) ln += 360;
+    out.push(_llMake(cur, _llLat(cur), ln));
+  }
+  return out;
 }
 function _polylineWrap(latlngs, opts) {
   const fg = L.featureGroup();
+  const unwrapped = _unwrapLngs(latlngs);
   for (let n = -_WORLD_COPIES; n <= _WORLD_COPIES; n++) {
-    L.polyline(n === 0 ? latlngs : _shiftLatLngs(latlngs, n * 360), opts).addTo(fg);
+    L.polyline(n === 0 ? unwrapped : _shiftLatLngs(unwrapped, n * 360), opts).addTo(fg);
   }
   return fg;
 }
@@ -9962,7 +9983,7 @@ function _aisAggOnMove(e) {
     if (_aisAgg.tip) map.closeTooltip(_aisAgg.tip);
     return;
   }
-  _aisAgg.hi.setLatLngs(hit.pts.map(p => [p[0], p[1]]));
+  _aisAgg.hi.setLatLngs(_unwrapLngs(hit.pts.map(p => [p[0], p[1]])));
   _aisAgg.tip.setLatLng(e.latlng).setContent(hit.day + (hit.q.isRef ? ' ★' : ''));
   map.openTooltip(_aisAgg.tip);
 }
