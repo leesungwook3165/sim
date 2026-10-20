@@ -1,11 +1,11 @@
 {
-  "fetched_at": "2026-10-19T10:55:16+09:00",
-  "price_date": "2026-10-16",
-  "vlsfo_usd_per_mt": 1040.0,
-  "lsmgo_usd_per_mt": 1350.0,
-  "usd_krw_rate": 1332.1,
-  "jpy_krw_rate": 8.4299,
-  "fx_date": "2026-10-16",
+  "fetched_at": "2026-10-20T11:13:22+09:00",
+  "price_date": "2026-10-19",
+  "vlsfo_usd_per_mt": 1050.0,
+  "lsmgo_usd_per_mt": 1340.0,
+  "usd_krw_rate": 1329.49,
+  "jpy_krw_rate": 8.4015,
+  "fx_date": "2026-10-19",
   "source_url": "https://www.bunkerindex.com/prices/port.php?p=109&n=busan-republic-of-korea",
   "fx_source_url": "https://frankfurter.dev/"
 }
