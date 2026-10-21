@@ -1115,7 +1115,7 @@
             </div>
             <div class="f">
               <label>선원 <span class="ast">가정</span></label>
-              <div class="ib"><input type="number" step="1" min="0" max="999" id="iSailorPeer" value="8"><span class="u">명</span></div>
+              <div class="ib"><input type="number" step="1" min="0" max="999" id="iSailorPeer" value="15"><span class="u">명</span></div>
             </div>
             <div class="f">
               <label>승무원 <span class="ast">가정</span></label>
@@ -2916,7 +2916,7 @@ function _applyWageMode(){
 }
 const FEE_RATE  = A.fee / (A.paxRev / 81000);             // 승객 1인당 환산 (정상운임 기준)
 const DEFAULTS  = { head:30, sailor:13, crew:7, fare:81000, vc:0, tgt:15, voy:498, voyPeer:600,
-                    headPeer:3, sailorPeer:8, crewPeer:2, paxPeer:212812, agencyPeer:15, agencyJpnShare:50,
+                    headPeer:3, sailorPeer:15, crewPeer:2, paxPeer:212812, agencyPeer:15, agencyJpnShare:50,
                     // 순톤수 — 국제톤수협약(ITC 1969)상 NT 는 0.30·GT 이상이어야 한다.
                     // GT 3,300톤이면 하한이 990톤이라 800톤은 그 아래다. 1,200톤(0.36·GT)이
                     // 여객선 통상 범위(0.3~0.5)에 든다 — 확정값은 국제톤수증서로 바꿔야 한다.
