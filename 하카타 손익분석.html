@@ -1326,55 +1326,96 @@
         <!-- ── 최악시나리오 가정 ── 증감률 가정(수지가정 포함) 아래에 둔다.
              10개년 뷰에서 growSection 과 함께 노출된다 (growSection 과 hidden 상태 공유).
              10개년 캡션의 토글 스위치가 ON 되면 이 블록이 자동으로 펼쳐지고 뷰로 스크롤된다. -->
-        <details id="worstCaseBlock" class="grp" hidden style="margin-top:8px;border:1px solid var(--line2);border-radius:4px;background:#fff">
+        <details id="worstCaseBlock" class="grp" open style="margin-top:8px;border:1px solid var(--line2);border-radius:4px;background:#fff">
           <summary style="padding:8px 10px;cursor:pointer;font-weight:700;color:var(--navy);display:flex;align-items:center;justify-content:space-between">
-            <span>⚠ 최악시나리오 가정
-              <small style="color:var(--muted);font-weight:400;margin-left:4px">하한 가격 · 하한 항차</small></span>
-            <span id="worstCaseSummaryBadge" class="badge">OFF</span>
+            <span>▣ 시나리오 선택 — worst / normal / best
+              <small style="color:var(--muted);font-weight:400;margin-left:4px">선택 시 운임·항차·선적율·단순연료가 각 시나리오 값으로 덮여 10개년 손익에 반영</small></span>
+            <span id="worstCaseSummaryBadge" class="badge">normal</span>
           </summary>
-          <div class="fields rowy" style="padding:6px 10px 10px">
-            <div class="f wide">
-              <label class="chk">
-                <input type="checkbox" id="iWorstCase">
-                <span>최악시나리오 적용<br>
-                  <span style="color:var(--muted)">체크 시 아래 두 값으로 대조선박의 '편도 운임 · 연간 항차수' 를 덮어 10개년 손익에 반영. 해제 시 대조선박 설정값으로 복귀. (운임 근거는 입력란 옆 PDF 링크로 바로 열람)</span>
-                </span>
-              </label>
+          <div style="padding:8px 10px 10px">
+            <!-- iWorstCase 는 하위 코드 호환용 (deprecated · scenario==='worst' 와 동기화됨) -->
+            <input type="checkbox" id="iWorstCase" hidden>
+
+            <!-- 라디오 그룹 — 가로 균등 분할. flex 안 input 과 텍스트가 nowrap 로 깨지지 않게 -->
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;font-size:11.5px;margin-bottom:8px">
+              <label class="scn-opt" data-scn="worst"
+                     style="padding:6px 4px;border:1px solid var(--line2);border-radius:4px;cursor:pointer;text-align:center;background:#fff;white-space:nowrap">
+                <input type="radio" name="iScenario" value="worst" style="margin-right:4px;cursor:pointer;vertical-align:-2px"><b>worst</b></label>
+              <label class="scn-opt" data-scn="normal"
+                     style="padding:6px 4px;border:1px solid var(--line2);border-radius:4px;cursor:pointer;text-align:center;background:#F6F9FC;white-space:nowrap">
+                <input type="radio" name="iScenario" value="normal" checked style="margin-right:4px;cursor:pointer;vertical-align:-2px"><b>normal</b></label>
+              <label class="scn-opt" data-scn="best"
+                     style="padding:6px 4px;border:1px solid var(--line2);border-radius:4px;cursor:pointer;text-align:center;background:#fff;white-space:nowrap">
+                <input type="radio" name="iScenario" value="best" style="margin-right:4px;cursor:pointer;vertical-align:-2px"><b>best</b></label>
             </div>
-            <div class="f">
-              <label>최악 편도 운임
-                <span style="margin-left:4px;color:var(--muted);font-size:10px;font-weight:normal" title="카멜리아호 운임 근거 PDF 3종 — 숫자 클릭">근거</span>
-                <a href="카멜리아운임.pdf" target="_blank" rel="noopener"
-                   style="display:inline-block;font-size:10px;color:#fff;background:var(--sky);width:14px;height:14px;line-height:14px;text-align:center;border-radius:50%;text-decoration:none;font-weight:600;margin-left:2px;vertical-align:0"
-                   title="① 카멜리아운임.pdf — 운임 공시 자료 (평균 편도 63,000원 근거)" onclick="event.stopPropagation()">1</a>
-                <a href="카멜리아운임(사이트 예매).pdf" target="_blank" rel="noopener"
-                   style="display:inline-block;font-size:10px;color:#fff;background:var(--sky);width:14px;height:14px;line-height:14px;text-align:center;border-radius:50%;text-decoration:none;font-weight:600;margin-left:2px;vertical-align:0"
-                   title="② 카멜리아운임(사이트 예매).pdf — 공식 예매 사이트 캡처 (할인 전·후 체급별 실제 결제 운임)" onclick="event.stopPropagation()">2</a>
-                <a href="카멜리아운임(사이트 예매2).pdf" target="_blank" rel="noopener"
-                   style="display:inline-block;font-size:10px;color:#fff;background:var(--sky);width:14px;height:14px;line-height:14px;text-align:center;border-radius:50%;text-decoration:none;font-weight:600;margin-left:2px;vertical-align:0"
-                   title="③ 카멜리아운임(사이트 예매2).pdf — 공식 예매 사이트 캡처 보조본" onclick="event.stopPropagation()">3</a>
-              </label>
-              <div class="ib"><input type="number" step="500" min="0" id="iWorstFare" value="63000"><span class="u">원</span></div>
+
+            <!-- 시나리오별 입력 테이블 — 라벨 좁게, 입력 넓게. 좁은 사이드바에서도 7자리까지 가로 스크롤 -->
+            <style>
+              #worstCaseBlock table input[type="number"]::-webkit-inner-spin-button,
+              #worstCaseBlock table input[type="number"]::-webkit-outer-spin-button
+                { -webkit-appearance: none; appearance: none; margin: 0; }
+              #worstCaseBlock table input[type="number"]
+                { -moz-appearance: textfield; appearance: textfield; }
+            </style>
+            <div style="overflow-x:auto">
+              <table style="min-width:400px;width:100%;border-collapse:collapse;font-size:10.5px;table-layout:fixed">
+                <thead>
+                  <tr style="background:var(--head);color:var(--navy);border-bottom:1px solid var(--line2)">
+                    <th style="padding:4px 4px;text-align:left;width:28%">항목</th>
+                    <th style="padding:4px 4px;text-align:right;width:24%;background:#FFF4F4">worst</th>
+                    <th style="padding:4px 4px;text-align:right;width:24%;background:#F6F9FC">normal</th>
+                    <th style="padding:4px 4px;text-align:right;width:24%;background:#F0FBF5">best</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style="padding:3px 6px;white-space:nowrap">편도 운임 <span style="color:var(--muted)">(원)</span></td>
+                    <td style="padding:2px 2px"><input type="number" step="1000" min="0" id="iWorstFare" value="70000" style="width:100%;text-align:right;padding:3px 2px;font-size:10.5px;font-variant-numeric:tabular-nums;box-sizing:border-box;min-width:0"></td>
+                    <td style="padding:2px 2px"><input type="number" step="1000" min="0" id="iNormalFare" value="90000" style="width:100%;text-align:right;padding:3px 2px;font-size:10.5px;font-variant-numeric:tabular-nums;box-sizing:border-box;min-width:0"></td>
+                    <td style="padding:2px 2px"><input type="number" step="1000" min="0" id="iBestFare" value="120000" style="width:100%;text-align:right;padding:3px 2px;font-size:10.5px;font-variant-numeric:tabular-nums;box-sizing:border-box;min-width:0"></td>
+                  </tr>
+                  <tr>
+                    <td style="padding:3px 6px;white-space:nowrap">유류할증료 <span style="color:var(--muted)">(원)</span></td>
+                    <td style="padding:2px 2px"><input type="number" step="500" min="0" id="iWorstFuel" value="30000" style="width:100%;text-align:right;padding:3px 2px;font-size:10.5px;font-variant-numeric:tabular-nums;box-sizing:border-box;min-width:0"></td>
+                    <td style="padding:2px 2px"><input type="number" step="500" min="0" id="iNormalFuel" value="30000" style="width:100%;text-align:right;padding:3px 2px;font-size:10.5px;font-variant-numeric:tabular-nums;box-sizing:border-box;min-width:0"></td>
+                    <td style="padding:2px 2px"><input type="number" step="500" min="0" id="iBestFuel" value="30000" style="width:100%;text-align:right;padding:3px 2px;font-size:10.5px;font-variant-numeric:tabular-nums;box-sizing:border-box;min-width:0"></td>
+                  </tr>
+                  <tr>
+                    <td style="padding:3px 6px;white-space:nowrap">연간 편도 항차</td>
+                    <td style="padding:2px 2px"><input type="number" step="10" min="1" id="iWorstVoy" value="500" style="width:100%;text-align:right;padding:3px 2px;font-size:10.5px;font-variant-numeric:tabular-nums;box-sizing:border-box;min-width:0"></td>
+                    <td style="padding:2px 2px"><input type="number" step="10" min="1" id="iNormalVoy" value="550" style="width:100%;text-align:right;padding:3px 2px;font-size:10.5px;font-variant-numeric:tabular-nums;box-sizing:border-box;min-width:0"></td>
+                    <td style="padding:2px 2px"><input type="number" step="10" min="1" id="iBestVoy" value="600" style="width:100%;text-align:right;padding:3px 2px;font-size:10.5px;font-variant-numeric:tabular-nums;box-sizing:border-box;min-width:0"></td>
+                  </tr>
+                  <tr>
+                    <td style="padding:3px 6px;white-space:nowrap">화물 선적율 <span style="color:var(--muted)">(%)</span></td>
+                    <td style="padding:2px 2px"><input type="number" step="0.25" min="0" max="100" id="iWorstCargo" value="5" style="width:100%;text-align:right;padding:3px 2px;font-size:10.5px;font-variant-numeric:tabular-nums;box-sizing:border-box;min-width:0"></td>
+                    <td style="padding:2px 2px"><input type="number" step="0.25" min="0" max="100" id="iNormalCargo" value="7.25" style="width:100%;text-align:right;padding:3px 2px;font-size:10.5px;font-variant-numeric:tabular-nums;box-sizing:border-box;min-width:0"></td>
+                    <td style="padding:2px 2px"><input type="number" step="0.25" min="0" max="100" id="iBestCargo" value="15" style="width:100%;text-align:right;padding:3px 2px;font-size:10.5px;font-variant-numeric:tabular-nums;box-sizing:border-box;min-width:0"></td>
+                  </tr>
+                  <tr>
+                    <td style="padding:3px 6px;white-space:nowrap">편도 단순연료 <span style="color:var(--muted)">(만원)</span></td>
+                    <td style="padding:2px 2px"><input type="number" step="100" min="0" id="iWorstFuelRT" value="2400" style="width:100%;text-align:right;padding:3px 2px;font-size:10.5px;font-variant-numeric:tabular-nums;box-sizing:border-box;min-width:0"></td>
+                    <td style="padding:2px 2px"><input type="number" step="100" min="0" id="iNormalFuelRT" value="2200" style="width:100%;text-align:right;padding:3px 2px;font-size:10.5px;font-variant-numeric:tabular-nums;box-sizing:border-box;min-width:0"></td>
+                    <td style="padding:2px 2px"><input type="number" step="100" min="0" id="iBestFuelRT" value="2000" style="width:100%;text-align:right;padding:3px 2px;font-size:10.5px;font-variant-numeric:tabular-nums;box-sizing:border-box;min-width:0"></td>
+                  </tr>
+                  <tr style="background:#FAFBFC;color:var(--muted);font-size:10px">
+                    <td style="padding:3px 6px;white-space:nowrap">총 운임 <span style="font-size:9px">(운임+할증)</span></td>
+                    <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums" id="hScnTotalWorst">100,000원</td>
+                    <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums" id="hScnTotalNormal">120,000원</td>
+                    <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums" id="hScnTotalBest">150,000원</td>
+                  </tr>
+                  <tr style="background:#FAFBFC;color:var(--muted);font-size:10px">
+                    <td style="padding:3px 6px;white-space:nowrap">연료 × 항차 <span style="font-size:9px">(연간)</span></td>
+                    <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums" id="hScnFuelAnnualWorst">12,000백만</td>
+                    <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums" id="hScnFuelAnnualNormal">12,100백만</td>
+                    <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums" id="hScnFuelAnnualBest">12,000백만</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
-            <div class="f">
-              <label>최악 유류할증료
-                <a href="https://koreaferry.kr/eng/bbs/board.php?bo_table=ferry_notice&wr_id=38" target="_blank" rel="noopener"
-                   style="font-size:10px;color:var(--sky);margin-left:4px;font-weight:normal"
-                   title="카멜리아라인 공식 공지 — 유류할증 안내 (koreaferry.kr)" onclick="event.stopPropagation()">카멜리아 공지↗</a>
-              </label>
-              <div class="ib"><input type="number" step="500" min="0" id="iWorstFuel" value="17000"><span class="u">원</span></div>
-            </div>
-            <div class="f">
-              <label>최악 연간 편도 항차수 <small style="color:#888;font-weight:normal" title="엘도라도호 2024 실적 항차수 498 그대로">엘도라도 참고</small></label>
-              <div class="ib"><input type="number" step="1" min="1" max="9999" id="iWorstVoy" value="498"><span class="u">항차</span></div>
-            </div>
-            <div class="f">
-              <label>최악 연간 승선율 <small style="color:#888;font-weight:normal" title="최악시나리오 전용 승선율 — 좌측 대조선박 승선율과 분리. 승객수 = 정원 × 이 승선율 × 최악 항차수">하한 가정</small></label>
-              <div class="ib"><input type="number" step="1" min="0" max="100" id="iWorstLoad" value="50"><span class="u">%</span></div>
-            </div>
-            <div class="f wide">
-              <div class="fh" id="hWorstCase">—</div>
-            </div>
+            <!-- iWorstLoad 는 기존 호환 — 이제 승선율은 메인 iLoadPeer 가 전담 (시나리오별 승선율 불변) -->
+            <input type="hidden" id="iWorstLoad" value="50">
+            <div class="fh" id="hWorstCase" style="margin-top:8px">—</div>
           </div>
         </details>
 
@@ -3028,16 +3069,33 @@ function model(){
   const rPeer = Math.min(0.99, Math.max(-0.99, num('iTgtPeer', DEFAULTS.tgtPeer) / 100));
   const r    = (typeof ACTIVE_TAB !== 'undefined' && ACTIVE_TAB === 'tabB') ? rPeer : rBase;
   const voy     = Math.max(1, Math.round(num('iVoy',     DEFAULTS.voy)));
-  // 최악시나리오 가정 — 체크 시 iFarePeer / iFuelPeer / iVoyPeer 를 덮어쓴다 (하한 가격 · 하한 항차 조합).
-  //   운임 카멜리아운임 참고 편도 63,000원 · 유류할증 17,000원 · 항차는 엘도라도호 2024 실적 498.
-  //   손익계산서(대조선박)·10개년 모두 이 값으로 재계산된다.
-  const worstCase    = !!el('iWorstCase')?.checked;
-  const worstFare    = Math.max(0, num('iWorstFare', 63000));
-  const worstFuel    = Math.max(0, num('iWorstFuel', 17000));
-  const worstVoy     = Math.max(1, Math.round(num('iWorstVoy', 498)));
-  const worstLoad    = Math.max(0, Math.min(100, num('iWorstLoad', 50)));
+  // 시나리오 — worst / normal / best 3-way. 선택된 시나리오의 운임·할증·항차·선적율·단순연료를
+  // 메인 피어 입력에 덮어씌워 10개년 손익에 반영한다. 각 시나리오별 입력은 사용자가 따로 조정 가능.
+  //   worst  : 편도 7만 · 할증 3만 · 항차 500 · 선적 5%   · 왕복 4,800만 (편도 2,400만)
+  //   normal : 편도 9만 · 할증 3만 · 항차 550 · 선적 7.25% · 왕복 4,400만 (편도 2,200만)
+  //   best   : 편도 12만 · 할증 3만 · 항차 600 · 선적 15%  · 왕복 4,000만 (편도 2,000만)
+  const _scnEl    = document.querySelector('input[name="iScenario"]:checked');
+  const scenario  = _scnEl ? _scnEl.value : 'normal';
+  const scnFare   = Math.max(0, num('i' + (scenario==='worst'?'Worst':scenario==='best'?'Best':'Normal') + 'Fare',
+                                     scenario==='worst'?70000:scenario==='best'?120000:90000));
+  const scnFuel   = Math.max(0, num('i' + (scenario==='worst'?'Worst':scenario==='best'?'Best':'Normal') + 'Fuel',
+                                     30000));
+  const scnVoy    = Math.max(1, Math.round(num('i' + (scenario==='worst'?'Worst':scenario==='best'?'Best':'Normal') + 'Voy',
+                                                scenario==='worst'?500:scenario==='best'?600:550)));
+  const scnCargo  = Math.max(0, num('i' + (scenario==='worst'?'Worst':scenario==='best'?'Best':'Normal') + 'Cargo',
+                                     scenario==='worst'?5:scenario==='best'?15:7.25));
+  const scnFuelRT = Math.max(0, num('i' + (scenario==='worst'?'Worst':scenario==='best'?'Best':'Normal') + 'FuelRT',
+                                     scenario==='worst'?2400:scenario==='best'?2000:2200));  // 만원 편도 (단순 모드)
+  // 하위 호환 — worstCase 는 scenario==='worst' 와 동일
+  const worstCase    = (scenario === 'worst');
+  const bestCase     = (scenario === 'best');
+  // scenario 가 선택되면 "항상" 메인 피어 값을 덮어쓴다 (OFF 상태 없음)
+  const worstFare    = scnFare;
+  const worstFuel    = scnFuel;
+  const worstVoy     = scnVoy;
+  const worstLoad    = Math.max(0, Math.min(100, num('iWorstLoad', 50)));  // 승선율은 메인 iLoadPeer 가 전담
   const voyPeerBase  = Math.max(1, Math.round(num('iVoyPeer', DEFAULTS.voyPeer)));
-  const voyPeer      = worstCase ? worstVoy : voyPeerBase;
+  const voyPeer      = scnVoy;  // 항상 시나리오 값
   const DEP    = cur('op_감가상각비');          // 3,349,232,000 — 전액 운항원가에 들어가 있다
 
   // 승객당 변동비는 원가 구성표에서 나온다. 여기 vcMan 은 표에 없는 몫을 손으로 얹는 칸이다.
@@ -3130,8 +3188,9 @@ function model(){
     : salvagePeerIn * 1e6;
   const opDepPeer     = shipPricePeer > 0
     ? Math.max(0, shipPricePeer - salvageWon) / lifePeer : DEP;
-  // 여객 외 수입 — 화물 시뮬레이션(적재 케이스 × 선적율 × 항차)과 임대료
-  const cargoLoadP  = Math.min(1, Math.max(0, num('iCargoLoad', DEFAULTS.cargoLoad) / 100));
+  // 여객 외 수입 — 화물 시뮬레이션(적재 케이스 × 선적율 × 항차)과 임대료.
+  //   선적율은 시나리오별 값(scnCargo)으로 덮어쓴다 (worst 5% · normal 7.25% · best 15%).
+  const cargoLoadP  = Math.min(1, Math.max(0, scnCargo / 100));
   const cargoCaseP  = CARGO_CASES.find(c => c.id === +(el('iCargoCase')?.value)) || CARGO_CASES[3];
   // 거리 배율 — seaworld 운임표는 진도-제주(≈85km) 기준이고 대조선은 부산-하카타(213km).
   // 운임이 거리에 비례한다고 보고 그 비(≈2.51)만큼 끌어올린다. 사용자가 조정할 수 있다.
@@ -3166,7 +3225,9 @@ function model(){
   const fuelMode     = fuelEngOn ? 'engineering' : (fuelSimpleOn ? 'simple' : 'accounting');
   const fuelEngKm    = Math.max(1, num('iFuelEngKm',  213));
   const fuelEngKts   = Math.max(1, num('iFuelEngKts',  42));
-  const fuelSimpleOneway = Math.max(0, num('iFuelSimpleOneway', 20000000));
+  // 단순 모드 편도단가 = 시나리오별 편도 금액(만원) × 10,000 → 원 환산
+  //   worst 2,400만/편도 · normal 2,200만/편도 · best 2,000만/편도
+  const fuelSimpleOneway = Math.max(0, scnFuelRT * 10000);
   const _engUsd = fuelEsc ? fuelNow : fuelBase;
   const _engFx  = fuelEsc ? fxNow   : fxBase;
   const fuelEngEst   = fuelEngEstimate(fuelEngKm, fuelEngKts, voyPeer, _engUsd, _engFx);
@@ -3203,16 +3264,16 @@ function model(){
   const costSVpeer = sumPeer('semi');
   const svPerVoyPeer    = voyPeer > 0 ? costSVpeer / voyPeer : 0;
   const svPerVoy_ofPeer = x => voyPeer > 0 ? x.amt / voyPeer : 0;
-  // 목표기반 탭 독립 운임 계산 — 최악시나리오 체크 시 iFarePeer / iFuelPeer 를 덮어쓴다.
-  //   worstFare 는 유류할증 제외 '이코노미 편도 운임' 자리, worstFuel 은 유류할증료 자리. 등급별 배율은 그대로 유지.
+  // 목표기반 탭 독립 운임 계산 — 시나리오(worst/normal/best) 선택에 따라 iFarePeer/iFuelPeer 를 덮어쓴다.
+  //   scnFare 는 유류할증 제외 '이코노미 편도 운임', scnFuel 은 유류할증료. 등급별 배율은 그대로 유지.
   const fareEcoPeerBase = Math.max(1, num('iFarePeer', DEFAULTS.farePeer));
-  const fareEcoPeer     = worstCase ? Math.max(1, worstFare) : fareEcoPeerBase;
+  const fareEcoPeer     = Math.max(1, scnFare);  // 항상 시나리오 값
   const mixPeer      = SEATS.map((t,i) => Math.max(0, num('iMix'+t.id+'Peer', DEFAULTS.mixPeer[i])));
   const mixSumPeer   = mixPeer.reduce((a,b) => a+b, 0);
   const wsumPeer     = SEATS.reduce((a,t,i) => a + t.mult*mixPeer[i], 0);
   const fareSeatPeer = wsumPeer > 0 ? fareEcoPeer * wsumPeer / mixSumPeer : fareEcoPeer;
   const fuelPeerBase = num('iFuelPeer', DEFAULTS.fuelPeer);
-  const fuelPeer     = worstCase ? worstFuel : fuelPeerBase;
+  const fuelPeer     = scnFuel;  // 항상 시나리오 값
   const farePeer     = fareSeatPeer + fuelPeer;
   const voyForPeer = q => autoVoy && peer && peer.pax > 0
     ? Math.max(voyPeer, Math.ceil(q / peer.pax)) : voyPeer;
@@ -3311,7 +3372,8 @@ function model(){
            fuelEsc, escRate, etcPeer, opEtcEsc, voyRatio, applyVoyRatio, voyR, agencyPct, agencyJpn,
            fuelEngOn, fuelEngKm, fuelEngKts, fuelEngEst,
            fuelSimpleOn, fuelSimpleOneway, fuelSimpleAnnualWon, fuelMode,
-           worstCase, worstFare, worstFuel, worstVoy, worstLoad, voyPeerBase, fareEcoPeerBase, fuelPeerBase,
+           worstCase, bestCase, scenario, scnFare, scnFuel, scnVoy, scnCargo, scnFuelRT,
+           worstFare, worstFuel, worstVoy, worstLoad, voyPeerBase, fareEcoPeerBase, fuelPeerBase,
            paxPeerManualInput, paxPeerAutoFromTarget,
            tonnageTax, netTon, opDays, tonnageAmt,
            headPeer, sailorPeer, crewPeer, opHeadPeer, sgaWagePeer, opLaborPeer, opEtcPeer,
@@ -4826,7 +4888,8 @@ function drawPeerPL(m) {
   // 승선율·선적율을 괄호로 명시 — 어느 가정으로 집계된 매출인지 한눈에
   const _loadPct   = (m.peer && m.peer.pax > 0 && m.voyPeer > 0)
     ? (m.paxPeer / (m.peer.pax * m.voyPeer) * 100).toFixed(1) + '%' : '—';
-  const _cargoLoad = (num('iCargoLoad', DEFAULTS.cargoLoad)).toFixed(1) + '%';
+  // 선적율은 7.25 처럼 소수점 둘째 자리까지 쓸 수 있으므로 toFixed(2) 후 뒤쪽 0 만 떼낸다.
+  const _cargoLoad = (num('iCargoLoad', DEFAULTS.cargoLoad)).toFixed(2).replace(/\.?0+$/, '') + '%';
   html += rowD(`여객수입 <span class="tagv est">승선율 ${_loadPct}</span>`,   paxRev,   sales);
   // 산타모니카 : CARGO_CASES.extra 는 운임표 미산정 항목이라 계산 금액에 '+α' 표기
   if (isSanta && selectedCase.extra && cargoRev > 0) {
@@ -4896,7 +4959,7 @@ function drawPeerPL(m) {
       } else if (_mode === 'simple') {
         _rhs = `<span style="font-size:10.5px">편도`
              + ` <input type="number" min="0" step="1000000" value="${m.fuelSimpleOneway}" data-worst-ignore="1"`
-             + ` oninput="(function(e){var v=parseFloat(e.target.value);if(!isNaN(v)&&v>=0){document.getElementById('iFuelSimpleOneway').value=v;render();}})(event)"`
+             + ` oninput="(function(e){var v=parseFloat(e.target.value);if(isNaN(v)||v<0)return;document.getElementById('iFuelSimpleOneway').value=v;var scn=(document.querySelector('input[name=&quot;iScenario&quot;]:checked')||{}).value||'normal';var cap=scn.charAt(0).toUpperCase()+scn.slice(1);var inp=document.getElementById('i'+cap+'FuelRT');if(inp){inp.value=v/10000;}render();})(event)"`
              + ` onclick="event.stopPropagation()"`
              + ` style="width:110px;padding:1px 4px;font-size:11px;font-weight:700;color:#4A6EE0;border:1px solid rgba(74,110,224,0.4);border-radius:3px;text-align:right">원`
              + ` <span style="color:var(--navy)">× ${_wonFmtAux(m.voyPeer)}항차</span>`
@@ -5184,7 +5247,7 @@ function drawPeerPL(m) {
   // 승선율·선적율 뱃지 — 손익계산서 대조와 동일하게 매출 라인에 노출
   const _load10    = (m.peer && m.peer.pax > 0 && m.voyPeer > 0)
     ? (m.paxPeer / (m.peer.pax * m.voyPeer) * 100).toFixed(1) + '%' : '—';
-  const _cargoLd10 = (num('iCargoLoad', DEFAULTS.cargoLoad)).toFixed(1) + '%';
+  const _cargoLd10 = (num('iCargoLoad', DEFAULTS.cargoLoad)).toFixed(2).replace(/\.?0+$/, '') + '%';
   const iPax   = add({ cls:'d', name:`여객수입 <span class="tagv est">승선율 ${_load10}</span>`, v:paxRev, gk:'gPax' });
   const iCargo = add({ cls:'d', name:`화물수입 <span class="tagv est">선적율 ${_cargoLd10}</span>${_alphaTag}`, v:cargoRev, gk:'gCargo' });
   const iRent  = add({ cls:'d', name:'면세점(수입임대료) <span class="tagv est" style="cursor:help" title="하카타 외항선로 가정 — 선내 면세점 임대료 3개년 평균(성희) 39,330,000원. 증감률 가정은 좌측 패널에서 조정 가능.">3개년 평균(성희)</span>', v:rentRev, gk:'gRent' });
@@ -5257,7 +5320,7 @@ function drawPeerPL(m) {
       } else if (_mode === 'simple') {
         _rhs = `<span style="font-size:10.5px">편도`
              + ` <input type="number" min="0" step="1000000" value="${m.fuelSimpleOneway}" data-worst-ignore="1"`
-             + ` oninput="(function(e){var v=parseFloat(e.target.value);if(!isNaN(v)&&v>=0){document.getElementById('iFuelSimpleOneway').value=v;render();}})(event)"`
+             + ` oninput="(function(e){var v=parseFloat(e.target.value);if(isNaN(v)||v<0)return;document.getElementById('iFuelSimpleOneway').value=v;var scn=(document.querySelector('input[name=&quot;iScenario&quot;]:checked')||{}).value||'normal';var cap=scn.charAt(0).toUpperCase()+scn.slice(1);var inp=document.getElementById('i'+cap+'FuelRT');if(inp){inp.value=v/10000;}render();})(event)"`
              + ` onclick="event.stopPropagation()"`
              + ` style="width:110px;padding:1px 4px;font-size:11px;font-weight:700;color:#4A6EE0;border:1px solid rgba(74,110,224,0.4);border-radius:3px;text-align:right">원`
              + ` <span style="color:var(--navy)">× ${_wonFmtAux(m.voyPeer)}항차</span>`
@@ -5460,10 +5523,10 @@ function drawPeerPL(m) {
   const _ratioTxt = m.applyVoyRatio
     ? ` · 배율 ×${m.voyRatio.toFixed(3)} (변동(항차) 반영)`
     : ` · 배율 ×${m.voyRatio.toFixed(3)} 미적용`;
-  // 최악시나리오 배너 — 서브타이틀 앞머리에 붙여 즉시 식별 (HTML 이라 innerHTML 로 넣는다)
-  const _worstBadge = m.worstCase
-    ? `<span class="tagv est" style="color:var(--warn);border-color:var(--warn);margin-right:4px" title="편도 운임 ${won(m.worstFare)}원 · 유류할증 ${won(m.worstFuel)}원 · 연 ${won(m.worstVoy)}항차 (카멜리아운임 · 엘도라도호 참고)">● 최악시나리오</span>`
-    : '';
+  // 시나리오 배너 — 서브타이틀 앞머리. 색상도 시나리오별 (worst=warn·best=good·normal=navy).
+  const _scnColor = m.scenario === 'worst' ? 'var(--warn)' : m.scenario === 'best' ? 'var(--good)' : 'var(--navy)';
+  const _scnLabel = m.scenario === 'worst' ? '⚠ worst' : m.scenario === 'best' ? '★ best' : '● normal';
+  const _worstBadge = `<span class="tagv est" style="color:${_scnColor};border-color:${_scnColor};margin-right:4px" title="시나리오 : ${_scnLabel} — 편도 운임 ${won(m.scnFare)}원 · 유류할증 ${won(m.scnFuel)}원 · 연 ${won(m.scnVoy)}항차 · 선적율 ${m.scnCargo}% · 왕복 단순연료 ${won(m.scnFuelRT)}만원">${_scnLabel}</span>`;
   // 영업이익률은 header 타일(_sim50 / _marginSpan)과 완전히 같은 로직을 쓰도록 simPeer 를 통일 사용.
   //   drawPeer 의 직접 계산(opProfit/sales)과 simPeer 는 지급수수료 스케일링 축(항차비율 vs 승객비율)이
   //   미세하게 달라 같은 설정에서 0.1%p 차이가 나던 버그 수정.
@@ -5474,7 +5537,7 @@ function drawPeerPL(m) {
       `${peerName} · ${won(m.voyPeer)}항차`
     + ` · 항차당 ${won(Math.round(_perVoy))}명`
     + (_load === null ? ' · 승선율 —' : ` · 승선율 ${pct(_load, 1)}`)
-    + ` · 화물 선적율 ${pct(_cargo, 0)}`
+    + ` · 화물 선적율 ${pct(_cargo, 2).replace(/\.?0+%$/, '%')}`
     + ` · 영업이익률 ${pct(_subMargin, 1)}`
     + _ratioTxt;
   const _plSubEl = document.getElementById('plPeerSub');
@@ -5855,14 +5918,14 @@ function drawPeerPL10() {
       const _perVoy = _m2.voyPeer > 0 ? _m2.paxPeer / _m2.voyPeer : 0;
       const _load   = (_m2.peer && _m2.peer.pax > 0) ? _perVoy / _m2.peer.pax : null;
       const _cargo  = Math.min(1, Math.max(0, num('iCargoLoad', DEFAULTS.cargoLoad) / 100));
-      const _worstBadge = _m2.worstCase
-        ? `<span class="tagv est" style="color:var(--warn);border-color:var(--warn);margin-right:4px" title="편도 운임 ${won(_m2.worstFare)}원 · 유류할증 ${won(_m2.worstFuel)}원 · 연 ${won(_m2.worstVoy)}항차 (카멜리아운임 · 엘도라도호 참고)">● 최악시나리오</span>`
-        : '';
+      const _scnColor2 = _m2.scenario === 'worst' ? 'var(--warn)' : _m2.scenario === 'best' ? 'var(--good)' : 'var(--navy)';
+      const _scnLabel2 = _m2.scenario === 'worst' ? '⚠ worst' : _m2.scenario === 'best' ? '★ best' : '● normal';
+      const _worstBadge = `<span class="tagv est" style="color:${_scnColor2};border-color:${_scnColor2};margin-right:4px" title="시나리오 : ${_scnLabel2} — 편도 ${won(_m2.scnFare)}원 · 유류할증 ${won(_m2.scnFuel)}원 · 연 ${won(_m2.scnVoy)}항차 · 선적 ${_m2.scnCargo}%">${_scnLabel2}</span>`;
       head = _worstBadge
         + `${peerName} · ${won(_m2.voyPeer)}항차`
         + ` · 항차당 ${won(Math.round(_perVoy))}명`
         + (_load === null ? ' · 승선율 —' : ` · 승선율 ${pct(_load, 1)}`)
-        + ` · 화물 선적율 ${pct(_cargo, 0)}`;
+        + ` · 화물 선적율 ${pct(_cargo, 2).replace(/\.?0+%$/, '%')}`;
     }
     const _op  = PEER_PL_ROWS.findIndex(r => /Ⅴ\. 영업이익/.test(r.name));
     const _sl  = PEER_PL_ROWS.findIndex(r => /Ⅰ\. 매출액/.test(r.name));
@@ -5925,7 +5988,7 @@ function drawCargo(m){
 
   el('tCargoCmp').innerHTML = '';
   el('hCargoCmp').innerHTML = cargoPeer > 0
-    ? R_('선적율 적용', won(Math.round(cargoPeer*cargoLoad)) + '원/항차', pct(cargoLoad))
+    ? R_('선적율 적용', won(Math.round(cargoPeer*cargoLoad)) + '원/항차', pct(cargoLoad, 2).replace(/\.?0+%$/, '%'))
       + RT_('연간 화물수입', mil(cargoPeer*cargoLoad*m.voyPeer) + '백만', won(m.voyPeer) + '항차')
       + R_('화물 반영 손익분기', fmtQ(q0p), '화물 제외 ' + fmtQ(qForO(0, A.nonCargoRev, true)))
       + R_(`화물 반영 목표 ${pct(m.r,1)}`, fmtQ(qTp), '화물 제외 ' + fmtQ(qForO(m.r, A.nonCargoRev, true)))
@@ -6501,7 +6564,7 @@ function render(){
       _seg(`항차당 ${won(Math.round(q / (voyV || 1)))}명`),
       _seg(_capV ? `승선율 ${pct(q / _capV, 1)}` : '승선율 —'),
     ];
-    if (onPeer)     parts.push(_seg(`화물 선적율 ${pct(_cargoLoadV, 0)}`));
+    if (onPeer)     parts.push(_seg(`화물 선적율 ${pct(_cargoLoadV, 2).replace(/\.?0+%$/, '%')}`));
     if (marginHtml) parts.push(_seg(marginHtml));
     // 한 줄로 붙여 둔다 — 화물 선적율만 다음 줄로 밀려 내려가면 타일이 어긋나 보인다
     return `<span style="white-space:nowrap">${parts.join(' · ')}</span>`;
@@ -6679,14 +6742,87 @@ el('iAutoVoy').addEventListener('change', render);
 ['iFxBase','iFxNow'].forEach(id => el(id).addEventListener('input', render));
 el('iFuelEsc').addEventListener('change', render);
 el('iVoyRatio').addEventListener('change', render);
-// 최악시나리오 — 체크·값 변경 모두 즉시 재계산. 최악 Fare/Voy 는 체크 OFF 때도 입력은 저장되어 있으므로 input 이벤트로.
-// 체크박스가 켜지면 좌측 상세 블록을 자동으로 펼친다 (사용자가 설정을 조정할 수 있도록).
-el('iWorstCase').addEventListener('change', () => {
-  const d = document.getElementById('worstCaseBlock');
-  if (d && el('iWorstCase').checked) d.open = true;
-  render();
+// 시나리오 선택 (worst/normal/best) — radio 전환 시 하위 호환용 iWorstCase 동기화 + 재렌더.
+// 메인 피어 입력(iVoyPeer, iCargoLoad)도 선택된 시나리오 값으로 동기화해 UI 일관성 유지.
+function _applyScenarioToMainInputs() {
+  const scn = document.querySelector('input[name="iScenario"]:checked')?.value || 'normal';
+  const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+  const prefix = 'i' + cap(scn);
+  const scnVoy   = parseFloat(el(prefix + 'Voy')?.value)   || (scn==='worst'?500:scn==='best'?600:550);
+  const scnCargo = parseFloat(el(prefix + 'Cargo')?.value) || (scn==='worst'?5:scn==='best'?15:7.25);
+  const scnFare  = parseFloat(el(prefix + 'Fare')?.value)  || (scn==='worst'?70000:scn==='best'?120000:90000);
+  const scnFuel  = parseFloat(el(prefix + 'Fuel')?.value)  || 30000;
+  const scnFuelRT = parseFloat(el(prefix + 'FuelRT')?.value) || (scn==='worst'?2400:scn==='best'?2000:2200);
+  if (el('iVoyPeer'))         el('iVoyPeer').value         = scnVoy;
+  if (el('iCargoLoad'))       el('iCargoLoad').value       = scnCargo;
+  if (el('iFarePeer'))        el('iFarePeer').value        = scnFare;
+  if (el('iFuelPeer'))        el('iFuelPeer').value        = scnFuel;
+  if (el('iFuelSimpleOneway')) el('iFuelSimpleOneway').value = scnFuelRT * 10000;  // 편도(만원) → 편도(원)
+}
+document.querySelectorAll('input[name="iScenario"]').forEach(radio => {
+  radio.addEventListener('change', () => {
+    const scn = document.querySelector('input[name="iScenario"]:checked')?.value || 'normal';
+    const wc = el('iWorstCase'); if (wc) wc.checked = (scn === 'worst');
+    const d  = document.getElementById('worstCaseBlock');
+    if (d) d.open = true;
+    // 라디오 라벨 배경을 활성 상태에 맞춰 하이라이트
+    document.querySelectorAll('.scn-opt').forEach(lbl => {
+      const sel = lbl.dataset.scn === scn;
+      lbl.style.background = sel
+        ? (scn==='worst'?'#FFF4F4':scn==='best'?'#F0FBF5':'#F6F9FC')
+        : '#fff';
+      lbl.style.borderColor = sel ? 'var(--navy)' : 'var(--line2)';
+      lbl.style.fontWeight  = sel ? '700' : '400';
+    });
+    _applyScenarioToMainInputs();
+    render();
+  });
 });
-['iWorstFare','iWorstFuel','iWorstVoy','iWorstLoad'].forEach(id => el(id).addEventListener('input', render));
+// 페이지 로드 시 초기 시나리오 값을 메인 입력에 반영
+if (document.querySelector('input[name="iScenario"]')) {
+  _applyScenarioToMainInputs();
+}
+// 하위 호환 — 외부 코드가 iWorstCase 를 토글하면 normal↔worst 라디오 동기화 (양방향)
+el('iWorstCase')?.addEventListener('change', () => {
+  const on = el('iWorstCase').checked;
+  const targetScn = on ? 'worst' : 'normal';
+  const r = document.querySelector(`input[name="iScenario"][value="${targetScn}"]`);
+  if (r && !r.checked) { r.checked = true; r.dispatchEvent(new Event('change')); }
+  else render();
+});
+// 시나리오별 값 변경 즉시 재계산 — 모든 시나리오 입력 (worst/normal/best × 5개 필드)
+// 입력이 바뀌면 선택된 시나리오면 메인 입력에도 반영 + 하단 요약셀(총운임·연간연료) 재계산.
+function _refreshScenarioSummary() {
+  ['Worst','Normal','Best'].forEach(scn => {
+    const fare = parseFloat(el('i'+scn+'Fare')?.value)   || 0;
+    const fuel = parseFloat(el('i'+scn+'Fuel')?.value)   || 0;
+    const voy  = parseFloat(el('i'+scn+'Voy')?.value)    || 0;
+    const rt   = parseFloat(el('i'+scn+'FuelRT')?.value) || 0;   // 편도 만원
+    const tot  = el('hScnTotal' + scn);
+    const anl  = el('hScnFuelAnnual' + scn);
+    if (tot) tot.textContent = (fare + fuel).toLocaleString('ko-KR') + '원';
+    if (anl) {
+      // 편도 단가(만원) × 항차 → 만원 → 백만원 (÷100)
+      const mil = Math.round(rt * voy / 100);
+      anl.textContent = mil.toLocaleString('ko-KR') + '백만';
+    }
+  });
+}
+['Worst','Normal','Best'].forEach(scn => {
+  ['Fare','Fuel','Voy','Cargo','FuelRT'].forEach(fld => {
+    const inp = el('i' + scn + fld);
+    if (inp) inp.addEventListener('input', () => {
+      _refreshScenarioSummary();
+      // 선택된 시나리오의 값이면 메인 입력도 동기화
+      const curScn = document.querySelector('input[name="iScenario"]:checked')?.value || 'normal';
+      const scnLow = scn.toLowerCase();
+      if (curScn === scnLow) _applyScenarioToMainInputs();
+      render();
+    });
+  });
+});
+// 로드 시 요약셀 초기화
+if (typeof _refreshScenarioSummary === 'function') _refreshScenarioSummary();
 
 // ── 손익계산서 캡션 최악시나리오 전환 스위치 (단일연도·10개년·하마유 S0 공용) ─────
 // 세 호스트 (plBodyB-single · plBodyB-multi · ovHamayuCombo) 에 같은 스위치를 그려
@@ -6697,54 +6833,55 @@ function drawWorstCaseSwitch10() {
     .map(id => document.getElementById(id))
     .filter(Boolean);
   if (!hosts.length) return;
-  const on = !!el('iWorstCase')?.checked;
-  // 세그먼트 — 활성 쪽은 유채색(네이비·warn), 비활성 쪽은 흰 배경 + 취소선 으로 명확히 구분
+  const scn = document.querySelector('input[name="iScenario"]:checked')?.value || 'normal';
+  // 세그먼트 — 활성 쪽은 유채색(worst=warn·normal=navy·best=good), 비활성은 흰 배경
   const base = 'padding:4px 12px;font-size:11px;line-height:1.3;cursor:pointer;'
              + 'transition:background .15s,color .15s;user-select:none';
-  const activeOff = `${base};background:var(--navy);color:#fff;font-weight:700`;
-  const activeOn  = `${base};background:var(--warn);color:#fff;font-weight:700`;
-  const inactive  = `${base};background:#fff;color:var(--muted);font-weight:500;text-decoration:line-through;text-decoration-thickness:1.5px;text-decoration-color:rgba(0,0,0,0.35)`;
-  const offSide = !on ? activeOff : inactive;
-  const onSide  =  on ? activeOn  : inactive;
-  // 사각형 외곽선 — 2px 네이비(비활성 때)·warn(활성 때) 로 어떤 상태인지 즉시 식별 가능
-  const wrapBorder = on ? '2px solid var(--warn)' : '2px solid var(--navy)';
+  // 3-way 세그먼트 — worst/normal/best 각각 전용 색상
+  const scnColor = { worst:'var(--warn)', normal:'var(--navy)', best:'var(--good)' };
+  const activeSty = c => `${base};background:${c};color:#fff;font-weight:700`;
+  const inactive  = `${base};background:#fff;color:var(--muted);font-weight:500`;
+  const wrapBorder = `2px solid ${scnColor[scn] || scnColor.normal}`;
   const wrap = 'display:inline-flex;align-items:stretch;overflow:hidden;background:#fff;'
              + 'border-radius:3px;border:' + wrapBorder
              + ';box-shadow:0 1px 2px rgba(0,0,0,0.08)';
-  const _fare = parseFloat(el('iWorstFare')?.value) || 63000;
-  const _fuel = parseFloat(el('iWorstFuel')?.value) || 17000;
-  const _voy  = parseInt(el('iWorstVoy')?.value, 10) || 498;
-  const _tip = on
-    ? `최악시나리오 ON — 편도 운임 ${_fare.toLocaleString('ko-KR')}원 · 유류할증 ${_fuel.toLocaleString('ko-KR')}원 · 연 ${_voy.toLocaleString('ko-KR')}항차로 재산출 중.\n`
-      + `← 왼쪽 '정상' 을 누르면 대조선박 설정값으로 복귀`
-    : `최악시나리오 OFF — 대조선박 설정값(기본) 사용 중.\n`
-      + `오른쪽 '최악시나리오' 를 누르면 편도 ${_fare.toLocaleString('ko-KR')}원 · 유류할증 ${_fuel.toLocaleString('ko-KR')}원 · 연 ${_voy.toLocaleString('ko-KR')}항차 로 전환 → 좌측 설정 블록이 자동으로 펼쳐짐`;
-  // 세그먼트 분리선 — 활성/비활성 색을 따라가 깔끔히 분리
-  const _sepColor = on ? 'var(--warn)' : 'var(--navy)';
-  const _html =
-      `<span style="${wrap}">`
-    +   `<span data-worst-side="off" style="${offSide};border-right:1px solid ${_sepColor}">정상</span>`
-    +   `<span data-worst-side="on"  style="${onSide}">⚠ 최악시나리오</span>`
-    + `</span>`;
+  // 시나리오별 값
+  const vals = {
+    worst:  { fare: parseFloat(el('iWorstFare')?.value)  || 70000,
+              fuel: parseFloat(el('iWorstFuel')?.value)  || 30000,
+              voy:  parseInt(el('iWorstVoy')?.value, 10) || 500,
+              label: '⚠ worst' },
+    normal: { fare: parseFloat(el('iNormalFare')?.value) || 90000,
+              fuel: parseFloat(el('iNormalFuel')?.value) || 30000,
+              voy:  parseInt(el('iNormalVoy')?.value, 10) || 550,
+              label: '● normal' },
+    best:   { fare: parseFloat(el('iBestFare')?.value)   || 120000,
+              fuel: parseFloat(el('iBestFuel')?.value)   || 30000,
+              voy:  parseInt(el('iBestVoy')?.value, 10)  || 600,
+              label: '★ best' }
+  };
+  const cur = vals[scn] || vals.normal;
+  const _tip = `시나리오 : ${cur.label} — 편도 운임 ${cur.fare.toLocaleString('ko-KR')}원 · 유류할증 ${cur.fuel.toLocaleString('ko-KR')}원 · 연 ${cur.voy.toLocaleString('ko-KR')}항차로 재산출.\n다른 시나리오 세그먼트를 누르면 전환 → 좌측 설정 블록이 자동으로 펼쳐짐`;
+  const seg = key => {
+    const v = vals[key]; const sel = (key === scn);
+    const sty = sel ? activeSty(scnColor[key]) : inactive;
+    const sep = (key !== 'best') ? `border-right:1px solid ${scnColor[scn] || scnColor.normal}` : '';
+    return `<span data-scn-side="${key}" style="${sty};${sep}">${v.label}</span>`;
+  };
+  const _html = `<span style="${wrap}">${seg('worst')}${seg('normal')}${seg('best')}</span>`;
   hosts.forEach(host => {
     host.title = _tip;
     host.innerHTML = _html;
-    host.querySelectorAll('[data-worst-side]').forEach(seg => {
-      seg.addEventListener('click', () => {
-        const wantOn = seg.getAttribute('data-worst-side') === 'on';
-        const chk = el('iWorstCase');
-        if (!chk) return;
-        // 하마유 모달 안의 스위치는 모달 뒤의 설정 블록 스크롤이 의미 없으므로 생략
+    host.querySelectorAll('[data-scn-side]').forEach(segEl => {
+      segEl.addEventListener('click', () => {
+        const wantScn = segEl.getAttribute('data-scn-side');
+        const r = document.querySelector(`input[name="iScenario"][value="${wantScn}"]`);
+        if (!r) return;
         const fromHamayu = (host.id === 'worstCaseSwitchHamayu');
-        if (chk.checked === wantOn) {
-          if (wantOn && !fromHamayu) _openWorstCaseBlock();
-          return;
-        }
-        chk.checked = wantOn;
-        if (wantOn && !fromHamayu) _openWorstCaseBlock();
-        render();
-        // 하마유 S0 (양사 대리점) 통합 뷰는 _hakataSeries 로 PEER_PL_PROJ 를 읽으므로,
-        // 손익 재계산 후 하마유 표도 다시 그려야 S0 매출·영업이익이 최악 값 반영.
+        if (r.checked) { if (!fromHamayu) _openWorstCaseBlock(); return; }
+        r.checked = true;
+        r.dispatchEvent(new Event('change'));
+        if (!fromHamayu) _openWorstCaseBlock();
         if (typeof renderHamayuAll === 'function' &&
             document.getElementById('ovHamayuCombo')?.hasAttribute('data-open')) {
           renderHamayuAll();
@@ -6772,16 +6909,19 @@ function _openWorstCaseBlock() {
     if (inp) setTimeout(() => inp.focus({ preventScroll: true }), 320);
   });
 }
-// 요약 뱃지 (details summary 오른쪽) ON/OFF 색상
+// 요약 뱃지 (details summary 오른쪽) — 선택된 시나리오 표시 (worst/normal/best 색상)
 function syncWorstCaseSummaryBadge() {
   const b = document.getElementById('worstCaseSummaryBadge');
   if (!b) return;
-  const on = !!el('iWorstCase')?.checked;
-  b.textContent = on ? 'ON' : 'OFF';
-  b.className = 'badge' + (on ? ' chg' : '');
-  b.style.cssText = on
+  const scn = document.querySelector('input[name="iScenario"]:checked')?.value || 'normal';
+  const label = scn === 'worst' ? '⚠ worst' : scn === 'best' ? '★ best' : '● normal';
+  b.textContent = label;
+  b.className = 'badge';
+  b.style.cssText = scn === 'worst'
     ? 'background:var(--warn);color:#fff;border-color:var(--warn)'
-    : '';
+    : scn === 'best'
+      ? 'background:var(--good);color:#fff;border-color:var(--good)'
+      : 'background:var(--navy);color:#fff;border-color:var(--navy)';
 }
 ['iLoanYears','iLoanGrace'].forEach(id => el(id).addEventListener('input', render));
 el('iLoanMethod').addEventListener('change', render);
@@ -7454,6 +7594,20 @@ el('btnReset').addEventListener('click', () => {
   el('iSailorPeer').value = DEFAULTS.sailorPeer;
   el('iCrewPeer').value   = DEFAULTS.crewPeer;
   el('iVoyPeer').value    = DEFAULTS.voyPeer;
+  // 시나리오 — normal 로 되돌리고 각 입력도 기본값 복원
+  const _scnDef = {
+    worst:  { Fare:70000,  Fuel:30000, Voy:500, Cargo:5,    FuelRT:2400 },
+    normal: { Fare:90000,  Fuel:30000, Voy:550, Cargo:7.25, FuelRT:2200 },
+    best:   { Fare:120000, Fuel:30000, Voy:600, Cargo:15,   FuelRT:2000 }
+  };
+  Object.entries(_scnDef).forEach(([scn, vals]) => {
+    const cap = scn.charAt(0).toUpperCase() + scn.slice(1);
+    Object.entries(vals).forEach(([k, v]) => {
+      const inp = el('i' + cap + k); if (inp) inp.value = v;
+    });
+  });
+  const _nr = document.querySelector('input[name="iScenario"][value="normal"]');
+  if (_nr) { _nr.checked = true; _nr.dispatchEvent(new Event('change')); }
   el('iAgencyPeer').value = DEFAULTS.agencyPeer;
   el('iAgencyJapanShare').value = DEFAULTS.agencyJpnShare;
   el('iVoyRatio').checked = DEFAULTS.voyRatio;
