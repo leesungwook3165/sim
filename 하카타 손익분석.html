@@ -489,6 +489,22 @@
     min-width:240px;white-space:nowrap}
   /* 급여 라인의 당사기준 체크박스 — pl10 안에서 sticky th 폭 안에 들어오게 유지 */
   table.pl.pl10 tbody th .chkWageInline{vertical-align:middle}
+
+  /* 시나리오 로컬 탭 — 목표이익율·CVP 패널 상단에서 worst/normal/best 전환 */
+  .scn-tabs{display:inline-flex;gap:4px;align-items:center;margin-bottom:8px;
+    padding:3px;background:#F7FAFC;border:1px solid var(--rule);border-radius:4px}
+  .scn-tabs::before{content:'시나리오';font-size:10.5px;color:var(--muted);
+    padding:0 6px 0 4px;letter-spacing:0.2px}
+  .scn-tab{appearance:none;background:#fff;border:1px solid var(--rule);
+    padding:4px 12px;font-size:11.5px;font-weight:600;color:var(--muted);
+    border-radius:3px;cursor:pointer;transition:all .15s}
+  .scn-tab:hover{border-color:var(--navy);color:var(--navy)}
+  .scn-tab.on[data-scn="worst"]{background:#FFF4F4;border-color:#A8392F;color:#A8392F;
+    box-shadow:inset 0 -2px 0 #A8392F}
+  .scn-tab.on[data-scn="normal"]{background:#F6F9FC;border-color:#154B8C;color:#154B8C;
+    box-shadow:inset 0 -2px 0 #154B8C}
+  .scn-tab.on[data-scn="best"]{background:#F0FBF5;border-color:#1C6B4A;color:#1C6B4A;
+    box-shadow:inset 0 -2px 0 #1C6B4A}
   table.pl.pl10 tbody td{text-align:right;padding:4px 6px;border-bottom:1px solid #EEF1F6;
     font-variant-numeric:tabular-nums;white-space:nowrap;color:#33415A}
   table.pl.pl10 tbody td.base{border-right:1px solid var(--rule);background:#F7FAFC}
@@ -517,9 +533,9 @@
   details.grp>summary .badge{font-size:9px;font-weight:700;padding:0 5px;border-radius:8px;
     background:var(--soft);color:var(--navy);flex:none}
   details.grp>summary .badge.chg{background:var(--amberbg);color:var(--amber)}
-  /* ── 인쇄 ── */
+  /* ── 인쇄 — A4 landscape · 12mm 사방 여백(프린터 safe area + 여유) ── */
   @media print {
-    @page{size:A4 landscape;margin:8mm}
+    @page{size:A4 landscape;margin:12mm}
     html,body{height:auto !important;overflow:visible !important}
     #stage{height:auto !important;overflow:visible !important}
     #row{overflow:visible !important}
@@ -1356,6 +1372,89 @@
                 { -webkit-appearance: none; appearance: none; margin: 0; }
               #worstCaseBlock table input[type="number"]
                 { -moz-appearance: textfield; appearance: textfield; }
+              /* 좌측 '항목' 열 sticky — 가로 스크롤해도 라벨은 항상 보이게 */
+              #worstCaseBlock table th:first-child,
+              #worstCaseBlock table td:first-child
+                { position:sticky; left:0; z-index:2;
+                  background:#fff; box-shadow:1px 0 2px rgba(0,0,0,0.06) }
+              #worstCaseBlock table thead th:first-child { background:var(--head); z-index:3 }
+              #worstCaseBlock table tbody tr.scn-summary td:first-child { background:#FAFBFC }
+
+              /* 시나리오 테이블 — 열마다 시나리오 색을 미묘하게 */
+              #worstCaseBlock table tbody tr:not(.scn-summary) > td:nth-child(2) { background:#FFF8F8 }
+              #worstCaseBlock table tbody tr:not(.scn-summary) > td:nth-child(3) { background:#F8FBFF }
+              #worstCaseBlock table tbody tr:not(.scn-summary) > td:nth-child(4) { background:#F6FBF8 }
+              #worstCaseBlock table tbody td:nth-child(2) input
+                { background:#fff; border:1px solid #F0C8C8; color:#A8392F }
+              #worstCaseBlock table tbody td:nth-child(3) input
+                { background:#fff; border:1px solid #C8D8F0; color:#154B8C }
+              #worstCaseBlock table tbody td:nth-child(4) input
+                { background:#fff; border:1px solid #C0DCCB; color:#1C6B4A }
+
+              /* ── 칼럼 전체 외곽선 — 시나리오 열마다 좌우에 색 테두리 ── */
+              /* 평상시(비선택) 열에도 옅은 색 테두리 — 열을 눈으로 구분 */
+              #worstCaseBlock table th:nth-child(2), #worstCaseBlock table td:nth-child(2)
+                { border-left:2px solid rgba(168,57,47,0.25); border-right:1px dashed rgba(168,57,47,0.15) }
+              #worstCaseBlock table th:nth-child(3), #worstCaseBlock table td:nth-child(3)
+                { border-left:1px dashed rgba(21,75,140,0.20); border-right:1px dashed rgba(21,75,140,0.20) }
+              #worstCaseBlock table th:nth-child(4), #worstCaseBlock table td:nth-child(4)
+                { border-left:1px dashed rgba(28,107,74,0.15); border-right:2px solid rgba(28,107,74,0.25) }
+              /* 상단·하단 — 열 전체를 감싸는 느낌 */
+              #worstCaseBlock table thead th:nth-child(2) { border-top:3px solid rgba(168,57,47,0.55) }
+              #worstCaseBlock table thead th:nth-child(3) { border-top:3px solid rgba(21,75,140,0.55) }
+              #worstCaseBlock table thead th:nth-child(4) { border-top:3px solid rgba(28,107,74,0.55) }
+              #worstCaseBlock table tbody tr:last-child td:nth-child(2) { border-bottom:3px solid rgba(168,57,47,0.55) }
+              #worstCaseBlock table tbody tr:last-child td:nth-child(3) { border-bottom:3px solid rgba(21,75,140,0.55) }
+              #worstCaseBlock table tbody tr:last-child td:nth-child(4) { border-bottom:3px solid rgba(28,107,74,0.55) }
+
+              /* 선택된 시나리오 열 — 더 진한 바탕 + 좌우 테두리 강조 (2→3px 실선) */
+              body[data-scn="worst"]  #worstCaseBlock table tbody tr:not(.scn-summary) > td:nth-child(2) { background:#FFEEEE }
+              body[data-scn="normal"] #worstCaseBlock table tbody tr:not(.scn-summary) > td:nth-child(3) { background:#EDF3FC }
+              body[data-scn="best"]   #worstCaseBlock table tbody tr:not(.scn-summary) > td:nth-child(4) { background:#E6F5EC }
+              body[data-scn="worst"]  #worstCaseBlock table tbody td:nth-child(2) input { border-color:#D08080; font-weight:600 }
+              body[data-scn="normal"] #worstCaseBlock table tbody td:nth-child(3) input { border-color:#88A4D0; font-weight:600 }
+              body[data-scn="best"]   #worstCaseBlock table tbody td:nth-child(4) input { border-color:#78B090; font-weight:600 }
+              /* 선택된 열은 좌·우 테두리를 3px 실선, 상·하 테두리도 더 진한 색으로 */
+              body[data-scn="worst"]  #worstCaseBlock table th:nth-child(2),
+              body[data-scn="worst"]  #worstCaseBlock table td:nth-child(2)
+                { border-left:3px solid #A8392F; border-right:3px solid #A8392F }
+              body[data-scn="normal"] #worstCaseBlock table th:nth-child(3),
+              body[data-scn="normal"] #worstCaseBlock table td:nth-child(3)
+                { border-left:3px solid #154B8C; border-right:3px solid #154B8C }
+              body[data-scn="best"]   #worstCaseBlock table th:nth-child(4),
+              body[data-scn="best"]   #worstCaseBlock table td:nth-child(4)
+                { border-left:3px solid #1C6B4A; border-right:3px solid #1C6B4A }
+              body[data-scn="worst"]  #worstCaseBlock table thead th:nth-child(2) { border-top:3px solid #A8392F }
+              body[data-scn="normal"] #worstCaseBlock table thead th:nth-child(3) { border-top:3px solid #154B8C }
+              body[data-scn="best"]   #worstCaseBlock table thead th:nth-child(4) { border-top:3px solid #1C6B4A }
+              body[data-scn="worst"]  #worstCaseBlock table tbody tr:last-child td:nth-child(2) { border-bottom:3px solid #A8392F }
+              body[data-scn="normal"] #worstCaseBlock table tbody tr:last-child td:nth-child(3) { border-bottom:3px solid #154B8C }
+              body[data-scn="best"]   #worstCaseBlock table tbody tr:last-child td:nth-child(4) { border-bottom:3px solid #1C6B4A }
+
+              /* ── 시나리오 적용 흔적 — 메인 피어 입력란에 시나리오 색조 + 2px 외곽선 강조 ── */
+              /* 적용 대상 : iFarePeer · iFuelPeer · iVoyPeer · iCargoLoad · iLoadPeer · iFuelSimpleOneway · iPerVoyPeer · iPaxPeer
+                 외곽선은 outline 으로 그려 border 와 중복되지 않고 "둘러싸인" 느낌 — growSection .dirty 패턴 참고 */
+              body[data-scn="worst"]  #iFarePeer,  body[data-scn="worst"]  #iFuelPeer,
+              body[data-scn="worst"]  #iVoyPeer,   body[data-scn="worst"]  #iCargoLoad,
+              body[data-scn="worst"]  #iLoadPeer,  body[data-scn="worst"]  #iPerVoyPeer,
+              body[data-scn="worst"]  #iPaxPeer,   body[data-scn="worst"]  #iFuelSimpleOneway
+                { background:#FFF4F4 !important; border:1px solid #D08080 !important; color:#A8392F !important; font-weight:600;
+                  outline:2px solid var(--warn, #A8392F); outline-offset:-1px;
+                  box-shadow:0 0 0 1px rgba(168,57,47,0.15), 0 1px 3px rgba(168,57,47,0.12) }
+              body[data-scn="normal"] #iFarePeer,  body[data-scn="normal"] #iFuelPeer,
+              body[data-scn="normal"] #iVoyPeer,   body[data-scn="normal"] #iCargoLoad,
+              body[data-scn="normal"] #iLoadPeer,  body[data-scn="normal"] #iPerVoyPeer,
+              body[data-scn="normal"] #iPaxPeer,   body[data-scn="normal"] #iFuelSimpleOneway
+                { background:#F6F9FC !important; border:1px solid #88A4D0 !important; color:#154B8C !important; font-weight:600;
+                  outline:2px solid var(--navy, #154B8C); outline-offset:-1px;
+                  box-shadow:0 0 0 1px rgba(21,75,140,0.15), 0 1px 3px rgba(21,75,140,0.12) }
+              body[data-scn="best"]   #iFarePeer,  body[data-scn="best"]   #iFuelPeer,
+              body[data-scn="best"]   #iVoyPeer,   body[data-scn="best"]   #iCargoLoad,
+              body[data-scn="best"]   #iLoadPeer,  body[data-scn="best"]   #iPerVoyPeer,
+              body[data-scn="best"]   #iPaxPeer,   body[data-scn="best"]   #iFuelSimpleOneway
+                { background:#F0FBF5 !important; border:1px solid #78B090 !important; color:#1C6B4A !important; font-weight:600;
+                  outline:2px solid var(--good, #1C6B4A); outline-offset:-1px;
+                  box-shadow:0 0 0 1px rgba(28,107,74,0.15), 0 1px 3px rgba(28,107,74,0.12) }
             </style>
             <div style="overflow-x:auto">
               <table style="min-width:400px;width:100%;border-collapse:collapse;font-size:10.5px;table-layout:fixed">
@@ -1393,18 +1492,24 @@
                     <td style="padding:2px 2px"><input type="number" step="0.25" min="0" max="100" id="iBestCargo" value="15" style="width:100%;text-align:right;padding:3px 2px;font-size:10.5px;font-variant-numeric:tabular-nums;box-sizing:border-box;min-width:0"></td>
                   </tr>
                   <tr>
+                    <td style="padding:3px 6px;white-space:nowrap">승선율 <span style="color:var(--muted)">(%)</span></td>
+                    <td style="padding:2px 2px"><input type="number" step="1" min="0" max="100" id="iWorstLoadRate"  value="50" style="width:100%;text-align:right;padding:3px 2px;font-size:10.5px;font-variant-numeric:tabular-nums;box-sizing:border-box;min-width:0"></td>
+                    <td style="padding:2px 2px"><input type="number" step="1" min="0" max="100" id="iNormalLoadRate" value="50" style="width:100%;text-align:right;padding:3px 2px;font-size:10.5px;font-variant-numeric:tabular-nums;box-sizing:border-box;min-width:0"></td>
+                    <td style="padding:2px 2px"><input type="number" step="1" min="0" max="100" id="iBestLoadRate"   value="50" style="width:100%;text-align:right;padding:3px 2px;font-size:10.5px;font-variant-numeric:tabular-nums;box-sizing:border-box;min-width:0"></td>
+                  </tr>
+                  <tr>
                     <td style="padding:3px 6px;white-space:nowrap">편도 단순연료 <span style="color:var(--muted)">(만원)</span></td>
                     <td style="padding:2px 2px"><input type="number" step="100" min="0" id="iWorstFuelRT" value="2400" style="width:100%;text-align:right;padding:3px 2px;font-size:10.5px;font-variant-numeric:tabular-nums;box-sizing:border-box;min-width:0"></td>
                     <td style="padding:2px 2px"><input type="number" step="100" min="0" id="iNormalFuelRT" value="2200" style="width:100%;text-align:right;padding:3px 2px;font-size:10.5px;font-variant-numeric:tabular-nums;box-sizing:border-box;min-width:0"></td>
                     <td style="padding:2px 2px"><input type="number" step="100" min="0" id="iBestFuelRT" value="2000" style="width:100%;text-align:right;padding:3px 2px;font-size:10.5px;font-variant-numeric:tabular-nums;box-sizing:border-box;min-width:0"></td>
                   </tr>
-                  <tr style="background:#FAFBFC;color:var(--muted);font-size:10px">
+                  <tr class="scn-summary" style="background:#FAFBFC;color:var(--muted);font-size:10px">
                     <td style="padding:3px 6px;white-space:nowrap">총 운임 <span style="font-size:9px">(운임+할증)</span></td>
                     <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums" id="hScnTotalWorst">100,000원</td>
                     <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums" id="hScnTotalNormal">120,000원</td>
                     <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums" id="hScnTotalBest">150,000원</td>
                   </tr>
-                  <tr style="background:#FAFBFC;color:var(--muted);font-size:10px">
+                  <tr class="scn-summary" style="background:#FAFBFC;color:var(--muted);font-size:10px">
                     <td style="padding:3px 6px;white-space:nowrap">연료 × 항차 <span style="font-size:9px">(연간)</span></td>
                     <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums" id="hScnFuelAnnualWorst">12,000백만</td>
                     <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums" id="hScnFuelAnnualNormal">12,100백만</td>
@@ -1477,6 +1582,9 @@
           <div id="plBodyB" hidden>
             <div class="plbar">
               <button type="button" class="lnk" id="btnPeerAll">모두 펼치기</button>
+              <button type="button" class="lnk" id="btnPrint3Scn" hidden
+                      style="color:var(--navy);font-weight:600"
+                      title="worst/normal/best 3개 시나리오의 10개년 손익계산서를 모두 펼친 상태로 한 번에 인쇄">3-시나리오 10개년 인쇄</button>
               <button type="button" class="lnk" id="btnTrafficRef" hidden
                       style="margin-left:auto"
                       title="선사/항공사 수송실적 — 새 창으로 열기">선사/항공사 수송실적 ↗</button>
@@ -1549,11 +1657,14 @@
         <h2 class="clk" data-modal="ovCost" role="button" tabindex="0" aria-haspopup="dialog"><span class="tt">목표 영업이익률 도달 지표<span class="ic">?</span></span><em id="tgtCap">—</em>
           <button type="button" class="h2btn" data-printpanel="tgt" title="이 탭을 인쇄">🖨 인쇄</button></h2>
         <div class="body">
+          <div class="scn-tabs" role="tablist" aria-label="시나리오 선택 — 전역 운임·연료·항차수 세트를 전환합니다">
+            <button type="button" class="scn-tab" data-scn="worst"  role="tab">worst</button>
+            <button type="button" class="scn-tab" data-scn="normal" role="tab">normal</button>
+            <button type="button" class="scn-tab" data-scn="best"   role="tab">best</button>
+          </div>
           <div class="tgtbar">
-            <span class="lbl">보고 있는 배</span>
-            <button type="button" class="shipsw" id="swBase" data-settab="tabA">참조</button>
-            <button type="button" class="shipsw" id="swPeer" data-settab="tabB">대조</button>
-            <div class="facts" id="tgtFacts"></div>
+            <!-- 참조/대조 전환 버튼 제거 — 산타모니카(대조) 전용. 엘도라도 실적은 이 패널에 표시 안 함. -->
+            <div class="facts" id="tgtFacts" style="margin-left:0"></div>
           </div>
           <div class="minis">
             <div class="mini"><div class="k">필요 승객수</div><div class="v" id="mQ">—</div><div class="s" id="mQs">—</div></div>
@@ -1587,13 +1698,19 @@
         <h2>승객수–손익 구조<em>가로축 승객수, 세로축 금액(백만원)</em>
           <button type="button" class="h2btn" data-printpanel="cvp" title="이 탭을 인쇄">🖨 인쇄</button></h2>
         <div class="body">
+          <div class="scn-tabs" role="tablist" aria-label="시나리오 선택 — 전역 운임·연료·항차수 세트를 전환합니다">
+            <button type="button" class="scn-tab" data-scn="worst"  role="tab">worst</button>
+            <button type="button" class="scn-tab" data-scn="normal" role="tab">normal</button>
+            <button type="button" class="scn-tab" data-scn="best"   role="tab">best</button>
+          </div>
           <div id="cvp"></div>
           <div class="legend">
             <span><i class="sw" style="background:#154B8C"></i> 매출액</span>
             <span><i class="sw" style="background:#A8392F"></i> 총비용</span>
             <span><i class="sw" style="background:#1C6B4A"></i> 손익분기점</span>
             <span><i class="sw" style="background:#8A5A12"></i> 목표 도달점</span>
-            <span><i class="sw" style="background:#5BA3D9"></i> 실적 위치</span>
+            <span><i class="sw" style="background:#5BA3D9"></i> 현재 설정 (승선율 반영)</span>
+            <span><i class="sw" style="background:#8A5A12;height:2px"></i> 화물·기타 수입선 (선적율 반영)</span>
           </div>
         </div>
       </section>
@@ -2168,6 +2285,182 @@
     <div class="mbody">
       <section class="card">
         <div class="body" id="opEtcCalcBody" style="font-size:12px">—</div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- 연료비 10개년 설정 모달 — AI 유가추세(전 모드) + 년차별 수동(단순 모드) 통합 -->
+<div class="ov" id="ovFuelSeg" role="dialog" aria-modal="true" aria-label="연료비 10개년 설정">
+  <div class="modal" style="width:min(720px,95vw)">
+    <header>
+      <div><h3>연료비 10개년 설정 <small id="hFuelSegModeTag" style="font-weight:400;color:var(--muted);font-size:11px">—</small></h3></div>
+      <button class="x" data-close aria-label="닫기">✕</button>
+    </header>
+    <div class="mbody">
+      <section class="card">
+        <div class="body" style="font-size:12px">
+          <!-- 모드별 안내 밴드 — 현재 활성 모드와 유효 옵션을 안내 (openFuelSegModal 에서 세팅) -->
+          <div id="hFuelSegModeBanner" style="margin-bottom:10px;padding:6px 10px;font-size:10.5px;line-height:1.45;background:#F5F9FE;border-left:3px solid var(--navy);color:#33415A;border-radius:2px"></div>
+          <!-- 적용 토글 — 단순 모드 전용. 비단순 모드에선 AI 유가추세 체크박스가 마스터 토글 역할. -->
+          <div data-sim-only style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--rule)">
+            <label class="chk" style="margin:0;cursor:pointer">
+              <input type="checkbox" id="iFuelSegEnabled" style="margin:0 6px 0 0">
+              <b>년차별 수동 설정 적용</b>
+              <small style="color:var(--muted);margin-left:6px"
+                     title="끄면 현재 시나리오 편도단가 + gFuel 복리로 전구간 계산">(끄면 전구간 기본값)</small>
+            </label>
+            <span id="hFuelSegSel" style="font-size:11px;color:var(--muted)">선택 없음</span>
+          </div>
+
+          <!-- AI 유가추세 — 모든 모드에서 유효. 상단에 돋보이게 분리. -->
+          <div style="margin-bottom:12px;padding:8px 10px;background:#FFF8EC;border:1px solid #D9A520;border-radius:3px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <label class="chk" style="margin:0;cursor:pointer;display:flex;align-items:center;gap:6px">
+              <input type="checkbox" id="iFuelSegAiTrend" style="margin:0">
+              <b style="color:#8A5A12;font-size:12px">AI 유가추세 적용</b>
+            </label>
+            <small style="color:#8A5A12;font-size:10.5px;flex:1">ICE LSGO 선물·Platts·Argus·MABUX 기반 LSMGO 10년 궤적 — 평균 ~$880/MT 수렴. 모든 모드에서 년차별 배율로 자동 적용.</small>
+            <button type="button" class="lnk" id="btnFuelAiEvidence"
+                    title="LSMGO 전용 전망 근거 — 11개년 상세표"
+                    style="font-size:10.5px;color:#8A5A12;padding:2px 6px;border:1px solid #D9A520;border-radius:2px;background:#fff;font-weight:600">근거 ⓘ</button>
+          </div>
+
+          <!-- 단순 모드 전용 — 년차별 수동 설정. 비단순 모드에선 자동 비활성화. -->
+          <div data-sim-only style="margin-bottom:4px;font-size:10.5px;color:var(--muted);font-weight:600">년차별 수동 편도단가 설정 <small style="font-weight:400">(단순 모드 전용)</small></div>
+
+          <!-- 연도 셀 그리드 -->
+          <div data-sim-only id="fuelSegGrid"
+               title="클릭: 단일 선택 · 드래그: 범위 선택 · Shift+클릭: 범위 확장"
+               style="display:grid;grid-template-columns:repeat(11,1fr);gap:3px;user-select:none;margin-bottom:8px"></div>
+
+          <!-- 빠른 범위 -->
+          <div data-sim-only style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px">
+            <button type="button" class="lnk" data-fseg-range="all"   style="font-size:10.5px">전체</button>
+            <button type="button" class="lnk" data-fseg-range="early" style="font-size:10.5px">초기 y+0~3</button>
+            <button type="button" class="lnk" data-fseg-range="mid"   style="font-size:10.5px">중기 y+4~7</button>
+            <button type="button" class="lnk" data-fseg-range="late"  style="font-size:10.5px">후기 y+8~10</button>
+            <button type="button" class="lnk" data-fseg-range="none"  style="font-size:10.5px;color:var(--muted);margin-left:auto">해제</button>
+          </div>
+
+          <!-- 적용 패널 — 수동 입력 + 프리셋 (단순 모드 전용) -->
+          <div data-sim-only style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <input type="number" id="iFuelSegVal" step="100" min="0" placeholder="편도 만원"
+                   style="width:100px;padding:5px 8px;font-size:12px;text-align:right;font-variant-numeric:tabular-nums;border:1px solid var(--rule);border-radius:3px">
+            <button type="button" class="btn" id="btnFuelSegApplyVal"
+                    title="선택 없으면 전구간에 적용"
+                    style="padding:5px 12px;font-size:11px;background:var(--navy);color:#fff;border-color:var(--navy)">적용</button>
+            <span style="color:var(--muted);margin:0 2px">│</span>
+            <button type="button" class="btn" data-fseg-preset="worst"
+                    style="background:#FFF4F4;border-color:#D08080;color:#A8392F;padding:5px 10px;font-size:11px">worst</button>
+            <button type="button" class="btn" data-fseg-preset="normal"
+                    style="background:#F6F9FC;border-color:#88A4D0;color:#154B8C;padding:5px 10px;font-size:11px">normal</button>
+            <button type="button" class="btn" data-fseg-preset="best"
+                    style="background:#F0FBF5;border-color:#78B090;color:#1C6B4A;padding:5px 10px;font-size:11px">best</button>
+          </div>
+
+          <!-- 근거 — 기본 숨김, 토글로 노출. LSMGO MT 단가·환율 예상 궤적을 명시 -->
+          <div id="hFuelAiEvidence" hidden
+               style="margin-top:10px;padding:8px 10px;background:#FBFCFD;border:1px solid var(--rule);border-radius:3px;font-size:10.5px;line-height:1.55;color:var(--ink)">
+            <b style="color:var(--navy)">AI 유가추세 — LSMGO 평균 ~$880 수렴</b>
+            <small style="color:var(--muted);margin-left:4px">y+0 $1,490(pre-war $820 ×1.82) → y+4 $820 바닥 → y+10 $950 · 환율 1,320~1,410원/$ · <b>10년 평균 ~$880/MT</b></small>
+            <table id="hFuelAiEvidenceTbl" style="width:100%;border-collapse:collapse;margin-top:6px;font-size:9.5px">
+              <thead>
+                <tr style="background:#F5F9FE;color:var(--navy)">
+                  <th style="padding:3px 6px;text-align:left;width:46px">년차</th>
+                  <th style="padding:3px 6px;text-align:right;width:50px">배율</th>
+                  <th style="padding:3px 6px;text-align:right;width:68px">LSMGO $/MT</th>
+                  <th style="padding:3px 6px;text-align:right;width:62px">환율 ₩/$</th>
+                  <th style="padding:3px 6px;text-align:left">연도별 근거 (LSMGO 전용 전망)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- 년차별 상세 — y+0 ~ y+10 (11행). 배율은 FUEL_AI_TREND, 가격은 ×$1,490, FX 는 궤적 추정. -->
+                <tr><td style="padding:2px 6px;color:#8A5A12"><b>y+0</b></td>
+                  <td style="padding:2px 6px;text-align:right">×1.000</td>
+                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">$1,490</td>
+                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">1,410</td>
+                  <td style="padding:2px 6px">현 시점 — 중동 저유황 유통 리스크 · 러시아 제재 지속</td></tr>
+                <tr><td style="padding:2px 6px;color:#8A5A12"><b>y+1</b></td>
+                  <td style="padding:2px 6px;text-align:right">×0.840</td>
+                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">$1,252</td>
+                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">1,380</td>
+                  <td style="padding:2px 6px">저유황 공급 안정화 → MABUX Correction Index 음전환</td></tr>
+                <tr><td style="padding:2px 6px;color:#8A5A12"><b>y+2</b></td>
+                  <td style="padding:2px 6px;text-align:right">×0.705</td>
+                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">$1,050</td>
+                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">1,350</td>
+                  <td style="padding:2px 6px">싱가포르 LSMGO 수급 완화 (Platts 평가 하락)</td></tr>
+                <tr><td style="padding:2px 6px;color:#8A5A12"><b>y+3</b></td>
+                  <td style="padding:2px 6px;text-align:right">×0.617</td>
+                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">$919</td>
+                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">1,330</td>
+                  <td style="padding:2px 6px">저유황 디젤 정제능력 확대 → 프리미엄 축소 (Argus)</td></tr>
+                <tr style="background:#FFFBEE"><td style="padding:2px 6px;color:#8A5A12"><b>y+4</b></td>
+                  <td style="padding:2px 6px;text-align:right">×0.550</td>
+                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums"><b>$820</b></td>
+                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">1,320</td>
+                  <td style="padding:2px 6px"><b>저점</b> — pre-war 평균 수렴 · IMO 2030 발효 직전</td></tr>
+                <tr style="background:#FFFBEE"><td style="padding:2px 6px;color:#8A5A12"><b>y+5</b></td>
+                  <td style="padding:2px 6px;text-align:right">×0.544</td>
+                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">$810</td>
+                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums"><b>1,320</b></td>
+                  <td style="padding:2px 6px">저유황 공급 과잉 · 플러스알파 저가 유지</td></tr>
+                <tr><td style="padding:2px 6px;color:#8A5A12"><b>y+6</b></td>
+                  <td style="padding:2px 6px;text-align:right">×0.557</td>
+                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">$830</td>
+                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">1,330</td>
+                  <td style="padding:2px 6px">IMO 2030 저유황 수요 증가 반영</td></tr>
+                <tr><td style="padding:2px 6px;color:#8A5A12"><b>y+7</b></td>
+                  <td style="padding:2px 6px;text-align:right">×0.577</td>
+                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">$860</td>
+                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">1,350</td>
+                  <td style="padding:2px 6px">저유황 바이오혼합 요구 상향 → MGO 프리미엄 복원</td></tr>
+                <tr><td style="padding:2px 6px;color:#8A5A12"><b>y+8</b></td>
+                  <td style="padding:2px 6px;text-align:right">×0.597</td>
+                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">$890</td>
+                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">1,370</td>
+                  <td style="padding:2px 6px">바이오 LSMGO 비용 반영 완만 상승</td></tr>
+                <tr><td style="padding:2px 6px;color:#8A5A12"><b>y+9</b></td>
+                  <td style="padding:2px 6px;text-align:right">×0.617</td>
+                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">$920</td>
+                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">1,385</td>
+                  <td style="padding:2px 6px">신선박 LSMGO 수요 증가 · ICE LSGO 선물 반영</td></tr>
+                <tr><td style="padding:2px 6px;color:#8A5A12"><b>y+10</b></td>
+                  <td style="padding:2px 6px;text-align:right">×0.638</td>
+                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">$950</td>
+                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">1,400</td>
+                  <td style="padding:2px 6px">IMO 2030 완전 적용 · 10년 평균 ~$880 수렴</td></tr>
+              </tbody>
+            </table>
+            <div style="margin-top:6px;padding:5px 7px;background:#F5F9FE;border-left:3px solid var(--navy);font-size:10px;line-height:1.5;color:#33415A">
+              <b style="color:var(--navy)">반영 로직</b> — 년차별 편도단가(만원) = 산타모니카호 편도 톤수 × (LSMGO $/MT × ₩/$) ÷ 10,000.
+              현 손익은 LSMGO 단가·환율 복합 변동을 <b>'편도 만원'</b> 단일 값으로 흡수.
+              <br><b style="color:var(--navy)">기준</b> — Brent 유가 전망이 아니라 <b>LSMGO 직접 전망</b>(ICE LSGO 선물·Platts·Argus·MABUX)의 중앙치.
+              2015-2024 Platts Singapore MGO 역사 평균이 $500-820 범위라 10년 평균 $880 은 보수적 중앙.
+            </div>
+            <div style="margin-top:4px;font-size:10px;color:var(--muted)">
+              <a href="https://www.theice.com/products/34361119/Low-Sulphur-Gasoil-Futures" target="_blank" rel="noopener" style="color:var(--sky)">ICE LSGO 선물 ↗</a> ·
+              <a href="https://www.spglobal.com/commodityinsights/en/our-methodology/price-assessments/oil/marine-fuel-price-assessments" target="_blank" rel="noopener" style="color:var(--sky)">S&amp;P Platts Marine Fuels ↗</a> ·
+              <a href="https://www.argusmedia.com/en/oil-products/argus-marine-fuels" target="_blank" rel="noopener" style="color:var(--sky)">Argus Marine Fuels ↗</a> ·
+              <a href="https://mabux.com/" target="_blank" rel="noopener" style="color:var(--sky)">MABUX ↗</a> ·
+              <a href="https://shipandbunker.com/prices" target="_blank" rel="noopener" style="color:var(--sky)">Ship &amp; Bunker ↗</a> ·
+              <a href="https://www.bunkerindex.com/prices/port.php?p=109&amp;n=busan-republic-of-korea" target="_blank" rel="noopener" style="color:var(--sky)">BunkerIndex Busan ↗</a> ·
+              <a href="https://www.imo.org/en/MediaCentre/PressBriefings/pages/Revised-GHG-reduction-strategy-for-global-shipping-adopted-.aspx" target="_blank" rel="noopener" style="color:var(--sky)">IMO 2030/2050 ↗</a> ·
+              <a href="https://frankfurter.dev/" target="_blank" rel="noopener" style="color:var(--sky)">환율 Frankfurter ↗</a>
+              · 10년 평균 복리 -4.4%/년
+            </div>
+          </div>
+
+          <!-- 하단 버튼 -->
+          <div style="margin-top:16px;display:flex;gap:6px;justify-content:flex-end;padding-top:10px;border-top:1px solid var(--rule)">
+            <button type="button" class="btn" id="btnFuelSegReset"
+                    style="background:#fff;border-color:var(--rule);color:var(--muted);padding:5px 12px;font-size:11px">전체 초기화</button>
+            <button type="button" class="btn" data-close
+                    style="background:#fff;border-color:var(--rule);color:var(--ink);padding:5px 12px;font-size:11px">취소</button>
+            <button type="button" class="btn" id="btnFuelSegSave"
+                    style="background:var(--navy);color:#fff;border-color:var(--navy);padding:5px 18px;font-size:11px;font-weight:600">저장</button>
+          </div>
+        </div>
       </section>
     </div>
   </div>
@@ -3086,6 +3379,7 @@ function model(){
                                      scenario==='worst'?5:scenario==='best'?15:7.25));
   const scnFuelRT = Math.max(0, num('i' + (scenario==='worst'?'Worst':scenario==='best'?'Best':'Normal') + 'FuelRT',
                                      scenario==='worst'?2400:scenario==='best'?2000:2200));  // 만원 편도 (단순 모드)
+  const scnLoad   = Math.max(0, Math.min(100, num('i' + (scenario==='worst'?'Worst':scenario==='best'?'Best':'Normal') + 'LoadRate', 50)));  // 승선율 % · 공통 50% 기본
   // 하위 호환 — worstCase 는 scenario==='worst' 와 동일
   const worstCase    = (scenario === 'worst');
   const bestCase     = (scenario === 'best');
@@ -3372,7 +3666,7 @@ function model(){
            fuelEsc, escRate, etcPeer, opEtcEsc, voyRatio, applyVoyRatio, voyR, agencyPct, agencyJpn,
            fuelEngOn, fuelEngKm, fuelEngKts, fuelEngEst,
            fuelSimpleOn, fuelSimpleOneway, fuelSimpleAnnualWon, fuelMode,
-           worstCase, bestCase, scenario, scnFare, scnFuel, scnVoy, scnCargo, scnFuelRT,
+           worstCase, bestCase, scenario, scnFare, scnFuel, scnVoy, scnCargo, scnFuelRT, scnLoad,
            worstFare, worstFuel, worstVoy, worstLoad, voyPeerBase, fareEcoPeerBase, fuelPeerBase,
            paxPeerManualInput, paxPeerAutoFromTarget,
            tonnageTax, netTon, opDays, tonnageAmt,
@@ -3952,8 +4246,10 @@ function opcGapTag(side){
 // 목표지표와 CVP 는 보고 있는 탭의 배를 따라야 한다. 참조(엘도라도)와 대조(산타모니카)는
 // 운임·항차·정원·원가가 모두 달라서, 같은 그림에 두 배를 섞으면 읽을 수 없는 그림이 된다.
 // 아래는 탭에 맞는 한 벌을 골라 같은 이름으로 돌려주는 얇은 껍데기다.
-function view(m){
-  const onPeer = (ACTIVE_TAB === 'tabB');
+// forcePeer=true 로 호출하면 ACTIVE_TAB 과 무관하게 대조선박(산타모니카) 뷰를 돌려준다.
+// — 목표이익율·CVP 패널에서 쓴다. 엘도라도호 실적은 보여줄 필요가 없다는 결정.
+function view(m, forcePeer){
+  const onPeer = forcePeer || (ACTIVE_TAB === 'tabB');
   const _peerNm = m.peer ? m.peer.name.split(' · ')[0] : '대조';
   const _baseNm = m.ship ? m.ship.name.split(' · ')[0] : '엘도라도호';
   return onPeer ? {
@@ -3977,35 +4273,45 @@ function view(m){
 }
 
 function drawTgt(m){
-  const V = view(m);
+  // 산타모니카(peer) 전용 — 엘도라도 실적은 이 패널에선 안 보여준다.
+  const V = view(m, true);
   const qT = V.qFor(m.r), q0 = V.qFor(0);
   const _hold = V.onPeer ? peerHold() : '';
   const _baseNm = m.ship ? m.ship.name.split(' · ')[0] : '엘도라도호';
   const _peerNm = m.peer ? m.peer.name.split(' · ')[0] : '대조 선박';
   const _nowNm  = V.onPeer ? _peerNm : _baseNm;
 
-  // 이 탭이 어느 배를 어떤 자료 위에서 그리고 있는지는 좌측 설정 탭이 정한다 —
-  // 그 사실이 패널 밖에 있으면 읽는 사람이 알 길이 없어, 여기서 밝히고 여기서 바꾸게 둔다.
-  { const b = el('swBase'), p = el('swPeer');
-    b.textContent = '참조 · ' + _baseNm;
-    b.title = '감사보고서 실적 그대로 — 포항↔울릉';
-    b.classList.toggle('on', !V.onPeer);
-    p.textContent = '대조 · ' + _peerNm;
-    p.title = '좌측 「대조 선박 설정」의 시나리오 — 부산↔하카타';
-    p.classList.toggle('on',  V.onPeer); }
-  el('tgtFacts').innerHTML = [
-    ['원가 기준', V.onPeer ? '대저페리 3기(2024) + 대조 설정' : '대저페리 3기(2024) 실적'],
-    ['목표', pct(m.r,1) + (m.ebitda ? ' · EBITDA' : '')],
-    ['운임', won(V.fare) + '원'],
-    ['정원', V.ship ? won(V.ship.pax) + '명' : '—'],
-    ['항차', won(V.voy)],
-    ['육상직', V.head + '명'],
-  ].map(([k, v]) => `<span class="fact"><em>${k}</em>${v}</span>`).join('');
+  // 참조/대조 전환 버튼은 제거됨 — 이 패널은 산타모니카(peer) 전용. _baseNm 참조는 유지(사용 안 함).
+  void _baseNm;
+  { const _seatsHdr    = (V.ship && V.ship.pax) ? V.ship.pax * V.voy : 0;
+    const _loadPctHdr  = _seatsHdr > 0 ? (V.pax / _seatsHdr) * 100 : null;
+    const _cargoPctHdr = V.onPeer && m.scnCargo != null ? m.scnCargo : null;
+    el('tgtFacts').innerHTML = [
+      ['원가 기준', V.onPeer ? '대저페리 3기(2024) + 대조 설정' : '대저페리 3기(2024) 실적'],
+      ['목표', pct(m.r,1) + (m.ebitda ? ' · EBITDA' : '')],
+      ['운임', won(V.fare) + '원'],
+      ['정원', V.ship ? won(V.ship.pax) + '명' : '—'],
+      ['승선율', _loadPctHdr  != null ? _loadPctHdr.toFixed(1)  + '% (' + won(V.pax) + '명)' : '—'],
+      ...(_cargoPctHdr != null ? [['선적율', _cargoPctHdr.toFixed(2) + '%']] : []),
+      ['항차', won(V.voy)],
+      ['육상직', V.head + '명'],
+    ].map(([k, v]) => `<span class="fact"><em>${k}</em>${v}</span>`).join(''); }
 
   el('tgtCap').innerHTML = _nowNm + ' 기준' + (_hold ? ' ' + HOLD_TAG : '');
   el('tgtCap').title = _hold || '';
+  // ── 승선율·선적율 — 표 캡션·KPI 서브텍스트·컬럼 헤더에 공통 노출 ──────────
+  //   승선율 = 설정 승객수 ÷ 연간좌석(정원 × 항차)
+  //   선적율 = 시나리오 scnCargo (peer 모드 전용)
+  const _seats    = (V.ship && V.ship.pax) ? V.ship.pax * V.voy : 0;
+  const _loadPct  = _seats > 0 ? (V.pax / _seats) * 100 : null;
+  const _cargoPct = V.onPeer && m.scnCargo != null ? m.scnCargo : null;
+  // 승선율은 인원수를 괄호로 병기 — 모든 노출 지점에서 '승선율 X% (N명)' 로 통일
+  const _loadStr  = _loadPct  != null ? `승선율 ${_loadPct.toFixed(1)}% (${won(V.pax)}명)` : '';
+  const _cargoStr = _cargoPct != null ? `선적율 ${_cargoPct.toFixed(2)}%` : '';
   { const _cgS = V.cur.sales ? V.cargo / V.cur.sales : 0;
-    el('tgtCap1').innerHTML = `<b>${_nowNm}</b> · 목표 영업이익률별 필요 승객수 · 운임 — ${won(V.voy)}항차 고정`
+    const _prem = [_loadStr, _cargoStr].filter(Boolean).join(' · ');
+    el('tgtCap1').innerHTML = `<b>${_nowNm}</b> · 목표 영업이익률별 필요 승객수 · 운임`
+      + ` — ${won(V.voy)}항차 고정${_prem ? ' · ' + _prem : ''}`
       + ` · 화물 <b>${mil(V.cargo)}백만</b>(매출의 ${pct(_cgS,1)})이 빠지면 오른쪽 칸`; }
   el('tgtCap2').innerHTML = `<b>${_nowNm}</b> · 같은 목표를 매출 대비 비중으로`;
 
@@ -4016,27 +4322,62 @@ function drawTgt(m){
     const t = V.sim(qT), p = V.pFor(m.r, V.pax);
     // 화물은 선적율 가정 위에 선 숫자라, 그게 통째로 빠졌을 때를 나란히 둔다
     const qNC = V.qFor(m.r, V.Onc), pNC = V.pFor(m.r, V.pax, V.Onc);
-    el('mQ').innerHTML = won(qT) + '<small>명</small>'; el('mQ').className='v';
-    el('mQs').innerHTML = `${V.tag} 대비 ${dlt(qT-V.paxAct)}명 (${pct(qT/V.paxAct-1)})`
-      + (qNC === null ? '' : `<br>화물 제외 ${won(qNC)}명 <span class="nc">${dlt(qNC-qT)}명</span>`);
+    // mQ(메인 수치) · mQs(서브텍스트) 구조:
+    //   mQ  = "205,302명 (총 승선율 61.6%)"          — 결과 승선율은 메인 수치에 붙임
+    //   mQs = "현재 설정 승선율 50.0% (연 550항차 · 166,650명) 대비 필요 +11.6% (+38,652명)"
+    //         + "화물 제외시 211,021명 (+5,718명)"
+    //   — 베이스라인/증분/화물 제외 비교 세 축을 명확히 분리.
+    { const _tgtLoadPct = (_seats > 0 && isFinite(qT)) ? (qT / _seats) * 100 : null;
+      const _tgtLoadStr = (V.onPeer && _tgtLoadPct != null)
+        ? ` <span style="font-size:12px;font-weight:500;opacity:0.85">(총 승선율 ${_tgtLoadPct.toFixed(1)}%)</span>`
+        : '';
+      el('mQ').innerHTML = won(qT) + '<small>명</small>' + _tgtLoadStr;
+      el('mQ').className = 'v';
+      const _loadGapPp  = (_loadPct != null && _tgtLoadPct != null) ? (_tgtLoadPct - _loadPct) : null;
+      const _gapN       = qT - V.paxAct;
+      let _mqsHead;
+      if (V.onPeer && _loadPct != null && _tgtLoadPct != null) {
+        const _need   = _loadGapPp >= 0 ? '필요' : '여유';
+        const _sign   = _loadGapPp >= 0 ? '+' : '△';
+        const _ppStr  = `${_sign}${Math.abs(_loadGapPp).toFixed(1)}%`;
+        const _nStr   = `${_sign}${won(Math.abs(_gapN))}명`;
+        _mqsHead = `현재 설정 승선율 ${_loadPct.toFixed(1)}% (연 ${won(V.voy)}항차 · ${won(V.paxAct)}명) 대비 `
+                 + `${_need} ${_ppStr} `
+                 + `<span class="nc">(${_nStr})</span>`;
+      } else {
+        _mqsHead = `${V.tag} 대비 ${dlt(_gapN)}명 (${pct(qT/V.paxAct-1)})`;
+      }
+      el('mQs').innerHTML = _mqsHead
+        + (qNC === null ? '' : `<br>화물 제외시 ${won(qNC)}명 <span class="nc">(${dlt(qNC-qT)}명)</span>`); }
     el('mP').innerHTML = p===null ? '—' : won(p) + '<small>원</small>'; el('mP').className='v';
-    el('mPs').innerHTML = p===null ? '—'
-      : `승객 ${won(V.pax)}명 고정 시 · 현재 대비 ${pct(p/V.fare-1)}`
-        + (pNC === null ? '' : `<br>화물 제외 ${won(pNC)}원 <span class="nc">${dlt(pNC-p)}원</span>`);
+    { // 승선율에 이미 (N명) 이 들어가 있으니 '승객 N명 고정' 중복 표기를 피한다.
+      //   '현재 대비' → '현재 운임 대비' 로 어떤 수치와 비교하는지 명시.
+      const _lockHead = _loadStr ? `${_loadStr} 고정` : `승객 ${won(V.pax)}명 고정`;
+      const _lockPrem = _cargoStr ? ` · ${_cargoStr}` : '';
+      el('mPs').innerHTML = p===null ? '—'
+        : `${_lockHead}${_lockPrem} · 현재 운임 ${won(V.fare)}원 대비 ${pct(p/V.fare-1)}`
+          + (pNC === null ? '' : `<br>화물 제외 ${won(pNC)}원 <span class="nc">${dlt(pNC-p)}원</span>`); }
     el('mS').innerHTML = mil(t.sales) + '<small>백만</small>'; el('mS').className='v';
-    // 견줄 자리는 감사보고서 실적이 아니라 '지금 이 설정의 매출'이다 —
-    // 입력 승객수를 바꾸면 기준도 같이 움직여야 앞뒤가 맞는다.
+    // 비교 기준이 '지금 이 설정의 매출' 임을 명시 — 매출 단어까지 넣어 혼동 제거.
     el('mSs').textContent =
-      `현재 설정 ${mil(V.cur.sales)}백만 대비 ${pct(t.sales/V.cur.sales-1)}`;
+      `현재 설정 매출 ${mil(V.cur.sales)}백만 대비 ${pct(t.sales/V.cur.sales-1)}`;
     el('mC').innerHTML = mil(t.cost) + '<small>백만</small>'; el('mC').className='v';
     el('mCs').textContent = `영업이익 ${mil(t.op)}백만 확보`;
   }
 
   const tiers = [0, 0.03, 0.05, 0.08, 0.10, 0.15];
   if (!tiers.includes(m.r)) { tiers.push(m.r); tiers.sort((a,b) => a-b); }
-  { const th = el('thTgtGap'); if (th) th.textContent = `${V.tag} 대비`;
+  { // 컬럼 헤더 — '현재 설정 승선율 대비' + 서브라인에 '(X% · 연 N항차)' 로 항차 못 박기
+    const th = el('thTgtGap');
+    if (th) th.innerHTML = V.onPeer
+      ? `현재 설정 승선율 대비${_loadStr ? '<br><span class="thsub">(' + _loadPct.toFixed(1) + '% · 연 ' + won(V.voy) + '항차)</span>' : ''}`
+      : `${V.tag} 대비`;
     // 이 칸만 전제가 다르다 — 승객수를 지금 설정에 묶어 둔 채 운임만 올리는 경우다
-    const fs_ = el('thFareSub'); if (fs_) fs_.textContent = `승객 ${won(V.pax)}명 고정`; }
+    const fs_ = el('thFareSub');
+    // 승선율에 (N명) 이 포함돼 있어 '승객 N명 고정' 과 중복 — 승선율 있으면 그것만.
+    const _lockHead2 = _loadStr ? `${_loadStr} 고정` : `승객 ${won(V.pax)}명 고정`;
+    if (fs_) fs_.innerHTML = _lockHead2
+      + (_cargoStr ? `<br><span style="opacity:0.8">${_cargoStr}</span>` : ''); }
   const tierRows = tiers.map(rr => {
     const q = V.qFor(rr), hit = Math.abs(rr-m.r) < 1e-9;
     const tag = (hit?'<span class="tagv">목표</span>':'') + (rr===0?'<span class="tagv">손익분기</span>':'');
@@ -4045,11 +4386,17 @@ function drawTgt(m){
         <td class="fail" colspan="5">운임이 변동비를 못 넘어 달성 불가</td></tr>`;
     const p = V.pFor(rr, V.pax), gap = q - V.paxAct;
     const qNC = V.qFor(rr, V.Onc);
+    // 승선율 대비 %p 를 1차 지표로, 명 수치는 보조로 (peer 모드만)
+    const _rowLoadPct = (V.onPeer && _seats > 0) ? (q / _seats) * 100 : null;
+    const _ppGap      = (_rowLoadPct != null && _loadPct != null) ? (_rowLoadPct - _loadPct) : null;
+    const _gapCell    = (_ppGap != null)
+      ? `${(_ppGap >= 0 ? '+' : '△')}${Math.abs(_ppGap).toFixed(1)}%p<span class="nc">${dlt(gap)}명</span>`
+      : `${dlt(gap)}명`;
     return `<tr class="${hit?'lead':''}"><td>${pct(rr,0)}${tag}</td>
       <td>${won(q)}명</td>
       <td>${qNC===null?'—':won(qNC)+'명<span class="nc">'+dlt(qNC-q)+'</span>'}</td>
       <td>${won(q/V.voy)}명</td>
-      <td class="${gap>0?'fail':'pass'}">${dlt(gap)}명</td>
+      <td class="${gap>0?'fail':'pass'}">${_gapCell}</td>
       <td>${p===null?'—':won(p)+'원'}</td></tr>`;
   }).join('');
 
@@ -4115,7 +4462,8 @@ function drawCVP(m){
   const W = Math.max(640, Math.round(box.clientWidth  || 1000));
   const H = Math.max(260, Math.round(box.clientHeight ||  300));
   const L=64, R=16, T=14, B=34;
-  const V = view(m);
+  // 산타모니카(peer) 전용 — 엘도라도 실적은 이 패널에선 안 보여준다.
+  const V = view(m, true);
   const qT = V.qFor(m.r), q0 = V.qFor(0);
   const qMax = Math.max(...[V.paxAct, V.pax, q0||0, qT||0].filter(v => isFinite(v) && v>0), 1) * 1.25;
   const yMax = Math.max(V.sim(qMax).sales, V.sim(qMax).cost) * 1.05;
@@ -4125,14 +4473,23 @@ function drawCVP(m){
   const line = (fn, col) =>
     `<polyline points="${[0,qMax].map(q => `${x(q).toFixed(1)},${y(fn(q)).toFixed(1)}`).join(' ')}"
        fill="none" stroke="${col}" stroke-width="2"/>`;
-  const mark = (q, col, label, dy) => {
+  // mark — label 은 string 또는 {main, sub} 객체. sub 가 있으면 작은 서브라인으로 아래 한 줄 추가.
+  const mark = (q, col, label, dy, opts) => {
     if (q===null || !isFinite(q) || q<=0 || q>qMax) return '';
     const v = V.sim(q);
+    const _dash = (opts && opts.dash) || '4 3';
+    const _main = (typeof label === 'string') ? label : (label && label.main) || '';
+    const _sub  = (typeof label === 'object' && label && label.sub) ? label.sub : '';
+    const _subEl = _sub
+      ? `<text x="${x(q).toFixed(1)}" y="${(y(v.sales)+dy+(dy<0?-12:12)).toFixed(1)}"
+           fill="${col}" font-size="9.5" font-weight="400" text-anchor="middle" opacity="0.85">${_sub}</text>`
+      : '';
     return `<line x1="${x(q).toFixed(1)}" y1="${y(0).toFixed(1)}" x2="${x(q).toFixed(1)}" y2="${y(v.sales).toFixed(1)}"
-              stroke="${col}" stroke-width="1.2" stroke-dasharray="4 3"/>
+              stroke="${col}" stroke-width="1.2" stroke-dasharray="${_dash}"/>
             <circle cx="${x(q).toFixed(1)}" cy="${y(v.sales).toFixed(1)}" r="4" fill="${col}"/>
             <text x="${x(q).toFixed(1)}" y="${(y(v.sales)+dy).toFixed(1)}" fill="${col}"
-              font-size="11" font-weight="700" text-anchor="middle">${label}</text>`;
+              font-size="11" font-weight="700" text-anchor="middle">${_main}</text>
+            ${_subEl}`;
   };
 
   let ticks = '';                                   // y축 — 5,000백만원 간격
@@ -4146,17 +4503,79 @@ function drawCVP(m){
     xt += `<text x="${x(q).toFixed(1)}" y="${H-12}" fill="#5C6B7F" font-size="10"
              text-anchor="middle">${(q/1000).toFixed(0)}천명</text>`;
 
+  // ── 시나리오 전제 — 그래프 상단 우측에 승선율·선적율·시나리오 라벨 ────────
+  //   peer 탭에서만 노출 (base 탭은 실적 자체라 시나리오 전제가 없다).
+  //   선적율은 화물수입 수평선(sales line 의 y 절편)에 추가 라벨로 꽂아 눈에 보이게.
+  const onPeer = V.onPeer;
+  const _scn = (m.scenario || 'normal');
+  const _scnColor = _scn==='worst' ? '#A8392F' : _scn==='best' ? '#1C6B4A' : '#154B8C';
+  const _scnBg    = _scn==='worst' ? '#FFF4F4' : _scn==='best' ? '#F0FBF5' : '#F6F9FC';
+  const seats     = (m.peer && m.peer.pax > 0) ? m.peer.pax * (m.voyPeer || 0) : 0;
+  const loadPct   = onPeer && seats > 0 ? (V.paxAct / seats) * 100 : null;   // 실측 승선율 (설정 승객수 ÷ 연간좌석)
+  const cargoPct  = onPeer ? (m.scnCargo != null ? m.scnCargo : null) : null;
+  // 우측 상단 전제 뱃지 — 흰 배경 라운드 박스
+  //   1줄: 시나리오 라벨
+  //   2줄: 승선율(인원 병기) · 선적율
+  //   3줄: 연 N항차 · 가동률 % (가동률 = voy / 730, 365일 × 왕복2)
+  let scnBadge = '';
+  if (onPeer) {
+    const bw = 300, bh = 52, bx = W - R - bw, by = T + 4;
+    const _loadLbl  = loadPct != null ? `승선율 ${loadPct.toFixed(1)}% (${won(V.paxAct)}명)` : '승선율 —';
+    const _voy      = m.voyPeer || V.voy || 0;
+    const _utilPct  = _voy > 0 ? (_voy / (365 * 2)) * 100 : null;
+    const _voyLbl   = `연 ${won(_voy)}항차 · 가동률 ${_utilPct != null ? _utilPct.toFixed(1) + '%' : '—'}`;
+    scnBadge =
+      `<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="4"
+         fill="${_scnBg}" stroke="${_scnColor}" stroke-width="1"/>
+       <text x="${bx+10}" y="${by+14}" fill="${_scnColor}" font-size="10.5" font-weight="700">
+         ${_scn.toUpperCase()} 시나리오 전제</text>
+       <text x="${bx+10}" y="${by+28}" fill="#33415A" font-size="10.5">
+         ${_loadLbl} · 선적율 ${cargoPct != null ? cargoPct.toFixed(2) : '—'}%</text>
+       <text x="${bx+10}" y="${by+42}" fill="#33415A" font-size="10.5">
+         ${_voyLbl}</text>`;
+  }
+  // 화물수입 수평 참조선 — 선적율의 효과를 시각적으로 (sales line 의 y 절편 = V.O)
+  //   값이 0 보다 커야 보이고, 그래프 세로 범위 안에 들어와야 함.
+  let cargoLine = '';
+  if (onPeer && V.O > 0 && V.O < yMax) {
+    const yv = y(V.O);
+    cargoLine =
+      `<line x1="${L}" y1="${yv.toFixed(1)}" x2="${W-R}" y2="${yv.toFixed(1)}"
+         stroke="#8A5A12" stroke-width="1" stroke-dasharray="2 4" opacity="0.55"/>
+       <text x="${W-R-6}" y="${(yv-3).toFixed(1)}" fill="#8A5A12" font-size="10" font-weight="600"
+         text-anchor="end">
+         선적율 ${cargoPct != null ? cargoPct.toFixed(2) : '—'}% · 화물·기타 ${mil(V.O)}백만</text>`;
+  }
+  // ── 각 마커의 라벨 — 동일 양식으로 통일 ─────────────────────────────────
+  //   형식:  main = "{제목} · {N}명"
+  //          sub  = "승선율 X% · 선적율 Y%"
+  //   세 지점(현재 설정 · 손익분기 · 목표) 모두 같은 구조로 읽히도록.
+  const _loadOf  = q => (onPeer && seats > 0) ? (q / seats) * 100 : null;
+  const _subOf   = q => {
+    const lp  = _loadOf(q);
+    const lpS = lp != null ? `승선율 ${lp.toFixed(1)}%` : '';
+    const cgS = (onPeer && cargoPct != null) ? `선적율 ${cargoPct.toFixed(2)}%` : '';
+    return [lpS, cgS].filter(Boolean).join(' · ');
+  };
+  const _mkLabel = (title, q) => ({ main: `${title} · ${won(q||0)}명`, sub: _subOf(q) });
+  const _tgtRatePct = (m.r * 100).toFixed(1).replace(/\.0$/, '');
+
+  const _curLabel = _mkLabel('현재 설정',                       V.paxAct);
+  const _bepLabel = _mkLabel('손익분기',                        q0);
+  const _tgtLabel = _mkLabel(`목표(영업이익률 ${_tgtRatePct}%)`, qT);
   el('cvp').innerHTML =
     `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"
-       aria-label="승객수에 따른 매출액과 총비용, 손익분기점과 목표 도달점">
+       aria-label="승객수에 따른 매출액과 총비용, 손익분기점·목표·현재 설정">
       ${ticks}${xt}
       <line x1="${L}" y1="${y(0).toFixed(1)}" x2="${W-R}" y2="${y(0).toFixed(1)}" stroke="#D7DFE9"/>
       <line x1="${L}" y1="${T}" x2="${L}" y2="${y(0).toFixed(1)}" stroke="#D7DFE9"/>
+      ${cargoLine}
       ${line(q => V.sim(q).cost,  '#A8392F')}
       ${line(q => V.sim(q).sales, '#154B8C')}
-      ${mark(q0,       '#1C6B4A', '손익분기 ' + won(q0||0) + '명', -12)}
-      ${mark(qT,       '#8A5A12', '목표 ' + won(qT||0) + '명',     -28)}
-      ${mark(V.paxAct, '#5BA3D9', V.tag + ' ' + won(V.paxAct) + '명',   18)}
+      ${mark(q0,          '#1C6B4A', _bepLabel,  -12)}
+      ${mark(qT,          '#8A5A12', _tgtLabel,  -28)}
+      ${mark(V.paxAct,    '#5BA3D9', _curLabel,   18)}
+      ${scnBadge}
     </svg>`;
 }
 
@@ -4716,6 +5135,10 @@ function loanSchedule(principal, ratePct, years, grace, method){
 // 목표기반 탭에서는 대조 선박으로 다시 세운 값을 보여야 한 화면 안에서 앞뒤가 맞는다.
 let ACTIVE_TAB = 'tabA';
 let PEER_PL = null;
+// 단순 모드 연료비 10개년 년차별 편도단가 (만원 편도).
+//   enabled=false 면 현재 시나리오 편도단가가 10년 전구간 적용 (gFuel 복리).
+//   years[k] = k 년차(y+0..y+10)의 편도단가 (만원). null 이면 시나리오값으로 폴백.
+let FUEL_SEG = { enabled:false, aiTrend:false, years:new Array(11).fill(null) };
 let PEER_PL_ROWS = null;      // 10개년 뷰용 행별 데이터
 let PEER_PL_PROJ = null;      // 10개년 뷰 행별 연차 투영값 (팝업 모달에서 재사용)
 let PEER_PL_IDX  = {};        // 특정 행의 인덱스 (iNet, iCapex, iSinking 등)
@@ -4943,6 +5366,11 @@ function drawPeerPL(m) {
     }
     // 연료비 행 : 수동 ↔ 실제 시가 ↔ 초기값 토글 — 모든 모드에서 노출 (단순 모드는 참고용 · 산식에 미적용)
     if (t.id === 'fuel') tags.push(fuelToggleHTML());
+    // 연료비 행 UI — 10개년 분기 설정 버튼 하나로 통합 (내부에 AI 유가추세 토글 포함).
+    //   상태별 라벨 : 미적용 / AI 유가추세 적용 중 / 년차별 수동 적용 중
+    if (t.id === 'fuel') {
+      tags.push(_fuelSegBtnHTML(m));
+    }
     const nm = '&nbsp;&nbsp;· ' + t.name + (tags.length ? ' ' + tags.join(' ') : '');
     // 연료비 바로 위에 산출 모드 토글 보조행 — 모드별로 요약 다름 (회계상/단순/공학적)
     if (t.id === 'fuel') {
@@ -4963,7 +5391,7 @@ function drawPeerPL(m) {
              + ` onclick="event.stopPropagation()"`
              + ` style="width:110px;padding:1px 4px;font-size:11px;font-weight:700;color:#4A6EE0;border:1px solid rgba(74,110,224,0.4);border-radius:3px;text-align:right">원`
              + ` <span style="color:var(--navy)">× ${_wonFmtAux(m.voyPeer)}항차</span>`
-             + ` <span style="color:var(--muted)">= 1년차 ${_wonFmtAux(m.fuelSimpleAnnualWon)}원 (이후 gFuel 복리 · 유가 증가율 미적용)</span>`
+             + ` <span style="color:var(--muted)">= 1년차 ${_wonFmtAux(m.fuelSimpleAnnualWon)}원 ${FUEL_SEG.enabled ? '<b style=\'color:#8A5A12\'>· 10개년 분기 적용 중</b>' : '(이후 gFuel 복리)'}</span>`
              + `</span>`;
         _bg  = 'background:#EDF2FF';
       } else {
@@ -5324,7 +5752,7 @@ function drawPeerPL(m) {
              + ` onclick="event.stopPropagation()"`
              + ` style="width:110px;padding:1px 4px;font-size:11px;font-weight:700;color:#4A6EE0;border:1px solid rgba(74,110,224,0.4);border-radius:3px;text-align:right">원`
              + ` <span style="color:var(--navy)">× ${_wonFmtAux(m.voyPeer)}항차</span>`
-             + ` <span style="color:var(--muted)">= 1년차 ${_wonFmtAux(m.fuelSimpleAnnualWon)}원 (이후 gFuel 복리 · 유가 증가율 미적용)</span>`
+             + ` <span style="color:var(--muted)">= 1년차 ${_wonFmtAux(m.fuelSimpleAnnualWon)}원 ${FUEL_SEG.enabled ? '<b style=\'color:#8A5A12\'>· 10개년 분기 적용 중</b>' : '(이후 gFuel 복리)'}</span>`
              + `</span>`;
       } else {
         _rhs = `<span style="color:var(--muted);font-size:10.5px">장부 역산 — 단순·공학적으로 전환 시 산식 기반으로 재산출</span>`;
@@ -5332,9 +5760,91 @@ function drawPeerPL(m) {
       add({ cls:'n sub2 fuel-aux', name: fuelEngToggleHTML(m) + ' ' + _rhs,
             isAux:true, groupIn:'op_etc' });
     }
+    // 연료비(k=0) 년차별 적용 — AI 유가추세는 모든 모드에서, 수동 분기 입력은 단순 모드에서만.
+    //   · 단순 + 분기 설정 ON : fuelSeg10Series (년차별 편도단가 — AI 추세 적용 시 _applyAiTrend 로 미리 채워짐)
+    //   · 회계상/공학적 + AI 유가추세 ON : baseV × FUEL_AI_TREND[k] — 년차별 배율만 적용
+    const extra = {};
+    if (k === 0 && FUEL_SEG.enabled) {
+      if (m.fuelSimpleOn) {
+        extra.series = fuelSeg10Series(m.voyPeer, m.scnFuelRT || 2200);
+      } else if (FUEL_SEG.aiTrend && typeof FUEL_AI_TREND !== 'undefined') {
+        extra.series = FUEL_AI_TREND.map(ratio => baseV * ratio);
+      }
+    }
+    // 연료비 셀별 산식 툴팁 — 년차마다 "어떤 산식으로 그 숫자가 나왔는지" 를 cellTips[k] 에 넣는다.
+    //   모드·유가추세 활성 여부에 따라 설명이 다르다. 줄바꿈을 자주 넣어 가독성 확보.
+    if (k === 0) {
+      const _gFuel = (GROW?.gFuel || 0) / 100;
+      const _voyN  = m.voyPeer || 0;
+      const _fmtWon  = v => Math.round(v).toLocaleString('ko-KR');
+      const _fmtMil2 = v => Math.round(v / 1e6).toLocaleString('ko-KR');
+      const _aiOn    = FUEL_SEG.enabled && FUEL_SEG.aiTrend && !m.fuelSimpleOn;
+      const _segOn   = FUEL_SEG.enabled && m.fuelSimpleOn;
+      extra.cellTips = Array.from({ length: 11 }, (_, k2) => {
+        let yVal;
+        const lines = [];
+        lines.push(`▌ y+${k2} 연료비 산출`);
+        lines.push('─────────────');
+        if (_segOn) {
+          const oneway = (typeof fuelSegOnewayFor === 'function')
+            ? fuelSegOnewayFor(k2, m.scnFuelRT || 2200) : (m.scnFuelRT || 2200);
+          yVal = oneway * 10000 * _voyN;
+          lines.push('모드 : 단순');
+          lines.push(FUEL_SEG.aiTrend ? '적용 : AI 유가추세 (년차별)' : '적용 : 년차별 수동');
+          if (FUEL_SEG.aiTrend && FUEL_AI_USD_MT[k2] != null) {
+            lines.push('');
+            lines.push(`LSMGO : $${FUEL_AI_USD_MT[k2]} /MT`);
+            lines.push(`환율   : ₩${FUEL_AI_FX[k2].toLocaleString('ko-KR')} /$`);
+            lines.push(`배율   : ×${FUEL_AI_TREND[k2].toFixed(3)}`);
+            if (FUEL_AI_RATIONALE[k2]) lines.push(`근거   : ${FUEL_AI_RATIONALE[k2]}`);
+          }
+          lines.push('');
+          lines.push('[산식]');
+          lines.push(`편도 ${oneway.toLocaleString('ko-KR')}만원`);
+          lines.push(`× ${_voyN.toLocaleString('ko-KR')}항차`);
+          lines.push(`= ${_fmtWon(yVal)}원`);
+          lines.push(`(${_fmtMil2(yVal)}백만원)`);
+        } else if (_aiOn && FUEL_AI_TREND[k2] != null) {
+          const ratio = FUEL_AI_TREND[k2];
+          yVal = baseV * ratio;
+          lines.push('모드 : ' + (m.fuelMode === 'engineering' ? '공학적' : '회계상'));
+          lines.push('적용 : AI 유가추세 (년차별)');
+          lines.push('');
+          lines.push(`LSMGO : $${FUEL_AI_USD_MT[k2]} /MT`);
+          lines.push(`환율   : ₩${FUEL_AI_FX[k2].toLocaleString('ko-KR')} /$`);
+          lines.push(`배율   : ×${ratio.toFixed(3)}`);
+          if (FUEL_AI_RATIONALE[k2]) lines.push(`근거   : ${FUEL_AI_RATIONALE[k2]}`);
+          lines.push('');
+          lines.push('[산식]');
+          lines.push(`y+0 ${_fmtMil2(baseV)}백만원`);
+          lines.push(`× ${ratio.toFixed(3)}`);
+          lines.push(`= ${_fmtMil2(yVal)}백만원`);
+        } else {
+          const g = _gFuel;
+          yVal = baseV * Math.pow(1 + g, k2);
+          const modeNm = m.fuelSimpleOn ? '단순' : (m.fuelMode === 'engineering' ? '공학적' : '회계상');
+          lines.push(`모드 : ${modeNm}`);
+          lines.push(`적용 : gFuel ${(GROW?.gFuel || 0).toFixed(1)}%/년 복리`);
+          lines.push('');
+          lines.push('[산식]');
+          lines.push(`y+0 ${_fmtMil2(baseV)}백만원`);
+          lines.push(`× (1 + ${g.toFixed(3)})^${k2}`);
+          lines.push(`= ${_fmtMil2(yVal)}백만원`);
+        }
+        return lines.join('\n');
+      });
+    }
+    // 연료비 행 UI — AI 유가추세 체크박스는 모든 모드, 10개년 분기 설정 버튼은 단순 모드에서만
+    // 10개년 분기 설정 버튼 하나로 통합 — 상태별 라벨 자동 반영. 인라인 체크박스·뱃지 모두 제거.
+    const rowBtn = (k === 0) ? ' ' + _fuelSegBtnHTML(m, true) : '';
+    const aiTag  = '';
+    // 연료비(k=0) 행은 셀별 툴팁(cellTips)이 산식을 담당 — 행 통짜 tip 은 짧은 요약만.
+    const _rowTip = (k === 0)
+      ? '셀마다 년차별 산식 확인 — 각 숫자에 마우스 올리면 ×배율·LSMGO·환율·공식'
+      : _ep[k]?.note;
     return add({ cls:'n sub2',
-      name:'· ' + (_ep[k]?.name || _etcNm[k]) + _etcTag(k) + nameTag,
-      v: baseV, gk, tip:_ep[k]?.note, groupIn:'op_etc' });
+      name:'· ' + (_ep[k]?.name || _etcNm[k]) + _etcTag(k) + nameTag + aiTag + rowBtn,
+      v: baseV, gk, tip:_rowTip, groupIn:'op_etc', ...extra });
   });
   R10[iOpEtc].agg = iEtcKids.map(x => [x, 1]);
 
@@ -5525,7 +6035,7 @@ function drawPeerPL(m) {
     : ` · 배율 ×${m.voyRatio.toFixed(3)} 미적용`;
   // 시나리오 배너 — 서브타이틀 앞머리. 색상도 시나리오별 (worst=warn·best=good·normal=navy).
   const _scnColor = m.scenario === 'worst' ? 'var(--warn)' : m.scenario === 'best' ? 'var(--good)' : 'var(--navy)';
-  const _scnLabel = m.scenario === 'worst' ? '⚠ worst' : m.scenario === 'best' ? '★ best' : '● normal';
+  const _scnLabel = m.scenario === 'worst' ? 'worst' : m.scenario === 'best' ? 'best' : 'normal';
   const _worstBadge = `<span class="tagv est" style="color:${_scnColor};border-color:${_scnColor};margin-right:4px" title="시나리오 : ${_scnLabel} — 편도 운임 ${won(m.scnFare)}원 · 유류할증 ${won(m.scnFuel)}원 · 연 ${won(m.scnVoy)}항차 · 선적율 ${m.scnCargo}% · 왕복 단순연료 ${won(m.scnFuelRT)}만원">${_scnLabel}</span>`;
   // 영업이익률은 header 타일(_sim50 / _marginSpan)과 완전히 같은 로직을 쓰도록 simPeer 를 통일 사용.
   //   drawPeer 의 직접 계산(opProfit/sales)과 simPeer 는 지급수수료 스케일링 축(항차비율 vs 승객비율)이
@@ -5798,7 +6308,10 @@ function drawPeerPL10() {
                    : r.groupIn ? ` data-in="${r.groupIn}"` : '';
     const styleAttr = isParent ? ' style="cursor:pointer"' : '';
     const hiddenAttr = isChildHidden ? ' hidden' : '';
-    const tipAttr = r.tip ? ` title="${r.tip}"` : '';
+    // 셀별 툴팁(cellTips)이 있는 행은 행-레벨 title/underline 을 완전 제거 — 중복 노출 방지.
+    const _hasCellTips = Array.isArray(r.cellTips) && r.cellTips.length > 0;
+    const tipAttr = (r.tip && !_hasCellTips) ? ` title="${r.tip}"` : '';
+    const tipCls  = (r.tip && !_hasCellTips) ? ' tip' : '';
     const clkAttr = r.clickOv ? ` data-ov="${r.clickOv}"` : '';
     const clkStyle = r.clickOv ? ' style="cursor:pointer"' : styleAttr;
     // 보조행 : 라벨 하나로 전 열 콜스팬 — 데이터 셀 없음. 접이·접이상태 그대로 따른다.
@@ -5813,11 +6326,15 @@ function drawPeerPL10() {
     const avg = validProj.length ? validProj.reduce((a,b)=>a+b,0) / validProj.length : null;
     const _fmt = r.isRatio ? fmtRatio : r.isPct ? fmtPct : fmtM;
     const caret = isParent ? '<span class="caret">▶</span> ' : '';
+    // 셀별 산식 툴팁 — r.cellTips 가 있으면 셀마다 title 삽입. HTML attr-safe escape 간단히.
+    const _cellTitle = k => (r.cellTips && r.cellTips[k])
+      ? ` title="${String(r.cellTips[k]).replace(/"/g, '&quot;')}" style="cursor:help"`
+      : '';
     return `<tr class="${r.cls}${openCls}${r.tip ? ' tip' : ''}"${dataAttr}${clkAttr}${clkStyle}${tipAttr}${hiddenAttr}>
       <th>${caret}${r.name}</th>`
       + `
-      <td class="base ${cellCls(p[0])}">${_fmt(p[0])}</td>
-      ${p.slice(1).map(v => `<td class="${cellCls(v)}">${_fmt(v)}</td>`).join('')}
+      <td class="base ${cellCls(p[0])}"${_cellTitle(0)}>${_fmt(p[0])}</td>
+      ${p.slice(1).map((v, idx) => `<td class="${cellCls(v)}"${_cellTitle(idx+1)}>${_fmt(v)}</td>`).join('')}
       <td class="avg ${cellCls(avg)}">${_fmt(avg)}</td>
     </tr>`;
   }).join('');
@@ -5919,7 +6436,7 @@ function drawPeerPL10() {
       const _load   = (_m2.peer && _m2.peer.pax > 0) ? _perVoy / _m2.peer.pax : null;
       const _cargo  = Math.min(1, Math.max(0, num('iCargoLoad', DEFAULTS.cargoLoad) / 100));
       const _scnColor2 = _m2.scenario === 'worst' ? 'var(--warn)' : _m2.scenario === 'best' ? 'var(--good)' : 'var(--navy)';
-      const _scnLabel2 = _m2.scenario === 'worst' ? '⚠ worst' : _m2.scenario === 'best' ? '★ best' : '● normal';
+      const _scnLabel2 = _m2.scenario === 'worst' ? 'worst' : _m2.scenario === 'best' ? 'best' : 'normal';
       const _worstBadge = `<span class="tagv est" style="color:${_scnColor2};border-color:${_scnColor2};margin-right:4px" title="시나리오 : ${_scnLabel2} — 편도 ${won(_m2.scnFare)}원 · 유류할증 ${won(_m2.scnFuel)}원 · 연 ${won(_m2.scnVoy)}항차 · 선적 ${_m2.scnCargo}%">${_scnLabel2}</span>`;
       head = _worstBadge
         + `${peerName} · ${won(_m2.voyPeer)}항차`
@@ -6174,31 +6691,300 @@ function addShip(){
 }
 
 // ── 갱신 ───────────────────────────────────────────────────────────────────
+// ── 단순 모드 연료비 10개년 년차별 적용 ──────────────────────────────────────
+// 년차 k(0..10) 에 적용될 편도단가(만원) 를 돌려준다. years[k] 가 null 이면 fallback 사용.
+function fuelSegOnewayFor(k, fallbackMan) {
+  if (!FUEL_SEG.enabled) return fallbackMan;
+  const v = FUEL_SEG.years[k];
+  return (v == null || isNaN(v)) ? fallbackMan : v;
+}
+// 10개년 fuel row 에 붙일 series (원 단위) — toMil 이 백만원으로 환산하므로 여기서는 원 그대로.
+function fuelSeg10Series(voyPeer, fallbackMan) {
+  const arr = [];
+  for (let k = 0; k <= 10; k++) {
+    const man = fuelSegOnewayFor(k, fallbackMan);          // 편도 만원
+    const won = man * 10000 * voyPeer;                     // 년간 연료비 (원)
+    arr.push(won);                                          // 원 (하류 toMil 이 /1e6 환산)
+  }
+  return arr;
+}
+
+// ── 모달 — 년차 셀 그리드 UI ────────────────────────────────────────────────
+let _fuelSegSel = new Set();   // 선택된 년차 index (0~10)
+let _fuelSegDrag = { active:false, start:null };
+
+// AI 유가추세 배율 (y+0..y+10) — "LSMGO 평균 ~$880 수렴" 가정
+//   현 시점(y+0) LSMGO ×1.82 = pre-war 평균 $820 대비 ~82% 상승. 저유황 공급 안정화·IMO 규제
+//   반영 속도를 LSMGO 직접 전망(ICE LSGO 선물·Platts·Argus·MABUX) 기반으로 재조정.
+//
+//   y+0~y+2 : 저유황 공급 안정화 → 지정학 프리미엄 축소 (-16% ~ -30%)
+//   y+3~y+5 : pre-war 평균 $820 수렴 (바닥 ×0.544 = $810, IMO 2030 발효 직전 저점)
+//   y+6~y+10: IMO 2030 저유황 수요 반영 + 바이오혼합 비용 → 완만 반등 ($830~$950)
+//
+//   10년 평균 ≈ $880/MT (배율 평균 ≈ 0.591) — 2015-2024 Platts Singapore MGO 역사 평균 범위.
+//   10년 평균 복리 ≈ -4.4%/년.
+//   ※ ICE LSGO 36개월 선물곡선 역행 신호 + Platts/Argus 중기 전망의 중앙치 기준.
+const FUEL_AI_TREND  = [1.000, 0.840, 0.705, 0.617, 0.550, 0.544, 0.557, 0.577, 0.597, 0.617, 0.638];
+// 년차별 LSMGO $/MT · 환율 ₩/$ — 셀 툴팁에서 산식을 보여줄 때 쓰는 참고치. 근거 테이블과 동기.
+const FUEL_AI_USD_MT = [1490, 1252, 1050,  919,  820,  810,  830,  860,  890,  920,  950];
+const FUEL_AI_FX     = [1410, 1380, 1350, 1330, 1320, 1320, 1330, 1350, 1370, 1385, 1400];
+const FUEL_AI_RATIONALE = [
+  '현 시점 · 중동 저유황 유통 리스크',
+  '저유황 공급 안정화 → MABUX 음전환',
+  '싱가포르 LSMGO 수급 완화',
+  '저유황 디젤 정제능력 확대 → 프리미엄 축소',
+  '저점 · pre-war 평균 수렴 · IMO 2030 발효 직전',
+  '저유황 공급 과잉 · 저가 유지',
+  'IMO 2030 저유황 수요 증가',
+  '저유황 바이오혼합 요구 상향',
+  '바이오 LSMGO 비용 반영 완만 상승',
+  '신선박 LSMGO 수요 증가',
+  'IMO 2030 완전 적용 · 10년 평균 수렴',
+];
+function _aiTrendDescribe(fallback) {
+  const items = FUEL_AI_TREND.map((m, k) => {
+    const v = Math.round(fallback * m);
+    const pct = ((m - 1) * 100).toFixed(1);
+    return `y+${k} ${v.toLocaleString('ko-KR')}만 (${pct >= 0 ? '+' : ''}${pct}%)`;
+  });
+  return items.join(' · ');
+}
+// AI 유가추세 적용 — 년차 셀에 배율 적용. 수동 override 는 유지하지 않고 전부 덮어씀.
+function _applyAiTrend(fallback) {
+  for (let k = 0; k <= 10; k++) {
+    FUEL_SEG.years[k] = Math.round(fallback * FUEL_AI_TREND[k]);
+  }
+}
+
+function _drawFuelSegGrid(fallbackMan) {
+  const host = document.getElementById('fuelSegGrid');
+  if (!host) return;
+  const html = [];
+  for (let k = 0; k <= 10; k++) {
+    const v = FUEL_SEG.years[k];
+    const isCustom = (v != null && !isNaN(v));
+    const display = isCustom ? v : fallbackMan;
+    const selected = _fuelSegSel.has(k);
+    const bg  = selected ? '#154B8C' : (isCustom ? '#FFF4D6' : '#F5F9FE');
+    const bdr = selected ? '#154B8C' : (isCustom ? '#D9A520' : 'var(--rule)');
+    const txt = selected ? '#fff'    : (isCustom ? '#8A5A12' : 'var(--muted)');
+    const yr  = selected ? '#CFE' : (isCustom ? '#B07A20' : 'var(--muted)');
+    html.push(`<div data-fsg-cell="${k}" style="
+      padding:8px 4px;border:1px solid ${bdr};border-radius:4px;background:${bg};color:${txt};
+      text-align:center;cursor:pointer;font-size:10px;line-height:1.3;transition:all .1s">
+      <div style="font-size:9px;color:${yr};margin-bottom:2px">y+${k}<br>${2025+k}</div>
+      <div style="font-weight:700;font-variant-numeric:tabular-nums">${display.toLocaleString('ko-KR')}</div>
+      <div style="font-size:8.5px;opacity:0.8">${isCustom ? '수동' : '기본'}</div>
+    </div>`);
+  }
+  host.innerHTML = html.join('');
+  // 선택 요약
+  const sel = document.getElementById('hFuelSegSel');
+  if (sel) {
+    if (_fuelSegSel.size === 0) sel.textContent = '선택 : 없음';
+    else {
+      const arr = [..._fuelSegSel].sort((a,b)=>a-b);
+      sel.textContent = `선택 : ${arr.length}개년 (y+${arr[0]}${arr.length>1?' ~ y+'+arr[arr.length-1]:''})`;
+    }
+  }
+  // 셀 이벤트 — 클릭/드래그/shift+클릭
+  host.querySelectorAll('[data-fsg-cell]').forEach(cell => {
+    const k = +cell.dataset.fsgCell;
+    cell.addEventListener('mousedown', e => {
+      e.preventDefault();
+      if (e.shiftKey && _fuelSegDrag.start !== null) {
+        // Shift+클릭 — 범위 확장
+        const from = Math.min(_fuelSegDrag.start, k);
+        const to   = Math.max(_fuelSegDrag.start, k);
+        for (let i = from; i <= to; i++) _fuelSegSel.add(i);
+      } else {
+        _fuelSegSel.clear();
+        _fuelSegSel.add(k);
+        _fuelSegDrag = { active:true, start:k };
+      }
+      _drawFuelSegGrid(fallbackMan);
+    });
+    cell.addEventListener('mouseenter', () => {
+      if (!_fuelSegDrag.active) return;
+      _fuelSegSel.clear();
+      const from = Math.min(_fuelSegDrag.start, k);
+      const to   = Math.max(_fuelSegDrag.start, k);
+      for (let i = from; i <= to; i++) _fuelSegSel.add(i);
+      _drawFuelSegGrid(fallbackMan);
+    });
+  });
+}
+
+// 연료비 행 하단에 노출되는 "10개년 분기 설정" 버튼 — AI 유가추세와 수동 년차 설정을 한 입구로 통합.
+//   상태별로 라벨·배경색이 바뀌어 "지금 뭐가 적용 중인지" 한눈에.
+//     · 미적용              → 흰 배경 · 네이비 테두리 · "10개년 분기 설정"
+//     · AI 유가추세 적용    → 앰버 배경 · "10개년 분기 · AI 유가추세 ✓"
+//     · 년차별 수동 적용    → 앰버 배경 · "10개년 분기 · 년차별 수동 ✓"  (단순 모드에서만 가능)
+//   compact=true 면 10개년 뷰용 축소 스타일.
+function _fuelSegBtnHTML(m, compact) {
+  const _segOn = FUEL_SEG.enabled;
+  const _aiOn  = _segOn && FUEL_SEG.aiTrend;
+  const _manual = _segOn && !FUEL_SEG.aiTrend && m && m.fuelSimpleOn;
+  let label = '10개년 분기 설정';
+  let title = 'AI 유가추세 적용 또는 년차별 편도단가 수동 설정 (단순 모드) — 클릭해서 열기';
+  if (_aiOn)        { label = '10개년 분기 · AI 유가추세 ✓';   title = 'AI 유가추세(LSMGO) 적용 중 — 클릭해서 조정'; }
+  else if (_manual) { label = '10개년 분기 · 년차별 수동 ✓';   title = '단순 모드 년차별 편도단가 수동 적용 중 — 클릭해서 조정'; }
+  const bg     = _segOn ? '#FFF4D6' : '#fff';
+  const border = _segOn ? '#D9A520' : 'var(--rule)';
+  const color  = _segOn ? '#8A5A12' : 'var(--navy)';
+  const pad    = compact ? '1px 7px'    : '2px 8px';
+  const fs     = compact ? '10px'       : '10.5px';
+  return `<button type="button" onclick="event.stopPropagation();openFuelSegModal()" `
+       + `style="padding:${pad};font-size:${fs};background:${bg};border:1px solid ${border};color:${color};border-radius:3px;cursor:pointer;font-weight:600" `
+       + `title="${title}">${label}</button>`;
+}
+
+function openFuelSegModal() {
+  const m = (typeof model === 'function') ? model() : null;
+  const fallback = m ? (m.scnFuelRT || 2200) : 2200;
+  _fuelSegSel.clear();
+  _drawFuelSegGrid(fallback);
+  const chk = document.getElementById('iFuelSegEnabled');
+  if (chk) chk.checked = !!FUEL_SEG.enabled;
+  const ai = document.getElementById('iFuelSegAiTrend');
+  if (ai) ai.checked = !!FUEL_SEG.aiTrend;
+  const valInp = document.getElementById('iFuelSegVal');
+  if (valInp) valInp.value = fallback;
+  // 모드별 UI 가변 — 단순 모드만 년차 셀/편도만원 입력이 유효. 그 외는 AI 유가추세만.
+  const modeTag    = document.getElementById('hFuelSegModeTag');
+  const modeBanner = document.getElementById('hFuelSegModeBanner');
+  const isSimple   = m && m.fuelSimpleOn;
+  const modeNm     = isSimple ? '단순 모드'
+                   : (m && m.fuelMode === 'engineering') ? '공학적 모드' : '회계상 모드';
+  if (modeTag) modeTag.textContent = modeNm;
+  if (modeBanner) {
+    modeBanner.innerHTML = isSimple
+      ? '<b style="color:var(--navy)">단순 모드</b> — <b>AI 유가추세</b>(권장) 또는 <b>년차별 수동 편도단가</b> 둘 다 사용 가능.'
+      : `<b style="color:var(--navy)">${modeNm}</b> — <b>AI 유가추세</b>만 유효. 년차 셀·편도단가 입력은 단순 모드 전용 (아래 비활성).`;
+  }
+  // 단순 전용 섹션(년차 셀/편도만원/프리셋)을 비활성화 시각 효과로 묶는다.
+  const sections = document.querySelectorAll('#ovFuelSeg [data-sim-only]');
+  sections.forEach(el => {
+    el.style.opacity       = isSimple ? '1'    : '0.4';
+    el.style.pointerEvents = isSimple ? 'auto' : 'none';
+    el.title = isSimple ? '' : '단순 모드 전용 — 현재 모드에서는 AI 유가추세만 유효';
+  });
+  openOv('ovFuelSeg');
+  document.getElementById('ovFuelSeg').dataset.fallback = fallback;
+}
+
+(function wireFuelSegModal(){
+  // 드래그 종료 — document 전체에서 mouseup 수신
+  document.addEventListener('mouseup', () => { _fuelSegDrag.active = false; });
+
+  // 선택 셀에 입력값 적용
+  const applyBtn = document.getElementById('btnFuelSegApplyVal');
+  if (applyBtn) applyBtn.addEventListener('click', () => {
+    const v = parseFloat(document.getElementById('iFuelSegVal').value);
+    if (isNaN(v) || v < 0) return;
+    const fallback = +document.getElementById('ovFuelSeg').dataset.fallback || 2200;
+    const targets = _fuelSegSel.size ? [..._fuelSegSel] : Array.from({length:11}, (_,i)=>i);
+    targets.forEach(k => FUEL_SEG.years[k] = v);
+    _drawFuelSegGrid(fallback);
+  });
+
+  // 프리셋 — 선택된 셀(또는 전구간) 에 시나리오 단가 적용
+  document.querySelectorAll('[data-fseg-preset]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const scn = btn.dataset.fsegPreset;
+      const presetMap = { worst:2400, normal:2200, best:2000 };
+      const v = presetMap[scn] || 2200;
+      const fallback = +document.getElementById('ovFuelSeg').dataset.fallback || 2200;
+      const targets = _fuelSegSel.size ? [..._fuelSegSel] : Array.from({length:11}, (_,i)=>i);
+      targets.forEach(k => FUEL_SEG.years[k] = v);
+      _drawFuelSegGrid(fallback);
+    });
+  });
+
+  // 빠른 범위 선택
+  document.querySelectorAll('[data-fseg-range]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const r = btn.dataset.fsegRange;
+      _fuelSegSel.clear();
+      if (r === 'all')   for (let i=0; i<=10; i++) _fuelSegSel.add(i);
+      if (r === 'early') for (let i=0; i<=3;  i++) _fuelSegSel.add(i);
+      if (r === 'mid')   for (let i=4; i<=7;  i++) _fuelSegSel.add(i);
+      if (r === 'late')  for (let i=8; i<=10; i++) _fuelSegSel.add(i);
+      // 'none' → clear 상태 유지
+      const fallback = +document.getElementById('ovFuelSeg').dataset.fallback || 2200;
+      _drawFuelSegGrid(fallback);
+    });
+  });
+
+  // ON/OFF
+  const chk = document.getElementById('iFuelSegEnabled');
+  if (chk) chk.addEventListener('change', () => { FUEL_SEG.enabled = chk.checked; });
+
+  // 근거 보기 토글
+  const evBtn = document.getElementById('btnFuelAiEvidence');
+  const evBox = document.getElementById('hFuelAiEvidence');
+  if (evBtn && evBox) evBtn.addEventListener('click', () => {
+    evBox.hidden = !evBox.hidden;
+    evBtn.textContent = evBox.hidden ? '근거 ⓘ' : '근거 ✕';
+  });
+
+  // AI 유가추세 적용 — 체크 시 년차 셀 일괄 자동 산출
+  const aiChk = document.getElementById('iFuelSegAiTrend');
+  if (aiChk) aiChk.addEventListener('change', () => {
+    FUEL_SEG.aiTrend = aiChk.checked;
+    const fallback = +document.getElementById('ovFuelSeg').dataset.fallback || 2200;
+    if (aiChk.checked) {
+      _applyAiTrend(fallback);
+      // 추세 적용했으니 enabled 도 자동 ON (사용자가 체크해 두는 걸 깜빡해도 결과가 보이게)
+      FUEL_SEG.enabled = true;
+      const en = document.getElementById('iFuelSegEnabled');
+      if (en) en.checked = true;
+    } else {
+      // 추세 해제 — 전체 리셋 (사용자가 수동 조정한 값도 함께 지우는 걸 명시적으로)
+      FUEL_SEG.years = new Array(11).fill(null);
+    }
+    _drawFuelSegGrid(fallback);
+  });
+
+  // 전체 초기화 — 모든 년차 폴백으로
+  const resetBtn = document.getElementById('btnFuelSegReset');
+  if (resetBtn) resetBtn.addEventListener('click', () => {
+    FUEL_SEG.enabled = false;
+    FUEL_SEG.aiTrend = false;
+    FUEL_SEG.years = new Array(11).fill(null);
+    _fuelSegSel.clear();
+    const chkEl = document.getElementById('iFuelSegEnabled');
+    if (chkEl) chkEl.checked = false;
+    const aiEl  = document.getElementById('iFuelSegAiTrend');
+    if (aiEl) aiEl.checked = false;
+    const fallback = +document.getElementById('ovFuelSeg').dataset.fallback || 2200;
+    _drawFuelSegGrid(fallback);
+  });
+
+  // 저장 — 모달 닫고 재렌더
+  const saveBtn = document.getElementById('btnFuelSegSave');
+  if (saveBtn) saveBtn.addEventListener('click', () => {
+    closeOv(document.getElementById('ovFuelSeg'));
+    render();
+  });
+})();
+
 function render(){
   // 승선율 · 항차당 인원 · 연간 승객수 — 셋 다 유기적으로 연동된다.
   // 가장 최근에 사용자가 만진 칸(PAX_SRC)이 '주인'이 되고 나머지 둘은 거기에 맞춰 재계산된다.
   // 정원을 모르는 배(peer.pax=0)는 승선율이 성립하지 않으므로 그 칸만 비활성화한다.
   //
-  // ※ 최악시나리오 ON 이면 voy·load 를 iWorstVoy·iWorstLoad 로 치환해 sync.
-  //    → _runModel 의 worstVoy·worstFare·worstFuel 와 완전히 맞아 떨어지도록. (좌측 대조선박
-  //    설정은 건드리지 않고 보존 — 토글 OFF 하면 즉시 원래 값으로 돌아온다.)
+  // 시나리오 전환은 _applyScenarioToMainInputs 가 이미 iVoyPeer·iLoadPeer 로 반영했으므로
+  //   여기서는 메인 입력만 보면 된다. PAX_SRC 가 'load' 가 아니면 사용자가 직접 승객수를 조정한 상태.
   {
     const _pe0  = SHIPS.find(x => x.id === el('iPeer').value);
     const _cap  = _pe0 && _pe0.pax > 0 ? _pe0.pax : 0;
-    const _worst   = !!el('iWorstCase')?.checked;
-    const voy   = _worst
-      ? Math.max(1, parseFloat(el('iWorstVoy').value) || 498)
-      : Math.max(1, parseFloat(el('iVoyPeer').value) || 0);
-    const load  = _worst
-      ? (parseFloat(el('iWorstLoad').value) || 50)
-      : (parseFloat(el('iLoadPeer').value)  || 0);
+    const voy   = Math.max(1, parseFloat(el('iVoyPeer').value) || 0);
+    const load  = parseFloat(el('iLoadPeer').value)  || 0;
     const perV  = parseFloat(el('iPerVoyPeer').value) || 0;
     const year  = parseFloat(el('iPaxPeer').value)    || 0;
-    // 최악 모드에선 PAX_SRC 를 'load' 로 강제 — 사용자가 '승선율' 로 하한을 정하는 그림.
     //   정원이 없으면 PAX_SRC='load' 로 두면 안 된다 — 승선율로 역산할 분모가 없다
-    const src = _worst && _cap
-      ? 'load'
-      : ((!_cap && PAX_SRC === 'load') ? 'year' : PAX_SRC);
+    const src = (!_cap && PAX_SRC === 'load') ? 'year' : PAX_SRC;
     let _perV, _year, _load;
     if (src === 'load' && _cap) {
       _perV = _cap * load / 100;
@@ -6753,18 +7539,50 @@ function _applyScenarioToMainInputs() {
   const scnFare  = parseFloat(el(prefix + 'Fare')?.value)  || (scn==='worst'?70000:scn==='best'?120000:90000);
   const scnFuel  = parseFloat(el(prefix + 'Fuel')?.value)  || 30000;
   const scnFuelRT = parseFloat(el(prefix + 'FuelRT')?.value) || (scn==='worst'?2400:scn==='best'?2000:2200);
+  const scnLoad   = parseFloat(el(prefix + 'LoadRate')?.value);
   if (el('iVoyPeer'))         el('iVoyPeer').value         = scnVoy;
   if (el('iCargoLoad'))       el('iCargoLoad').value       = scnCargo;
   if (el('iFarePeer'))        el('iFarePeer').value        = scnFare;
   if (el('iFuelPeer'))        el('iFuelPeer').value        = scnFuel;
   if (el('iFuelSimpleOneway')) el('iFuelSimpleOneway').value = scnFuelRT * 10000;  // 편도(만원) → 편도(원)
+  // 승선율 동기화 → iLoadPeer. PAX_SRC='load' 로 강제해 iPerVoyPeer / iPaxPeer 가 즉시 재계산되게 함.
+  if (!isNaN(scnLoad) && el('iLoadPeer')) {
+    el('iLoadPeer').value = scnLoad;
+    PAX_SRC = 'load';
+  }
+}
+// 시나리오 테이블의 가로 스크롤러를 선택된 열 위치로 이동 (sticky 라벨 뒤로 들어가지 않게).
+function _scrollScenarioColIntoView(scn) {
+  const block = document.getElementById('worstCaseBlock');
+  if (!block) return;
+  const scroller = block.querySelector('div[style*="overflow-x"]');
+  const table    = block.querySelector('table');
+  if (!scroller || !table) return;
+  const colIdx = scn === 'worst' ? 2 : scn === 'best' ? 4 : 3;
+  const headTh = table.querySelector('thead tr th:nth-child(' + colIdx + ')');
+  if (!headTh) return;
+  // sticky 1번 열 폭만큼 좌측 여유를 빼서 선택 열 전체가 보이게
+  const stickyTh = table.querySelector('thead tr th:first-child');
+  const stickyW  = stickyTh ? stickyTh.getBoundingClientRect().width : 0;
+  const sRect    = scroller.getBoundingClientRect();
+  const cRect    = headTh.getBoundingClientRect();
+  // 열이 뷰포트 안에 다 들어있는지 확인 — 왼쪽 start 가 sticky 뒤에 있거나 오른쪽 end 가 밖
+  const needLeft  = cRect.left  < sRect.left + stickyW;
+  const needRight = cRect.right > sRect.right;
+  if (!needLeft && !needRight) return;
+  const target = scroller.scrollLeft + (cRect.left - sRect.left) - stickyW - 4;
+  scroller.scrollTo({ left: Math.max(0, target), behavior: 'smooth' });
 }
 document.querySelectorAll('input[name="iScenario"]').forEach(radio => {
   radio.addEventListener('change', () => {
     const scn = document.querySelector('input[name="iScenario"]:checked')?.value || 'normal';
+    // body 에 data-scn 을 걸어 — CSS 가 시나리오 색을 메인 피어 입력란에 입히도록 한다.
+    document.body.setAttribute('data-scn', scn);
     const wc = el('iWorstCase'); if (wc) wc.checked = (scn === 'worst');
     const d  = document.getElementById('worstCaseBlock');
     if (d) d.open = true;
+    // 선택된 시나리오 열이 뷰포트에 들어오도록 가로 스크롤 (best 가 좁은 사이드바에서 가려지던 문제 해결)
+    requestAnimationFrame(() => _scrollScenarioColIntoView(scn));
     // 라디오 라벨 배경을 활성 상태에 맞춰 하이라이트
     document.querySelectorAll('.scn-opt').forEach(lbl => {
       const sel = lbl.dataset.scn === scn;
@@ -6774,12 +7592,46 @@ document.querySelectorAll('input[name="iScenario"]').forEach(radio => {
       lbl.style.borderColor = sel ? 'var(--navy)' : 'var(--line2)';
       lbl.style.fontWeight  = sel ? '700' : '400';
     });
+    // 목표이익율·CVP 패널 상단 로컬 탭 — 활성 상태 동기화
+    document.querySelectorAll('.scn-tab').forEach(btn => {
+      btn.classList.toggle('on', btn.dataset.scn === scn);
+      btn.setAttribute('aria-selected', btn.dataset.scn === scn ? 'true' : 'false');
+    });
     _applyScenarioToMainInputs();
+    // AI 유가추세 활성 중이면 — 새 시나리오 편도단가(scnFuelRT) 로 년차 셀 재산출
+    // (안 그러면 normal 기준으로 굳은 값이 worst/best 에도 그대로 적용되어 비교가 흐려짐)
+    if (FUEL_SEG && FUEL_SEG.enabled && FUEL_SEG.aiTrend) {
+      try {
+        const _m = (typeof model === 'function') ? model() : null;
+        const _fb = _m ? (_m.scnFuelRT || 2200) : 2200;
+        if (typeof _applyAiTrend === 'function') _applyAiTrend(_fb);
+      } catch(_) {}
+    }
     render();
   });
 });
-// 페이지 로드 시 초기 시나리오 값을 메인 입력에 반영
+
+// 목표이익율·CVP 패널의 로컬 시나리오 탭 — 전역 iScenario 라디오를 트리거
+document.addEventListener('click', e => {
+  const btn = e.target.closest && e.target.closest('.scn-tab');
+  if (!btn) return;
+  const scn = btn.dataset.scn;
+  if (!scn) return;
+  const r = document.querySelector(`input[name="iScenario"][value="${scn}"]`);
+  if (r && !r.checked) { r.checked = true; r.dispatchEvent(new Event('change')); }
+});
+// 초기 로드 시 .scn-tab 활성 상태 반영
+(function _initScnTabs(){
+  const scn = document.querySelector('input[name="iScenario"]:checked')?.value || 'normal';
+  document.querySelectorAll('.scn-tab').forEach(btn => {
+    btn.classList.toggle('on', btn.dataset.scn === scn);
+    btn.setAttribute('aria-selected', btn.dataset.scn === scn ? 'true' : 'false');
+  });
+})();
+// 페이지 로드 시 초기 시나리오 값을 메인 입력에 반영 + body data-scn 세팅
 if (document.querySelector('input[name="iScenario"]')) {
+  const _initScn = document.querySelector('input[name="iScenario"]:checked')?.value || 'normal';
+  document.body.setAttribute('data-scn', _initScn);
   _applyScenarioToMainInputs();
 }
 // 하위 호환 — 외부 코드가 iWorstCase 를 토글하면 normal↔worst 라디오 동기화 (양방향)
@@ -6809,7 +7661,7 @@ function _refreshScenarioSummary() {
   });
 }
 ['Worst','Normal','Best'].forEach(scn => {
-  ['Fare','Fuel','Voy','Cargo','FuelRT'].forEach(fld => {
+  ['Fare','Fuel','Voy','Cargo','FuelRT','LoadRate'].forEach(fld => {
     const inp = el('i' + scn + fld);
     if (inp) inp.addEventListener('input', () => {
       _refreshScenarioSummary();
@@ -6850,15 +7702,15 @@ function drawWorstCaseSwitch10() {
     worst:  { fare: parseFloat(el('iWorstFare')?.value)  || 70000,
               fuel: parseFloat(el('iWorstFuel')?.value)  || 30000,
               voy:  parseInt(el('iWorstVoy')?.value, 10) || 500,
-              label: '⚠ worst' },
+              label: 'worst' },
     normal: { fare: parseFloat(el('iNormalFare')?.value) || 90000,
               fuel: parseFloat(el('iNormalFuel')?.value) || 30000,
               voy:  parseInt(el('iNormalVoy')?.value, 10) || 550,
-              label: '● normal' },
+              label: 'normal' },
     best:   { fare: parseFloat(el('iBestFare')?.value)   || 120000,
               fuel: parseFloat(el('iBestFuel')?.value)   || 30000,
               voy:  parseInt(el('iBestVoy')?.value, 10)  || 600,
-              label: '★ best' }
+              label: 'best' }
   };
   const cur = vals[scn] || vals.normal;
   const _tip = `시나리오 : ${cur.label} — 편도 운임 ${cur.fare.toLocaleString('ko-KR')}원 · 유류할증 ${cur.fuel.toLocaleString('ko-KR')}원 · 연 ${cur.voy.toLocaleString('ko-KR')}항차로 재산출.\n다른 시나리오 세그먼트를 누르면 전환 → 좌측 설정 블록이 자동으로 펼쳐짐`;
@@ -6914,7 +7766,7 @@ function syncWorstCaseSummaryBadge() {
   const b = document.getElementById('worstCaseSummaryBadge');
   if (!b) return;
   const scn = document.querySelector('input[name="iScenario"]:checked')?.value || 'normal';
-  const label = scn === 'worst' ? '⚠ worst' : scn === 'best' ? '★ best' : '● normal';
+  const label = scn === 'worst' ? 'worst' : scn === 'best' ? 'best' : 'normal';
   b.textContent = label;
   b.className = 'badge';
   b.style.cssText = scn === 'worst'
@@ -7095,10 +7947,11 @@ function applyPLView(){
   el('plBodyB').hidden        = !isPeer;
   el('plBodyB-single').hidden = multi;
   el('plBodyB-multi' ).hidden = !multi;
-  // 10개년 뷰에서만 외부 참고(항공기 수송실적) 버튼 노출
+  // 10개년 뷰에서만 외부 참고 버튼 · 3-시나리오 인쇄 버튼 노출
   { const b = el('btnTrafficRef'); if (b) b.hidden = !multi;
     const c = el('btnCapRef');     if (c) c.hidden = !multi;
-    const h = el('btnHamayuCombo');if (h) h.hidden = !multi; }
+    const h = el('btnHamayuCombo');if (h) h.hidden = !multi;
+    const p = el('btnPrint3Scn');  if (p) p.hidden = !multi; }
 
   // 좌측 설정 카드 : 10개년에서는 '대조 선박 설정' 과 '증감률 가정' 두 탭 사이를 전환한다.
   // ACTIVE_TAB 은 model() 의 peer/base 분기와 연결돼 있어 10개년 모드에서도 'tabB' 로 유지한다.
@@ -7247,6 +8100,211 @@ function printPL() {
   if (_b) _b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); printPL(); });
 }
 
+// 10개년 손익계산서 — worst/normal/best 3-시나리오 모두 인쇄 (감춰진 계정과목까지)
+async function print3ScenariosPL10() {
+  const scns = ['worst', 'normal', 'best'];
+  const scnLabels = { worst: 'WORST (하한 시나리오)', normal: 'NORMAL (기본 시나리오)', best: 'BEST (상한 시나리오)' };
+  const scnColors = { worst: '#A8392F', normal: '#154B8C', best: '#1C6B4A' };
+  const scnBg     = { worst: '#FFF4F4', normal: '#F6F9FC', best: '#F0FBF5' };
+  const origScn = document.querySelector('input[name="iScenario"]:checked')?.value || 'normal';
+  const sections = [];
+  const waitRender = () => new Promise(r => setTimeout(r, 80));
+  const _fmtWon = n => (n == null || !isFinite(n)) ? '—' : Math.round(n).toLocaleString('ko-KR');
+  const _fmtMil = n => (n == null || !isFinite(n)) ? '—' : Math.round(n/1e6).toLocaleString('ko-KR') + '백만';
+  const _fmtPct = (n, d=1) => (n == null || !isFinite(n)) ? '—' : (n*100).toFixed(d) + '%';
+  const _sign   = n => n < 0 ? '△' : (n > 0 ? '+' : '');
+  // 각 시나리오로 전환하면서 10개년 테이블 HTML + 임원용 KPI + CVP 그래프 캡처
+  for (const scn of scns) {
+    const radio = document.querySelector(`input[name="iScenario"][value="${scn}"]`);
+    if (!radio) continue;
+    radio.checked = true;
+    radio.dispatchEvent(new Event('change'));
+    await waitRender();
+    const multi = document.getElementById('plBodyB-multi');
+    if (!multi) continue;
+    // ── 임원용 KPI 산출 ───────────────────────────────────────────────────
+    const m = (typeof model === 'function') ? model() : null;
+    const kpi = {};
+    if (m) {
+      // 현재 설정 승객수 (iPaxPeer 가 기반) 로 손익 계산
+      const paxCur = m.paxPeer || 0;
+      const sim    = m.simPeer ? m.simPeer(paxCur) : null;
+      const sales  = sim ? sim.sales : 0;
+      const opP    = sim ? sim.op    : 0;
+      const dep    = (m.opDepPeer || 0);
+      const ebitda = opP + dep;
+      const bep    = m.qForPeer ? m.qForPeer(0)   : null;        // 손익분기 승객수
+      const tgt    = m.qForPeer ? m.qForPeer(m.r) : null;        // 목표 영업이익률 달성 승객수
+      const cap    = m.peer && m.peer.pax > 0 ? m.peer.pax : 0;
+      const voy    = m.voyPeer || 0;
+      const peerCap = cap * voy;
+      const pax50  = cap > 0 ? Math.round(cap * 0.5 * voy) : null;
+      const sim50  = (pax50 && m.simPeer) ? m.simPeer(pax50) : null;
+      const utilPct = (voy / (365*2)) * 100;
+      kpi.sales     = sales;
+      kpi.opProfit  = opP;
+      kpi.opMargin  = sales > 0 ? opP / sales : 0;
+      kpi.ebitda    = ebitda;
+      kpi.ebMargin  = sales > 0 ? ebitda / sales : 0;
+      kpi.paxCur    = paxCur;
+      kpi.loadCur   = peerCap > 0 ? paxCur / peerCap : 0;
+      kpi.bep       = bep;
+      kpi.bepLoad   = (bep && peerCap > 0) ? bep / peerCap : null;
+      kpi.tgt       = tgt;
+      kpi.tgtLoad   = (tgt && peerCap > 0) ? tgt / peerCap : null;
+      kpi.tgtR      = m.r;
+      kpi.pax50     = pax50;
+      kpi.sim50Op   = sim50 ? sim50.op : null;
+      kpi.sim50Mg   = sim50 ? sim50.margin : null;
+      kpi.voy       = voy;
+      kpi.utilPct   = utilPct;
+      kpi.cap       = cap;
+      kpi.peerCap   = peerCap;
+      kpi.scnFare   = m.scnFare || 0;
+      kpi.scnFuel   = m.scnFuel || 0;
+      kpi.scnCargo  = m.scnCargo || 0;
+      kpi.scnFuelRT = m.scnFuelRT || 0;
+    }
+    // ── CVP SVG 캡처 (있으면) ──────────────────────────────────────────
+    let cvpSvg = '';
+    try {
+      const cvpEl = document.querySelector('#cvp svg');
+      if (cvpEl) cvpSvg = cvpEl.outerHTML;
+    } catch(_) {}
+    // ── 감춰진 세목 전부 펼친 상태로 10개년 표 캡처 ─────────────────────
+    const clone = multi.cloneNode(true);
+    clone.querySelectorAll('tr[hidden]').forEach(tr => tr.removeAttribute('hidden'));
+    clone.querySelectorAll('tr[data-in]').forEach(tr => tr.style.display = 'table-row');
+    clone.querySelectorAll('[id^="worstCaseSwitch"]').forEach(x => x.remove());
+    const subEl = clone.querySelector('#plPeerSub10');
+    const subTxt = subEl ? subEl.textContent.trim() : '';
+    sections.push({ scn, label: scnLabels[scn], color: scnColors[scn], bg: scnBg[scn],
+                    html: clone.innerHTML, sub: subTxt, kpi, cvpSvg });
+  }
+  // 원래 시나리오로 복원
+  const origRadio = document.querySelector(`input[name="iScenario"][value="${origScn}"]`);
+  if (origRadio) { origRadio.checked = true; origRadio.dispatchEvent(new Event('change')); }
+  await waitRender();
+  // 새 창에 3 섹션을 쌓아 인쇄
+  const w = window.open('', 'print3Scn', 'width=1200,height=900');
+  if (!w) { alert('팝업 차단으로 인쇄 창을 열 수 없습니다. 팝업 허용 후 다시 시도해 주세요.'); return; }
+  const today = new Date().toISOString().slice(0, 10);
+  // ── 섹션별 KPI 카드 + 전제 요약 + 10개년 표 + CVP 그래프 ─────────────
+  // AI 유가추세 상태 — 각 섹션 공통. 년차별 편도단가 라인(y+0..y+10) 도 함께 출력.
+  const aiOn = !!(FUEL_SEG && FUEL_SEG.enabled && FUEL_SEG.aiTrend);
+  const kpiCard = (s) => {
+    const k = s.kpi || {};
+    const colOp = k.opProfit < 0 ? '#A8392F' : '#1C6B4A';
+    const colEb = k.ebitda   < 0 ? '#A8392F' : '#1C6B4A';
+    const bepGap = (k.bep != null && k.paxCur != null) ? (k.bep - k.paxCur) : null;
+    const tgtGap = (k.tgt != null && k.paxCur != null) ? (k.tgt - k.paxCur) : null;
+    const sim50Col = k.sim50Mg != null && k.sim50Mg < 0 ? '#A8392F' : '#1C6B4A';
+    // AI 유가추세 ON 이면 — 년차별 편도단가(만원) 를 전제 라인 아래에 한 줄 추가
+    //   (단순 모드 전용 — fuelSimpleOn 조건 확인하진 않지만 FUEL_SEG.enabled 자체가 단순 모드에서만 유의미)
+    const _aiBadge = aiOn
+      ? ` &nbsp;<span style="background:#FFF4D6;color:#8A5A12;padding:1px 7px;border-radius:3px;font-size:8.5pt;font-weight:700;border:1px solid #D9A520">AI 유가추세 적용</span>`
+      : '';
+    const _aiLine = aiOn
+      ? `<div style="padding:4px 10px;background:#FFF8EC;border-bottom:1px solid #E0B870;font-size:8pt;color:#8A5A12;line-height:1.4">
+           <b>년차별 편도단가 (만원)</b> — ${(FUEL_SEG.years||[]).map((v,i)=>`y+${i} ${v==null?'—':Number(v).toLocaleString('ko-KR')}`).join(' · ')}
+         </div>`
+      : '';
+    return `
+    <div class="exec-kpi" style="margin:0 0 10px;border:2px solid ${s.color};border-radius:4px;overflow:hidden;background:#fff">
+      <div style="padding:4px 10px;background:${s.color};color:#fff;font-size:9.5pt;font-weight:700">
+        [임원 요약] 영업 핵심 지표${_aiBadge} &nbsp;·&nbsp; 전제 : 승선율 ${_fmtPct(k.loadCur,1)} (${_fmtWon(k.paxCur)}명) · 운임 ${_fmtWon(k.scnFare)}원+할증 ${_fmtWon(k.scnFuel)}원 · 선적율 ${(k.scnCargo||0).toFixed(2).replace(/\.?0+$/, '')}% · 연 ${_fmtWon(k.voy)}항차 · 단순연료 ${_fmtWon(k.scnFuelRT)}만원/편도
+      </div>
+      ${_aiLine}
+      <table style="width:100%;border-collapse:collapse;font-size:8.5pt">
+        <thead>
+          <tr style="background:${s.bg};color:${s.color};border-bottom:1px solid ${s.color}">
+            <th style="padding:4px 6px;text-align:left;width:17%">영업손익</th>
+            <th style="padding:4px 6px;text-align:left;width:14%">EBITDA</th>
+            <th style="padding:4px 6px;text-align:left;width:17%">손익분기 승객수</th>
+            <th style="padding:4px 6px;text-align:left;width:19%">목표(${_fmtPct(k.tgtR,0)}) 달성 승객수</th>
+            <th style="padding:4px 6px;text-align:left;width:17%">50% 승선율 (${_fmtWon(k.pax50)}명)</th>
+            <th style="padding:4px 6px;text-align:left;width:16%">가동률</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding:5px 6px;color:${colOp};font-weight:700">${_sign(k.opProfit)}${_fmtMil(Math.abs(k.opProfit))}<br>
+              <span style="font-size:8pt;font-weight:400;color:${colOp}">영업이익률 ${_fmtPct(k.opMargin,1)}</span></td>
+            <td style="padding:5px 6px;color:${colEb};font-weight:700">${_sign(k.ebitda)}${_fmtMil(Math.abs(k.ebitda))}<br>
+              <span style="font-size:8pt;font-weight:400;color:${colEb}">마진 ${_fmtPct(k.ebMargin,1)}</span></td>
+            <td style="padding:5px 6px;font-weight:700">${k.bep!=null?_fmtWon(k.bep)+'명':'—'}<br>
+              <span style="font-size:8pt;font-weight:400;color:#555">승선율 ${k.bepLoad!=null?_fmtPct(k.bepLoad,1):'—'} ${bepGap!=null?`· 현재 설정 승선율 ${_fmtPct(k.loadCur,1)} 대비 ${bepGap<0?'+':'△'}${_fmtWon(Math.abs(bepGap))}명`:''}</span></td>
+            <td style="padding:5px 6px;font-weight:700">${k.tgt!=null?_fmtWon(k.tgt)+'명':'—'}<br>
+              <span style="font-size:8pt;font-weight:400;color:#555">승선율 ${k.tgtLoad!=null?_fmtPct(k.tgtLoad,1):'—'} ${tgtGap!=null?`· 현재 설정 승선율 ${_fmtPct(k.loadCur,1)} 대비 ${tgtGap<0?'+':'△'}${_fmtWon(Math.abs(tgtGap))}명`:''}</span></td>
+            <td style="padding:5px 6px;font-weight:700;color:${sim50Col}">${k.sim50Op!=null?_sign(k.sim50Op)+_fmtMil(Math.abs(k.sim50Op)):'—'}<br>
+              <span style="font-size:8pt;font-weight:400;color:${sim50Col}">영업이익률 ${k.sim50Mg!=null?_fmtPct(k.sim50Mg,1):'—'}</span></td>
+            <td style="padding:5px 6px;font-weight:700">${k.utilPct?k.utilPct.toFixed(1)+'%':'—'}<br>
+              <span style="font-size:8pt;font-weight:400;color:#555">연 ${_fmtWon(k.voy)}항차 ÷ 730일</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>`;
+  };
+
+  const body = sections.map(s => `
+    <section class="scn-section" style="page-break-after:always;margin:0 0 18px">
+      <div class="scn-header" style="border-top:5px solid ${s.color};background:${s.bg};padding:8px 12px;margin:0 0 10px">
+        <div style="font-size:16pt;font-weight:800;color:${s.color};letter-spacing:-0.3px">
+          ${s.label}
+        </div>
+        <div style="font-size:9pt;color:#555;margin-top:2px">${s.sub}</div>
+      </div>
+      ${kpiCard(s)}
+      ${s.html}
+    </section>
+  `).join('\n');
+  w.document.open();
+  w.document.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8">
+    <title>하카타 10개년 손익계산서 — 3-시나리오 (${today})</title>
+    <style>
+      /* A4 landscape 12mm 사방 여백 — 프린터 safe area 보장 + 섹션당 1 페이지 깔끔하게 들어가도록 */
+      @page { size: A4 landscape; margin: 12mm }
+      body { margin:0; font-family:'맑은 고딕','Malgun Gothic',sans-serif; font-size:8.5pt;
+             -webkit-print-color-adjust:exact; print-color-adjust:exact; color:#1a1d21 }
+      h1 { font-size:13pt; margin:0 0 8px; color:#154B8C }
+      /* 13-컬럼(기준+10년+평균+헤더) 표를 A4 landscape 273mm 안에 맞추기 위해
+         table-layout:fixed + 좁은 padding + 숫자 폰트 균일폭 */
+      table.pl { width:100%; border-collapse:collapse; margin:0; table-layout:auto }
+      table.pl caption { font-size:9.5pt; font-weight:700; padding:3px 0 6px; text-align:left; color:#154B8C }
+      table.pl caption .unit { float:right; font-size:8pt; font-weight:400; color:#555 }
+      table.pl th, table.pl td { padding:1.5px 3px; border-bottom:1px solid #D0D0D0; font-variant-numeric:tabular-nums; font-size:8pt }
+      table.pl thead th { background:#154B8C !important; color:#fff !important; font-size:8pt; text-align:center }
+      table.pl thead tr.grouprow th { background:#0E3767 !important; color:#fff !important }
+      table.pl tr.r td, table.pl tr.r th { background:#EDF1F7; font-weight:700 }
+      table.pl tr.t td, table.pl tr.t th { background:#E3EAF3; font-weight:700 }
+      table.pl tr.lead td, table.pl tr.lead th { background:#D3E5F6; font-weight:700 }
+      table.pl th { text-align:left }
+      table.pl td.base { background:#F0F4FA }
+      table.pl td.avg  { background:#E9EEF6 }
+      /* 숨겨진 세목 전부 표시 — 인쇄용으로 모두 open */
+      table.pl tr[hidden], table.pl tr[data-in] { display:table-row !important }
+      .scn-section { page-break-inside:auto }
+      .scn-section:last-child { page-break-after:auto }
+      .scn-header { page-break-after:avoid }
+      .exec-kpi { page-break-inside:avoid }
+      tr { page-break-inside:avoid }
+      /* 스위치나 버튼 등 조작부 제거 */
+      [id^="worstCaseSwitch"] { display:none !important }
+      .caret, .ic { display:none !important }
+      button, .lnk { display:none !important }
+    </style>
+  </head><body>
+    <h1>하카타 10개년 예상 손익계산서 — 3-시나리오 비교 (${today})</h1>
+    ${body}
+    <script>window.onload = () => setTimeout(() => window.print(), 300)</sc`+`ript>
+  </body></html>`);
+  w.document.close();
+}
+{
+  const _b2 = document.getElementById('btnPrint3Scn');
+  if (_b2) _b2.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); print3ScenariosPL10(); });
+}
+
 
 // ── 탭 인쇄 ── 지금 열려 있는 mtabPanel 하나만. 손익계산서는 전용 경로(printPL)가 따로 있다.
 function printPanel(){
@@ -7391,7 +8449,7 @@ function printSettingsSummary(){
   if (!w) { alert('팝업이 차단되었습니다. 브라우저 팝업 허용 후 다시 시도하세요.'); return; }
   const stamp = new Date().toLocaleString('ko-KR');
   w.document.write('<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>설정값 요약</title><style>'
-  + '@page{size:A4 portrait;margin:9mm}'
+  + '@page{size:A4 portrait;margin:12mm}'
   + '*{box-sizing:border-box}'
   + 'body{margin:0;padding:10px 12px;font-family:"Malgun Gothic","맑은 고딕",system-ui,sans-serif;'
   + 'color:#13263C;font-size:8pt;line-height:1.3}'
@@ -7468,7 +8526,7 @@ function printSettings() {
 <html lang="ko"><head><meta charset="utf-8"><title>설정값 인쇄</title>
 <style>${inlineStyles}</style>
 <style>
-@page{size:A4 portrait;margin:10mm}
+@page{size:A4 portrait;margin:12mm}
 body{padding:14px 18px;background:#fff;font-size:9pt;max-width:none}
 h1{font-size:13pt;margin:0 0 10px;color:var(--navy);
    border-bottom:2px solid var(--navy);padding-bottom:5px;letter-spacing:-.01em}
@@ -7596,9 +8654,9 @@ el('btnReset').addEventListener('click', () => {
   el('iVoyPeer').value    = DEFAULTS.voyPeer;
   // 시나리오 — normal 로 되돌리고 각 입력도 기본값 복원
   const _scnDef = {
-    worst:  { Fare:70000,  Fuel:30000, Voy:500, Cargo:5,    FuelRT:2400 },
-    normal: { Fare:90000,  Fuel:30000, Voy:550, Cargo:7.25, FuelRT:2200 },
-    best:   { Fare:120000, Fuel:30000, Voy:600, Cargo:15,   FuelRT:2000 }
+    worst:  { Fare:70000,  Fuel:30000, Voy:500, Cargo:5,    FuelRT:2400, LoadRate:50 },
+    normal: { Fare:90000,  Fuel:30000, Voy:550, Cargo:7.25, FuelRT:2200, LoadRate:50 },
+    best:   { Fare:120000, Fuel:30000, Voy:600, Cargo:15,   FuelRT:2000, LoadRate:50 }
   };
   Object.entries(_scnDef).forEach(([scn, vals]) => {
     const cap = scn.charAt(0).toUpperCase() + scn.slice(1);
@@ -8525,7 +9583,35 @@ document.addEventListener('change', e => {
   if (e.target && e.target.classList && e.target.classList.contains('iChkWage')) {
     _wageToggle(e.target.checked);
   }
+  if (e.target && e.target.classList && e.target.classList.contains('iChkAiFuel')) {
+    _fuelAiToggle(e.target.checked);
+  }
 });
+
+// ── AI 유가추세 (연료비) 인라인 토글 ────────────────────────────────────────────
+// 당사기준 체크박스와 동일한 UX — 손익계산서 연료비 행에서 바로 켜고 끈다.
+// ON  : FUEL_SEG.enabled=true + aiTrend=true + U-커브 값을 년차 셀에 자동 적용
+// OFF : FUEL_SEG 전체 초기화 (아날로그 기본값 = gFuel 복리 복귀)
+function _fuelAiToggle(on){
+  const m = (typeof model === 'function') ? model() : null;
+  const fallback = m ? (m.scnFuelRT || 2200) : 2200;
+  if (on) {
+    FUEL_SEG.enabled = true;
+    FUEL_SEG.aiTrend = true;
+    if (typeof _applyAiTrend === 'function') _applyAiTrend(fallback);
+  } else {
+    FUEL_SEG.enabled = false;
+    FUEL_SEG.aiTrend = false;
+    FUEL_SEG.years   = new Array(11).fill(null);
+  }
+  // 모달이 열려 있을 수 있으니 체크박스·그리드도 함께 동기화
+  const enEl = document.getElementById('iFuelSegEnabled');
+  const aiEl = document.getElementById('iFuelSegAiTrend');
+  if (enEl) enEl.checked = FUEL_SEG.enabled;
+  if (aiEl) aiEl.checked = FUEL_SEG.aiTrend;
+  if (typeof _drawFuelSegGrid === 'function') _drawFuelSegGrid(fallback);
+  render();
+}
 // 당사기준 1인당 급여 분해 팝업 — 토글 상태와 함께 지상직·해상직 과목별 단가와 설정 인원 반영액.
 function renderCompanyWage(){
   const body = el('companyWageBody');
@@ -9289,7 +10375,7 @@ el('hamayuPrint')?.addEventListener('click', () => {
   if (!w) { alert('팝업이 차단되어 있습니다 — 브라우저에서 허용해주세요.'); return; }
   w.document.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${title}</title>
     <style>
-      @page{size:A4 landscape;margin:10mm}
+      @page{size:A4 landscape;margin:12mm}
       *{box-sizing:border-box}
       body{margin:0;padding:14px 18px;font-family:'Pretendard GOV','Pretendard','Malgun Gothic',sans-serif;color:#17202B;font-size:11px}
       h1{font-size:14pt;margin:0 0 2px;color:#154B8C;letter-spacing:-.01em}
