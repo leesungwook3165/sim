@@ -1372,6 +1372,25 @@
                   <div class="fh" id="hDepPeer">—</div>
                 </div>
 
+                <div class="dep-sub">접안시설 CapEx <small style="color:var(--muted);font-weight:normal">폰툰·램프 등 1회성 설비 투자</small></div>
+                <div class="f wide">
+                  <label class="chk">
+                    <input type="checkbox" id="iMoorageOn" checked>
+                    <span>접안시설 투자 반영 <small style="color:var(--muted)">— y+0 수지 1회 유출 + 내용연수 동안 매년 감가</small></span>
+                  </label>
+                </div>
+                <div class="f">
+                  <label>투자액</label>
+                  <div class="ib"><input type="number" step="100" min="0" id="iMoorageInvest" value="1000"><span class="u">백만원</span></div>
+                </div>
+                <div class="f">
+                  <label>내용연수 <small style="color:var(--muted);font-weight:normal">정액법</small></label>
+                  <div class="ib"><input type="number" step="1" min="1" max="30" id="iMoorageLife" value="10"><span class="u">년</span></div>
+                </div>
+                <div class="f wide">
+                  <div class="fh" id="hMoorage">—</div>
+                </div>
+
                 <div class="dep-sub">차입금 · 이자비용</div>
                 <div class="f">
                   <label>차입금 <small style="color:#bbb;font-weight:normal">비우면 미적용</small></label>
@@ -1795,6 +1814,8 @@
             <span><i class="sw" style="background:#8A5A12"></i> 목표 도달점</span>
             <span><i class="sw" style="background:#5BA3D9"></i> 현재 설정 (승선율 반영)</span>
             <span><i class="sw" style="background:#8A5A12;height:2px"></i> 화물·기타 수입선 (선적율 반영)</span>
+            <span><i class="sw" style="background:#6B7280;height:2px"></i> 역대 최대 탑승객 (2017 · 235,246명)</span>
+            <span><i class="sw" style="background:#8899AA;height:2px"></i> 2위 탑승객 (2018 · 181,520명)</span>
           </div>
         </div>
       </section>
@@ -2470,83 +2491,89 @@
 
           <!-- 근거 — 기본 숨김, 토글로 노출. LSMGO MT 단가·환율 예상 궤적을 명시 -->
           <div id="hFuelAiEvidence" hidden
-               style="margin-top:10px;padding:8px 10px;background:#FBFCFD;border:1px solid var(--rule);border-radius:3px;font-size:10.5px;line-height:1.55;color:var(--ink)">
-            <b style="color:var(--navy)">AI 유가추세 — LSMGO 평균 ~$880 수렴</b>
-            <small style="color:var(--muted);margin-left:4px">y+0 $1,490(pre-war $820 ×1.82) → y+4 $820 바닥 → y+10 $950 · 환율 1,320~1,410원/$ · <b>10년 평균 ~$880/MT</b></small>
-            <table id="hFuelAiEvidenceTbl" style="width:100%;border-collapse:collapse;margin-top:6px;font-size:9.5px">
+               style="margin-top:10px;padding:10px 12px;background:#FBFCFD;border:1px solid var(--rule);border-radius:3px;font-size:10.5px;line-height:1.6;color:var(--ink)">
+            <b style="color:var(--navy);font-size:11.5px">연료비 10년 추세 — 전쟁 전 평균($820) 복귀 가정</b>
+            <div style="margin-top:4px;color:#33415A;font-size:10px;line-height:1.55">
+              <b>핵심 가정 3가지</b>
+              <br>&nbsp;&nbsp;① 현 시세($1,490)는 러시아-우크라이나 전쟁·중동 지정학 프리미엄이 포함된 가격
+              <br>&nbsp;&nbsp;② 전쟁 종료·공급 정상화 시 LSMGO는 2024년 평균 $820 수준으로 회귀
+              <br>&nbsp;&nbsp;③ IMO 2030 규제·바이오혼합 의무로 중장기(y+6 이후) 완만한 상승
+            </div>
+            <table id="hFuelAiEvidenceTbl" style="width:100%;border-collapse:collapse;margin-top:8px;font-size:10px">
               <thead>
                 <tr style="background:#F5F9FE;color:var(--navy)">
-                  <th style="padding:3px 6px;text-align:left;width:46px">년차</th>
-                  <th style="padding:3px 6px;text-align:right;width:50px">배율</th>
-                  <th style="padding:3px 6px;text-align:right;width:68px">LSMGO $/MT</th>
-                  <th style="padding:3px 6px;text-align:right;width:62px">환율 ₩/$</th>
-                  <th style="padding:3px 6px;text-align:left">연도별 근거 (LSMGO 전용 전망)</th>
+                  <th style="padding:4px 6px;text-align:left;width:56px">연도</th>
+                  <th style="padding:4px 6px;text-align:right;width:58px">LSMGO</th>
+                  <th style="padding:4px 6px;text-align:right;width:56px">환율</th>
+                  <th style="padding:4px 6px;text-align:right;width:50px">배율</th>
+                  <th style="padding:4px 6px;text-align:left">주요 사유 (예정된 공급·수요·규제 이벤트)</th>
                 </tr>
               </thead>
               <tbody>
-                <!-- 년차별 상세 — y+0 ~ y+10 (11행). 배율은 FUEL_AI_TREND, 가격은 ×$1,490, FX 는 궤적 추정. -->
-                <tr><td style="padding:2px 6px;color:#8A5A12"><b>y+0</b></td>
-                  <td style="padding:2px 6px;text-align:right">×1.000</td>
-                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">$1,490</td>
-                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">1,410</td>
-                  <td style="padding:2px 6px">현 시점 — 중동 저유황 유통 리스크 · 러시아 제재 지속</td></tr>
-                <tr><td style="padding:2px 6px;color:#8A5A12"><b>y+1</b></td>
-                  <td style="padding:2px 6px;text-align:right">×0.840</td>
-                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">$1,252</td>
-                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">1,380</td>
-                  <td style="padding:2px 6px">저유황 공급 안정화 → MABUX Correction Index 음전환</td></tr>
-                <tr><td style="padding:2px 6px;color:#8A5A12"><b>y+2</b></td>
-                  <td style="padding:2px 6px;text-align:right">×0.705</td>
-                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">$1,050</td>
-                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">1,350</td>
-                  <td style="padding:2px 6px">싱가포르 LSMGO 수급 완화 (Platts 평가 하락)</td></tr>
-                <tr><td style="padding:2px 6px;color:#8A5A12"><b>y+3</b></td>
-                  <td style="padding:2px 6px;text-align:right">×0.617</td>
-                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">$919</td>
-                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">1,330</td>
-                  <td style="padding:2px 6px">저유황 디젤 정제능력 확대 → 프리미엄 축소 (Argus)</td></tr>
-                <tr style="background:#FFFBEE"><td style="padding:2px 6px;color:#8A5A12"><b>y+4</b></td>
-                  <td style="padding:2px 6px;text-align:right">×0.550</td>
-                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums"><b>$820</b></td>
-                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">1,320</td>
-                  <td style="padding:2px 6px"><b>저점</b> — pre-war 평균 수렴 · IMO 2030 발효 직전</td></tr>
-                <tr style="background:#FFFBEE"><td style="padding:2px 6px;color:#8A5A12"><b>y+5</b></td>
-                  <td style="padding:2px 6px;text-align:right">×0.544</td>
-                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">$810</td>
-                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums"><b>1,320</b></td>
-                  <td style="padding:2px 6px">저유황 공급 과잉 · 플러스알파 저가 유지</td></tr>
-                <tr><td style="padding:2px 6px;color:#8A5A12"><b>y+6</b></td>
-                  <td style="padding:2px 6px;text-align:right">×0.557</td>
-                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">$830</td>
-                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">1,330</td>
-                  <td style="padding:2px 6px">IMO 2030 저유황 수요 증가 반영</td></tr>
-                <tr><td style="padding:2px 6px;color:#8A5A12"><b>y+7</b></td>
-                  <td style="padding:2px 6px;text-align:right">×0.577</td>
-                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">$860</td>
-                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">1,350</td>
-                  <td style="padding:2px 6px">저유황 바이오혼합 요구 상향 → MGO 프리미엄 복원</td></tr>
-                <tr><td style="padding:2px 6px;color:#8A5A12"><b>y+8</b></td>
-                  <td style="padding:2px 6px;text-align:right">×0.597</td>
-                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">$890</td>
-                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">1,370</td>
-                  <td style="padding:2px 6px">바이오 LSMGO 비용 반영 완만 상승</td></tr>
-                <tr><td style="padding:2px 6px;color:#8A5A12"><b>y+9</b></td>
-                  <td style="padding:2px 6px;text-align:right">×0.617</td>
-                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">$920</td>
-                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">1,385</td>
-                  <td style="padding:2px 6px">신선박 LSMGO 수요 증가 · ICE LSGO 선물 반영</td></tr>
-                <tr><td style="padding:2px 6px;color:#8A5A12"><b>y+10</b></td>
-                  <td style="padding:2px 6px;text-align:right">×0.638</td>
-                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">$950</td>
-                  <td style="padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums">1,400</td>
-                  <td style="padding:2px 6px">IMO 2030 완전 적용 · 10년 평균 ~$880 수렴</td></tr>
+                <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+0 · 2026</b></td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$1,490</td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,410</td>
+                  <td style="padding:3px 6px;text-align:right">×1.000</td>
+                  <td style="padding:3px 6px">현 시세 (전쟁 프리미엄 포함)</td></tr>
+                <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+1 · 2027</b></td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$1,252</td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,380</td>
+                  <td style="padding:3px 6px;text-align:right">×0.840</td>
+                  <td style="padding:3px 6px">OPEC+ 감산 완화 예정 · 공급 증가로 가격 하락 시작</td></tr>
+                <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+2 · 2028</b></td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$1,050</td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,350</td>
+                  <td style="padding:3px 6px;text-align:right">×0.705</td>
+                  <td style="padding:3px 6px">미국 셰일 증산·중동 안정화 → 전쟁 프리미엄 해소</td></tr>
+                <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+3 · 2029</b></td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$919</td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,330</td>
+                  <td style="padding:3px 6px;text-align:right">×0.617</td>
+                  <td style="padding:3px 6px">전쟁 전 평균($820)에 접근 · 정제설비 증설 반영</td></tr>
+                <tr style="background:#FFFBEE"><td style="padding:3px 6px;color:#8A5A12"><b>y+4 · 2030</b></td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums"><b>$820</b></td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,320</td>
+                  <td style="padding:3px 6px;text-align:right">×0.550</td>
+                  <td style="padding:3px 6px"><b>저점 · 전쟁 전 평균 수렴</b> · IMO 2030 GHG 감축 전환기</td></tr>
+                <tr style="background:#FFFBEE"><td style="padding:3px 6px;color:#8A5A12"><b>y+5 · 2031</b></td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$810</td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums"><b>1,320</b></td>
+                  <td style="padding:3px 6px;text-align:right">×0.544</td>
+                  <td style="padding:3px 6px">저유황 공급 안정 · 저점 유지 · 원화 강세 피크</td></tr>
+                <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+6 · 2032</b></td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$830</td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,330</td>
+                  <td style="padding:3px 6px;text-align:right">×0.557</td>
+                  <td style="padding:3px 6px">IMO 2030 발효 · 저유황 수요 증가 반영 시작</td></tr>
+                <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+7 · 2033</b></td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$860</td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,350</td>
+                  <td style="padding:3px 6px;text-align:right">×0.577</td>
+                  <td style="padding:3px 6px">신선박 교체 수요 · LSMGO 소비량 확대</td></tr>
+                <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+8 · 2034</b></td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$890</td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,370</td>
+                  <td style="padding:3px 6px;text-align:right">×0.597</td>
+                  <td style="padding:3px 6px">바이오 혼합 의무화 확대 · 단가 완만 상승</td></tr>
+                <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+9 · 2035</b></td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$920</td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,385</td>
+                  <td style="padding:3px 6px;text-align:right">×0.617</td>
+                  <td style="padding:3px 6px">10년 평균 가격대 복귀 · 바이오 비용 반영 지속</td></tr>
+                <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+10 · 2036</b></td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$950</td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,400</td>
+                  <td style="padding:3px 6px;text-align:right">×0.638</td>
+                  <td style="padding:3px 6px">IMO 2050 중간 지표 반영 · 10년 평균 ~$880/MT</td></tr>
               </tbody>
             </table>
-            <div style="margin-top:6px;padding:5px 7px;background:#F5F9FE;border-left:3px solid var(--navy);font-size:10px;line-height:1.5;color:#33415A">
-              <b style="color:var(--navy)">반영 로직</b> — 년차별 편도단가(만원) = 산타모니카호 편도 톤수 × (LSMGO $/MT × ₩/$) ÷ 10,000.
-              현 손익은 LSMGO 단가·환율 복합 변동을 <b>'편도 만원'</b> 단일 값으로 흡수.
-              <br><b style="color:var(--navy)">기준</b> — Brent 유가 전망이 아니라 <b>LSMGO 직접 전망</b>(ICE LSGO 선물·Platts·Argus·MABUX)의 중앙치.
-              2015-2024 Platts Singapore MGO 역사 평균이 $500-820 범위라 10년 평균 $880 은 보수적 중앙.
+            <div style="margin-top:8px;padding:7px 10px;background:#F5F9FE;border-left:3px solid var(--navy);font-size:10px;line-height:1.6;color:#33415A">
+              <b style="color:var(--navy)">왜 이렇게 가정했는가 (3단계 논리)</b>
+              <br>&nbsp;&nbsp;<b>1️. 과거 평균</b> — Platts 싱가포르 MGO 2015~2024 평균 가격대는 <b>$500 ~ $820</b> 범위
+              <br>&nbsp;&nbsp;<b>2️. 현재 가격</b> — 2026년 10월 기준 $1,490 (지정학 리스크로 +82% 프리미엄 포함)
+              <br>&nbsp;&nbsp;<b>3️. 10년 평균</b> — 전쟁 종료 · IMO 규제 반영 시 과거 평균대로 회귀, <b>10년 평균 ~$880 (보수적 중앙치)</b>
+              <br><br>
+              <b style="color:var(--navy)">편도단가 산출</b> — 산타모니카호 편도 운항 톤수 × (LSMGO $/MT × ₩/$) ÷ 10,000 = 편도단가 (만원)
             </div>
             <div style="margin-top:4px;font-size:10px;color:var(--muted)">
               <a href="https://www.theice.com/products/34361119/Low-Sulphur-Gasoil-Futures" target="_blank" rel="noopener" style="color:var(--sky)">ICE LSGO 선물 ↗</a> ·
@@ -3594,8 +3621,17 @@ function model(){
   const salvageWon    = salvageUnit === 'pct'
     ? shipPricePeer * Math.min(100, salvagePeerIn) / 100
     : salvagePeerIn * 1e6;
-  const opDepPeer     = shipPricePeer > 0
+  const opDepShipPeer = shipPricePeer > 0
     ? Math.max(0, shipPricePeer - salvageWon) / lifePeer : DEP;
+  // 접안시설 CapEx — 폰툰·램프 등 1회성 설비 투자.
+  //   손익계산서: 내용연수(기본 10년) 정액 감가로 매년 비용 처리 (opDep 포함).
+  //   수지분석: y+0 에 1회 유출 + 매년 감가 되더하기 (비현금).
+  const moorageOn      = el('iMoorageOn')?.checked !== false;
+  const moorageInvest  = moorageOn ? Math.max(0, num('iMoorageInvest', 1000)) * 1e6 : 0;
+  const moorageLife    = Math.max(1, num('iMoorageLife', 10));
+  const moorageDepAnn  = moorageInvest > 0 ? moorageInvest / moorageLife : 0;
+  // 선박 감가 + 접안시설 감가 합계 → 운항원가의 감가상각비 라인에 함께 반영.
+  const opDepPeer      = opDepShipPeer + moorageDepAnn;
   // 여객 외 수입 — 화물 시뮬레이션(적재 케이스 × 선적율 × 항차)과 임대료.
   //   선적율은 시나리오별 값(scnCargo)으로 덮어쓴다 (worst 5% · normal 7.25% · best 15%).
   const cargoLoadP  = Math.min(1, Math.max(0, scnCargo / 100));
@@ -3792,6 +3828,7 @@ function model(){
            tonnageTax, netTon, opDays, tonnageAmt,
            headPeer, sailorPeer, crewPeer, opHeadPeer, sgaWagePeer, opLaborPeer, opEtcPeer,
            costFpeer, costSVpeer, svPerVoyPeer, svPerVoy_ofPeer, itemsPeer, Opeer, opDepPeer,
+           opDepShipPeer, moorageOn, moorageInvest, moorageLife, moorageDepAnn,
            shipPricePeer, lifePeer, salvageWon, salvageUnit, cargoRevP, isSantaP,
            voyForPeer, qForPeer, simPeer, pForPeer, fixedAtPeer,
            fareEcoPeer, mixPeer, mixSumPeer, fareSeatPeer, fuelPeer, farePeer,
@@ -4597,7 +4634,10 @@ function drawCVP(m){
   // 산타모니카(peer) 전용 — 엘도라도 실적은 이 패널에선 안 보여준다.
   const V = view(m, true);
   const qT = V.qFor(m.r), q0 = V.qFor(0);
-  const qMax = Math.max(...[V.paxAct, V.pax, q0||0, qT||0].filter(v => isFinite(v) && v>0), 1) * 1.25;
+  // 과거 실적 상한선 2개 — 역대 최대(2017)·2위(2018) 수송인원. qMax 산출에 포함돼 그래프 범위 보장.
+  const Q_PEAK_2017 = 235246;   // 역대 최대 — 2017년 후쿠오카 고속선 합계 (비틀·JR큐슈·코비·퀸비틀)
+  const Q_PEAK_2018 = 181520;   // 2위    — 2018년 수송인원
+  const qMax = Math.max(...[V.paxAct, V.pax, q0||0, qT||0, Q_PEAK_2017].filter(v => isFinite(v) && v>0), 1) * 1.15;
   const yMax = Math.max(V.sim(qMax).sales, V.sim(qMax).cost) * 1.05;
   const x = q => L + (W-L-R) * (q/qMax);
   const y = v => T + (H-T-B) * (1 - v/yMax);
@@ -4695,18 +4735,71 @@ function drawCVP(m){
   const _curLabel = _mkLabel('현재 설정',                       V.paxAct);
   const _bepLabel = _mkLabel('손익분기',                        q0);
   const _tgtLabel = _mkLabel(`목표(영업이익률 ${_tgtRatePct}%)`, qT);
+
+  // ── 역대 과거 탑승객 수 참고선 — 2017 최대 · 2018 2위. 가로 점선 + 좌측 상단 범례 박스.
+  //   선과 라벨을 분리: 가로 점선은 플롯 전체(연한 톤) · 라벨은 좌측 상단 통합 박스에 세로 스택.
+  //   이렇게 하면 매출선·마커가 라벨을 덮어도 범례 박스는 항상 보임.
+  const _peakHLineOnly = (q, col, dash) => {
+    if (!isFinite(q) || q <= 0) return { line:'', sv:null };
+    const sv = V.sim(q).sales;
+    if (!isFinite(sv) || sv <= 0 || sv > yMax) return { line:'', sv:null };
+    const yv = y(sv).toFixed(1);
+    return {
+      line: `<line x1="${L}" y1="${yv}" x2="${W-R}" y2="${yv}"
+              stroke="${col}" stroke-width="1.3" stroke-dasharray="${dash}" opacity="0.65"/>`,
+      sv: sv,
+    };
+  };
+  const p17 = _peakHLineOnly(Q_PEAK_2017, '#6B7280', '6 4');
+  const p18 = _peakHLineOnly(Q_PEAK_2018, '#8899AA', '3 3');
+  // 좌측 상단 통합 범례 박스 — 선 색상 스와치 + 라벨을 세로로 스택
+  let peakLegend = '';
+  if (p17.sv || p18.sv) {
+    const _bx = L + 6;             // 박스 좌측 x (y축 안쪽 6px)
+    const _by = T + 6;             // 박스 상단 y
+    const _bw = 220;
+    const _rows = [];
+    if (p17.sv) _rows.push({
+      col:'#6B7280', dash:'6 4',
+      main:`역대 최대 탑승객 (2017) · ${won(Q_PEAK_2017)}명`,
+      sub:`같은 승객수 매출 수준 ${mil(p17.sv)}백만`,
+    });
+    if (p18.sv) _rows.push({
+      col:'#8899AA', dash:'3 3',
+      main:`2위 탑승객 (2018) · ${won(Q_PEAK_2018)}명`,
+      sub:`같은 승객수 매출 수준 ${mil(p18.sv)}백만`,
+    });
+    const _rowH = 28;              // 한 항목 세로 높이
+    const _bh = 6 + _rows.length * _rowH;
+    peakLegend =
+      `<rect x="${_bx}" y="${_by}" width="${_bw}" height="${_bh}" rx="3"
+         fill="#fff" stroke="#B4C2D4" stroke-width="0.8" opacity="0.96"/>`
+      + _rows.map((r, i) => {
+          const _ry = _by + 6 + i * _rowH;
+          return `<line x1="${_bx+8}" y1="${_ry+6}" x2="${_bx+30}" y2="${_ry+6}"
+                    stroke="${r.col}" stroke-width="1.6" stroke-dasharray="${r.dash}"/>
+                  <text x="${_bx+36}" y="${_ry+9}" fill="${r.col}" font-size="9.5" font-weight="700"
+                    text-anchor="start">${r.main}</text>
+                  <text x="${_bx+36}" y="${_ry+21}" fill="${r.col}" font-size="8.5" font-weight="500"
+                    text-anchor="start" opacity="0.9">${r.sub}</text>`;
+        }).join('');
+  }
+
   el('cvp').innerHTML =
     `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"
-       aria-label="승객수에 따른 매출액과 총비용, 손익분기점·목표·현재 설정">
+       aria-label="승객수에 따른 매출액과 총비용, 손익분기점·목표·현재 설정·과거 수요 상한선">
       ${ticks}${xt}
       <line x1="${L}" y1="${y(0).toFixed(1)}" x2="${W-R}" y2="${y(0).toFixed(1)}" stroke="#D7DFE9"/>
       <line x1="${L}" y1="${T}" x2="${L}" y2="${y(0).toFixed(1)}" stroke="#D7DFE9"/>
       ${cargoLine}
+      ${p17.line}
+      ${p18.line}
       ${line(q => V.sim(q).cost,  '#A8392F')}
       ${line(q => V.sim(q).sales, '#154B8C')}
       ${mark(q0,          '#1C6B4A', _bepLabel,  -12)}
       ${mark(qT,          '#8A5A12', _tgtLabel,  -28)}
       ${mark(V.paxAct,    '#5BA3D9', _curLabel,   18)}
+      ${peakLegend}
       ${scnBadge}
     </svg>`;
 }
@@ -6157,8 +6250,29 @@ function drawPeerPL(m) {
   const iAgency = add({ cls:'n',
     name: _agencyNm,
     agg:[[iPax, _agWeight], [iCargo, _agWeight]], v:agency });
+  // 감가상각비 — 선박 감가(gDep 복리) + 접안시설 감가(내용연수 동안만, 그 후 0) 합산.
+  //   moorage 가 있을 때는 series 를 직접 산출해 년차별 정확히 반영.
+  const _depShipBase = (m.opDepShipPeer != null) ? m.opDepShipPeer : opDep;
+  const _depSeries = (m.moorageOn && m.moorageInvest > 0 && m.moorageDepAnn > 0)
+    ? Array.from({length: 11}, (_, k) => {
+        const g = (GROW.gDep || 0) / 100;
+        const shipK = _depShipBase * Math.pow(1 + g, k);
+        const moorK = k < (m.moorageLife || 10) ? m.moorageDepAnn : 0;
+        return shipK + moorK;
+      })
+    : null;
   const iOpDep  = add({ cls:'n', name:'감가상각비 <span class="tagv" style="cursor:pointer">상각표 ↗</span>',
-                        v:opDep, gk:'gDep', clickOv:'ovDepSchedule' });
+                        v:opDep, gk:_depSeries ? undefined : 'gDep',
+                        series:_depSeries || undefined,
+                        clickOv:'ovDepSchedule' });
+  // 접안시설 감가 서브라인 — 참고용 표시 (iOpDep 집계에 이미 포함돼 중복 집계 안 함).
+  if (m.moorageOn && m.moorageInvest > 0) {
+    const _mLife = m.moorageLife || 10;
+    const _mSeries = Array.from({ length: 11 }, (_, k) => k < _mLife ? m.moorageDepAnn : 0);
+    add({ cls:'d sub2',
+      name:`· 접안시설 감가 <span class="tagv est" title="폰툰·램프 등 1회성 설비 투자 ${won(m.moorageInvest / 1e6)}백만 ÷ ${_mLife}년 정액. y+${_mLife - 1} 까지만 발생.">${won(m.moorageInvest / 1e6)}백만 ÷ ${_mLife}년</span>`,
+      series:_mSeries });
+  }
   const iOpTax  = add({ cls:'n', name:'세금과공과',          v:opTax,  gk:'gTax' });
   const iOpRent = add({ cls:'n', name:'임차료',              v:opRent, gk:'gRent2' });
   const iOpEtc  = add({ cls:'n', name:'운항기타', v:opEtc, collapsible:'op_etc' });
@@ -6447,9 +6561,17 @@ function drawPeerPL(m) {
     v: -_sinkingBaseWon, gk:'gSinking',
     clickOv:'ovSinkingSchedule',
     groupIn:'post_tax' });
-  // 오너 가용현금 = 영업 순현금흐름 + CapEx(음수) + Sinking(음수)
-  add({ cls:'lead', name:'= 가용현금 <span class="tagv est" title="당기순이익 + 감가 − 원금 − 우발수리유보금 − 선박대체유보금. 이자·세금을 모두 치르고, 그 해 원금 상환과 유보 적립을 마친 뒤 통장에 남는 돈 — 주주에게 배당·재투자할 수 있는 몫이다. 원금커버배수 1.0 초과와 같은 뜻이다.">상환 후 잉여현금</span>',
-        agg:[[iOpCash,1],[iCapex,1],[iSinking,1]], groupIn:'post_tax' });
+  // 접안시설 CapEx — y+0 1회성 유출. 손익에는 감가로 녹아 있고, 수지에선 투자 당해 한 번 통째로.
+  const iMoorageCapex = (m.moorageOn && m.moorageInvest > 0)
+    ? add({ cls:'n', name:`(−) 접안시설 CapEx <span class="tagv est" title="폰툰·램프 등 1회성 설비 투자 — y+0 에만 ${won(m.moorageInvest / 1e6)}백만 유출. 손익계산서엔 ${m.moorageLife}년 감가로 분할 반영.">y+0 1회</span>`,
+            series:Array.from({length: 11}, (_, k) => k === 0 ? -m.moorageInvest : 0),
+            groupIn:'post_tax' })
+    : null;
+  // 오너 가용현금 = 영업 순현금흐름 + CapEx(음수) + Sinking(음수) + 접안시설 CapEx(y+0)
+  const _availKids = [[iOpCash,1],[iCapex,1],[iSinking,1]]
+    .concat(iMoorageCapex != null ? [[iMoorageCapex,1]] : []);
+  add({ cls:'lead', name:'= 가용현금 <span class="tagv est" title="당기순이익 + 감가 − 원금 − 우발수리유보금 − 선박대체유보금 − 접안시설 CapEx. 이자·세금을 모두 치르고, 그 해 원금 상환·유보 적립·설비 투자를 마친 뒤 통장에 남는 돈.">상환 후 잉여현금</span>',
+        agg:_availKids, groupIn:'post_tax' });
 
   // 원금커버배수 : (당기순 + 감가 − 유보금) ÷ 그 해 원금 — 차입금이 있을 때만 추가.
   // 선체이자는 운항원가에 이미 들어가 있으니 당기순이익 밑으론 원금만 남는다.
@@ -6738,10 +6860,10 @@ function drawPeerPL10() {
                                                   : v.toFixed(2) + 'x';
   const cellCls = v => v == null ? 'nil' : (v < 0 ? 'neg' : '');
 
-  // 1-a) 리프(비집계) 행 먼저 계산
+  // 1-a) 리프(비집계) 행 먼저 계산 — agg/ratio/transform/cum 은 2단계에서 처리
   const proj = new Array(PEER_PL_ROWS.length);
   PEER_PL_ROWS.forEach((r, i) => {
-    if (r.agg || r.ratio || r.transform) return;
+    if (r.agg || r.ratio || r.transform || r.cum != null) return;
     if (r.series) {                    // 상환 스케줄처럼 연도별 값이 정해진 행
       proj[i] = Array.from({length: YN+1}, (_, k) => toMil(r.series[k] ?? 0));
     } else if (r.gk) {
@@ -8020,8 +8142,10 @@ function render(){
  'iCargoLoad','iCargoDist',
  'iAgencyPeer','iAgencyJapanShare',
  'iNetTon','iOpDays',
- 'iShipPricePeer','iLifePeer','iSalvagePeer','iLoanPeer','iLoanRatePeer'].forEach(id =>
-  el(id).addEventListener('input', render));
+ 'iShipPricePeer','iLifePeer','iSalvagePeer','iLoanPeer','iLoanRatePeer',
+ 'iMoorageInvest','iMoorageLife'].forEach(id =>
+  el(id)?.addEventListener('input', render));
+el('iMoorageOn')?.addEventListener('change', render);
 el('iTonnageTax').addEventListener('change', render);
 // 대리점비 적용 토글 — change 이벤트로 render() 트리거
 el('iAgencyEnabled')?.addEventListener('change', render);
@@ -8686,12 +8810,41 @@ async function print3ScenariosPL10() {
       kpi.scnCargo  = m.scnCargo || 0;
       kpi.scnFuelRT = m.scnFuelRT || 0;
     }
-    // ── CVP SVG 캡처 (있으면) ──────────────────────────────────────────
+    // ── CVP SVG 캡처 (drawCVP 가 강제 peer 모드로 렌더) ─────────────────
+    // CVP 패널은 화면상 숨어있을 수 있음 — drawCVP(LAST_M) 를 명시 호출로 보장.
+    if (typeof drawCVP === 'function' && (typeof LAST_M !== 'undefined' && LAST_M)) {
+      try { drawCVP(LAST_M); } catch(_) {}
+      await waitRender();
+    }
     let cvpSvg = '';
     try {
       const cvpEl = document.querySelector('#cvp svg');
       if (cvpEl) cvpSvg = cvpEl.outerHTML;
     } catch(_) {}
+    // ── 목표이익율 도달 지표 캡처 (mini-KPI · 캡션 · 테이블 2종) ──────────
+    const _grab = sel => { const n = document.querySelector(sel); return n ? n.outerHTML : ''; };
+    const _grabInner = sel => { const n = document.querySelector(sel); return n ? n.innerHTML : ''; };
+    const tgtCap  = _grabInner('#tgtCap1');
+    const tgtCap2 = _grabInner('#tgtCap2');
+    // 미니 KPI 카드 — 시나리오 테마 색상(scnColors[scn])으로 통일. 배경·테두리·숫자 색까지 톤 매칭.
+    const _miniBg     = { worst:'#FFF4F4', normal:'#F6F9FC', best:'#F0FBF5' }[scn];
+    const _miniBorder = { worst:'#E6B5B0', normal:'#B4C9E2', best:'#B2D4BE' }[scn];
+    const _miniColor  = scnColors[scn];
+    const _miniCard = (label, vSel, sSel) => `
+        <div style="padding:3px 7px;background:${_miniBg};border:1px solid ${_miniBorder};border-radius:3px">
+          <div style="font-size:8pt;color:#5C6B7F;font-weight:600;line-height:1.3">${label}</div>
+          <div style="font-size:10.5pt;font-weight:800;color:${_miniColor};line-height:1.25">${_grabInner(vSel) || '—'}</div>
+          <div style="font-size:7.5pt;color:#5C6B7F;margin-top:1px;line-height:1.3">${_grabInner(sSel) || ''}</div>
+        </div>`;
+    const tgtMiniHTML =
+      `<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px;margin:4px 0 6px">
+        ${_miniCard('필요 승객수', '#mQ', '#mQs')}
+        ${_miniCard('필요 운임',   '#mP', '#mPs')}
+        ${_miniCard('필요 매출액', '#mS', '#mSs')}
+        ${_miniCard('허용 총비용', '#mC', '#mCs')}
+      </div>`;
+    const tgtTblHTML   = _grabInner('#tTgt');   // 목표이익률 × 필요승객수·운임 표 tbody
+    const ratioTblHTML = _grabInner('#tRatio'); // 매출/원가/판관비/영업이익률 비율 표 tbody
     // ── 감춰진 세목 전부 펼친 상태로 10개년 표 캡처 ─────────────────────
     const clone = multi.cloneNode(true);
     clone.querySelectorAll('tr[hidden]').forEach(tr => tr.removeAttribute('hidden'));
@@ -8700,7 +8853,8 @@ async function print3ScenariosPL10() {
     const subEl = clone.querySelector('#plPeerSub10');
     const subTxt = subEl ? subEl.textContent.trim() : '';
     sections.push({ scn, label: scnLabels[scn], color: scnColors[scn], bg: scnBg[scn],
-                    html: clone.innerHTML, sub: subTxt, kpi, cvpSvg });
+                    html: clone.innerHTML, sub: subTxt, kpi, cvpSvg,
+                    tgtCap, tgtCap2, tgtMiniHTML, tgtTblHTML, ratioTblHTML });
   }
   // 원래 시나리오로 복원
   const origRadio = document.querySelector(`input[name="iScenario"][value="${origScn}"]`);
@@ -8736,15 +8890,16 @@ async function print3ScenariosPL10() {
         [임원 요약] 영업 핵심 지표${_aiBadge} &nbsp;·&nbsp; 전제 : 승선율 ${_fmtPct(k.loadCur,1)} (${_fmtWon(k.paxCur)}명) · 운임 ${_fmtWon(k.scnFare)}원+할증 ${_fmtWon(k.scnFuel)}원 · 선적율 ${(k.scnCargo||0).toFixed(2).replace(/\.?0+$/, '')}% · 연 ${_fmtWon(k.voy)}항차 · 단순연료 ${_fmtWon(k.scnFuelRT)}만원/편도
       </div>
       ${_aiLine}
-      <table style="width:100%;border-collapse:collapse;font-size:8.5pt">
+      <table style="width:100%;border-collapse:collapse;font-size:9pt">
         <thead>
-          <tr style="background:${s.bg};color:${s.color};border-bottom:1px solid ${s.color}">
-            <th style="padding:4px 6px;text-align:left;width:17%">영업손익</th>
-            <th style="padding:4px 6px;text-align:left;width:14%">EBITDA</th>
-            <th style="padding:4px 6px;text-align:left;width:17%">손익분기 승객수</th>
-            <th style="padding:4px 6px;text-align:left;width:19%">목표(${_fmtPct(k.tgtR,0)}) 달성 승객수</th>
-            <th style="padding:4px 6px;text-align:left;width:17%">50% 승선율 (${_fmtWon(k.pax50)}명)</th>
-            <th style="padding:4px 6px;text-align:left;width:16%">가동률</th>
+          <!-- 시나리오 테마 색상으로 헤더 통일 — 해당 시나리오 안 모든 보조 표가 같은 색 -->
+          <tr style="background:${s.color};color:#fff;border-bottom:1px solid ${s.color}">
+            <th style="padding:5px 7px;text-align:left;width:17%">영업손익</th>
+            <th style="padding:5px 7px;text-align:left;width:14%">EBITDA</th>
+            <th style="padding:5px 7px;text-align:left;width:17%">손익분기 승객수</th>
+            <th style="padding:5px 7px;text-align:left;width:19%">목표(${_fmtPct(k.tgtR,0)}) 달성 승객수</th>
+            <th style="padding:5px 7px;text-align:left;width:17%">50% 승선율 (${_fmtWon(k.pax50)}명)</th>
+            <th style="padding:5px 7px;text-align:left;width:16%">가동률</th>
           </tr>
         </thead>
         <tbody>
@@ -8767,38 +8922,1042 @@ async function print3ScenariosPL10() {
     </div>`;
   };
 
-  const body = sections.map(s => `
-    <section class="scn-section" style="page-break-after:always;margin:0 0 18px">
-      <div class="scn-header" style="border-top:5px solid ${s.color};background:${s.bg};padding:8px 12px;margin:0 0 10px">
-        <div style="font-size:16pt;font-weight:800;color:${s.color};letter-spacing:-0.3px">
-          ${s.label}
+  // 통일된 페이지 번호 — 인트로 8장(목차+선박+전제+증감률+퀸비틀+승용차+후쿠오카항로+항공) + 시나리오 3장 × 3페이지 = 전체 17장.
+  //   AI 유가추세 ON 이면 P 5 에 근거 페이지 1장이 추가되어 전체 18장.
+  //   각 시나리오는 3 페이지: ① 10개년 손익계산서 · ② 목표지표+비율 · ③ 손익분기 그래프(풀페이지).
+  const fuelAiOffset = aiOn ? 1 : 0;
+  const INTRO_PAGES  = 8 + fuelAiOffset;
+  const TOTAL_PAGES  = INTRO_PAGES + 9;
+  // 인트로 각 페이지의 번호 — aiOn 이면 fuelAi 가 P 5 로 삽입되고 그 뒤가 전부 +1 밀림
+  const PP = {
+    toc:    1,
+    ships:  2,
+    cond:   3,
+    growth: 4,
+    fuelAi: aiOn ? 5 : null,
+    qb:     aiOn ? 6 : 5,
+    car:    aiOn ? 7 : 6,
+    fuk:    aiOn ? 8 : 7,
+    air:    aiOn ? 9 : 8,
+  };
+  const _pageTag = (n) => `<div style="font-size:9.5pt;color:#5C6B7F;font-weight:700;white-space:nowrap">페이지 ${n} / ${TOTAL_PAGES}</div>`;
+  const body = sections.map((s, idx) => {
+    const pageA = INTRO_PAGES + 1 + idx * 3;        // 10년 표 페이지 번호 (인트로 뒤)
+    const pageB = pageA + 1;          // 목표지표+비율 페이지 번호
+    const pageC = pageA + 2;          // 손익분기 그래프 풀페이지
+    const sheetA = `
+    <section class="scn-section" data-scn="${s.scn}" style="page-break-after:always;margin:0 0 18px">
+      <div class="scn-header" style="border-top:5px solid ${s.color};background:${s.bg};padding:8px 12px;margin:0 0 10px;display:flex;justify-content:space-between;align-items:flex-end">
+        <div>
+          <div style="font-size:16pt;font-weight:800;color:${s.color};letter-spacing:-0.3px">
+            ${s.label} — 10개년 손익계산서
+          </div>
+          <div style="font-size:9pt;color:#555;margin-top:2px">${s.sub}</div>
         </div>
-        <div style="font-size:9pt;color:#555;margin-top:2px">${s.sub}</div>
+        ${_pageTag(pageA)}
       </div>
       ${kpiCard(s)}
       ${s.html}
+    </section>`;
+    const sheetB = `
+    <section class="scn-section" data-scn="${s.scn}" style="page-break-after:always;margin:0 0 18px">
+      <div class="scn-header" style="border-top:5px solid ${s.color};background:${s.bg};padding:8px 12px;margin:0 0 10px;display:flex;justify-content:space-between;align-items:flex-end">
+        <div>
+          <div style="font-size:16pt;font-weight:800;color:${s.color};letter-spacing:-0.3px">
+            ${s.label} — 목표 지표 · 비율 분석
+          </div>
+          <div style="font-size:9pt;color:#555;margin-top:2px">${s.sub}</div>
+        </div>
+        ${_pageTag(pageB)}
+      </div>
+
+      <h3 style="font-size:10.5pt;margin:2px 0 1px;color:${s.color}">① 목표 영업이익률 도달 지표</h3>
+      <div style="font-size:8pt;color:#5C6B7F;margin-bottom:3px;line-height:1.3">${s.tgtCap || ''}</div>
+      ${s.tgtMiniHTML || ''}
+      <table style="width:100%;border-collapse:collapse;font-size:9pt;margin-bottom:6px">
+        <thead>
+          <tr style="background:${s.color};color:#fff">
+            <th style="padding:3px 7px;text-align:left">목표 영업이익률</th>
+            <th style="padding:3px 7px;text-align:right">필요 승객수 (화물 반영)</th>
+            <th style="padding:3px 7px;text-align:right">필요 승객수 (화물 제외)</th>
+            <th style="padding:3px 7px;text-align:right">현재 설정 승선율·선적율 대비</th>
+            <th style="padding:3px 7px;text-align:right">필요 운임</th>
+          </tr>
+        </thead>
+        <tbody>${s.tgtTblHTML || ''}</tbody>
+      </table>
+
+      <h3 style="font-size:10.5pt;margin:6px 0 2px;color:${s.color}">② 매출·원가·판관비 비율</h3>
+      <div style="font-size:8pt;color:#5C6B7F;margin-bottom:3px;line-height:1.3">${s.tgtCap2 || ''}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:9pt;margin-bottom:6px">
+        <thead>
+          <tr style="background:${s.color};color:#fff">
+            <th style="padding:3px 7px;text-align:left">구분</th>
+            <th style="padding:3px 7px;text-align:right">매출액</th>
+            <th style="padding:3px 7px;text-align:right">운항원가 (매출 대비 %)</th>
+            <th style="padding:3px 7px;text-align:right">판관비 (매출 대비 %)</th>
+            <th style="padding:3px 7px;text-align:right">전사 인건비율</th>
+            <th style="padding:3px 7px;text-align:right">영업이익률</th>
+          </tr>
+        </thead>
+        <tbody>${s.ratioTblHTML || ''}</tbody>
+      </table>
+    </section>`;
+    // sheetC — 손익분기 그래프를 A4 landscape 1 페이지 전체에 꽉 채움
+    const sheetC = `
+    <section class="scn-section" data-scn="${s.scn}" style="page-break-after:always;margin:0;display:flex;flex-direction:column;height:100%;min-height:184mm">
+      <div class="scn-header" style="border-top:5px solid ${s.color};background:${s.bg};padding:8px 12px;margin:0 0 8px;display:flex;justify-content:space-between;align-items:flex-end;flex:0 0 auto">
+        <div>
+          <div style="font-size:16pt;font-weight:800;color:${s.color};letter-spacing:-0.3px">
+            ${s.label} — 승객수 손익분기 그래프
+          </div>
+          <div style="font-size:9pt;color:#555;margin-top:2px">${s.sub}</div>
+        </div>
+        ${_pageTag(pageC)}
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;min-height:0">
+        <div style="flex:1;border:1px solid #D7DFE9;border-radius:3px;background:#fff;overflow:hidden;min-height:0">
+          ${s.cvpSvg
+            ? s.cvpSvg.replace('<svg ', '<svg preserveAspectRatio="none" style="width:100%;height:100%;display:block" ')
+            : '<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#5C6B7F;font-size:10pt">CVP 그래프 캡처 실패 — 화면에서 CVP 패널 활성화 후 재시도</div>'}
+        </div>
+        <div style="margin-top:6px;font-size:9pt;color:#5C6B7F;line-height:1.6;flex:0 0 auto">
+          <b style="color:${s.color}">읽는 법</b> &nbsp;·&nbsp;
+          매출선(파랑) · 총비용선(빨강) · 손익분기점(초록) · 목표도달점(황갈) · 현재 설정(스카이블루)
+          <br>· 가로 점선: 역대 최대 2017 / 2위 2018 — 과거 탑승객 수에 대응하는 매출 수준
+          <br>· 세로 점선 (황갈): 화물·기타 수입선 — 선적율 반영된 매출 하한
+        </div>
+      </div>
+    </section>`;
+    return sheetA + sheetB + sheetC;
+  }).join('\n');
+
+  // ── 인트로 페이지들 — 선박 소개 2장 + 전제·시나리오 요약 1장 ─────────────────
+  //   선박 사진은 상대경로 (window.open 은 about:blank 이라 <base href=> 로 보정).
+  const _ship = (id) => (typeof SHIPS !== 'undefined' ? SHIPS.find(s => s.id === id) : null)
+                     || (typeof SHIPS_BUILTIN !== 'undefined' ? SHIPS_BUILTIN.find(s => s.id === id) : null);
+  const eld = _ship('eldorado');
+  const sm  = _ship('santamonica');
+  // 오션플라워2호 — 대아고속해운 운영 4,114t급 쌍동형 고속여객선. 부산 ↔ 대마도 이즈하라 운항.
+  //   길이 81m · 폭 26m · 최고 44 kts · 정원 825명 + 차량 86대 · 소요 2시간 50분 · 주 2회 (토·일)
+  //   층 구성 : 1층 화물 · 2층 일반석 637 · 3층 우등석 188 (총 825석)
+  //   과거 : 대아그룹 제주 항로 투입 당시 선명 "오렌지1호" (장흥 노력항 ↔ 제주 성산항)
+  //   자전거 거치 100대 · 대형 보관함 4개 (낚시가방·캐리어 수납).
+  const of2 = {
+    name:'오션플라워2호 · 대아고속해운',
+    route:'부산 ↔ 대마도 이즈하라 · 소요 2시간 50분 · 주 2회 (토·일)',
+    gt:4114, loa:81, beam:26, pax:825, kts:44, cars:86,
+    note:'4,114톤급 쌍동형 고속여객선 · 前 "오렌지1호" (대아그룹 제주 노력~성산 항로)',
+    src:'공개 보도자료',
+    seats:{ eco:637, biz:188 },
+    seatsText:'1층 화물 · 2층 일반석 637 · 3층 우등석 188 (총 825석) · 차량 86대',
+  };
+  // 선박 1장용 콤팩트 블록 — 2단 그리드(사진 좌 / 제원 우) · 섹션 번호 뱃지 포함.
+  //   같은 페이지에 2척을 세로로 쌓을 수 있도록 max-height 이 아닌 density 로 조정.
+  const _specRow = (k, v) => `<tr><th style="text-align:left;padding:2.5px 8px;background:#F5F9FE;color:#154B8C;font-weight:700;width:110px;font-size:9pt">${k}</th><td style="padding:2.5px 8px;font-size:9.5pt">${v}</td></tr>`;
+  const _shipBlock = (ship, imgSrc, num, roleLabel, roleColor, extraNote, imgH='140px', primary=false) => {
+    if (!ship) return '';
+    const seats = ship.seats || {};
+    const seatTxt = (seats.eco || seats.biz || seats.fst)
+      ? `이코노미 ${seats.eco || '—'} · 비즈니스 ${seats.biz || '—'} · 퍼스트 ${seats.fst || '—'} = ${(seats.eco||0)+(seats.biz||0)+(seats.fst||0)}석`
+      : '—';
+    // object-fit:cover + object-position(center 35%) → 박스를 꽉 채우되 사진의 윗쪽 2/3 정도를 보여줘
+    //   하단(물·부두)이 과하게 잘리지 않도록 조정. 세 선박 사진이 동일한 밀도로 보임.
+    const imgBlock = imgSrc
+      ? `<img src="${imgSrc}" alt="${ship.name}" style="width:100%;height:${imgH};object-fit:cover;object-position:center 35%;background:#F5F9FE;border-radius:3px;border:1px solid #D7DFE9">`
+      : `<div style="width:100%;height:${imgH};display:flex;align-items:center;justify-content:center;background:#F5F9FE;border:1px dashed #88A4D0;border-radius:3px;color:#88A4D0;font-size:10pt">사진 자료 미보유</div>`;
+    const numBadge = `<span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;background:${roleColor};color:#fff;border-radius:50%;font-weight:800;font-size:11pt;margin-right:8px;vertical-align:1px">${num}</span>`;
+    // 현재 매입 검토 중인 선박(primary=true)은 ★ 뱃지 + 노란 배경 + 두꺼운 상단 테두리로 시각 강조
+    const starBadge = primary
+      ? `<span style="display:inline-block;background:#FFF4D6;color:#8A5A12;border:1.5px solid #D9A520;border-radius:3px;padding:2px 10px;font-size:10pt;font-weight:800;margin-left:10px;vertical-align:1px">★ 현재 매입 검토 중</span>`
+      : '';
+    const blockBg     = primary ? '#FFFBEE'   : '#F7FAFC';
+    const blockBorder = primary ? '6px solid #D9A520' : `4px solid ${roleColor}`;
+    return `
+      <div style="border-top:${blockBorder};background:${blockBg};padding:6px 10px;margin:0 0 8px">
+        <div style="font-size:12pt;font-weight:800;color:${roleColor};letter-spacing:-0.3px">
+          ${numBadge}${roleLabel}${starBadge}
+        </div>
+        <div style="font-size:10pt;color:#17202B;margin-top:1px;padding-left:30px">${ship.name}
+          <span style="font-size:8.5pt;color:#5C6B7F;margin-left:6px">${ship.note || ''}</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:12px;align-items:start;margin-bottom:6px">
+        <div>
+          ${imgBlock}
+          <div style="font-size:7.5pt;color:#5C6B7F;margin-top:3px">출처: ${ship.src || '—'}</div>
+        </div>
+        <div>
+          <table style="width:100%;border-collapse:collapse">
+            <tbody>
+              ${_specRow('항로',       ship.route || '—')}
+              ${_specRow('총톤수 (GT)', ship.gt ? ship.gt.toLocaleString('ko-KR') + ' t' : '—')}
+              ${_specRow('전장 (LOA)',  ship.loa ? ship.loa + ' m' : '—')}
+              ${_specRow('선폭 (Beam)', ship.beam ? ship.beam + ' m' : '—')}
+              ${_specRow('정원',        ship.pax ? ship.pax.toLocaleString('ko-KR') + ' 명' : '—')}
+              ${_specRow('최고 속력',   ship.kts ? ship.kts + ' kts' : '—')}
+              ${_specRow('좌석 구성',   seatTxt)}
+              ${ship.depart ? _specRow('운항 시각', `출항 ${ship.depart} · 입항 ${ship.return_ || '—'}`) : ''}
+            </tbody>
+          </table>
+          ${extraNote ? `<div style="margin-top:7px;padding:7px 10px;background:#FFF8EC;border-left:3px solid #D9A520;border-radius:2px;font-size:9pt;line-height:1.65;color:#8A5A12">${extraNote}</div>` : ''}
+        </div>
+      </div>
+    `;
+  };
+  // 선박 3척 — 한 페이지에 가로 3-컬럼 배치. 컬럼당 : 번호 뱃지 + 사진 + 제원 + 짧은 설명.
+  //   2번(산타모니카) primary=true → 황금 테두리 + ★ 매입 검토 뱃지.
+  const _shipCol = (ship, imgSrc, num, roleLabel, roleColor, extraNote, primary) => {
+    if (!ship) return '';
+    const seats = ship.seats || {};
+    const seatTxt = (seats.eco || seats.biz || seats.fst)
+      ? `이코 ${seats.eco || '—'} · 비즈 ${seats.biz || '—'} · 퍼스트 ${seats.fst || '—'}`
+      : '—';
+    const imgBlock = imgSrc
+      ? `<img src="${imgSrc}" alt="${ship.name}" style="width:100%;height:230px;object-fit:cover;object-position:center 35%;background:#F5F9FE;border-radius:3px;border:1px solid #D7DFE9">`
+      : `<div style="width:100%;height:230px;display:flex;align-items:center;justify-content:center;background:#F5F9FE;border:1px dashed #88A4D0;border-radius:3px;color:#88A4D0;font-size:9pt">사진 자료 미보유</div>`;
+    const starBadge = primary
+      ? `<span style="display:inline-block;background:#FFF4D6;color:#8A5A12;border:1.5px solid #D9A520;border-radius:3px;padding:1px 7px;font-size:8.5pt;font-weight:800;margin-left:5px">★ 매입 검토</span>`
+      : '';
+    const colBg     = primary ? '#FFFBEE'   : '#F7FAFC';
+    const colBorder = primary ? '2px solid #D9A520' : `1px solid ${roleColor}`;
+    const _r = (k, v) => `<tr>
+      <th style="padding:2px 6px;text-align:left;background:#F5F9FE;color:#154B8C;font-weight:700;width:68px;font-size:8pt;line-height:1.3">${k}</th>
+      <td style="padding:2px 6px;font-size:8.5pt;line-height:1.3">${v}</td></tr>`;
+    return `
+      <div style="flex:1;min-width:0;background:${colBg};border:${colBorder};border-top:4px solid ${roleColor};border-radius:3px;padding:7px 9px;display:flex;flex-direction:column">
+        <div style="font-size:10.5pt;font-weight:800;color:${roleColor};letter-spacing:-0.3px;margin-bottom:3px">
+          <span style="display:inline-block;width:20px;height:20px;line-height:20px;text-align:center;background:${roleColor};color:#fff;border-radius:50%;font-weight:800;font-size:10pt;margin-right:6px;vertical-align:1px">${num}</span>
+          ${roleLabel}${starBadge}
+        </div>
+        <div style="font-size:9pt;color:#17202B;margin-bottom:6px;line-height:1.3">${ship.name}
+          <span style="font-size:7.5pt;color:#5C6B7F;display:block;margin-top:1px">${ship.note || ''}</span></div>
+        ${imgBlock}
+        <table style="width:100%;border-collapse:collapse;margin-top:5px">
+          <tbody>
+            ${_r('항로',       ship.route || '—')}
+            ${_r('총톤수',     ship.gt   ? ship.gt.toLocaleString('ko-KR') + ' t' : '—')}
+            ${_r('전장·선폭', (ship.loa ? ship.loa + 'm' : '—') + ' · ' + (ship.beam ? ship.beam + 'm' : '—'))}
+            ${_r('정원·속력', (ship.pax ? ship.pax.toLocaleString('ko-KR') + '명' : '—') + ' · ' + (ship.kts ? ship.kts + 'kts' : '—'))}
+            ${_r('좌석',       seatTxt)}
+          </tbody>
+        </table>
+        ${extraNote ? `<div style="margin-top:6px;padding:5px 7px;background:#FFF8EC;border-left:3px solid #D9A520;border-radius:2px;font-size:7.5pt;line-height:1.5;color:#8A5A12">${extraNote}</div>` : ''}
+      </div>
+    `;
+  };
+  // 세로 스택 + 각 선박 가로 레이아웃(이미지 좌 · 설명 우) — 가독성 ↑
+  //   한 ROW 당 세로 ~55mm, 3 ROW 로 A4 landscape 세로를 꽉 채움.
+  const _shipRow = (ship, imgSrc, num, roleLabel, roleColor, extraNote, primary) => {
+    if (!ship) return '';
+    const seats = ship.seats || {};
+    const seatTxt = ship.seatsText
+      ? ship.seatsText
+      : (seats.eco || seats.biz || seats.fst)
+        ? `이코 ${seats.eco || '—'} · 비즈 ${seats.biz || '—'} · 퍼스트 ${seats.fst || '—'}`
+        : '—';
+    const imgBlock = imgSrc
+      ? `<img src="${imgSrc}" alt="${ship.name}" style="width:100%;height:100%;object-fit:cover;object-position:center 35%;background:#F5F9FE;border-radius:3px;border:1px solid #D7DFE9">`
+      : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#F5F9FE;border:1px dashed #88A4D0;border-radius:3px;color:#88A4D0;font-size:9pt">사진 자료 미보유</div>`;
+    const starBadge = primary
+      ? `<span style="display:inline-block;background:#FFF4D6;color:#8A5A12;border:1.5px solid #D9A520;border-radius:3px;padding:1px 8px;font-size:9pt;font-weight:800;margin-left:6px;vertical-align:1px">★ 현재 매입 검토</span>`
+      : '';
+    const rowBg      = primary ? '#FFFBEE' : '#F7FAFC';
+    const rowBorderL = primary ? '5px solid #D9A520' : `5px solid ${roleColor}`;
+    const _r = (k, v) => `<tr>
+      <th style="padding:3px 8px;text-align:left;background:#F5F9FE;color:#154B8C;font-weight:700;width:80px;font-size:9pt;line-height:1.3">${k}</th>
+      <td style="padding:3px 8px;font-size:9.5pt;line-height:1.35">${v}</td></tr>`;
+    const numBadge = `<span style="display:inline-block;width:24px;height:24px;line-height:24px;text-align:center;background:${roleColor};color:#fff;border-radius:50%;font-weight:800;font-size:11.5pt;margin-right:8px;vertical-align:1px">${num}</span>`;
+    return `
+      <div class="grow-cell" style="flex:1 1 0;display:flex;flex-direction:column;background:${rowBg};border-left:${rowBorderL};border:1px solid #D7DFE9;border-left-width:5px;border-radius:3px;padding:7px 10px;min-height:0">
+        <div style="font-size:11.5pt;font-weight:800;color:${roleColor};letter-spacing:-0.3px;margin-bottom:3px;display:flex;align-items:center;flex:0 0 auto">
+          ${numBadge}<span>${roleLabel}</span>${starBadge}
+          <span style="margin-left:10px;font-size:9pt;color:#17202B;font-weight:700">${ship.name}</span>
+          <span style="margin-left:6px;font-size:8pt;color:#5C6B7F;font-weight:400">${ship.note || ''}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:340px 1fr 1.2fr;gap:10px;flex:1;min-height:0">
+          <div style="min-height:0">${imgBlock}</div>
+          <div style="display:flex;flex-direction:column;min-height:0">
+            <table style="border-collapse:collapse;border:1px solid #B4C2D4;width:100%">
+              <tbody>
+                ${_r('항로',       ship.route || '—')}
+                ${_r('총톤수 GT',  ship.gt   ? ship.gt.toLocaleString('ko-KR') + ' t' : '—')}
+                ${_r('전장 · 선폭', (ship.loa ? ship.loa + ' m' : '—') + ' · ' + (ship.beam ? ship.beam + ' m' : '—'))}
+                ${_r('정원 · 속력', (ship.pax ? ship.pax.toLocaleString('ko-KR') + ' 명' : '—') + ' · ' + (ship.kts ? ship.kts + ' kts' : '—'))}
+                ${_r('좌석',       seatTxt)}
+              </tbody>
+            </table>
+          </div>
+          <div style="display:flex;flex-direction:column;min-height:0">
+            ${extraNote ? `<div style="padding:8px 10px;background:#FFF8EC;border-left:3px solid #D9A520;border-radius:2px;font-size:9.5pt;line-height:1.7;color:#8A5A12;flex:1;display:flex;flex-direction:column;justify-content:center">${extraNote}</div>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  };
+  const shipsAllPage = `
+    <section class="intro-section" style="margin:0;position:relative">
+      <div style="position:absolute;top:0;right:0;padding:4px 6px;z-index:2">${_pageTag(PP.ships)}</div>
+      <div class="intro-header" style="border-top:5px solid #154B8C;background:#F5F9FE;padding:7px 14px;margin:0 0 8px">
+        <div style="font-size:13pt;font-weight:800;color:#154B8C">참조 · 대조 · 참고 선박 — 3척 비교</div>
+        <div style="font-size:8.5pt;color:#555;margin-top:2px">
+          ① 참조 (엘도라도 — 원가 레퍼런스) &nbsp;·&nbsp;
+          <b>② 대조 (산타모니카 — ★ 현재 매입 검토)</b> &nbsp;·&nbsp;
+          ③ 참고 (오션플라워2 — 과거 사례)
+        </div>
+      </div>
+      <div class="intro-main" style="gap:8px">
+        ${_shipRow(eld, 'eldorado.jpg', '1', '참조 선박', '#154B8C',
+          '· <b>엘도라도호 · 대저페리</b> 운항<br>· 포항 ↔ 울릉 항로 · 2024년 감사보고서 기준', false)}
+        ${_shipRow(sm, 'santamonica.jpg', '2', '대조 선박', '#1C6B4A',
+          '· <b>산타모니카호 · 시월드고속훼리</b> 운영<br>· 2026.10.01 2026.12.31부 운항 종료 통보 (제주 항로)<br>· 현 항로 (제주-추자-진도) 연 약 15억 적자', true)}
+        ${_shipRow(of2, 'oceanflower2_ship.jpg', '3', '참고 선박', '#5C6B7F',
+          '· <b>오션플라워2호 · 대아고속해운</b> 운영<br>· <b>제원</b> : 4,114톤 · 전장 81m · 전폭 26m · 최고 44 kts<br>· <b>수송 능력</b> : 여객 825명 + 차량 86대<br>· 부산 ↔ 이즈하라 주 2회 (토·일) · 소요 2시간 50분<br>· <b>층 구성</b> : 1층 화물 · 2층 일반석 637 · 3층 우등석 188<br>· <b>과거 명칭</b> : "오렌지1호" (대아그룹 제주 노력~성산 항로)<br>· 자전거 100대 거치 · 대형 보관함 4개', false)}
+      </div>
     </section>
-  `).join('\n');
+  `;
+
+  // ── 전제·시나리오 조건 요약 페이지 ───────────────────────────────────────
+  const _n = id => parseFloat(document.getElementById(id)?.value) || 0;
+  const _c = id => document.getElementById(id)?.checked;
+  const _fmtN = v => v == null ? '—' : v.toLocaleString('ko-KR');
+  const scenarios = [
+    { k:'worst',  nm:'WORST',  bg:'#FFF4F4', color:'#A8392F' },
+    { k:'normal', nm:'NORMAL', bg:'#F6F9FC', color:'#154B8C' },
+    { k:'best',   nm:'BEST',   bg:'#F0FBF5', color:'#1C6B4A' },
+  ];
+  const _scnCap = k => k[0].toUpperCase() + k.slice(1);
+  const scnRow = (label, fn, unit='') => `<tr>
+    <th style="padding:4px 10px;text-align:left;background:#F5F9FE;color:#154B8C;font-weight:700;width:28%">${label}</th>
+    ${scenarios.map(s => `<td style="padding:4px 10px;text-align:right;background:${s.bg};font-variant-numeric:tabular-nums">${fn(s.k)}${unit}</td>`).join('')}
+  </tr>`;
+  const scnHead = `<tr>
+    <th style="padding:6px 10px;background:#154B8C;color:#fff;text-align:left">항목</th>
+    ${scenarios.map(s => `<th style="padding:6px 10px;background:${s.color};color:#fff;text-align:center">${s.nm}</th>`).join('')}
+  </tr>`;
+
+  // 기타 조건 (대조선박 설정 등)
+  const voyPeer = _n('iVoyPeer');
+  const paxPeer = _n('iPaxPeer');
+  const loadPeer= _n('iLoadPeer');
+  const fuelMode = _c('iFuelEngMode') ? '공학적' : _c('iFuelSimpleMode') ? '단순' : '회계상';
+  const agencyOn = document.getElementById('iAgencyEnabled')?.checked !== false;
+  const portOn   = typeof PORT_FEE_STATE !== 'undefined' && PORT_FEE_STATE.enabled;
+  const aiOn2    = typeof FUEL_SEG !== 'undefined' && FUEL_SEG.enabled && FUEL_SEG.aiTrend;
+  const _condRow = (k, v, note='') => `<tr>
+    <th style="padding:4px 10px;text-align:left;background:#F5F9FE;color:#154B8C;font-weight:700;width:30%">${k}</th>
+    <td style="padding:4px 10px;font-size:9.5pt">${v}${note ? ` <span style="color:#5C6B7F;font-size:9pt">· ${note}</span>` : ''}</td>
+  </tr>`;
+
+  // ── 2페이지 — 증감률 가정 ─────────────────────────────────────────────────
+  //   GROWTH_GROUPS 구조를 그대로 가져와 2 컬럼 그리드로 나란히 배치.
+  //   HTML label 에 들어 있는 <small> 등은 그대로 활용 (텍스트 가독성 손실 없이).
+  const _gFmt = (v, unit) => {
+    if (v == null || !isFinite(v)) return '—';
+    if (unit === '백만원') return v.toLocaleString('ko-KR') + ' 백만';
+    return (v >= 0 ? '+' : '') + v.toFixed(2) + ' %';
+  };
+  const _growRow = ([key, label, unit]) => {
+    const v = GROW[key];
+    const _lbl = String(label).replace(/<br>/g, ' · ').replace(/<small[^>]*>/g, '<span style="color:var(--muted);font-size:7.5pt">').replace(/<\/small>/g, '</span>');
+    return `<tr>
+      <th style="padding:3px 8px;text-align:left;background:#F5F9FE;color:#154B8C;font-weight:600;font-size:8.5pt;line-height:1.3">${_lbl}</th>
+      <td style="padding:3px 8px;text-align:right;font-variant-numeric:tabular-nums;font-size:9pt;font-weight:700;width:92px">${_gFmt(v, unit)}</td>
+    </tr>`;
+  };
+  const _growGroupBlock = (group) => `
+    <div style="margin-bottom:8px;break-inside:avoid">
+      <div style="font-size:9.5pt;font-weight:800;color:#154B8C;background:#EDF3F9;padding:3px 8px;border-left:3px solid #154B8C;border-radius:2px;margin-bottom:3px">
+        ${group.t}
+      </div>
+      <table style="width:100%;border-collapse:collapse;background:#fff">
+        <tbody>${group.f.map(_growRow).join('')}</tbody>
+      </table>
+    </div>
+  `;
+  // GROWTH_GROUPS 를 2 컬럼 CSS 그리드로 균형있게 배치 — 각 그룹이 1 셀, auto-flow 로 자동 분배.
+  //   justify-content:space-between (기본) 은 콘텐츠가 짧을 때 중간 공백이 크게 떠서 flex-start 로 override.
+  const _growAll = (typeof GROWTH_GROUPS !== 'undefined') ? GROWTH_GROUPS : [];
+  const growthPage = `
+    <section class="intro-section" style="margin:0 0 10px">
+      <div class="intro-header" style="border-top:5px solid #154B8C;background:#F5F9FE;padding:8px 12px;margin:0 0 10px;display:flex;justify-content:space-between;align-items:flex-end">
+        <div>
+          <div style="font-size:14pt;font-weight:800;color:#154B8C">10개년 증감률 가정</div>
+          <div style="font-size:9pt;color:#555;margin-top:2px">계정과목별 연 복리 증감률 — 10개년 손익계산서 투영 기준</div>
+        </div>
+        ${_pageTag(PP.growth)}
+      </div>
+      <div class="intro-main" style="justify-content:flex-start;gap:10px">
+        <div class="grow-cell" style="display:grid;grid-template-columns:1fr 1fr;align-content:start;gap:6px 14px">
+          ${_growAll.map(_growGroupBlock).join('')}
+        </div>
+        <div class="intro-note" style="background:#F5F9FE;border-left:3px solid #154B8C;border-radius:2px;color:#33415A">
+          <b style="color:#154B8C">증감률 적용 방식</b>
+          <p>· 1년차 금액에 연 <b>복리 적용</b> &nbsp; y+k 금액 = y+0 × (1 + g)<sup>k</sup></p>
+          <p>· 수지 가정(우발수리·선박대체)은 <b>매년 정액 적립</b>, 증감률 0 이 기본</p>
+        </div>
+      </div>
+    </section>
+  `;
+
+  const condPage = `
+    <section class="intro-section" style="margin:0 0 10px">
+      <div class="intro-header" style="border-top:5px solid #154B8C;background:#F5F9FE;padding:8px 12px;margin:0 0 10px;display:flex;justify-content:space-between;align-items:flex-end">
+        <div>
+          <div style="font-size:14pt;font-weight:800;color:#154B8C">분석 전제·조건 요약</div>
+          <div style="font-size:9pt;color:#555;margin-top:2px">${today} 기준 · 산타모니카호 하카타 투입 시나리오</div>
+        </div>
+        ${_pageTag(PP.cond)}
+      </div>
+
+      <div class="intro-main" style="justify-content:flex-start;gap:12px">
+        <div class="grow-cell">
+          <h3 style="color:#154B8C;margin-top:0">① 3-시나리오 조건값</h3>
+          <table>
+            <thead>${scnHead}</thead>
+            <tbody>
+              ${scnRow('편도 운임 (원)',          k => _fmtN(_n('i' + _scnCap(k) + 'Fare')))}
+              ${scnRow('유류할증료 (원)',          k => _fmtN(_n('i' + _scnCap(k) + 'Fuel')))}
+              ${scnRow('총 운임 (원)',             k => _fmtN(_n('i' + _scnCap(k) + 'Fare') + _n('i' + _scnCap(k) + 'Fuel')))}
+              ${scnRow('연간 편도 항차',          k => _fmtN(_n('i' + _scnCap(k) + 'Voy')), '항차')}
+              ${scnRow('화물 선적율',              k => _n('i' + _scnCap(k) + 'Cargo').toFixed(2).replace(/\.?0+$/, ''), '%')}
+              ${scnRow('승선율',                    k => _n('i' + _scnCap(k) + 'LoadRate'), '%')}
+              ${scnRow('편도 단순연료 (만원)',    k => _fmtN(_n('i' + _scnCap(k) + 'FuelRT')))}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="grow-cell">
+          <h3 style="color:#154B8C;margin-top:0">② 기타 전제 (양쪽 공통)</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px">
+            <table>
+              <tbody>
+                ${_condRow('선박 (대조)',     sm ? sm.name : '산타모니카호')}
+                ${_condRow('선박 (참조)',     eld ? eld.name : '엘도라도호')}
+                ${_condRow('연간 편도 항차',   _fmtN(voyPeer) + '항차')}
+                ${_condRow('연간 승객수',      _fmtN(paxPeer) + '명')}
+                ${_condRow('승선율',           loadPeer + '%')}
+                ${_condRow('지상직 / 선원 / 승무원', _fmtN(_n('iHeadPeer')) + ' / ' + _fmtN(_n('iSailorPeer')) + ' / ' + _fmtN(_n('iCrewPeer')) + ' 명')}
+                ${_condRow('대리점비',         agencyOn ? _n('iAgencyPeer') + '% × 일본비중 ' + _n('iAgencyJapanShare') + '%' : '해제')}
+                ${_condRow('목표 영업이익률', _n('iTgtPeer') + '%')}
+              </tbody>
+            </table>
+            <table>
+              <tbody>
+                ${_condRow('연료 산출 모드',  fuelMode + ' 모드')}
+                ${_condRow('AI 유가추세',      aiOn2 ? '적용 중 (LSMGO 10년 평균 ~$880/MT)' : '미적용')}
+                ${_condRow('항비 수동 산식',  portOn  ? '적용 중 (부산+하카타 세목별 PDF 산식)' : '미적용')}
+                ${_condRow('유가 기준',        _fmtN(_n('iFuelBase')) + ' $/MT (2024)')}
+                ${_condRow('환율 기준',        _fmtN(_n('iFxBase')) + ' 원/$ (2024)')}
+                ${_condRow('선가 / 내용연수', _fmtN(_n('iShipPricePeer')) + '백만 / ' + _fmtN(_n('iLifePeer')) + '년')}
+                ${_condRow('차입금 / 이자율', _fmtN(_n('iLoanPeer')) + '백만 / ' + _n('iLoanRatePeer') + '%' + (_c('iJpyLoan') ? ' (엔화 1.56%)' : ''))}
+                ${_condRow('세금 적용',        _c('iTonnageTax') ? '톤세 (조세특례제한법 §104-10)' : '누진 법인세')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  `;
+
+  // ── 6페이지 — 퀸비틀 운항실적 벤치마크 (참고 자료 정리) ──────────────────
+  //   퀸비틀 항차.pdf 내용을 정리: 월별 항차/평균승선인원/승선율 + 핵심 인사이트.
+  //   하카타 노선 유일 경쟁선(JR큐슈)의 실제 운영 패턴 — 산타모니카 투입 가정의 외부 벤치마크.
+  // PDF 원본에서 노란색으로 표시된 셀을 그대로 반영. 2023/2024 각 행별로 다른 index 배열.
+  //   label 은 '2023년' 등 base — 2024 행은 자동으로 치환하지 않고 명시적으로 '2024년' 표시.
+  const _qbRow = (label, bg, cells23, cells24, hi23 = [], hi24 = []) => {
+    const _td = (hi) => (v, i) => {
+      const isHi = hi.includes(i);
+      const col  = /철수|중단|준비/.test(v) ? '#5C6B7F' : '#17202B';
+      // 노란 하이라이트 — PDF 원본에서 저자가 표시한 분석 포인트
+      const _bg  = isHi ? '#FFF27A' : bg;
+      const _bd  = isHi ? ';border:1px solid #E6C230' : '';
+      const _fw  = isHi ? ';font-weight:700' : '';
+      return `<td style="padding:3px 2px;text-align:center;font-size:8.5pt;background:${_bg};color:${col};font-variant-numeric:tabular-nums${_bd}${_fw}">${v}</td>`;
+    };
+    const _label2024 = label.includes('2023') ? label.replace('2023', '2024') : '2024년';
+    return `<tr>
+      <th style="padding:3px 6px;text-align:left;background:#F5F9FE;color:#154B8C;font-weight:700;font-size:8.5pt;white-space:nowrap">${label}</th>
+      ${cells23.map(_td(hi23)).join('')}
+    </tr>
+    <tr>
+      <th style="padding:3px 6px;text-align:left;background:#F5F9FE;color:#154B8C;font-weight:700;font-size:8.5pt;white-space:nowrap">${_label2024}</th>
+      ${cells24.map(_td(hi24)).join('')}
+    </tr>`;
+  };
+  const _qbMonths = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  const qb_voy23  = ['운항준비','운항준비','운항준비','52▶','58','34','57','56','49','57','46','20'];
+  const qb_voy24  = ['35','45','53','54','52','운항중단(수리)','21','23','운항철수','운항철수','운항철수','운항철수'];
+  const qb_pax23  = ['운항준비','운항준비','운항준비','135▶','206','250','191','261','190','272','264','321'];
+  const qb_pax24  = ['262','285','308','255','243','운항중단','217','257','운항철수','운항철수','운항철수','운항철수'];
+  const qb_load23 = ['운항준비','운항준비','운항준비','23','44','53.4','40.9','55.8','40.7','58.1','56.5','68.6'];
+  const qb_load24 = ['56.1','60.9','65.7','54.5','51.9','운항중단','46.4','54.9','운항철수','운항철수','운항철수','운항철수'];
+  // PDF 원본 노란 셀 — month index (0=1월 ~ 11=12월)
+  //   [항차]  2023: 5·6·7·8·9·10·11·12월  / 2024: 1~4월
+  //   [평균승선] 2023: 6·8·10·11·12월 / 2024: 1~5·7월
+  //   [승선율]  2023: 6·8·10·11·12월 / 2024: 1~3·7월
+  const hi_voy23  = [4, 5, 6, 7, 8, 9, 10, 11];
+  const hi_voy24  = [0, 1, 2, 3];
+  const hi_pax23  = [5, 7, 8, 9, 10, 11];      // 6·8·9·10·11·12월
+  const hi_pax24  = [0, 1, 2, 3, 4, 6];
+  const hi_load23 = [5, 7, 8, 9, 10, 11];      // 6·8·9·10·11·12월
+  const hi_load24 = [0, 1, 2, 3, 4, 6];        // 1~5월·7월
+  const qbPage = `
+    <section class="intro-section" style="margin:0 0 10px">
+      <!-- 헤더 — 제목 + 핵심 3대 지표를 상단에 배치 -->
+      <div class="intro-header" style="border-top:5px solid #154B8C;background:#F5F9FE;padding:10px 14px;margin:0 0 10px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:14pt;font-weight:800;color:#154B8C">퀸비틀 운항실적 벤치마크</div>
+          <div style="font-size:9pt;color:#555;margin-top:2px">JR큐슈고속선 · 부산 ↔ 하카타 유일 경쟁선 · 2023.4 운항시작 → 2024.8 운항중단</div>
+        </div>
+        ${_pageTag(PP.qb)}
+      </div>
+
+      <!-- 핵심 3대 지표 뱃지 — 눈에 띄게 상단에 -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px">
+        <div style="padding:10px 14px;background:#F6F9FC;border:1.5px solid #154B8C;border-radius:4px;text-align:center">
+          <div style="font-size:8.5pt;color:#5C6B7F;font-weight:600;margin-bottom:3px">총 편도 항차</div>
+          <div style="font-size:16pt;font-weight:800;color:#154B8C">564 <span style="font-size:10pt;font-weight:400">항차</span></div>
+          <div style="font-size:8pt;color:#5C6B7F;margin-top:2px">정상 운항달 합산</div>
+        </div>
+        <div style="padding:10px 14px;background:#F6F9FC;border:1.5px solid #154B8C;border-radius:4px;text-align:center">
+          <div style="font-size:8.5pt;color:#5C6B7F;font-weight:600;margin-bottom:3px">평균 승선인원</div>
+          <div style="font-size:16pt;font-weight:800;color:#154B8C">260 <span style="font-size:10pt;font-weight:400">명 / 항차</span></div>
+          <div style="font-size:8pt;color:#5C6B7F;margin-top:2px">전 운항기간 평균</div>
+        </div>
+        <div style="padding:10px 14px;background:#F6F9FC;border:1.5px solid #154B8C;border-radius:4px;text-align:center">
+          <div style="font-size:8.5pt;color:#5C6B7F;font-weight:600;margin-bottom:3px">평균 승선율 (소석율)</div>
+          <div style="font-size:16pt;font-weight:800;color:#154B8C">55.72 <span style="font-size:10pt;font-weight:400">%</span></div>
+          <div style="font-size:8pt;color:#5C6B7F;margin-top:2px">탑승률 기준</div>
+        </div>
+      </div>
+
+      <div class="intro-main">
+        <!-- 3개 월별 지표 테이블 — 각 테이블 캡션은 좌측 바 + 라벨 로 그루핑 -->
+        <div class="grow-cell">
+          ${(() => {
+            const _qbTbl = (caption, cells23, cells24, hi23, hi24) => `
+              <div style="margin-bottom:8px">
+                <div style="font-size:9.5pt;font-weight:700;color:#154B8C;padding:3px 10px;background:#EDF3F9;border-left:3px solid #154B8C;margin-bottom:3px;border-radius:2px">
+                  ${caption}
+                </div>
+                <table>
+                  <thead>
+                    <tr style="background:#F7FAFC;color:#17202B">
+                      <th style="text-align:left;width:68px"></th>
+                      ${_qbMonths.map(m => `<th style="text-align:center;font-weight:700">${m}</th>`).join('')}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${_qbRow('2023년', '#fff', cells23, cells24, hi23, hi24)}
+                  </tbody>
+                </table>
+              </div>
+            `;
+            return _qbTbl('월별 편도 항차',       qb_voy23,  qb_voy24,  hi_voy23,  hi_voy24)
+                 + _qbTbl('월별 평균 승선인원 (명)', qb_pax23,  qb_pax24,  hi_pax23,  hi_pax24)
+                 + _qbTbl('월별 탑승률 / 소석율 (%)', qb_load23, qb_load24, hi_load23, hi_load24);
+          })()}
+          <div style="font-size:8pt;color:#5C6B7F;margin-top:4px">
+            <span style="background:#FFF27A;border:1px solid #E6C230;padding:0 5px;font-weight:700">노란 셀</span>
+            = PDF 원본 저자가 분석 포인트로 표시한 셀
+          </div>
+        </div>
+
+        <!-- 핵심 관찰 4가지 — 2×2 카드 그리드 (PDF 원문 내용 그대로 요약) -->
+        <div class="grow-cell">
+          <div style="font-size:10.5pt;font-weight:800;color:#154B8C;margin:0 0 6px">핵심 관찰</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div style="padding:8px 11px;background:#F5F9FE;border-left:3px solid #154B8C;border-radius:2px">
+              <div style="font-weight:800;color:#154B8C;font-size:10pt;margin-bottom:3px">① 50% 돌파까지 3개월</div>
+              <div style="font-size:9.5pt;line-height:1.6;color:#33415A">
+                운항시작 후 평균 승선율이 50% 를 넘기까지 <b>3개월 소요</b> (2023.4 ~ 6).
+              </div>
+            </div>
+            <div style="padding:8px 11px;background:#FBF5EE;border-left:3px solid #D9A520;border-radius:2px">
+              <div style="font-weight:800;color:#8A5A12;font-size:10pt;margin-bottom:3px">② 매년 6월 정기 도크</div>
+              <div style="font-size:9.5pt;line-height:1.6;color:#33415A">
+                2023.6.9 ~ 19 (10일) · 2024.6.17 ~ 7.5 (18일, 누수 발생).
+                재개 후 잦은 결항으로 <b>2024.8.13 운항 중단</b>.
+              </div>
+            </div>
+            <div style="padding:8px 11px;background:#F0F7F2;border-left:3px solid #1C6B4A;border-radius:2px">
+              <div style="font-weight:800;color:#1C6B4A;font-size:10pt;margin-bottom:3px">③ 12월 피크 · 7월 비수기</div>
+              <div style="font-size:9.5pt;line-height:1.6;color:#33415A">
+                <b>12월</b>: 항차 최소지만 항차당 승선·승선율 최고. &nbsp;<b>7월</b>: 비수기 (항차 多, 탑승 少).
+              </div>
+            </div>
+            <div style="padding:8px 11px;background:#F5F9FE;border-left:3px solid #5BA3D9;border-radius:2px">
+              <div style="font-weight:800;color:#154B8C;font-size:10pt;margin-bottom:3px">④ 신규 사업자 모객 포인트</div>
+              <div style="font-size:9.5pt;line-height:1.6;color:#33415A">
+                7월은 비수기라 <b>모객 유치·프로모션 활성화</b> 가 필요한 구간.
+              </div>
+            </div>
+          </div>
+          <div style="font-size:7.5pt;color:#5C6B7F;text-align:right;margin-top:4px">
+            출처 : 퀸비틀 항차.pdf (내부 집계 · 정상 운항달 합산 기준)
+          </div>
+        </div>
+      </div>
+    </section>
+  `;
+
+  // ── 승용차실적 (2025.4~2026.3) ─────────────────────────────────────────────
+  //   PDF 원본: 월별 입항/출항/계 대수 + 운임(원) + 일평균(5.8대·2,011,403원) + 대당 단가(346,794원·운전자 티켓 포함)
+  const carMonths = ['4월','5월','6월','7월','8월','9월','10월','11월','12월','1월','2월','3월'];
+  const carIn   = [194, 170,  72, 33, 70,  50, 186, 117, 44, 36, 46,  51];
+  const carOut  = [184, 137,  44, 42, 60, 104, 169,  79, 31, 41, 47, 110];
+  const carSum  = carIn.map((v, i) => v + carOut[i]);
+  const carTotIn  = carIn.reduce((a, b) => a + b, 0);
+  const carTotOut = carOut.reduce((a, b) => a + b, 0);
+  const carTot    = carTotIn + carTotOut;
+  // 운임(원) — PDF 원본 그대로
+  const carRevIn  = [58822000, 58209200, 26080280, 12071000, 25899900, 16649240, 63657400, 37884540, 16685320, 14459400, 18794700, 17564360];
+  const carRevOut = [61462800, 46145800, 16267560, 15087500, 21720000, 37557800, 55926600, 25449420, 11925000, 16698840, 18944700, 40198760];
+  const carRevSum = carRevIn.map((v, i) => v + carRevOut[i]);
+  const carRevTotIn  = carRevIn.reduce((a, b) => a + b, 0);   // 366,777,340
+  const carRevTotOut = carRevOut.reduce((a, b) => a + b, 0);  // 367,384,780
+  const carRevTot    = carRevTotIn + carRevTotOut;             // 734,162,120
+  // 백만원 포맷 — 셀 폭 절약, 소수 1자리.
+  const _fmtMwon = v => (v / 1e6).toFixed(1);
+  // PDF 하단 요약값
+  const carAvgDay    = 5.8;         // 일평균 대수
+  const carAvgRevDay = 2011403;     // 일평균 운임
+  const carUnitPrice = 346794;      // 대당 단가 (운전자 티켓포함)
+  const carPage = `
+    <section class="intro-section" style="margin:0 0 10px">
+      <div class="intro-header" style="border-top:5px solid #154B8C;background:#F5F9FE;padding:8px 12px;margin:0 0 10px;display:flex;justify-content:space-between;align-items:flex-end">
+        <div>
+          <div style="font-size:14pt;font-weight:800;color:#154B8C">승용차 실적 — 월별 입·출항 · 운임</div>
+          <div style="font-size:9pt;color:#555;margin-top:2px">기간: 2025년 4월 ~ 2026년 3월 · 단위: 대 / 백만원</div>
+        </div>
+        ${_pageTag(PP.car)}
+      </div>
+      <div class="intro-main" style="justify-content:flex-start;gap:8px">
+        <!-- 상단 요약 뱃지 — PDF 하단 "일평균 / 대당 단가" 를 눈에 띄게 상단에 배치 -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:4px">
+          <div style="padding:7px 12px;background:#F5F9FE;border:1px solid #B4C9E2;border-radius:3px;text-align:center">
+            <div style="font-size:9pt;color:#5C6B7F;font-weight:600">연간 합계</div>
+            <div style="font-size:13pt;font-weight:800;color:#154B8C">${carTot.toLocaleString('ko-KR')}대</div>
+            <div style="font-size:9pt;color:#154B8C;font-weight:700;margin-top:2px">${(carRevTot/1e6).toFixed(1)}백만원</div>
+          </div>
+          <div style="padding:7px 12px;background:#F5F9FE;border:1px solid #B4C9E2;border-radius:3px;text-align:center">
+            <div style="font-size:9pt;color:#5C6B7F;font-weight:600">일평균 (365일 기준)</div>
+            <div style="font-size:13pt;font-weight:800;color:#154B8C">${carAvgDay}대</div>
+            <div style="font-size:9pt;color:#154B8C;font-weight:700;margin-top:2px">${carAvgRevDay.toLocaleString('ko-KR')}원</div>
+          </div>
+          <div style="padding:7px 12px;background:#FFF8EC;border:1.5px solid #D9A520;border-radius:3px;text-align:center">
+            <div style="font-size:9pt;color:#8A5A12;font-weight:600">대당 단가 <span style="font-size:7.5pt;font-weight:400">(운전자 티켓포함)</span></div>
+            <div style="font-size:16pt;font-weight:800;color:#8A5A12;line-height:1.1">${carUnitPrice.toLocaleString('ko-KR')}원</div>
+            <div style="font-size:8pt;color:#8A5A12;margin-top:2px">운임 ${(carRevTot/1e6).toFixed(1)}백만 ÷ ${carTot.toLocaleString('ko-KR')}대</div>
+          </div>
+        </div>
+        <div class="grow-cell">
+          <table style="font-size:8.5pt">
+            <thead>
+              <tr style="background:#154B8C;color:#fff">
+                <th style="text-align:left;width:92px">구분</th>
+                ${carMonths.map(m => `<th style="text-align:center;font-weight:700">${m}</th>`).join('')}
+                <th style="text-align:right;font-weight:800;background:#0E3767">합계</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- ── 대수 섹션 ── -->
+              <tr>
+                <th style="background:#F5F9FE;color:#154B8C">대수 · 입항</th>
+                ${carIn.map(v => `<td style="text-align:right;font-variant-numeric:tabular-nums">${v.toLocaleString('ko-KR')}</td>`).join('')}
+                <td style="text-align:right;font-weight:800;background:#EDF1F7">${carTotIn.toLocaleString('ko-KR')}</td>
+              </tr>
+              <tr>
+                <th style="background:#F5F9FE;color:#154B8C">대수 · 출항</th>
+                ${carOut.map(v => `<td style="text-align:right;font-variant-numeric:tabular-nums">${v.toLocaleString('ko-KR')}</td>`).join('')}
+                <td style="text-align:right;font-weight:800;background:#EDF1F7">${carTotOut.toLocaleString('ko-KR')}</td>
+              </tr>
+              <tr style="background:#F6F9FC">
+                <th style="background:#D3E5F6;color:#154B8C;font-weight:800">대수 · 계</th>
+                ${carSum.map(v => `<td style="text-align:right;font-variant-numeric:tabular-nums;font-weight:700">${v.toLocaleString('ko-KR')}</td>`).join('')}
+                <td style="text-align:right;font-weight:800;background:#D3E5F6;color:#A8392F">${carTot.toLocaleString('ko-KR')}</td>
+              </tr>
+              <!-- ── 운임 섹션 (백만원) — 섹션 구분을 위해 상단 테두리 강조 ── -->
+              <tr style="border-top:2px solid #154B8C">
+                <th style="background:#FFFBEE;color:#8A5A12">운임 · 입항<br><span style="font-size:7pt;font-weight:400">(백만원)</span></th>
+                ${carRevIn.map(v => `<td style="text-align:right;font-variant-numeric:tabular-nums;background:#FFFEF7">${_fmtMwon(v)}</td>`).join('')}
+                <td style="text-align:right;font-weight:800;background:#FFF4D6;color:#8A5A12">${_fmtMwon(carRevTotIn)}</td>
+              </tr>
+              <tr>
+                <th style="background:#FFFBEE;color:#8A5A12">운임 · 출항<br><span style="font-size:7pt;font-weight:400">(백만원)</span></th>
+                ${carRevOut.map(v => `<td style="text-align:right;font-variant-numeric:tabular-nums;background:#FFFEF7">${_fmtMwon(v)}</td>`).join('')}
+                <td style="text-align:right;font-weight:800;background:#FFF4D6;color:#8A5A12">${_fmtMwon(carRevTotOut)}</td>
+              </tr>
+              <tr style="background:#FFF8EC">
+                <th style="background:#FFF4D6;color:#8A5A12;font-weight:800">운임 · 계<br><span style="font-size:7pt;font-weight:400">(백만원)</span></th>
+                ${carRevSum.map(v => `<td style="text-align:right;font-variant-numeric:tabular-nums;font-weight:700;background:#FFFBEE">${_fmtMwon(v)}</td>`).join('')}
+                <td style="text-align:right;font-weight:800;background:#FFE8A8;color:#A8392F">${_fmtMwon(carRevTot)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="intro-note" style="background:#F5F9FE;border-left:3px solid #154B8C;color:#33415A">
+          <b style="color:#154B8C">사실 요약</b>
+          <p>· 연간 : <b>${carTot.toLocaleString('ko-KR')}대 · ${(carRevTot/1e6).toFixed(1)}백만원</b> (입항 ${carTotIn.toLocaleString('ko-KR')}대·${(carRevTotIn/1e6).toFixed(1)}백만 · 출항 ${carTotOut.toLocaleString('ko-KR')}대·${(carRevTotOut/1e6).toFixed(1)}백만)</p>
+          <p>· 일평균 : <b>${carAvgDay}대 · ${carAvgRevDay.toLocaleString('ko-KR')}원</b> (365일 기준)</p>
+          <p>· 대당 단가 : <b>${carUnitPrice.toLocaleString('ko-KR')}원</b> (운전자 티켓 포함 · 운임 총액 ÷ 총대수)</p>
+          <p>· 월별 최대 : 4월 ${carSum[0]}대·${_fmtMwon(carRevSum[0])}백만 · 10월 ${carSum[6]}대·${_fmtMwon(carRevSum[6])}백만 · 5월 ${carSum[1]}대·${_fmtMwon(carRevSum[1])}백만</p>
+          <p>· 월별 최소 : 7월·12월 각 ${carSum[3]}대 (${_fmtMwon(carRevSum[3])}·${_fmtMwon(carRevSum[8])}백만)</p>
+        </div>
+      </div>
+    </section>
+  `;
+
+  // ── 부산 ↔ 일본 4개 항로 선사별 총수송인원 (2017~2026E) ────────────────────
+  const fukYears = ['2017','2018','2019','2020','2022','2023','2024','2025','2026(1~6)','2026E','합계'];
+  const fukRows = [
+    // 후쿠오카 · RORO (카멜리아)
+    { nm:'카멜리아 (RORO)',           d:[171858, 186193, 119576,  12642,      0, 106673, 180564, 182011, 106632, 205864, 1066149] },
+    { nm:'카멜리아 소계 (RORO)',      d:[171858, 186193, 119576,  12642,      0, 106673, 180564, 182011, 106632, 205864, 1066149], sub:true, tag:'carm' },
+    // 후쿠오카 · 고속선 (비틀·JR큐슈·코비·퀸비틀)
+    { nm:'비틀',                       d:[183181, 181520, 144797,  13796,   1167,  13872,      0,      0,      0,      0,  538333] },
+    { nm:'JR큐슈 (퀸비틀)',            d:[     0,      0,      0,      0,      0,  96400,  75186,      0,      0,      0,  171586] },
+    { nm:'코비',                       d:[ 52065,      0,      0,      0,      0,      0,      0,      0,      0,      0,   52065] },
+    { nm:'퀸비틀 (단독)',              d:[     0,      0,      0,      0,   1864,      0,      0,      0,      0,      0,    1864] },
+    { nm:'고속선 소계',                d:[235246, 181520, 144797,  13796,   3031, 110272,  75186,      0,      0,      0,  763848], sub:true, tag:'hs' },
+    // 후쿠오카 합계 (RORO + 고속선)
+    { nm:'후쿠오카 소계',              d:[407104, 367713, 264373,  26438,   3031, 216945, 255750, 182011, 106632, 205864, 1829997], sub:true, tag:'fuk' },
+    // 시모노세키
+    { nm:'부관훼리 · 시모노세키',      d:[205578, 176757, 100149,   7763,   1533, 106382, 145707, 164137,  95037, 173825, 1003043] },
+    { nm:'시모노세키 소계',            d:[205578, 176757, 100149,   7763,   1533, 106382, 145707, 164137,  95037, 173825, 1003043], sub:true, tag:'smk' },
+    // 오사카
+    { nm:'팬스타 · 오사카',            d:[ 65826,  51622,  32939,   2994,   1260,  36306,  54417,  49538,  23463,  37541,  318365] },
+    { nm:'오사카 소계',                d:[ 65826,  51622,  32939,   2994,   1260,  36306,  54417,  49538,  23463,  37541,  318365], sub:true, tag:'osk' },
+    // 쓰시마
+    { nm:'비틀 · 쓰시마',              d:[145230, 128301,  96548,   7357,      0,      0,      0,      0,      0,      0,  377436] },
+    { nm:'대아고속해운 · 쓰시마',      d:[318715, 276912, 154657,   7933,      0,      0,      0, 211101,  99430, 198860, 1068748] },
+    { nm:'한일고속 · 쓰시마',          d:[     0,  92651,  31479,      0,      0,      0,      0,      0,      0,      0,  124130] },
+    { nm:'코비 · 쓰시마',              d:[255834, 326804, 211062,   8293,      0,   2365,      0,      0,      0,      0,  804358] },
+    { nm:'팬스타 · 쓰시마',            d:[     0,      0,      0,      0,      0, 115214, 196843, 174908, 110604, 221208,  597569] },
+    { nm:'스타라인 · 쓰시마',          d:[     0,      0,      0,      0,      0, 123965, 191386, 155102, 133281, 266562,  603734] },
+    { nm:'쓰시마 소계',                d:[719779, 824668, 493746,  23583,      0, 241544, 388229, 541111, 343315, 686630, 3575975], sub:true, tag:'tsu' },
+    // 전체
+    { nm:'4개 항로 합계',              d:[1398287, 1420760, 891207, 60778, 5824, 601177, 844103, 936797, 568447, 1103860, 6727380], grand:true },
+  ];
+  const _fmtNZ = n => n === 0 ? '-' : n.toLocaleString('ko-KR');
+  const fukPage = `
+    <section class="intro-section" style="margin:0 0 10px">
+      <div class="intro-header" style="border-top:5px solid #154B8C;background:#F5F9FE;padding:8px 12px;margin:0 0 10px;display:flex;justify-content:space-between;align-items:flex-end">
+        <div>
+          <div style="font-size:14pt;font-weight:800;color:#154B8C">부산 ↔ 일본 4개 항로 — 선사별 연도 총수송인원</div>
+          <div style="font-size:9pt;color:#555;margin-top:2px">단위: 명 · 2017~2026E · 후쿠오카·시모노세키·오사카·쓰시마 · 원본 자료: 타선사 월별수송실적 2017-2026</div>
+        </div>
+        ${_pageTag(PP.fuk)}
+      </div>
+      <div class="intro-main">
+        <div class="grow-cell">
+          <table style="font-size:9.5pt">
+            <thead>
+              <tr style="background:#154B8C;color:#fff">
+                <th style="text-align:left;width:160px">선사</th>
+                ${fukYears.map(y => `<th style="text-align:right;font-weight:700;${y==='합계'?'background:#0E3767':''}">${y}</th>`).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${fukRows.map(r => {
+                // 소계행은 노선·구분별 색상으로 구분
+                //   carm = 카멜리아(RORO) · hs = 고속선 · fuk = 후쿠오카 전체 · smk = 시모노세키 · osk = 오사카 · tsu = 쓰시마
+                const subColors = {
+                  carm: { tr:'#E6F3FA', th:'#0F6A94', thBg:'#CFE7F3', totalBg:'#BBDCEB' },
+                  hs:   { tr:'#DBE8F7', th:'#154B8C', thBg:'#C6DAF1', totalBg:'#B6CFEC' },
+                  fuk:  { tr:'#C9DCF1', th:'#0E3767', thBg:'#AFC9E6', totalBg:'#9CBBDC' },
+                  smk:  { tr:'#D7EEDF', th:'#1C6B4A', thBg:'#B9E0C7', totalBg:'#A6D4B6' },
+                  osk:  { tr:'#EDE1F2', th:'#683480', thBg:'#DDC9E6', totalBg:'#CDB7D9' },
+                  tsu:  { tr:'#FBEBD5', th:'#8A5A12', thBg:'#F5DBAE', totalBg:'#EFCB8E' },
+                };
+                const c = r.sub && r.tag ? subColors[r.tag] : null;
+                const trStyle = r.grand ? 'background:#D3E5F6;font-weight:800'
+                             : c        ? `background:${c.tr};font-weight:700`
+                             : '';
+                const thStyle = `background:${c ? c.thBg : '#F5F9FE'};color:${c ? c.th : '#154B8C'}` + (r.grand ? ';color:#A8392F' : '');
+                return `
+                <tr${trStyle ? ` style="${trStyle}"` : ''}>
+                  <th style="${thStyle}">${r.nm}</th>
+                  ${r.d.map((v, i) => {
+                    const isLast = i === r.d.length - 1;
+                    const totalBg = c ? c.totalBg : '#EDF1F7';
+                    return `<td style="text-align:right;font-variant-numeric:tabular-nums${isLast ? `;background:${totalBg};font-weight:800` : ''}${r.grand && isLast ? ';color:#A8392F' : ''}">${_fmtNZ(v)}</td>`;
+                  }).join('')}
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div class="intro-note" style="background:#F5F9FE;border-left:3px solid #154B8C;color:#33415A">
+          <b style="color:#154B8C">사실 요약 (4개 항로)</b>
+          <p>· 2017~2026E 누적 수송인원: <b>6,727,380명</b> · 2026E 연환산 <b>1,103,860명</b></p>
+          <p>· 2025년 항로별 소계: 쓰시마 541,111 · 후쿠오카 182,011 · 시모노세키 164,137 · 오사카 49,538</p>
+          <p>· 2026E 항로별 소계: 쓰시마 686,630 · 후쿠오카 205,864 · 시모노세키 173,825 · 오사카 37,541</p>
+          <p>· 2025년 후쿠오카 고속선 전사(JR큐슈·비틀·코비·퀸비틀) 수송인원 <b>0명</b> · 2026E 후쿠오카 합계 전원 RORO(카멜리아)</p>
+        </div>
+      </div>
+    </section>
+  `;
+
+  // ── 부산 ↔ 일본 2개 노선 항공 여객 실적 (FSC+LCC, 후쿠오카·키타큐슈) ───────
+  const airYears = ['2017','2018','2019','2020','2022','2023','2024','2025','2026(1~6)','2026E','총합계'];
+  const airRows = [
+    // 후쿠오카 노선
+    { nm:'대한항공 · 후쿠오카',        d:[191055, 195066, 124884,  18024,      0,  58818, 225010, 160494,       0,       0,   973351] },
+    { nm:'스쿠트 · 후쿠오카',          d:[     0,      0,      0,      0,      0,    184,      0,      0,       0,       0,      184] },
+    { nm:'에어로케이 · 후쿠오카',      d:[     0,      0,      0,      0,      0,      0,      0,  51704,   51909,  155923,   259536] },
+    { nm:'에어부산 · 후쿠오카',        d:[635925, 777699, 529319,  57770,  80765, 581626, 607785, 575122,  284301,  566090,  4696402] },
+    { nm:'이스타항공 · 후쿠오카',      d:[     0,   2388,      0,      0,      0,      0,      0,  48022,  129099,  258198,   437707] },
+    { nm:'제주항공 · 후쿠오카',        d:[200646, 261290, 218993,  16237,  57323, 279559, 262614, 270419,  123736,  279822,  1970639] },
+    { nm:'진에어 · 후쿠오카',          d:[  7268,      0,      0,      0,  29486,  72906,  73033,  72097,   63387,  139130,   457307] },
+    { nm:'티웨이항공 · 후쿠오카',      d:[186676, 116829,  95924,  12037,  17606, 141449, 242694, 346063,  365859,  889013,  2414150] },
+    { nm:'후쿠오카 소계',              d:[1221570, 1353272, 969120, 104068, 185180, 1134542, 1411136, 1523921, 1018291, 2288176, 11209276], sub:true, tag:'fuk' },
+    // 키타큐슈 노선
+    { nm:'스타플라이어항공 · 키타큐슈',d:[ 13735,   1993,      0,      0,      0,   8567,  10748,      0,       0,       0,    35043] },
+    { nm:'에어로케이 · 키타큐슈',      d:[     0,      0,      0,      0,      0,      0,      0,   8206,   30348,   60696,    99250] },
+    { nm:'에어부산 · 키타큐슈',        d:[     0,      0,  11187,      0,      0,      0,      0,      0,       0,       0,    11187] },
+    { nm:'진에어 · 키타큐슈',          d:[ 81578,  85042,  58147,   5560,      0,      0,      0,      0,       0,       0,   230327] },
+    { nm:'티웨이항공 · 키타큐슈',      d:[ 13354,  17891,  26640,      0,      0,      0,      0,      0,       0,       0,    57885] },
+    { nm:'키타큐슈 소계',              d:[108667, 104926,  95974,   5560,      0,   8567,  10748,   8206,   30348,   60696,   433692], sub:true, tag:'kita' },
+    // 전체 합계
+    { nm:'일본 2개 노선 합계',         d:[1330237, 1458198, 1065094, 109628, 185180, 1143109, 1421884, 1532127, 1048639, 2348872, 11642968], grand:true },
+  ];
+  const airPage = `
+    <section class="intro-section" style="margin:0 0 10px">
+      <div class="intro-header" style="border-top:5px solid #154B8C;background:#F5F9FE;padding:8px 12px;margin:0 0 10px;display:flex;justify-content:space-between;align-items:flex-end">
+        <div>
+          <div style="font-size:14pt;font-weight:800;color:#154B8C">부산 ↔ 후쿠오카·키타큐슈 항공 여객 실적 — FSC + LCC</div>
+          <div style="font-size:9pt;color:#555;margin-top:2px">단위: 명 · 2017~2026E · 후쿠오카 + 키타큐슈 2개 노선</div>
+        </div>
+        ${_pageTag(PP.air)}
+      </div>
+      <div class="intro-main">
+        <div class="grow-cell">
+          <table style="font-size:9.5pt">
+            <thead>
+              <tr style="background:#154B8C;color:#fff">
+                <th style="text-align:left;width:120px">항공사</th>
+                ${airYears.map(y => `<th style="text-align:right;font-weight:700;${y==='총합계'?'background:#0E3767':''}">${y}</th>`).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${airRows.map(r => {
+                // 소계행은 노선별 색상으로 구분 — 후쿠오카(파란 톤) · 키타큐슈(초록 톤)
+                const subColors = {
+                  fuk:  { tr:'#DBE8F7', th:'#154B8C', thBg:'#C6DAF1', totalBg:'#B6CFEC' },
+                  kita: { tr:'#D7EEDF', th:'#1C6B4A', thBg:'#B9E0C7', totalBg:'#A6D4B6' },
+                };
+                const c = r.sub && r.tag ? subColors[r.tag] : null;
+                const trStyle = r.grand ? 'background:#D3E5F6;font-weight:800'
+                             : c        ? `background:${c.tr};font-weight:700`
+                             : '';
+                const thStyle = `background:${c ? c.thBg : '#F5F9FE'};color:${c ? c.th : '#154B8C'}` + (r.grand ? ';color:#A8392F' : '');
+                return `
+                <tr${trStyle ? ` style="${trStyle}"` : ''}>
+                  <th style="${thStyle}">${r.nm}</th>
+                  ${r.d.map((v, i) => {
+                    const isLast = i === r.d.length - 1;
+                    const totalBg = c ? c.totalBg : '#EDF1F7';
+                    return `<td style="text-align:right;font-variant-numeric:tabular-nums${isLast ? `;background:${totalBg};font-weight:800` : ''}${r.grand && isLast ? ';color:#A8392F' : ''}">${_fmtNZ(v)}</td>`;
+                  }).join('')}
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div class="intro-note" style="background:#F5F9FE;border-left:3px solid #154B8C;color:#33415A">
+          <b style="color:#154B8C">사실 요약 (후쿠오카 + 키타큐슈)</b>
+          <p>· 2노선 합계: 2017년 1,330,237 · 2024년 1,421,884 · 2025년 1,532,127 · 2026E 2,348,872명</p>
+          <p>· 후쿠오카 2025년 상위 3사: 에어부산 575,122 · 티웨이 346,063 · 제주항공 270,419</p>
+          <p>· 키타큐슈 : 2017년 108,667명 → 2025년 8,206명(에어로케이 단독) → 2026E 60,696명 회복세</p>
+          <p>· 2026(1~6) 대한항공 후쿠오카 실적 0명 (2025년 160,494명 → 노선 중단 추정)</p>
+        </div>
+      </div>
+    </section>
+  `;
+
+  // ── 1페이지 — 목차 (별도 페이지로 분리) ───────────────────────────────────
+  const _tocRow = (p, label, note = '', hilite = false) => `
+    <tr${hilite ? ' style="background:#FFFBEE"' : ''}>
+      <td style="padding:7px 10px;text-align:center;font-weight:800;color:#154B8C;background:#F5F9FE;width:60px;border:1px solid #B4C2D4;font-size:11pt">${p}</td>
+      <td style="padding:7px 12px;border:1px solid #B4C2D4;font-size:10.5pt">${label}${note ? ` <span style="color:#5C6B7F;font-size:9.5pt;font-weight:400">${note}</span>` : ''}</td>
+    </tr>`;
+  const _tocGroup = (title, rows) => `
+    <div style="margin-bottom:10px">
+      <div style="font-size:11pt;font-weight:800;color:#154B8C;padding:5px 10px;background:#EDF3F9;border-left:3px solid #154B8C;border-radius:2px;margin-bottom:4px">
+        ${title}
+      </div>
+      <table style="width:100%;border-collapse:collapse;border:1px solid #B4C2D4">
+        <tbody>${rows.join('')}</tbody>
+      </table>
+    </div>
+  `;
+  // ── 5페이지 (조건부) — AI 유가추세 적용시 근거 ──────────────────────────────
+  //   AI 유가추세 ON 일 때만 포함 — 전제·조건 뒤에 두어 "이 가정으로 손익을 돌렸다" 는 흐름 유지.
+  const fuelAiPage = !aiOn ? '' : `
+    <section class="intro-section" style="margin:0 0 10px">
+      <div class="intro-header" style="border-top:5px solid #D9A520;background:#FFF8EC;padding:8px 12px;margin:0 0 10px;display:flex;justify-content:space-between;align-items:flex-end">
+        <div>
+          <div style="font-size:14pt;font-weight:800;color:#8A5A12">AI 유가추세 적용 근거 — LSMGO 10년 추세 ($820 복귀 가정)</div>
+          <div style="font-size:9pt;color:#5C6B7F;margin-top:2px">현 시세 $1,490 (전쟁 프리미엄) → 2030년 $820 저점 → 10년 평균 ~$880/MT</div>
+        </div>
+        ${_pageTag(PP.fuelAi)}
+      </div>
+      <div class="intro-main" style="justify-content:flex-start;gap:10px">
+        <div class="grow-cell">
+          <div style="padding:8px 12px;background:#FFFBEE;border:1px solid #E0B870;border-radius:3px;margin-bottom:8px;font-size:10pt;line-height:1.6;color:#33415A">
+            <b style="color:#8A5A12">핵심 가정 3가지</b>
+            <p style="margin:3px 0 0">① 현 시세($1,490)는 러시아-우크라이나 전쟁·중동 지정학 프리미엄이 포함된 가격</p>
+            <p style="margin:0">② 전쟁 종료·공급 정상화 시 LSMGO는 2024년 평균 $820 수준으로 회귀</p>
+            <p style="margin:0">③ IMO 2030 규제·바이오혼합 의무로 중장기(y+6 이후) 완만한 상승</p>
+          </div>
+          <table style="width:100%;border-collapse:collapse;border:1px solid #B4C2D4;font-size:9pt">
+            <thead>
+              <tr style="background:#154B8C;color:#fff">
+                <th style="padding:4px 8px;text-align:left;width:90px">연도</th>
+                <th style="padding:4px 8px;text-align:right;width:80px">LSMGO ($/MT)</th>
+                <th style="padding:4px 8px;text-align:right;width:70px">환율 (₩/$)</th>
+                <th style="padding:4px 8px;text-align:right;width:60px">배율</th>
+                <th style="padding:4px 8px;text-align:left">주요 사유 (예정된 공급·수요·규제 이벤트)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${[
+                ['y+0 · 2026', '$1,490', '1,410', '×1.000', '현 시세 (전쟁 프리미엄 포함)',                                   false],
+                ['y+1 · 2027', '$1,252', '1,380', '×0.840', 'OPEC+ 감산 완화 예정 · 공급 증가로 가격 하락 시작',             false],
+                ['y+2 · 2028', '$1,050', '1,350', '×0.705', '미국 셰일 증산·중동 안정화 → 전쟁 프리미엄 해소',                false],
+                ['y+3 · 2029', '$919',   '1,330', '×0.617', '전쟁 전 평균($820)에 접근 · 정제설비 증설 반영',                 false],
+                ['y+4 · 2030', '<b>$820</b>', '1,320', '×0.550', '<b>저점 · 전쟁 전 평균 수렴</b> · IMO 2030 GHG 감축 전환기', true],
+                ['y+5 · 2031', '$810',   '<b>1,320</b>', '×0.544', '저유황 공급 안정 · 저점 유지 · 원화 강세 피크',           true],
+                ['y+6 · 2032', '$830',   '1,330', '×0.557', 'IMO 2030 발효 · 저유황 수요 증가 반영 시작',                     false],
+                ['y+7 · 2033', '$860',   '1,350', '×0.577', '신선박 교체 수요 · LSMGO 소비량 확대',                           false],
+                ['y+8 · 2034', '$890',   '1,370', '×0.597', '바이오 혼합 의무화 확대 · 단가 완만 상승',                       false],
+                ['y+9 · 2035', '$920',   '1,385', '×0.617', '10년 평균 가격대 복귀 · 바이오 비용 반영 지속',                  false],
+                ['y+10 · 2036','$950',   '1,400', '×0.638', 'IMO 2050 중간 지표 반영 · 10년 평균 ~$880/MT',                   false],
+              ].map(([yr, lsmgo, fx, mul, reason, hi]) => `
+                <tr${hi ? ' style="background:#FFFBEE"' : ''}>
+                  <td style="padding:4px 8px;color:#8A5A12;font-weight:700;border:1px solid #D7DFE9">${yr}</td>
+                  <td style="padding:4px 8px;text-align:right;font-variant-numeric:tabular-nums;border:1px solid #D7DFE9">${lsmgo}</td>
+                  <td style="padding:4px 8px;text-align:right;font-variant-numeric:tabular-nums;border:1px solid #D7DFE9">${fx}</td>
+                  <td style="padding:4px 8px;text-align:right;border:1px solid #D7DFE9">${mul}</td>
+                  <td style="padding:4px 8px;border:1px solid #D7DFE9">${reason}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <div style="margin-top:10px;padding:8px 12px;background:#F5F9FE;border-left:3px solid #154B8C;border-radius:2px;font-size:9.5pt;line-height:1.65;color:#33415A">
+            <b style="color:#154B8C">왜 이렇게 가정했는가 (3단계 논리)</b>
+            <p style="margin:3px 0 0">· <b>과거 평균</b> — Platts 싱가포르 MGO 2015~2024 평균 가격대는 <b>$500 ~ $820</b> 범위</p>
+            <p style="margin:0">· <b>현재 가격</b> — 2026년 10월 기준 $1,490 (지정학 리스크로 +82% 프리미엄 포함)</p>
+            <p style="margin:0">· <b>10년 평균</b> — 전쟁 종료·IMO 규제 반영 시 과거 평균대로 회귀, <b>10년 평균 ~$880 (보수적 중앙치)</b></p>
+            <p style="margin:4px 0 0;padding-top:4px;border-top:1px dashed #B4C2D4"><b style="color:#154B8C">편도단가 산출</b> — 산타모니카호 편도 운항 톤수 × (LSMGO $/MT × ₩/$) ÷ 10,000 = 편도단가 (만원)</p>
+          </div>
+        </div>
+        <div class="intro-note" style="background:#F5F9FE;border-left:3px solid #154B8C;color:#33415A">
+          <b style="color:#154B8C">출처</b>
+          <p style="margin:2px 0 0">· ICE LSGO 선물 · S&amp;P Platts Marine Fuels · Argus Marine Fuels · MABUX · Ship &amp; Bunker · BunkerIndex Busan · IMO 2030/2050 · 환율 Frankfurter</p>
+          <p style="margin:0">· 10년 평균 복리 <b>-4.4%/년</b> (y+0 → y+10)</p>
+        </div>
+      </div>
+    </section>
+  `;
+
+  // ── 목차 — 동적 페이지 번호 (aiOn 이면 fuelAi 가 P 5 로 삽입되어 뒤 페이지 전부 +1 밀림)
+  const _scnStart = INTRO_PAGES + 1;
+  const _scnMid   = _scnStart + 3;
+  const _scnEnd   = _scnStart + 6;
+  const tocPage = `
+    <section class="intro-section" style="margin:0 0 10px">
+      <div class="intro-header" style="border-top:5px solid #154B8C;background:#F5F9FE;padding:10px 14px;margin:0 0 12px;display:flex;justify-content:space-between;align-items:flex-end">
+        <div>
+          <div style="font-size:17pt;font-weight:800;color:#154B8C">문서 구성 · 목차</div>
+          <div style="font-size:9.5pt;color:#555;margin-top:3px">하카타 10개년 손익계산서 — 3-시나리오 비교 (${today}) · 총 ${TOTAL_PAGES} 페이지</div>
+        </div>
+        ${_pageTag(PP.toc)}
+      </div>
+      <div class="intro-main">
+        <div class="grow-cell">
+          ${_tocGroup(`Ⅰ. 선박·전제 (P 2 ~ P ${aiOn ? 5 : 4})`, [
+            _tocRow(`P ${PP.ships}`,  '선박 3척 비교', '— ① 엘도라도 · <b>② 산타모니카 ★ 매입 검토</b> · ③ 오션플라워2'),
+            _tocRow(`P ${PP.cond}`,   '분석 전제·조건 요약', '— 3-시나리오 조건값 · 기타 전제'),
+            _tocRow(`P ${PP.growth}`, '10개년 증감률 가정',   '— 계정과목별 연 복리 증감률'),
+            ...(aiOn ? [_tocRow(`P ${PP.fuelAi}`, '<b>AI 유가추세 적용 근거</b>', '— LSMGO 10년 추세·환율·배율·사유 (전쟁 전 $820 복귀 가정)', true)] : []),
+          ])}
+          ${_tocGroup(`Ⅱ. 시장 레퍼런스 (P ${PP.qb} ~ P ${PP.air})`, [
+            _tocRow(`P ${PP.qb}`,  '퀸비틀 운항실적',       '— 경쟁선 벤치마크 (2023~2024)'),
+            _tocRow(`P ${PP.car}`, '승용차 실적',           '— 2025.4 ~ 2026.3 월별 입·출항'),
+            _tocRow(`P ${PP.fuk}`, '부산 ↔ 일본 4개 항로',  '— 후쿠오카·시모노세키·오사카·쓰시마 선사별 (2017~2026E)'),
+            _tocRow(`P ${PP.air}`, '부산 ↔ 후쿠오카·키타큐슈 항공',  '— FSC + LCC 항공사별 (2017~2026E)'),
+          ])}
+          ${_tocGroup(`Ⅲ. 3-시나리오 10개년 손익 (P ${_scnStart} ~ P ${TOTAL_PAGES})`, [
+            _tocRow(`P ${_scnStart} ~ ${_scnStart+2}`, '<b>WORST</b> 시나리오',  '— ① 10개년 손익계산서 + 임원 요약 · ② 목표지표·비율 · ③ 손익분기 그래프', true),
+            _tocRow(`P ${_scnMid} ~ ${_scnMid+2}`,     '<b>NORMAL</b> 시나리오', '— ① 10개년 손익계산서 + 임원 요약 · ② 목표지표·비율 · ③ 손익분기 그래프'),
+            _tocRow(`P ${_scnEnd} ~ ${_scnEnd+2}`,     '<b>BEST</b> 시나리오',   '— ① 10개년 손익계산서 + 임원 요약 · ② 목표지표·비율 · ③ 손익분기 그래프'),
+          ])}
+        </div>
+      </div>
+    </section>
+  `;
+
+  const intros = tocPage + shipsAllPage + condPage + growthPage + fuelAiPage + qbPage + carPage + fukPage + airPage;
+
   w.document.open();
   w.document.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8">
+    <!-- base href : window.open 은 about:blank 이라 상대경로 이미지가 안 뜬다. 부모 창 위치 기준으로 보정. -->
+    <base href="${window.location.href}">
     <title>하카타 10개년 손익계산서 — 3-시나리오 (${today})</title>
     <style>
-      /* A4 landscape 12mm 사방 여백 — 프린터 safe area 보장 + 섹션당 1 페이지 깔끔하게 들어가도록 */
-      @page { size: A4 landscape; margin: 12mm }
-      body { margin:0; font-family:'맑은 고딕','Malgun Gothic',sans-serif; font-size:8.5pt;
-             -webkit-print-color-adjust:exact; print-color-adjust:exact; color:#1a1d21 }
+      /* A4 landscape 10mm 사방 여백 — 프린터 safe area 유지하며 콘텐츠 영역 최대화. */
+      @page { size: A4 landscape; margin: 10mm;
+              @bottom-right { content: counter(page) " / " counter(pages); font-family:'맑은 고딕',sans-serif; font-size:8pt; color:#5C6B7F } }
+      /* html/body 를 꽉 채워 섹션이 100% 로 페이지 전체 영역 사용 가능하게 */
+      html, body { height:100% }
+      /* 색상 변수 — 메인 페이지와 동일. 본문 class(.neg/.pos/.amb/.nc) 가 var(--warn) 등을 참조하므로 필요. */
+      :root { --navy:#154B8C; --sky:#5BA3D9; --ink:#17202B; --muted:#5C6B7F;
+              --rule:#D7DFE9; --warn:#A8392F; --good:#1C6B4A; --amber:#8A5A12 }
+      /* print 컬러 보존 — 모든 요소에 강제 적용 (브라우저 기본 "흑백 절약" 끄기) */
+      *, *::before, *::after { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important }
+      body { margin:0; font-family:'맑은 고딕','Malgun Gothic',sans-serif; font-size:9.5pt; color:#1a1d21; line-height:1.5 }
+      /* 손익계산서 색상 class — 10개년 뷰 음수 셀, 보조 수치, 성공·실패 플래그 */
+      .neg,  td.neg  { color:#A8392F !important }
+      .pos,  td.pos  { color:#1C6B4A !important }
+      .amb           { color:#8A5A12 !important }
+      .nc            { color:#5C6B7F; font-size:7.5pt; margin-left:3px; font-weight:400 }
+      td.fail        { color:#A8392F !important; font-weight:700 }
+      td.pass        { color:#1C6B4A !important; font-weight:700 }
+      /* 손익계산서 금액 셀 색상 — 적자 괄호 표시도 빨강으로 */
+      table.pl td { color:#33415A }
+      table.pl td.neg { color:#A8392F !important }
       h1 { font-size:13pt; margin:0 0 8px; color:#154B8C }
       /* 13-컬럼(기준+10년+평균+헤더) 표를 A4 landscape 273mm 안에 맞추기 위해
          table-layout:fixed + 좁은 padding + 숫자 폰트 균일폭 */
       table.pl { width:100%; border-collapse:collapse; margin:0; table-layout:auto }
       table.pl caption { font-size:9.5pt; font-weight:700; padding:3px 0 6px; text-align:left; color:#154B8C }
       table.pl caption .unit { float:right; font-size:8pt; font-weight:400; color:#555 }
-      table.pl th, table.pl td { padding:1.5px 3px; border-bottom:1px solid #D0D0D0; font-variant-numeric:tabular-nums; font-size:8pt }
-      table.pl thead th { background:#154B8C !important; color:#fff !important; font-size:8pt; text-align:center }
-      table.pl thead tr.grouprow th { background:#0E3767 !important; color:#fff !important }
+      table.pl th, table.pl td { padding:2.5px 4px; border-bottom:1px solid #D0D0D0; font-variant-numeric:tabular-nums; font-size:9pt; line-height:1.4 }
+      /* 10개년 P&L thead · 요약 행 — 시나리오 테마 색상으로 통일 (각 시나리오 안에서 일관) */
+      table.pl thead th { color:#fff !important; font-size:8.5pt; text-align:center; background:#154B8C !important }
+      table.pl thead tr.grouprow th { background:#0E3767 !important }
       table.pl tr.r td, table.pl tr.r th { background:#EDF1F7; font-weight:700 }
       table.pl tr.t td, table.pl tr.t th { background:#E3EAF3; font-weight:700 }
       table.pl tr.lead td, table.pl tr.lead th { background:#D3E5F6; font-weight:700 }
+      /* 시나리오 테마 — WORST(빨강)/NORMAL(파랑)/BEST(초록). 모든 보조/주요 표의 thead/accent 를 통일. */
+      [data-scn="worst"] table.pl thead th,
+      [data-scn="worst"] table:not(.pl) thead th     { background:#A8392F !important }
+      [data-scn="worst"] table.pl thead tr.grouprow th { background:#7A2820 !important }
+      [data-scn="worst"] table.pl tr.r td, [data-scn="worst"] table.pl tr.r th    { background:#FBE5E2 !important }
+      [data-scn="worst"] table.pl tr.lead td, [data-scn="worst"] table.pl tr.lead th { background:#F6CBC5 !important }
+      [data-scn="normal"] table.pl thead th,
+      [data-scn="normal"] table:not(.pl) thead th    { background:#154B8C !important }
+      [data-scn="normal"] table.pl thead tr.grouprow th { background:#0E3767 !important }
+      [data-scn="normal"] table.pl tr.r td, [data-scn="normal"] table.pl tr.r th    { background:#EDF1F7 !important }
+      [data-scn="normal"] table.pl tr.lead td, [data-scn="normal"] table.pl tr.lead th { background:#D3E5F6 !important }
+      [data-scn="best"] table.pl thead th,
+      [data-scn="best"] table:not(.pl) thead th      { background:#1C6B4A !important }
+      [data-scn="best"] table.pl thead tr.grouprow th { background:#124A33 !important }
+      [data-scn="best"] table.pl tr.r td, [data-scn="best"] table.pl tr.r th    { background:#E0F3E6 !important }
+      [data-scn="best"] table.pl tr.lead td, [data-scn="best"] table.pl tr.lead th { background:#C4E6CD !important }
       table.pl th { text-align:left }
       table.pl td.base { background:#F0F4FA }
       table.pl td.avg  { background:#E9EEF6 }
@@ -8809,21 +9968,107 @@ async function print3ScenariosPL10() {
       .scn-header { page-break-after:avoid }
       .exec-kpi { page-break-inside:avoid }
       tr { page-break-inside:avoid }
+      /* 시나리오 페이지 B — 목표지표·비율표 셀 정렬 + 명확한 외곽선.
+         목표 15% 등 긴 수치에서 2줄 랩이 발생해도 1 페이지에 담기도록 패딩·행간 축소. */
+      .scn-section table:not(.pl) { width:100%; border-collapse:collapse; border:1.2px solid #5C7CA8 !important; table-layout:fixed; margin-bottom:6px }
+      .scn-section table:not(.pl) th,
+      .scn-section table:not(.pl) td { padding:3px 7px; border:1px solid #5C7CA8 !important; font-size:9pt; line-height:1.35; vertical-align:middle; word-break:keep-all }
+      /* thead th 배경은 각 섹션에서 inline style 로 지정 (s.color) — 시나리오별 테마 유지 */
+      .scn-section table:not(.pl) thead th { color:#fff !important }
+      .scn-section table:not(.pl) tbody td { text-align:right }
+      .scn-section table:not(.pl) tbody td:first-child { text-align:left }
+      .scn-section table:not(.pl) tbody tr.lead td { background:#D3E5F6 !important; font-weight:700 }
+      .scn-section table:not(.pl) tbody tr.sum td { background:#EDF1F7 !important; font-weight:700 }
+      .scn-section table:not(.pl) tbody tr.refrow td { background:#F7FAFC !important; color:#5C6B7F }
+      .scn-section table:not(.pl) tbody .fail { color:#A8392F; font-weight:700 }
+      .scn-section table:not(.pl) tbody .pass { color:#1C6B4A; font-weight:700 }
+      .scn-section table:not(.pl) tbody .nc { color:#5C6B7F; font-size:7.5pt; display:block; margin-top:1px }
+      .scn-section table:not(.pl) tbody .tagv { background:#EDF3F9; color:#154B8C; padding:0 4px; border-radius:2px; font-size:7.5pt; margin-left:3px; display:inline-block }
+      .scn-section table:not(.pl) tbody .tagv.est { background:#FFF4D6; color:#8A5A12 }
+      /* 시나리오 테마별 테이블 외곽선·셀 경계 — 기본 남색(#5C7CA8) 오버라이드 */
+      [data-scn="worst"]  table:not(.pl),
+      [data-scn="worst"]  table:not(.pl) th,
+      [data-scn="worst"]  table:not(.pl) td { border-color:#D08080 !important }
+      [data-scn="normal"] table:not(.pl),
+      [data-scn="normal"] table:not(.pl) th,
+      [data-scn="normal"] table:not(.pl) td { border-color:#88A4D0 !important }
+      [data-scn="best"]   table:not(.pl),
+      [data-scn="best"]   table:not(.pl) th,
+      [data-scn="best"]   table:not(.pl) td { border-color:#78B090 !important }
+      /* 임원 요약 카드(exec-kpi) 안 테이블 — 상단 헤더 바와 연결감을 위해 셀 하단 경계도 테마색 */
+      [data-scn="worst"]  .exec-kpi table th,
+      [data-scn="worst"]  .exec-kpi table td { border-color:#E6B5B0 !important }
+      [data-scn="normal"] .exec-kpi table th,
+      [data-scn="normal"] .exec-kpi table td { border-color:#B4C9E2 !important }
+      [data-scn="best"]   .exec-kpi table th,
+      [data-scn="best"]   .exec-kpi table td { border-color:#B2D4BE !important }
+      /* 인트로 페이지 — height:100% 로 실제 페이지 영역 정확히 흡수.
+         @page margin 10mm 기준 가용영역 (190mm × 277mm) 를 html/body 가 100% 로 받고,
+         .intro-section 이 그 전체를 flex column 으로 채움. */
+      .intro-section { page-break-after:always; page-break-inside:avoid;
+                       display:flex; flex-direction:column;
+                       height:100%; min-height:184mm; box-sizing:border-box; overflow:hidden }
+      .intro-main { flex:1; display:flex; flex-direction:column; justify-content:space-between; min-height:0 }
+      /* grow-cell 은 자연 크기 유지 + flex-shrink 제어로 겹침 방지 */
+      .intro-main > .grow-cell { flex:0 0 auto; display:block }
+      .intro-main > .grow-cell > table { width:100% }
+      .intro-main > *:not(.grow-cell) { flex:0 0 auto }
+      /* 인트로 표 — 10.5pt, 넉넉한 패딩·명확한 외곽선 */
+      .intro-section table { font-size:10.5pt; width:100%; border-collapse:collapse; border:1px solid #88A4D0 }
+      .intro-section table th, .intro-section table td { padding:6px 9px; line-height:1.55; border:1px solid #88A4D0 }
+      .intro-section h3 { font-size:12pt; margin:10px 0 6px }
+      .intro-section .intro-header { flex:0 0 auto }
+      /* 선박 3-in-1 페이지의 3컬럼은 하단까지 늘어남 */
+      .intro-section .ship-cols-wrap { flex:1 1 auto; display:flex; align-items:stretch; min-height:0 }
+      .intro-section .ship-cols-wrap > * { align-self:stretch; display:flex; flex-direction:column }
+      /* 설명·인사이트 블록 — 패딩·행간 넉넉히 */
+      .intro-section .intro-note { padding:11px 14px; line-height:1.8; font-size:10pt }
+      /* 단락 간격 */
+      .intro-section p, .intro-section ul, .intro-section ol { line-height:1.75; margin:0 0 7px }
       /* 스위치나 버튼 등 조작부 제거 */
       [id^="worstCaseSwitch"] { display:none !important }
       .caret, .ic { display:none !important }
       button, .lnk { display:none !important }
     </style>
   </head><body>
-    <h1>하카타 10개년 예상 손익계산서 — 3-시나리오 비교 (${today})</h1>
+    ${intros}
     ${body}
-    <script>window.onload = () => setTimeout(() => window.print(), 300)</sc`+`ript>
+    <script>window.onload = () => setTimeout(() => window.print(), 500)</sc`+`ript>
   </body></html>`);
   w.document.close();
 }
 {
   const _b2 = document.getElementById('btnPrint3Scn');
-  if (_b2) _b2.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); print3ScenariosPL10(); });
+  if (_b2) _b2.addEventListener('click', e => {
+    e.preventDefault(); e.stopPropagation();
+    // 창을 click 핸들러에서 즉시 연다 — async 내부(await 뒤)에서 열면 gesture context 손실로 조용히 차단될 수 있음.
+    const w = window.open('about:blank', 'print3Scn', 'width=1200,height=900');
+    if (!w) {
+      alert('팝업 차단으로 인쇄 창을 열 수 없습니다. 브라우저 주소창 우측 팝업 아이콘에서 허용 후 다시 시도해 주세요.');
+      return;
+    }
+    try {
+      w.document.open();
+      w.document.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>인쇄 준비 중…</title></head>
+        <body style="margin:0;padding:60px;font-family:'맑은 고딕',sans-serif;background:#F6F9FC;color:#154B8C">
+          <div style="font-size:18pt;font-weight:700;margin-bottom:10px">3-시나리오 10개년 손익계산서 — 인쇄 준비 중…</div>
+          <div style="font-size:11pt;color:#5C6B7F;line-height:1.6">
+            시나리오별 손익계산서를 수집하고 전제 요약·선박 소개·수송실적을 조립하는 중입니다.<br>
+            수 초 안에 완성된 보고서가 이 창에 나타나고 인쇄 미리보기가 자동으로 열립니다.
+          </div>
+        </body></html>`);
+      w.document.close();
+    } catch(_) {}
+    print3ScenariosPL10(w).catch(err => {
+      console.error('[print3ScenariosPL10] 실패:', err);
+      try {
+        w.document.open();
+        w.document.write('<pre style="padding:20px;color:#A8392F;font-family:monospace;white-space:pre-wrap">인쇄 생성 중 오류:\n\n' + (err && err.stack ? err.stack : err) + '</pre>');
+        w.document.close();
+      } catch(_) {}
+      alert('3-시나리오 인쇄 중 오류 — 열린 창을 확인하세요:\n' + (err && err.message ? err.message : err));
+    });
+  });
 }
 
 
