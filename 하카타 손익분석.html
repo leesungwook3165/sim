@@ -9309,52 +9309,133 @@ async function print3ScenariosPL10() {
         ${_pageTag(PP.cond)}
       </div>
 
-      <div class="intro-main" style="justify-content:flex-start;gap:12px">
-        <div class="grow-cell">
-          <h3 style="color:#154B8C;margin-top:0">① 3-시나리오 조건값</h3>
-          <table>
-            <thead>${scnHead}</thead>
-            <tbody>
-              ${scnRow('편도 운임 (원)',          k => _fmtN(_n('i' + _scnCap(k) + 'Fare')))}
-              ${scnRow('유류할증료 (원)',          k => _fmtN(_n('i' + _scnCap(k) + 'Fuel')))}
-              ${scnRow('총 운임 (원)',             k => _fmtN(_n('i' + _scnCap(k) + 'Fare') + _n('i' + _scnCap(k) + 'Fuel')))}
-              ${scnRow('연간 편도 항차',          k => _fmtN(_n('i' + _scnCap(k) + 'Voy')), '항차')}
-              ${scnRow('화물 선적율',              k => _n('i' + _scnCap(k) + 'Cargo').toFixed(2).replace(/\.?0+$/, ''), '%')}
-              ${scnRow('승선율',                    k => _n('i' + _scnCap(k) + 'LoadRate'), '%')}
-              ${scnRow('편도 단순연료 (만원)',    k => _fmtN(_n('i' + _scnCap(k) + 'FuelRT')))}
-            </tbody>
-          </table>
-        </div>
-
-        <div class="grow-cell">
-          <h3 style="color:#154B8C;margin-top:0">② 기타 전제 (양쪽 공통)</h3>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px">
+      <!-- ① + ② 를 2-컬럼으로 묶어 세로 공간 절약 → ③ 항비 계산식이 들어갈 자리 확보 -->
+      <div class="intro-main" style="justify-content:flex-start;gap:8px">
+        <div class="grow-cell" style="display:grid;grid-template-columns:1fr 1.4fr;gap:0 12px">
+          <div>
+            <h3 style="color:#154B8C;margin:0 0 3px;font-size:11pt">① 3-시나리오 조건값</h3>
             <table>
+              <thead>${scnHead}</thead>
               <tbody>
-                ${_condRow('선박 (대조)',     sm ? sm.name : '산타모니카호')}
-                ${_condRow('선박 (참조)',     eld ? eld.name : '엘도라도호')}
-                ${_condRow('연간 편도 항차',   _fmtN(voyPeer) + '항차')}
-                ${_condRow('연간 승객수',      _fmtN(paxPeer) + '명')}
-                ${_condRow('승선율',           loadPeer + '%')}
-                ${_condRow('지상직 / 선원 / 승무원', _fmtN(_n('iHeadPeer')) + ' / ' + _fmtN(_n('iSailorPeer')) + ' / ' + _fmtN(_n('iCrewPeer')) + ' 명')}
-                ${_condRow('대리점비',         agencyOn ? _n('iAgencyPeer') + '% × 일본비중 ' + _n('iAgencyJapanShare') + '%' : '해제')}
-                ${_condRow('목표 영업이익률', _n('iTgtPeer') + '%')}
-              </tbody>
-            </table>
-            <table>
-              <tbody>
-                ${_condRow('연료 산출 모드',  fuelMode + ' 모드')}
-                ${_condRow('AI 유가추세',      aiOn2 ? '적용 중 (LSMGO 10년 평균 ~$880/MT)' : '미적용')}
-                ${_condRow('항비 수동 산식',  portOn  ? '적용 중 (부산+하카타 세목별 PDF 산식)' : '미적용')}
-                ${_condRow('유가 기준',        _fmtN(_n('iFuelBase')) + ' $/MT (2024)')}
-                ${_condRow('환율 기준',        _fmtN(_n('iFxBase')) + ' 원/$ (2024)')}
-                ${_condRow('선가 / 내용연수', _fmtN(_n('iShipPricePeer')) + '백만 / ' + _fmtN(_n('iLifePeer')) + '년')}
-                ${_condRow('차입금 / 이자율', _fmtN(_n('iLoanPeer')) + '백만 / ' + _n('iLoanRatePeer') + '%' + (_c('iJpyLoan') ? ' (엔화 1.56%)' : ''))}
-                ${_condRow('세금 적용',        _c('iTonnageTax') ? '톤세 (조세특례제한법 §104-10)' : '누진 법인세')}
+                ${scnRow('편도 운임 (원)',          k => _fmtN(_n('i' + _scnCap(k) + 'Fare')))}
+                ${scnRow('유류할증료 (원)',          k => _fmtN(_n('i' + _scnCap(k) + 'Fuel')))}
+                ${scnRow('총 운임 (원)',             k => _fmtN(_n('i' + _scnCap(k) + 'Fare') + _n('i' + _scnCap(k) + 'Fuel')))}
+                ${scnRow('연간 편도 항차',          k => _fmtN(_n('i' + _scnCap(k) + 'Voy')), '항차')}
+                ${scnRow('화물 선적율',              k => _n('i' + _scnCap(k) + 'Cargo').toFixed(2).replace(/\.?0+$/, ''), '%')}
+                ${scnRow('승선율',                    k => _n('i' + _scnCap(k) + 'LoadRate'), '%')}
+                ${scnRow('편도 단순연료 (만원)',    k => _fmtN(_n('i' + _scnCap(k) + 'FuelRT')))}
               </tbody>
             </table>
           </div>
+          <div>
+            <h3 style="color:#154B8C;margin:0 0 3px;font-size:11pt">② 기타 전제 (양쪽 공통)</h3>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px">
+              <table>
+                <tbody>
+                  ${_condRow('선박 (대조)',     sm ? sm.name : '산타모니카호')}
+                  ${_condRow('선박 (참조)',     eld ? eld.name : '엘도라도호')}
+                  ${_condRow('연간 편도 항차',   _fmtN(voyPeer) + '항차')}
+                  ${_condRow('연간 승객수',      _fmtN(paxPeer) + '명')}
+                  ${_condRow('승선율',           loadPeer + '%')}
+                  ${_condRow('지상직 / 선원 / 승무원', _fmtN(_n('iHeadPeer')) + ' / ' + _fmtN(_n('iSailorPeer')) + ' / ' + _fmtN(_n('iCrewPeer')) + ' 명')}
+                  ${_condRow('대리점비',         agencyOn ? _n('iAgencyPeer') + '% × 일본비중 ' + _n('iAgencyJapanShare') + '%' : '해제')}
+                  ${_condRow('목표 영업이익률', _n('iTgtPeer') + '%')}
+                </tbody>
+              </table>
+              <table>
+                <tbody>
+                  ${_condRow('연료 산출 모드',  fuelMode + ' 모드')}
+                  ${_condRow('AI 유가추세',      aiOn2 ? '적용 중 (LSMGO 10년 평균 ~$880/MT)' : '미적용')}
+                  ${_condRow('항비 수동 산식',  portOn  ? '적용 중 (부산+하카타 세목별 PDF 산식)' : '미적용')}
+                  ${_condRow('유가 기준',        _fmtN(_n('iFuelBase')) + ' $/MT (2024)')}
+                  ${_condRow('환율 기준',        _fmtN(_n('iFxBase')) + ' 원/$ (2024)')}
+                  ${_condRow('선가 / 내용연수', _fmtN(_n('iShipPricePeer')) + '백만 / ' + _fmtN(_n('iLifePeer')) + '년')}
+                  ${_condRow('차입금 / 이자율', _fmtN(_n('iLoanPeer')) + '백만 / ' + _n('iLoanRatePeer') + '%' + (_c('iJpyLoan') ? ' (엔화 1.56%)' : ''))}
+                  ${_condRow('세금 적용',        _c('iTonnageTax') ? '톤세 (조세특례제한법 §104-10)' : '누진 법인세')}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
+
+        ${(() => {
+          // ③ 항비 계산식 — PORT_FEE_ITEMS / PORT_FEE_STATE 에서 활성 세목만 실시간 산출.
+          //   현재 UI 체크/수치가 그대로 반영되도록 computePortFeePerCall · computePortFeeAnnual 결과를 사용.
+          if (typeof PORT_FEE_ITEMS === 'undefined' || typeof computePortFeePerCall !== 'function') return '';
+          const perCall = computePortFeePerCall();
+          const annual  = (typeof computePortFeeAnnual === 'function') ? computePortFeeAnnual(voyPeer) : null;
+          const _rate   = (port, it) => (PORT_FEE_STATE[port][it.id].rate != null && isFinite(PORT_FEE_STATE[port][it.id].rate)) ? PORT_FEE_STATE[port][it.id].rate : it.rate;
+          const _unit   = (port, it) => it.unit === 'ton-local' ? (port === 'busan' ? '원/t' : '¥/t')
+                                      : it.unit === 'ton-intl'  ? '원/GT'
+                                      : (port === 'busan' ? '원/회' : '¥/회');
+          const _calcLbl = (it) => it.unit === 'ton-local' ? ` × 1,590t` : it.unit === 'ton-intl' ? ` × 3,321GT` : '';
+          const _amtKrw  = v => Math.round(v).toLocaleString('ko-KR') + '원';
+          const _amtJpy  = v => '¥' + Math.round(v).toLocaleString('ko-KR');
+          const bRows = PORT_FEE_ITEMS.busan.filter(it => PORT_FEE_STATE.busan[it.id].on).map(it => {
+            const r = _rate('busan', it);
+            const a = (typeof _portFeeItemAmount === 'function') ? _portFeeItemAmount('busan', it, perCall.tonLocal, perCall.tonIntl) : 0;
+            return `<tr><td style="padding:1.5px 6px">${it.name}</td><td style="padding:1.5px 6px;text-align:right;color:#5C6B7F;font-size:8pt">${r} ${_unit('busan', it)}${_calcLbl(it)}</td><td style="padding:1.5px 6px;text-align:right;font-variant-numeric:tabular-nums">${_amtKrw(a)}</td></tr>`;
+          }).join('');
+          const hRows = PORT_FEE_ITEMS.hakata.filter(it => PORT_FEE_STATE.hakata[it.id].on).map(it => {
+            const r = _rate('hakata', it);
+            const a = (typeof _portFeeItemAmount === 'function') ? _portFeeItemAmount('hakata', it, perCall.tonLocal, perCall.tonIntl) : 0;
+            const capTag = it.cap === 'enter' ? ' <span style="color:#8A5A12;font-size:7.5pt;font-weight:700">[월10회 cap]</span>' : '';
+            return `<tr><td style="padding:1.5px 6px">${it.name}${capTag}</td><td style="padding:1.5px 6px;text-align:right;color:#5C6B7F;font-size:8pt">${r} ${_unit('hakata', it)}${_calcLbl(it)}</td><td style="padding:1.5px 6px;text-align:right;font-variant-numeric:tabular-nums">${_amtJpy(a)}</td></tr>`;
+          }).join('');
+          return `
+          <div class="grow-cell">
+            <h3 style="color:#154B8C;margin-top:0">③ 항비 계산식 (수동 산식 · PDF 항비계산_1 기준)</h3>
+            <div style="display:grid;grid-template-columns:0.95fr 1.1fr 1.3fr;gap:0 10px">
+              <!-- 기준값 + 공식 -->
+              <div>
+                <table>
+                  <tbody>
+                    ${_condRow('국제톤수 (GT)',   _fmtN(perCall.tonIntl) + ' t')}
+                    ${_condRow('기준톤수',         _fmtN(perCall.tonLocal) + ' t (GT × 0.4786)')}
+                    ${_condRow('환율',             '¥1 = ₩' + perCall.fx)}
+                    ${_condRow('하카타 입항료 cap', '월 ' + (annual ? annual.jpyCap : 10) + '회 (초과분 면제)')}
+                  </tbody>
+                </table>
+                <div style="margin-top:5px;padding:5px 8px;background:#F5F9FE;border-left:2px solid #154B8C;font-size:8.5pt;line-height:1.5;color:#33415A">
+                  <b style="color:#154B8C">공식</b><br>
+                  <b>1 입항당</b> = Σ(요율 × 톤수) + Σ(회당 요금)<br>
+                  <b>연간</b> = 부산소계 × 연부산입항수<br>
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; + (하카타 cap분 + 매회분) × 환율<br>
+                  <span style="color:#5C6B7F;font-size:8pt">· 편도 ${_fmtN(voyPeer)}항차 ÷ 2 = 부산/하카타 각 ${_fmtN(voyPeer/2)}회 입항</span>
+                </div>
+              </div>
+              <!-- 부산항 -->
+              <div>
+                <table>
+                  <thead><tr style="background:#154B8C;color:#fff"><th style="padding:3px 6px;text-align:left">부산항 (매회 과금)</th><th style="padding:3px 6px;text-align:right">요율</th><th style="padding:3px 6px;text-align:right">1회</th></tr></thead>
+                  <tbody>
+                    ${bRows}
+                    <tr style="background:#D3E5F6;font-weight:800"><td style="padding:3px 6px" colspan="2">부산 소계</td><td style="padding:3px 6px;text-align:right;color:#A8392F">${_amtKrw(perCall.busanKrw)}</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <!-- 하카타항 -->
+              <div>
+                <table>
+                  <thead><tr style="background:#A8392F;color:#fff"><th style="padding:3px 6px;text-align:left">하카타항 (JPY)</th><th style="padding:3px 6px;text-align:right">요율</th><th style="padding:3px 6px;text-align:right">1회</th></tr></thead>
+                  <tbody>
+                    ${hRows}
+                    <tr style="background:#FBE5E2;font-weight:700"><td style="padding:3px 6px" colspan="2">입항료 cap 적용분</td><td style="padding:3px 6px;text-align:right">${_amtJpy(perCall.hakataJpyCap)}</td></tr>
+                    <tr style="background:#FBE5E2;font-weight:700"><td style="padding:3px 6px" colspan="2">매회 과금분</td><td style="padding:3px 6px;text-align:right">${_amtJpy(perCall.hakataJpyEvery)}</td></tr>
+                    <tr style="background:#F6CBC5;font-weight:800"><td style="padding:3px 6px" colspan="2">하카타 1회 합</td><td style="padding:3px 6px;text-align:right;color:#A8392F">${_amtJpy(perCall.hakataJpy)} ≈ ${_amtKrw(perCall.hakataKrw)}</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            ${annual ? `
+            <div style="margin-top:6px;padding:6px 10px;background:#FFF8EC;border-left:3px solid #D9A520;border-radius:2px;font-size:9pt;line-height:1.55;color:#8A5A12">
+              <b style="color:#8A5A12">연간 항비 산출 결과</b> &nbsp;·&nbsp;
+              부산 ${_amtKrw(annual.annualBusanKrw)} + 하카타 ${_amtKrw(annual.annualHakataKrw)}
+              = <b style="color:#A8392F">${_amtKrw(annual.annualKrw)}</b>
+              &nbsp;<span style="color:#5C6B7F;font-weight:400">(cap 면제 ${annual.capExemptCalls.toFixed(0)}회 · 절감 ${_amtKrw(annual.savedKrw)})</span>
+            </div>` : ''}
+          </div>`;
+        })()}
 
       </div>
     </section>
