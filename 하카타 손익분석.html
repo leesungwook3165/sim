@@ -1594,9 +1594,9 @@
                   </tr>
                   <tr>
                     <td style="padding:3px 6px;white-space:nowrap">승선율 <span style="color:var(--muted)">(%)</span></td>
-                    <td style="padding:2px 2px"><input type="number" step="1" min="0" max="100" id="iWorstLoadRate"  value="50" style="width:100%;text-align:right;padding:3px 2px;font-size:10.5px;font-variant-numeric:tabular-nums;box-sizing:border-box;min-width:0"></td>
+                    <td style="padding:2px 2px"><input type="number" step="1" min="0" max="100" id="iWorstLoadRate"  value="45" style="width:100%;text-align:right;padding:3px 2px;font-size:10.5px;font-variant-numeric:tabular-nums;box-sizing:border-box;min-width:0"></td>
                     <td style="padding:2px 2px"><input type="number" step="1" min="0" max="100" id="iNormalLoadRate" value="50" style="width:100%;text-align:right;padding:3px 2px;font-size:10.5px;font-variant-numeric:tabular-nums;box-sizing:border-box;min-width:0"></td>
-                    <td style="padding:2px 2px"><input type="number" step="1" min="0" max="100" id="iBestLoadRate"   value="50" style="width:100%;text-align:right;padding:3px 2px;font-size:10.5px;font-variant-numeric:tabular-nums;box-sizing:border-box;min-width:0"></td>
+                    <td style="padding:2px 2px"><input type="number" step="1" min="0" max="100" id="iBestLoadRate"   value="55" style="width:100%;text-align:right;padding:3px 2px;font-size:10.5px;font-variant-numeric:tabular-nums;box-sizing:border-box;min-width:0"></td>
                   </tr>
                   <tr>
                     <td style="padding:3px 6px;white-space:nowrap">편도 단순연료 <span style="color:var(--muted)">(만원)</span></td>
@@ -4470,8 +4470,7 @@ function drawTgt(m){
     const _prem = [_loadStr, _cargoStr].filter(Boolean).join(' · ');
     el('tgtCap1').innerHTML = `<b>${_nowNm}</b> · <b>목표 영업이익률</b>(0%=손익분기 · 5%~15%=목표 수익률) <b>달성에 필요한 승객수·운임</b>`
       + ` — ${won(V.voy)}항차 고정${_prem ? ' · ' + _prem : ''}`
-      + ` · 화물 <b>${mil(V.cargo)}백만</b>(매출의 ${pct(_cgS,1)}) 적용 ← 왼쪽 "화물 반영", 빼면 오른쪽 "화물 제외"`
-      + `<br><span style="color:var(--muted);font-size:10.5px">· 각 셀 괄호 안 "N/항차" = 그 승객수를 ${won(V.voy)} 항차로 나눈 '항차당' 수치</span>`; }
+      + ` · 화물 <b>${mil(V.cargo)}백만</b>(매출의 ${pct(_cgS,1)}) 적용`; }
   el('tgtCap2').innerHTML = `<b>${_nowNm}</b> · 같은 목표를 매출 대비 비중으로`;
 
   if (qT === null){
@@ -9164,12 +9163,12 @@ async function print3ScenariosPL10() {
     const rowBg      = primary ? '#FFFBEE' : '#F7FAFC';
     const rowBorderL = primary ? '5px solid #D9A520' : `5px solid ${roleColor}`;
     const _r = (k, v) => `<tr>
-      <th style="padding:3px 8px;text-align:left;background:#F5F9FE;color:#154B8C;font-weight:700;width:80px;font-size:9pt;line-height:1.3">${k}</th>
-      <td style="padding:3px 8px;font-size:9.5pt;line-height:1.35">${v}</td></tr>`;
-    const numBadge = `<span style="display:inline-block;width:24px;height:24px;line-height:24px;text-align:center;background:${roleColor};color:#fff;border-radius:50%;font-weight:800;font-size:11.5pt;margin-right:8px;vertical-align:1px">${num}</span>`;
+      <th style="padding:2px 8px;text-align:left;background:#F5F9FE;color:#154B8C;font-weight:700;width:80px;font-size:8.5pt;line-height:1.25">${k}</th>
+      <td style="padding:2px 8px;font-size:9pt;line-height:1.3">${v}</td></tr>`;
+    const numBadge = `<span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;background:${roleColor};color:#fff;border-radius:50%;font-weight:800;font-size:10.5pt;margin-right:7px;vertical-align:1px">${num}</span>`;
     return `
-      <div class="grow-cell" style="flex:1 1 0;display:flex;flex-direction:column;background:${rowBg};border-left:${rowBorderL};border:1px solid #D7DFE9;border-left-width:5px;border-radius:3px;padding:7px 10px;min-height:0">
-        <div style="font-size:11.5pt;font-weight:800;color:${roleColor};letter-spacing:-0.3px;margin-bottom:3px;display:flex;align-items:center;flex:0 0 auto">
+      <div class="grow-cell" style="flex:1 1 0;display:flex;flex-direction:column;background:${rowBg};border-left:${rowBorderL};border:1px solid #D7DFE9;border-left-width:5px;border-radius:3px;padding:5px 9px;min-height:0;overflow:hidden">
+        <div style="font-size:10.5pt;font-weight:800;color:${roleColor};letter-spacing:-0.3px;margin-bottom:2px;display:flex;align-items:center;flex:0 0 auto">
           ${numBadge}<span>${roleLabel}</span>${starBadge}
           <span style="margin-left:10px;font-size:9pt;color:#17202B;font-weight:700">${ship.name}</span>
           <span style="margin-left:6px;font-size:8pt;color:#5C6B7F;font-weight:400">${ship.note || ''}</span>
@@ -9188,7 +9187,7 @@ async function print3ScenariosPL10() {
             </table>
           </div>
           <div style="display:flex;flex-direction:column;min-height:0">
-            ${extraNote ? `<div style="padding:8px 10px;background:#FFF8EC;border-left:3px solid #D9A520;border-radius:2px;font-size:9.5pt;line-height:1.7;color:#8A5A12;flex:1;display:flex;flex-direction:column;justify-content:center">${extraNote}</div>` : ''}
+            ${extraNote ? `<div style="padding:5px 9px;background:#FFF8EC;border-left:3px solid #D9A520;border-radius:2px;font-size:8.5pt;line-height:1.5;color:#8A5A12;flex:1;display:flex;flex-direction:column;justify-content:center;overflow:hidden">${extraNote}</div>` : ''}
           </div>
         </div>
       </div>
@@ -9197,21 +9196,21 @@ async function print3ScenariosPL10() {
   const shipsAllPage = `
     <section class="intro-section" style="margin:0;position:relative">
       <div style="position:absolute;top:0;right:0;padding:4px 6px;z-index:2">${_pageTag(PP.ships)}</div>
-      <div class="intro-header" style="border-top:5px solid #154B8C;background:#F5F9FE;padding:7px 14px;margin:0 0 8px">
-        <div style="font-size:13pt;font-weight:800;color:#154B8C">참조 · 대조 · 참고 선박 — 3척 비교</div>
-        <div style="font-size:8.5pt;color:#555;margin-top:2px">
+      <div class="intro-header" style="border-top:4px solid #154B8C;background:#F5F9FE;padding:4px 14px;margin:0 0 5px">
+        <div style="font-size:12pt;font-weight:800;color:#154B8C">참조 · 대조 · 참고 선박 — 3척 비교</div>
+        <div style="font-size:8pt;color:#555;margin-top:1px">
           ① 참조 (엘도라도 — 원가 레퍼런스) &nbsp;·&nbsp;
           <b>② 대조 (산타모니카 — ★ 현재 매입 검토)</b> &nbsp;·&nbsp;
           ③ 참고 (오션플라워2 — 과거 사례)
         </div>
       </div>
-      <div class="intro-main" style="gap:8px">
+      <div class="intro-main" style="gap:5px">
         ${_shipRow(eld, 'eldorado.jpg', '1', '참조 선박', '#154B8C',
           '· <b>엘도라도호 · 대저페리</b> 운항<br>· 포항 ↔ 울릉 항로 · 2024년 감사보고서 기준', false)}
         ${_shipRow(sm, 'santamonica.jpg', '2', '대조 선박', '#1C6B4A',
           '· <b>산타모니카호 · 시월드고속훼리</b> 운영<br>· 2026.10.01 2026.12.31부 운항 종료 통보 (제주 항로)<br>· 현 항로 (제주-추자-진도) 연 약 15억 적자', true)}
         ${_shipRow(of2, 'oceanflower2_ship.jpg', '3', '참고 선박', '#5C6B7F',
-          '· <b>오션플라워2호 · 대아고속해운</b> 운영<br>· <b>제원</b> : 4,114톤 · 전장 81m · 전폭 26m · 최고 44 kts<br>· <b>수송 능력</b> : 여객 825명 + 차량 86대<br>· 부산 ↔ 이즈하라 주 2회 (토·일) · 소요 2시간 50분<br>· <b>층 구성</b> : 1층 화물 · 2층 일반석 637 · 3층 우등석 188<br>· <b>과거 명칭</b> : "오렌지1호" (대아그룹 제주 노력~성산 항로)<br>· 자전거 100대 거치 · 대형 보관함 4개', false)}
+          '· <b>대아고속해운</b> 운영 (※ 제원·좌석 상세는 좌측 표 참고)<br>· <b>과거 명칭</b> : "오렌지1호" (대아그룹 제주 노력~성산 항로)<br>· 자전거 100대 거치 · 대형 보관함 4개 (낚시가방·캐리어)', false)}
       </div>
     </section>
   `;
@@ -9374,26 +9373,39 @@ async function print3ScenariosPL10() {
           const bRows = PORT_FEE_ITEMS.busan.filter(it => PORT_FEE_STATE.busan[it.id].on).map(it => {
             const r = _rate('busan', it);
             const a = (typeof _portFeeItemAmount === 'function') ? _portFeeItemAmount('busan', it, perCall.tonLocal, perCall.tonIntl) : 0;
-            return `<tr><td style="padding:1.5px 6px">${it.name}</td><td style="padding:1.5px 6px;text-align:right;color:#5C6B7F;font-size:8pt">${r} ${_unit('busan', it)}${_calcLbl(it)}</td><td style="padding:1.5px 6px;text-align:right;font-variant-numeric:tabular-nums">${_amtKrw(a)}</td></tr>`;
+            return `<tr>
+              <td style="padding:1.5px 6px;white-space:nowrap">${it.name}</td>
+              <td style="padding:1.5px 6px;text-align:right;color:#5C6B7F;font-size:8pt;white-space:nowrap">${r} ${_unit('busan', it)}${_calcLbl(it)}</td>
+              <td style="padding:1.5px 6px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap">${_amtKrw(a)}</td>
+            </tr>`;
           }).join('');
           const hRows = PORT_FEE_ITEMS.hakata.filter(it => PORT_FEE_STATE.hakata[it.id].on).map(it => {
             const r = _rate('hakata', it);
             const a = (typeof _portFeeItemAmount === 'function') ? _portFeeItemAmount('hakata', it, perCall.tonLocal, perCall.tonIntl) : 0;
-            const capTag = it.cap === 'enter' ? ' <span style="color:#8A5A12;font-size:7.5pt;font-weight:700">[월10회 cap]</span>' : '';
-            return `<tr><td style="padding:1.5px 6px">${it.name}${capTag}</td><td style="padding:1.5px 6px;text-align:right;color:#5C6B7F;font-size:8pt">${r} ${_unit('hakata', it)}${_calcLbl(it)}</td><td style="padding:1.5px 6px;text-align:right;font-variant-numeric:tabular-nums">${_amtJpy(a)}</td></tr>`;
+            const capTag = it.cap === 'enter' ? ' <span style="color:#8A5A12;font-size:7.5pt;font-weight:700;white-space:nowrap">[cap]</span>' : '';
+            // 하카타 세목 이름이 길어서 (예: "안벽사용료 (접안료)") — 괄호 설명은 서브텍스트로 분리해서 2줄 허용
+            const nameParen = it.name.match(/^(.+?)\s*\((.+)\)$/);
+            const nameHtml  = nameParen
+              ? `<span style="white-space:nowrap">${nameParen[1]}</span><br><span style="color:#5C6B7F;font-size:7.5pt;white-space:nowrap">(${nameParen[2]})</span>`
+              : `<span style="white-space:nowrap">${it.name}</span>`;
+            return `<tr>
+              <td style="padding:1.5px 6px;line-height:1.25">${nameHtml}${capTag}</td>
+              <td style="padding:1.5px 6px;text-align:right;color:#5C6B7F;font-size:8pt;white-space:nowrap">${r} ${_unit('hakata', it)}${_calcLbl(it)}</td>
+              <td style="padding:1.5px 6px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap">${_amtJpy(a)}</td>
+            </tr>`;
           }).join('');
           return `
           <div class="grow-cell">
             <h3 style="color:#154B8C;margin-top:0">③ 항비 계산식 (수동 산식 · PDF 항비계산_1 기준)</h3>
             <div style="display:grid;grid-template-columns:0.95fr 1.1fr 1.3fr;gap:0 10px">
-              <!-- 기준값 + 공식 -->
+              <!-- 기준값 + 공식 — th·td 모두 nowrap 으로 라벨 깨짐 방지 -->
               <div>
                 <table>
                   <tbody>
-                    ${_condRow('국제톤수 (GT)',   _fmtN(perCall.tonIntl) + ' t')}
-                    ${_condRow('기준톤수',         _fmtN(perCall.tonLocal) + ' t (GT × 0.4786)')}
-                    ${_condRow('환율',             '¥1 = ₩' + perCall.fx)}
-                    ${_condRow('하카타 입항료 cap', '월 ' + (annual ? annual.jpyCap : 10) + '회 (초과분 면제)')}
+                    ${_condRow('<span style="white-space:nowrap">국제톤수 (GT)</span>',    '<span style="white-space:nowrap">' + _fmtN(perCall.tonIntl) + ' t</span>')}
+                    ${_condRow('<span style="white-space:nowrap">기준톤수</span>',          '<span style="white-space:nowrap">' + _fmtN(perCall.tonLocal) + ' t</span> <span style="color:#5C6B7F;font-size:8pt;white-space:nowrap">(GT×0.4786)</span>')}
+                    ${_condRow('<span style="white-space:nowrap">환율</span>',              '<span style="white-space:nowrap">¥1 = ₩' + perCall.fx + '</span>')}
+                    ${_condRow('<span style="white-space:nowrap">입항료 cap</span>',        '<span style="white-space:nowrap">월 ' + (annual ? annual.jpyCap : 10) + '회</span> <span style="color:#5C6B7F;font-size:8pt;white-space:nowrap">(초과분 면제)</span>')}
                   </tbody>
                 </table>
                 <div style="margin-top:5px;padding:5px 8px;background:#F5F9FE;border-left:2px solid #154B8C;font-size:8.5pt;line-height:1.5;color:#33415A">
@@ -9404,25 +9416,45 @@ async function print3ScenariosPL10() {
                   <span style="color:#5C6B7F;font-size:8pt">· 편도 ${_fmtN(voyPeer)}항차 ÷ 2 = 부산/하카타 각 ${_fmtN(voyPeer/2)}회 입항</span>
                 </div>
               </div>
-              <!-- 부산항 -->
+              <!-- 부산항 — 모든 라벨 nowrap -->
               <div>
                 <table>
-                  <thead><tr style="background:#154B8C;color:#fff"><th style="padding:3px 6px;text-align:left">부산항 (매회 과금)</th><th style="padding:3px 6px;text-align:right">요율</th><th style="padding:3px 6px;text-align:right">1회</th></tr></thead>
+                  <thead><tr style="background:#154B8C;color:#fff">
+                    <th style="padding:3px 6px;text-align:left;white-space:nowrap">부산항 (매회)</th>
+                    <th style="padding:3px 6px;text-align:right;white-space:nowrap">요율</th>
+                    <th style="padding:3px 6px;text-align:right;white-space:nowrap">1회</th>
+                  </tr></thead>
                   <tbody>
                     ${bRows}
-                    <tr style="background:#D3E5F6;font-weight:800"><td style="padding:3px 6px" colspan="2">부산 소계</td><td style="padding:3px 6px;text-align:right;color:#A8392F">${_amtKrw(perCall.busanKrw)}</td></tr>
+                    <tr style="background:#D3E5F6;font-weight:800">
+                      <td style="padding:3px 6px;white-space:nowrap" colspan="2">부산 소계</td>
+                      <td style="padding:3px 6px;text-align:right;color:#A8392F;white-space:nowrap">${_amtKrw(perCall.busanKrw)}</td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
-              <!-- 하카타항 -->
+              <!-- 하카타항 — 라벨 축약, 모든 셀 nowrap -->
               <div>
                 <table>
-                  <thead><tr style="background:#A8392F;color:#fff"><th style="padding:3px 6px;text-align:left">하카타항 (JPY)</th><th style="padding:3px 6px;text-align:right">요율</th><th style="padding:3px 6px;text-align:right">1회</th></tr></thead>
+                  <thead><tr style="background:#A8392F;color:#fff">
+                    <th style="padding:3px 6px;text-align:left;white-space:nowrap">하카타항 (JPY)</th>
+                    <th style="padding:3px 6px;text-align:right;white-space:nowrap">요율</th>
+                    <th style="padding:3px 6px;text-align:right;white-space:nowrap">1회</th>
+                  </tr></thead>
                   <tbody>
                     ${hRows}
-                    <tr style="background:#FBE5E2;font-weight:700"><td style="padding:3px 6px" colspan="2">입항료 cap 적용분</td><td style="padding:3px 6px;text-align:right">${_amtJpy(perCall.hakataJpyCap)}</td></tr>
-                    <tr style="background:#FBE5E2;font-weight:700"><td style="padding:3px 6px" colspan="2">매회 과금분</td><td style="padding:3px 6px;text-align:right">${_amtJpy(perCall.hakataJpyEvery)}</td></tr>
-                    <tr style="background:#F6CBC5;font-weight:800"><td style="padding:3px 6px" colspan="2">하카타 1회 합</td><td style="padding:3px 6px;text-align:right;color:#A8392F">${_amtJpy(perCall.hakataJpy)} ≈ ${_amtKrw(perCall.hakataKrw)}</td></tr>
+                    <tr style="background:#FBE5E2;font-weight:700">
+                      <td style="padding:3px 6px;white-space:nowrap" colspan="2">cap 적용분</td>
+                      <td style="padding:3px 6px;text-align:right;white-space:nowrap">${_amtJpy(perCall.hakataJpyCap)}</td>
+                    </tr>
+                    <tr style="background:#FBE5E2;font-weight:700">
+                      <td style="padding:3px 6px;white-space:nowrap" colspan="2">매회 과금분</td>
+                      <td style="padding:3px 6px;text-align:right;white-space:nowrap">${_amtJpy(perCall.hakataJpyEvery)}</td>
+                    </tr>
+                    <tr style="background:#F6CBC5;font-weight:800">
+                      <td style="padding:3px 6px;white-space:nowrap" colspan="2">1회 합</td>
+                      <td style="padding:3px 6px;text-align:right;color:#A8392F;white-space:nowrap">${_amtJpy(perCall.hakataJpy)} ≈ ${_amtKrw(perCall.hakataKrw)}</td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
@@ -10501,9 +10533,9 @@ el('btnReset').addEventListener('click', () => {
   el('iVoyPeer').value    = DEFAULTS.voyPeer;
   // 시나리오 — normal 로 되돌리고 각 입력도 기본값 복원
   const _scnDef = {
-    worst:  { Fare:70000,  Fuel:30000, Voy:500, Cargo:5,    FuelRT:2400, LoadRate:50 },
+    worst:  { Fare:70000,  Fuel:30000, Voy:500, Cargo:5,    FuelRT:2400, LoadRate:45 },
     normal: { Fare:90000,  Fuel:30000, Voy:550, Cargo:7.25, FuelRT:2200, LoadRate:50 },
-    best:   { Fare:120000, Fuel:30000, Voy:600, Cargo:15,   FuelRT:2000, LoadRate:50 }
+    best:   { Fare:120000, Fuel:30000, Voy:600, Cargo:15,   FuelRT:2000, LoadRate:55 }
   };
   Object.entries(_scnDef).forEach(([scn, vals]) => {
     const cap = scn.charAt(0).toUpperCase() + scn.slice(1);
