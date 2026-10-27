@@ -5371,7 +5371,9 @@ let PEER_PL = null;
 // 단순 모드 연료비 10개년 년차별 편도단가 (만원 편도).
 //   enabled=false 면 현재 시나리오 편도단가가 10년 전구간 적용 (gFuel 복리).
 //   years[k] = k 년차(y+0..y+10)의 편도단가 (만원). null 이면 시나리오값으로 폴백.
-let FUEL_SEG = { enabled:false, aiTrend:false, years:new Array(11).fill(null) };
+// 기본 ON — 10개년 단순 모드 유가는 AI 유가추세(LSMGO 10년 평균 ~$880/MT) 반영이 디폴트.
+// 년차 셀 실제값은 _applyAiTrend 가 FUEL_AI_TREND 정의 뒤에 1회 시드함 (하단).
+let FUEL_SEG = { enabled:true, aiTrend:true, years:new Array(11).fill(null) };
 
 // ── 항비 상세 산출 (단순 모드 수동 반영용) ───────────────────────────────────
 //   PDF (항비계산_1.pdf) 자료 기반 — 부산항·하카타항 세목별 요율.
@@ -7423,6 +7425,10 @@ function _applyAiTrend(fallback) {
     FUEL_SEG.years[k] = Math.round(fallback * FUEL_AI_TREND[k]);
   }
 }
+// 디폴트 ON 시드 — FUEL_SEG.aiTrend 가 기본 ON 이므로, 년차 셀을 normal 시나리오(2200만원/편도) 기준으로
+// 미리 채워둬야 최초 render 부터 10년 fuel row 가 추세 배율대로 나온다. 시나리오 변경 핸들러가
+// 이후 scnFuelRT 로 다시 _applyAiTrend 를 돌리므로 worst/best 전환도 자동 반영.
+if (FUEL_SEG.enabled && FUEL_SEG.aiTrend) _applyAiTrend(2200);
 
 function _drawFuelSegGrid(fallbackMan) {
   const host = document.getElementById('fuelSegGrid');
@@ -10187,12 +10193,263 @@ async function print3ScenariosPL10() {
       /* 스위치나 버튼 등 조작부 제거 */
       [id^="worstCaseSwitch"] { display:none !important }
       .caret, .ic { display:none !important }
-      button, .lnk { display:none !important }
+      /* button, .lnk 는 @media print 안에서만 숨김 — 화면 미리보기에선 toolbar 버튼이 살아있어야 */
+      .lnk { display:none !important }
+
+      /* ── 우측 세로 미리보기 패널 (화면 전용) ─────────────────────────────── */
+      #pgToolbar { position:fixed; top:0; right:0; bottom:0; width:190px; background:#fff;
+                   border-left:2px solid #154B8C; padding:8px 10px; z-index:9999;
+                   box-shadow:-3px 0 10px rgba(0,0,0,0.12);
+                   display:flex; flex-direction:column; font-size:10pt; box-sizing:border-box }
+      #pgToolbarCtrl { display:flex; flex-direction:column; gap:5px; align-items:stretch;
+                       margin-bottom:8px; flex:0 0 auto }
+      #pgToolbarCtrl button { padding:6px 10px; border:1px solid #154B8C; background:#fff; color:#154B8C;
+                              cursor:pointer; border-radius:3px; font-size:9.5pt; font-weight:600;
+                              font-family:inherit; text-align:center; width:100% }
+      #pgToolbarCtrl button.primary { background:#154B8C; color:#fff }
+      #pgToolbarCtrl button:hover { background:#F5F9FE }
+      #pgToolbarCtrl button.primary:hover { background:#0E3767 }
+      #pgToolbarCtrl .pg-status { color:#5C6B7F; font-size:9pt; font-weight:600;
+                                  text-align:center; padding:4px 0 2px; border-top:1px solid #E6ECF4; margin-top:3px }
+      /* 접기/펼치기 토글 — 메뉴 영역이 길어 썸네일을 가릴 때 접어서 썸네일 영역 확보 */
+      #pgCtrlToggle { width:100%; padding:5px 8px; border:1px solid #D7DFE9; background:#F5F9FE;
+                      color:#154B8C; cursor:pointer; font-size:9pt; font-weight:600;
+                      border-radius:3px; margin-bottom:5px; font-family:inherit; text-align:center;
+                      flex:0 0 auto }
+      #pgCtrlToggle:hover { background:#E8EFF8 }
+      #pgToolbar.ctrl-collapsed #pgToolbarCtrl { display:none }
+      #pgThumbs { display:flex; flex-direction:column; gap:6px; overflow-y:auto; overflow-x:hidden;
+                  padding:4px 2px; align-items:stretch; flex:1 1 auto; min-height:0 }
+      .pg-thumb { flex:0 0 auto; cursor:pointer; position:relative; border:2px solid #D7DFE9;
+                  border-radius:3px; background:#fff; width:100%; height:110px; display:block; overflow:hidden }
+      .pg-thumb.on  { border-color:#154B8C; box-shadow:0 0 0 1px #154B8C }
+      .pg-thumb.off { border-color:#D7DFE9 }
+      .pg-thumb input { position:absolute; top:3px; left:3px; z-index:3; cursor:pointer; transform:scale(1.15) }
+      .pg-thumb .pg-num { position:absolute; bottom:2px; right:4px; z-index:3;
+                          background:rgba(21,75,140,0.85); color:#fff; padding:1px 6px; border-radius:2px;
+                          font-size:9pt; font-weight:700 }
+      .pg-thumb.off .pg-num  { background:rgba(140,140,140,0.75) }
+      .pg-thumb.off .pg-mini { opacity:0.3; filter:grayscale(0.7) }
+      /* A4 가로 297×210mm → 96dpi 기준 ≈ 1123×794px. 0.133 로 축소해 ~150×106 표시 (세로 패널 폭에 맞춤). */
+      .pg-mini { width:1123px; height:794px; transform-origin:top left; transform:scale(0.133);
+                 pointer-events:none; background:#fff; padding:38px; box-sizing:border-box;
+                 overflow:hidden; position:absolute; top:0; left:0 }
+      /* 패널 폭만큼 body 우측 패딩 — 마지막 페이지가 가려지지 않도록 */
+      body { padding-right:200px }
+
+      /* ── 책 넘김 모드 — 현재 페이지만 중앙에 고정 배치, 좌우 화살표/키보드/썸네일 클릭으로 전환 ─ */
+      body.book-mode { overflow:hidden }
+      body.book-mode .intro-section,
+      body.book-mode .scn-section { display:none !important }
+      body.book-mode .intro-section.pg-cur,
+      body.book-mode .scn-section.pg-cur {
+        display:block !important;
+        position:fixed; top:16px;
+        /* 우측 패널(190px + 2px border + 외부 여백 10px) 제외한 영역 가운데에 배치 */
+        left: calc((100vw - 202px) / 2);
+        width:1123px; height:794px;
+        transform-origin:top center;
+        transform: translateX(-50%) scale(var(--book-scale, 0.75));
+        background:#fff; box-shadow:0 4px 24px rgba(0,0,0,0.25);
+        padding:38px; box-sizing:border-box; overflow:hidden;
+        margin:0 !important; page-break-after:auto !important;
+        border-radius:3px;
+      }
+      .book-nav { position:fixed; top:50%; transform:translateY(-50%); z-index:9998;
+                  width:46px; height:88px; background:rgba(21,75,140,0.9); color:#fff;
+                  border:none; cursor:pointer; font-size:24px; border-radius:6px;
+                  display:none; align-items:center; justify-content:center;
+                  box-shadow:0 2px 8px rgba(0,0,0,0.25); font-family:inherit }
+      body.book-mode .book-nav { display:flex }
+      .book-nav.prev { left:10px }
+      .book-nav.next { right:210px }      /* 우측 패널(190px) + 여백 */
+      .book-nav:hover:not(:disabled) { background:#154B8C }
+      .book-nav:disabled { opacity:0.3; cursor:not-allowed }
+      /* 책 모드에서 현재 페이지 썸네일 하이라이트 */
+      .pg-thumb.cur { outline:3px solid #D9A520; outline-offset:-3px }
+      /* 책 모드에서는 썸네일 클릭이 "그 페이지로 이동" 역할 — 커서로 표시 */
+      body.book-mode .pg-thumb { cursor:pointer }
+
+      /* ── 인쇄 모드 ───────────────────────────────────────────────────────── */
+      @media print {
+        #pgToolbar, .book-nav { display:none !important }
+        body { padding-right:0 !important; padding-bottom:0 !important; overflow:visible !important }
+        .pg-skip { display:none !important }
+        button { display:none !important }
+        /* 책 모드로 들어가 있는 상태에서 인쇄가 트리거돼도 안전하도록 — 섹션 원형 복원 */
+        body.book-mode .intro-section,
+        body.book-mode .scn-section { display:block !important }
+        body.book-mode .intro-section.pg-cur,
+        body.book-mode .scn-section.pg-cur {
+          position:static !important; transform:none !important;
+          width:auto !important; height:auto !important; padding:0 !important;
+          box-shadow:none !important; border-radius:0 !important;
+        }
+      }
     </style>
   </head><body>
     ${intros}
     ${body}
-    <script>window.onload = () => setTimeout(() => window.print(), 500)</sc`+`ript>
+    <div id="pgToolbar" class="ctrl-collapsed">
+      <button id="pgCtrlToggle" aria-expanded="false" title="메뉴 펼치기/접기">⚙ 메뉴 ▶</button>
+      <div id="pgToolbarCtrl">
+        <button class="primary" id="btnPrintSel">🖨 선택한 페이지 인쇄</button>
+        <button id="btnPrintAll">전체 인쇄</button>
+        <button id="btnMode">📖 책 보기</button>
+        <button id="btnSelAll">전체 선택</button>
+        <button id="btnSelNone">전체 해제</button>
+        <button id="btnDownload">💾 HTML 다운로드</button>
+        <span class="pg-status" id="pgStatus"></span>
+        <button id="btnClose">닫기</button>
+      </div>
+      <div id="pgThumbs"></div>
+    </div>
+    <button class="book-nav prev" id="bookPrev" title="이전 페이지 (←)">◀</button>
+    <button class="book-nav next" id="bookNext" title="다음 페이지 (→)">▶</button>
+    <script>
+      // 미리보기 툴바 wiring — 각 .intro-section · .scn-section 을 1페이지로 보고 썸네일 생성.
+      // 체크 해제 시 해당 섹션에 .pg-skip 을 토글해 @media print 로 숨긴다 (DOM 자체는 유지 → 썸네일/상태 보존).
+      // 자동 인쇄 트리거는 제거 — "선택 인쇄" 버튼을 명시적으로 누르는 흐름으로.
+      // 다운로드된 HTML 파일을 다시 열어도 동일 동작하도록 — 열릴 때 썸네일 영역을 비우고 다시 그린다,
+      // 그리고 기존 .pg-skip 상태를 체크박스 초기값에 반영.
+      window.addEventListener('load', () => {
+        const pages  = Array.from(document.querySelectorAll('.intro-section, .scn-section'));
+        const thumbs = document.getElementById('pgThumbs');
+        const status = document.getElementById('pgStatus');
+        if (thumbs) thumbs.innerHTML = '';                 // 다운로드본 재열람 시 썸네일 중복 방지
+        const upd = () => {
+          const sel = pages.filter(p => !p.classList.contains('pg-skip')).length;
+          if (status) status.textContent = sel + ' / ' + pages.length + ' 페이지 선택';
+        };
+        pages.forEach((pg, i) => {
+          const n = i + 1;
+          const skipped = pg.classList.contains('pg-skip');
+          const thumb = document.createElement('label');
+          thumb.className = 'pg-thumb ' + (skipped ? 'off' : 'on');
+          thumb.title = '페이지 ' + n;
+          thumb.innerHTML = '<input type="checkbox"' + (skipped ? '' : ' checked') + '>'
+                          + '<span class="pg-num">' + n + '</span><div class="pg-mini"></div>';
+          const mini = thumb.querySelector('.pg-mini');
+          const clone = pg.cloneNode(true);
+          clone.classList.remove('pg-skip');               // 썸네일은 항상 보이게 (상태는 체크박스로 표현)
+          clone.style.pageBreakAfter = 'auto';
+          clone.style.marginBottom   = '0';
+          mini.appendChild(clone);
+          thumb.querySelector('input').addEventListener('change', e => {
+            const on = e.target.checked;
+            if (on) { pg.classList.remove('pg-skip'); thumb.classList.remove('off'); thumb.classList.add('on'); }
+            else    { pg.classList.add('pg-skip');    thumb.classList.remove('on');  thumb.classList.add('off'); }
+            upd();
+          });
+          thumbs.appendChild(thumb);
+        });
+        upd();
+        const toggleAll = on => {
+          document.querySelectorAll('.pg-thumb input').forEach(cb => {
+            if (cb.checked !== on) { cb.checked = on; cb.dispatchEvent(new Event('change')); }
+          });
+        };
+
+        // ── 책 넘김 모드 ─────────────────────────────────────────────────────
+        // 한 페이지씩 중앙 고정, 좌우 화살표/키보드/썸네일 클릭으로 이동. 선택 상태는 영향 없음.
+        // 뷰포트 크기에 맞춰 scale 자동 조정 (A4 가로 1123×794 를 가용 영역에 맞춤).
+        let viewMode = 'scroll';
+        let curPage  = 0;
+        const prevBtn = document.getElementById('bookPrev');
+        const nextBtn = document.getElementById('bookNext');
+        const modeBtn = document.getElementById('btnMode');
+        const updateScale = () => {
+          if (viewMode !== 'book') return;
+          // 가용 폭 = 뷰포트 - 우측 패널(190+2) - prev 버튼(46+10 좌) - next 버튼(46+10 패널 오른쪽) - 여유
+          const availW = window.innerWidth  - 192 - 56 - 56 - 20;
+          const availH = window.innerHeight - 32;               // 상하 16px 여백
+          const scale  = Math.min(availW / 1123, availH / 794, 1);
+          document.body.style.setProperty('--book-scale', scale.toFixed(4));
+        };
+        const showPage = idx => {
+          curPage = Math.max(0, Math.min(pages.length - 1, idx));
+          pages.forEach((p, i) => p.classList.toggle('pg-cur', i === curPage));
+          document.querySelectorAll('.pg-thumb').forEach((t, i) => t.classList.toggle('cur', i === curPage));
+          if (prevBtn) prevBtn.disabled = (curPage === 0);
+          if (nextBtn) nextBtn.disabled = (curPage === pages.length - 1);
+          // 썸네일 세로 스크롤 — 우측 패널 안에서 현재 썸네일이 보이게
+          const curThumb = document.querySelectorAll('.pg-thumb')[curPage];
+          if (curThumb && curThumb.scrollIntoView) {
+            curThumb.scrollIntoView({ behavior:'smooth', block:'center', inline:'nearest' });
+          }
+        };
+        const setMode = mode => {
+          viewMode = mode;
+          document.body.classList.toggle('book-mode', mode === 'book');
+          if (modeBtn) modeBtn.textContent = mode === 'book' ? '📜 스크롤 보기' : '📖 책 보기';
+          if (mode === 'book') { updateScale(); showPage(curPage); }
+          else {
+            pages.forEach(p => p.classList.remove('pg-cur'));
+            document.querySelectorAll('.pg-thumb').forEach(t => t.classList.remove('cur'));
+          }
+        };
+        if (modeBtn)  modeBtn.addEventListener('click',  () => setMode(viewMode === 'book' ? 'scroll' : 'book'));
+        if (prevBtn)  prevBtn.addEventListener('click',  () => showPage(curPage - 1));
+        if (nextBtn)  nextBtn.addEventListener('click',  () => showPage(curPage + 1));
+        window.addEventListener('resize', updateScale);
+        document.addEventListener('keydown', e => {
+          if (viewMode !== 'book') return;
+          if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+          if (e.key === 'ArrowLeft'  || e.key === 'PageUp')   { e.preventDefault(); showPage(curPage - 1); }
+          if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); showPage(curPage + 1); }
+          if (e.key === 'Home')  { e.preventDefault(); showPage(0); }
+          if (e.key === 'End')   { e.preventDefault(); showPage(pages.length - 1); }
+        });
+        // 썸네일 클릭 — 체크박스 영역이 아니면 "그 페이지로 이동"(책 모드) 또는 "그 섹션으로 스크롤"(스크롤 모드)
+        document.querySelectorAll('.pg-thumb').forEach((thumb, i) => {
+          thumb.addEventListener('click', e => {
+            if (e.target.tagName === 'INPUT') return;    // 체크박스는 자기 핸들러에 맡김
+            e.preventDefault();                           // 라벨이 체크박스 토글하는 걸 막음
+            if (viewMode === 'book') showPage(i);
+            else pages[i].scrollIntoView({ behavior:'smooth', block:'start' });
+          });
+        });
+
+        // 인쇄 시엔 임시로 스크롤 모드로 복귀 — 책 모드의 fixed/transform 이 인쇄 레이아웃을 깨뜨리지 않도록
+        const doPrint = () => {
+          const wasBook = (viewMode === 'book');
+          if (wasBook) {
+            setMode('scroll');
+            const restore = () => { setMode('book'); window.removeEventListener('afterprint', restore); };
+            window.addEventListener('afterprint', restore);
+          }
+          window.print();
+        };
+        document.getElementById('btnPrintSel').addEventListener('click', doPrint);
+        document.getElementById('btnPrintAll').addEventListener('click', () => { toggleAll(true); setTimeout(doPrint, 50); });
+        document.getElementById('btnSelAll').addEventListener('click',   () => toggleAll(true));
+        document.getElementById('btnSelNone').addEventListener('click',  () => toggleAll(false));
+        document.getElementById('btnClose').addEventListener('click',    () => window.close());
+        // 메뉴 접기/펼치기 — 기본은 접힘(ctrl-collapsed), 사용자가 토글 시 상태 뒤집기
+        const ctrlToggle = document.getElementById('pgCtrlToggle');
+        if (ctrlToggle) ctrlToggle.addEventListener('click', () => {
+          const bar = document.getElementById('pgToolbar');
+          const collapsed = bar.classList.toggle('ctrl-collapsed');
+          ctrlToggle.textContent = collapsed ? '⚙ 메뉴 ▶' : '⚙ 메뉴 ▼';
+          ctrlToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        });
+        // HTML 다운로드 — 현재 문서 전체(.pg-skip 상태 포함) 를 저장. 다시 열면 썸네일 재생성 + 선택 상태 복원.
+        //   이미지는 <base href> 가 가리키는 원격 URL 에 의존 (오프라인 열람 시 이미지만 못 뜰 수 있음).
+        document.getElementById('btnDownload').addEventListener('click', () => {
+          const html = '<!doctype html>\\n' + document.documentElement.outerHTML;
+          const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+          const url  = URL.createObjectURL(blob);
+          const a    = document.createElement('a');
+          const d    = new Date();
+          const stamp = d.getFullYear() + ('0'+(d.getMonth()+1)).slice(-2) + ('0'+d.getDate()).slice(-2);
+          a.href = url;
+          a.download = 'hakata-3scn-10year-' + stamp + '.html';
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 100);
+        });
+      });
+    </sc`+`ript>
   </body></html>`);
   w.document.close();
 }
