@@ -6007,6 +6007,13 @@ function drawPeerPL(m) {
   // 손익계산서에 들어가는 것은 이자뿐이다. 원금은 아래 수지 줄에서 따로 본다.
   const intExp       = loanPeer > 0 && loanRatePeer > 0 ? loanPeer * (loanRatePeer / 100) : 0;
   PEER_DS = { ...DS, loan:loanPeer, rate:loanRatePeer, years:loanYears, grace:loanGrace, method:loanMethod };
+  // 10년 뷰 Ⅴ.영업이익 y+0 과 동일 기준으로 쓸 영업이익/EBITDA 를 저장 —
+  // 1차로는 공식적 산식(= opProfit − 선체이자 − 10년 수리비) 로 세팅해두고, drawPeerPL10 이 돌면
+  // 집계 결과(PEER_PL_PROJ[iOpP][0]) 로 덮어써서 10년 표 y+0 셀 값과 완전히 일치시킨다.
+  // (반올림·세목 집계 경로가 두 산식에서 ±수십백만 어긋나는 걸 10년 표 집계값 기준으로 통일.)
+  const _rep10yForPL = (typeof GROW !== 'undefined' && GROW.repair10yBase > 0) ? GROW.repair10yBase * 1e6 : 0;
+  PEER_PL.opProfit10 = opProfit - intExp - _rep10yForPL;
+  PEER_PL.ebitda10   = PEER_PL.opProfit10 + opDep;
   if (intExp > 0) {
     const preProfit = opProfit - intExp;
     const preColor  = preProfit < 0 ? ' style="color:var(--warn)"' : '';
@@ -6606,6 +6613,20 @@ function drawPeerPL(m) {
   PEER_PL_IDX = { iNet, iCapex, iSinking, iOpP, iSales, iOpDep, iPax, iCargo, iOp, iSga,
                   iOpWage, iOpSev, iOpWelf, iAgency, iHull };
   drawPeerPL10();
+  // 10년 표 y+0 집계값으로 opProfit10/ebitda10 를 덮어씀 — render 헤더 KPI 와 인쇄 KPI 가
+  // 10년 손익계산서 표의 Ⅴ.영업이익 y+0 셀과 완전히 같은 숫자로 뜨도록. iOpDep 은 운항원가의
+  // 감가상각비(접안시설 감가 제외) 이므로 EBITDA 는 opProfit10 + 그 값 그대로.
+  if (PEER_PL && PEER_PL_PROJ && PEER_PL_IDX.iOpP != null && PEER_PL_PROJ[PEER_PL_IDX.iOpP]) {
+    const _opPMil   = PEER_PL_PROJ[PEER_PL_IDX.iOpP][0];
+    const _opDepMil = PEER_PL_IDX.iOpDep != null && PEER_PL_PROJ[PEER_PL_IDX.iOpDep]
+                      ? PEER_PL_PROJ[PEER_PL_IDX.iOpDep][0] : null;
+    if (_opPMil != null && isFinite(_opPMil)) {
+      PEER_PL.opProfit10 = _opPMil * 1e6;
+      if (_opDepMil != null && isFinite(_opDepMil)) {
+        PEER_PL.ebitda10 = (_opPMil + _opDepMil) * 1e6;
+      }
+    }
+  }
 
   // ── 운항기타 산출 근거 모달 내용 갱신 ──
   // 체크박스 반영된 적용값(m.voyR)을 쓴다 — 꺼져 있으면 ×1 로 표시
@@ -7923,9 +7944,14 @@ function render(){
   const onPeer = (ACTIVE_TAB === 'tabB') && PEER_PL;
   const P = PEER_PL;
 
-  const opV   = onPeer ? P.opProfit : A.opProfit;
+  // 대조 선박 탭 헤더 KPI 는 지금 보고 있는 m-탭에 따라 영업이익 기준 분기 :
+  //   · 손익계산서 탭(plPeer) : K-IFRS (opProfit) — 손익계산서 표 Ⅴ.영업이익과 일치 (+129)
+  //   · 10개년 예상 탭(pl10)  : 선체이자+10년 수리비 포함 (opProfit10) — 10년 표 y+0 Ⅴ.영업이익과 일치 (-1,243)
+  const _curMtab  = document.querySelector('.mtab.on')?.dataset.mtab;
+  const _useKifrs = (_curMtab === 'plPeer');
+  const opV   = onPeer ? (_useKifrs ? P.opProfit : (P.opProfit10 != null ? P.opProfit10 : P.opProfit)) : A.opProfit;
   const salV  = onPeer ? P.sales    : A.sales;
-  const ebV   = onPeer ? P.ebitda   : A.opProfit + m.DEP;
+  const ebV   = onPeer ? (_useKifrs ? P.ebitda   : (P.ebitda10   != null ? P.ebitda10   : P.ebitda))   : A.opProfit + m.DEP;
   const bepV  = onPeer ? m.qForPeer(0)   : q0;
   const tgtV  = onPeer ? m.qForPeer(m.r) : qT;
   const paxV  = onPeer ? m.paxPeer  : m.paxAct;
@@ -8718,17 +8744,22 @@ function setMTab(t){
   PL10_MODE = (t === 'pl10') ? 'multi' : 'single';
   // 10개년에 처음 진입하면 좌측의 섹션(details.grp)을 모두 접고 증감률 탭을 디폴트로.
   // model 분기(ACTIVE_TAB === 'tabB')는 그대로 유지해야 peer-기반 수치가 보존된다.
+  let _rendered = false;
   if (prevMode !== 'multi' && PL10_MODE === 'multi') {
     document.querySelectorAll('#tabB details.grp').forEach(d => { d.open = false; });
     PL10_PANEL = 'grow';
     ACTIVE_TAB = 'tabB';            // peer 분기 유지
     render();
+    _rendered = true;
     applyPLView();
   } else {
     const want = MTAB_SET[t];
-    if (want && ACTIVE_TAB !== want) setSetTab(want);   // setSetTab 이 applyPLView 까지 한다
+    if (want && ACTIVE_TAB !== want) { setSetTab(want); _rendered = true; }   // setSetTab 이 applyPLView 까지 한다 (render 포함)
     else applyPLView();
   }
+  // 헤더 KPI 는 _curMtab(plPeer vs pl10)에 따라 K-IFRS/10년 기준이 갈리므로 — ACTIVE_TAB 이 안 바뀌어도
+  // mtab 전환 시 render() 를 다시 돌려야 헤더가 반영된다. (예: pl10 → plPeer 둘 다 ACTIVE_TAB='tabB')
+  if (!_rendered) render();
   if (t === 'cvp' && LAST_M) requestAnimationFrame(() => drawCVP(LAST_M));
 }
 document.querySelectorAll('.mtab').forEach(b => {
@@ -8782,10 +8813,15 @@ async function print3ScenariosPL10() {
       // 현재 설정 승객수 (iPaxPeer 가 기반) 로 손익 계산
       const paxCur = m.paxPeer || 0;
       const sim    = m.simPeer ? m.simPeer(paxCur) : null;
-      const sales  = sim ? sim.sales : 0;
-      const opP    = sim ? sim.op    : 0;
       const dep    = (m.opDepPeer || 0);
-      const ebitda = opP + dep;
+      // 매출·영업이익·EBITDA 는 pl10 탭 헤더(render 의 opProfit10/ebitda10 — 10년 표 y+0 집계와 일치)와 동일 소스.
+      // simPeer 로 재계산하면 drawPeerPL(K-IFRS 분류 기반) 과 백만원 단위 반올림 차이가 생겨 헤더와 어긋남.
+      const P = (typeof PEER_PL !== 'undefined' && PEER_PL) ? PEER_PL : null;
+      const sales  = P ? P.sales : (sim ? sim.sales : 0);
+      const opP10  = (P && P.opProfit10 != null) ? P.opProfit10 : (sim ? sim.op : 0);
+      const ebitda10 = (P && P.ebitda10 != null) ? P.ebitda10 : (opP10 + dep);
+      // sim50 (50% 승선율 시) 는 10년 표에 없어서 simPeer 로 뽑되, 같은 10년 조정(= opP10 − sim.op 의 차이) 을 반영.
+      const _delta10 = sim ? (sim.op - opP10) : 0;    // 양수 — 선체이자 + 수리비 ≈ 1,372M 수준
       const bep    = m.qForPeer ? m.qForPeer(0)   : null;        // 손익분기 승객수
       const tgt    = m.qForPeer ? m.qForPeer(m.r) : null;        // 목표 영업이익률 달성 승객수
       const cap    = m.peer && m.peer.pax > 0 ? m.peer.pax : 0;
@@ -8793,12 +8829,13 @@ async function print3ScenariosPL10() {
       const peerCap = cap * voy;
       const pax50  = cap > 0 ? Math.round(cap * 0.5 * voy) : null;
       const sim50  = (pax50 && m.simPeer) ? m.simPeer(pax50) : null;
+      const sim50Op10 = sim50 ? sim50.op - _delta10 : null;
       const utilPct = (voy / (365*2)) * 100;
       kpi.sales     = sales;
-      kpi.opProfit  = opP;
-      kpi.opMargin  = sales > 0 ? opP / sales : 0;
-      kpi.ebitda    = ebitda;
-      kpi.ebMargin  = sales > 0 ? ebitda / sales : 0;
+      kpi.opProfit  = opP10;
+      kpi.opMargin  = sales > 0 ? opP10 / sales : 0;
+      kpi.ebitda    = ebitda10;
+      kpi.ebMargin  = sales > 0 ? ebitda10 / sales : 0;
       kpi.paxCur    = paxCur;
       kpi.loadCur   = peerCap > 0 ? paxCur / peerCap : 0;
       kpi.bep       = bep;
@@ -8807,8 +8844,8 @@ async function print3ScenariosPL10() {
       kpi.tgtLoad   = (tgt && peerCap > 0) ? tgt / peerCap : null;
       kpi.tgtR      = m.r;
       kpi.pax50     = pax50;
-      kpi.sim50Op   = sim50 ? sim50.op : null;
-      kpi.sim50Mg   = sim50 ? sim50.margin : null;
+      kpi.sim50Op   = sim50Op10;
+      kpi.sim50Mg   = (sim50 && sim50.sales > 0) ? sim50Op10 / sim50.sales : null;
       kpi.voy       = voy;
       kpi.utilPct   = utilPct;
       kpi.cap       = cap;
