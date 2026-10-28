@@ -530,6 +530,8 @@
   table.pl.pl10 tr.sub2 th{padding-left:34px}
   /* 승선율 상한이 적용된 셀 — 얇은 호박색 외곽선으로 "cap 걸림" 신호 */
   table.pl.pl10 td.capped{outline:1.5px solid #D9A520;outline-offset:-2px;background:#FFF8EC !important}
+  /* 화물보상 적용된 셀 — 얇은 초록 외곽선 */
+  table.pl.pl10 td.comp-boost{outline:1.5px solid #1C6B4A;outline-offset:-2px;background:#E8F5EE !important;color:#0E3B26}
   /* 좌측 설정 카드의 증감률 입력 : dirty 상태(기본값에서 벗어남) 시각 강조 */
   #growSection input.dirty{border-color:var(--navy);background:#EBF2FB;font-weight:600;color:var(--navy)}
   details.grp>summary .badge{font-size:9px;font-weight:700;padding:0 5px;border-radius:8px;
@@ -5876,20 +5878,50 @@ function drawPeerPL(m) {
   // 선적율은 7.25 처럼 소수점 둘째 자리까지 쓸 수 있으므로 toFixed(2) 후 뒤쪽 0 만 떼낸다.
   const _cargoLoad = (num('iCargoLoad', DEFAULTS.cargoLoad)).toFixed(2).replace(/\.?0+$/, '') + '%';
   // 여객수입 행 옆에 승선율 상한 체크박스 + 입력란 (좌측 설정 패널과 양방향 동기화 — JS wiring 블록 참조)
+  //   상한이 켜져있을 때만 "화물보상" 체크박스가 함께 노출됨 — 상한으로 깎인 여객수입만큼 화물수입을 자동 보전.
   const _maxOnChecked = !!el('iMaxLoadPeerOn')?.checked;
   const _maxVal       = parseFloat(el('iMaxLoadPeer')?.value) || 60;
+  const _cargoCompOn  = !!window._cargoCompOn;
+  const _compBox = _maxOnChecked
+    ? ` <label style="display:inline-flex;align-items:center;gap:3px;margin-left:4px;font-weight:400;font-size:10.5px;color:#1C6B4A;cursor:pointer;vertical-align:middle" title="상한으로 깎인 여객수입만큼 화물수입을 자동 보전 — 손익계산서 화물수입 라인에 초록 외곽선 표시">`
+      + `<input type="checkbox" id="iCargoCompOnB" style="margin:0;cursor:pointer;accent-color:#1C6B4A"${_cargoCompOn ? ' checked' : ''}>`
+      + `화물보상</label>`
+    : '';
   const _inlineCap = ` <label style="display:inline-flex;align-items:center;gap:3px;margin-left:6px;font-weight:400;font-size:10.5px;color:var(--navy);cursor:pointer;vertical-align:middle" title="좌측 '시뮬레이션 승객수' 블록과 동기화 · 체크 시 10년 뷰 여객수입이 이 승선율에 해당하는 금액을 넘지 못하도록 cap">`
     + `<input type="checkbox" id="iMaxLoadPeerOnB" style="margin:0;cursor:pointer"${_maxOnChecked ? ' checked' : ''}>`
-    + `상한`
+    + `상한 승선율`
     + `<input type="number" min="0" max="100" step="1" id="iMaxLoadPeerB" value="${_maxVal}"${_maxOnChecked ? '' : ' disabled'} style="width:42px;padding:1px 3px;font-size:10.5px;text-align:right;font-variant-numeric:tabular-nums">`
-    + `<span style="color:#5C6B7F">%</span></label>`;
-  html += rowD(`여객수입 <span class="tagv est">승선율 ${_loadPct}</span>${_inlineCap}`,   paxRev,   sales);
+    + `<span style="color:#5C6B7F">%</span></label>${_compBox}`;
+  // 단일연도 손익계산서 : 상한+보상 모두 ON + 승선율이 상한을 넘길 때만 보전 적용 (default iLoadPeer 50 < 60 → 보전 0)
+  const _capWonSing  = (_maxOnChecked && m.peer && m.peer.pax > 0 && m.voyPeer > 0 && m.farePeer > 0)
+    ? m.peer.pax * (_maxVal / 100) * m.voyPeer * m.farePeer : null;
+  const _paxLossSing = (_capWonSing != null && paxRev > _capWonSing) ? (paxRev - _capWonSing) : 0;
+  const _showComp    = _maxOnChecked && _cargoCompOn && _paxLossSing > 0;
+  const _dispPaxRev    = (_capWonSing != null && paxRev > _capWonSing) ? _capWonSing : paxRev;
+  const _dispCargoRev  = _showComp ? cargoRev + _paxLossSing : cargoRev;
+  html += rowD(`여객수입 <span class="tagv est">승선율 ${_loadPct}</span>${_inlineCap}`,   _dispPaxRev,   sales);
   // 산타모니카 : CARGO_CASES.extra 는 운임표 미산정 항목이라 계산 금액에 '+α' 표기
+  // 화물보상 ON + 상한 적용으로 손실이 발생한 경우 — 화물수입 라인에 보전 금액 더해 표시 + 초록 외곽선.
+  //   총 매출(sales) 은 동일 (여객 감소분 = 화물 증가분 → 상쇄) → 영업이익 등 downstream 변동 없음.
+  const _cargoCompStyle = _showComp
+    ? ' style="outline:1.5px solid #1C6B4A;outline-offset:-2px;background:#E8F5EE"'
+    : '';
+  const _cargoCompTitle = _showComp
+    ? ` title="화물보상 적용 — 상한으로 깎인 여객수입 ${won(Math.round(_paxLossSing))}원이 화물수입으로 전가됨"`
+    : '';
+  const _cargoCompTag = _showComp
+    ? ` <span class="tagv est" style="background:#E8F5EE;color:#1C6B4A">보상 +${won(Math.round(_paxLossSing))}</span>`
+    : '';
   if (isSanta && selectedCase.extra && cargoRev > 0) {
     const alpha = `<span class="amb" style="font-size:11px;margin-left:4px" title="${selectedCase.extra} — 특정 화물에 대한 운임이 미반영·미공시되어 있어, 남는 부분에 대한 이익 여분">+α</span>`;
-    html += `<tr class="d"><td>화물수입 <span class="tagv est">선적율 ${_cargoLoad}</span></td><td>${acc(Math.round(cargoRev))}${alpha}</td>${fp(cargoRev, sales)}${fp(cargoRev, sales)}</tr>`;
+    html += `<tr class="d"${_cargoCompTitle}><td${_cargoCompStyle}>화물수입 <span class="tagv est">선적율 ${_cargoLoad}</span>${_cargoCompTag}</td><td${_cargoCompStyle}>${acc(Math.round(_dispCargoRev))}${alpha}</td>${fp(_dispCargoRev, sales)}${fp(_dispCargoRev, sales)}</tr>`;
   } else {
-    html += rowD(`화물수입 <span class="tagv est">선적율 ${_cargoLoad}</span>`, cargoRev, sales);
+    const _nameHtml = `화물수입 <span class="tagv est">선적율 ${_cargoLoad}</span>${_cargoCompTag}`;
+    if (_showComp) {
+      html += `<tr class="d"${_cargoCompTitle}><td${_cargoCompStyle}>${_nameHtml}</td><td${_cargoCompStyle}>${acc(Math.round(_dispCargoRev))}</td>${fp(_dispCargoRev, sales)}${fp(_dispCargoRev, sales)}</tr>`;
+    } else {
+      html += rowD(_nameHtml, cargoRev, sales);
+    }
   }
   html += `<tr class="d tip" title="하카타 외항선로 가정 — 선내 면세점(수입임대료) 3개년 평균(성희) ${won(A.dutyFreeRent)}원. 대저페리 임대료수입 계정과는 별개."><td>면세점(수입임대료)<span class="tagv est">3개년 평균(성희)</span></td>${fv(rentRev)}${fp(rentRev, sales)}${fp(rentRev, sales)}</tr>`;
 
@@ -6271,14 +6303,39 @@ function drawPeerPL(m) {
   if (_maxLoadOn && m.peer && m.peer.pax > 0 && m.voyPeer > 0 && m.farePeer > 0) {
     _paxMaxCapMil = m.peer.pax * (_maxLoadPct / 100) * m.voyPeer * m.farePeer / 1e6;
   }
-  // 10년 뷰 여객수입 행 옆 인라인 컨트롤 (iMaxLoadPeerOnC/iMaxLoadPeerC) — 좌측 설정과 양방향 동기화 (JS wiring 블록 참조)
+  // 10년 뷰 여객수입 행 옆 인라인 컨트롤 (iMaxLoadPeerOnC/iMaxLoadPeerC + iCargoCompOnC + iShowPaxPerVoyC)
+  const _cargoCompOn10 = !!window._cargoCompOn;
+  const _showPaxOn10   = !!window._showPaxPerVoy;
+  const _compBox10 = _maxLoadOn
+    ? ` <label style="display:inline-flex;align-items:center;gap:3px;margin-left:4px;font-weight:400;font-size:10.5px;color:#1C6B4A;cursor:pointer;vertical-align:middle" title="상한으로 깎인 여객수입만큼 화물수입을 자동 보전 — 10년 표 화물수입 라인에 초록 외곽선 표시">`
+      + `<input type="checkbox" id="iCargoCompOnC" style="margin:0;cursor:pointer;accent-color:#1C6B4A"${_cargoCompOn10 ? ' checked' : ''}>`
+      + `화물보상</label>`
+    : '';
+  const _paxVoyBox = ` <label style="display:inline-flex;align-items:center;gap:3px;margin-left:4px;font-weight:400;font-size:10.5px;color:var(--muted);cursor:pointer;vertical-align:middle" title="체크 시 — 여객수입 셀에 '항차당 N명 N%', 화물수입 셀에 '선적율 N%' 서브텍스트 표시 (성장률·cap·보상 반영)">`
+    + `<input type="checkbox" id="iShowPaxPerVoyC" style="margin:0;cursor:pointer"${_showPaxOn10 ? ' checked' : ''}>`
+    + `항차·선적 표시</label>`;
   const _inlineCap10 = ` <label style="display:inline-flex;align-items:center;gap:3px;margin-left:6px;font-weight:400;font-size:10.5px;color:var(--navy);cursor:pointer;vertical-align:middle" title="좌측 '시뮬레이션 승객수' 블록과 동기화 · 체크 시 10년 여객수입이 이 승선율에 해당하는 금액을 넘지 못하도록 cap">`
     + `<input type="checkbox" id="iMaxLoadPeerOnC" style="margin:0;cursor:pointer"${_maxLoadOn ? ' checked' : ''}>`
-    + `상한`
+    + `상한 승선율`
     + `<input type="number" min="0" max="100" step="1" id="iMaxLoadPeerC" value="${_maxLoadPct}"${_maxLoadOn ? '' : ' disabled'} style="width:42px;padding:1px 3px;font-size:10.5px;text-align:right;font-variant-numeric:tabular-nums">`
-    + `<span style="color:#5C6B7F">%</span></label>`;
-  const iPax   = add({ cls:'d', name:`여객수입 <span class="tagv est">승선율 ${_load10}</span>${_inlineCap10}`, v:paxRev, gk:'gPax', maxCap:_paxMaxCapMil });
-  const iCargo = add({ cls:'d', name:`화물수입 <span class="tagv est">선적율 ${_cargoLd10}</span>${_alphaTag}`, v:cargoRev, gk:'gCargo' });
+    + `<span style="color:#5C6B7F">%</span></label>${_compBox10}${_paxVoyBox}`;
+  // iPax 행에 fareWon/voyCount/peerCap 저장 — render 단계에서 "항차당 N명 N%" 역산에 사용
+  const iPax   = add({ cls:'d', name:`여객수입 <span class="tagv est">승선율 ${_load10}</span>${_inlineCap10}`, v:paxRev, gk:'gPax', maxCap:_paxMaxCapMil,
+                       fareWon: m.farePeer || 0, voyCount: m.voyPeer || 0, peerCap: (m.peer && m.peer.pax) || 0 });
+  // 화물수입 — 화물보상 ON + 상한 ON 일 때, 매년 iPax cap 손실분을 compGain 으로 넣어 projection 에서 더한다.
+  //   compGain 은 백만원 단위 배열, drawPeerPL10 의 projection 단계에서 base × (1+g)^k 에 가산.
+  //   cap 이 걸리지 않은 해는 compGain[k] = 0 → 변동 없음.
+  const _cargoCompActive = _maxLoadOn && !!window._cargoCompOn && _paxMaxCapMil != null;
+  let _cargoCompGain = null;
+  if (_cargoCompActive) {
+    const gPaxRate = (GROW.gPax || 0) / 100;
+    const paxBaseMil = paxRev / 1e6;
+    _cargoCompGain = Array.from({length: 11}, (_, k) => {
+      const uncap = paxBaseMil * Math.pow(1 + gPaxRate, k);
+      return uncap > _paxMaxCapMil ? (uncap - _paxMaxCapMil) : 0;
+    });
+  }
+  const iCargo = add({ cls:'d', name:`화물수입 <span class="tagv est">선적율 ${_cargoLd10}</span>${_alphaTag}${_cargoCompActive ? ' <span class="tagv est" style="background:#E8F5EE;color:#1C6B4A">보상</span>' : ''}`, v:cargoRev, gk:'gCargo', compGain:_cargoCompGain });
   const iRent  = add({ cls:'d', name:'면세점(수입임대료) <span class="tagv est" style="cursor:help" title="하카타 외항선로 가정 — 선내 면세점 임대료 3개년 평균(성희) 39,330,000원. 증감률 가정은 좌측 패널에서 조정 가능.">3개년 평균(성희)</span>', v:rentRev, gk:'gRent' });
   const iDuty  = add({ cls:'d', name:'기타수입 <span class="tagv est" style="cursor:help" title="대저페리는 내항선이라 현재는 집계된 기타수입(면세품 판매 등) 이 없지만, 외항선으로 취급하면 면세품 판매 수입을 포함한 기타수입을 기대해볼 수 있음. 잠재 매출로 감안 필요.">감안</span>', v:null, gk:'gDuty' });
   R10[iSales].agg = [[iPax,1],[iCargo,1],[iRent,1],[iDuty,1]];
@@ -6937,12 +6994,14 @@ function drawPeerPL10() {
     } else if (r.gk) {
       const g = (GROW[r.gk] || 0) / 100;
       const base = toMil(r.v);
-      // r.maxCap (백만원) 가 지정된 행은 매년 복리 상승 값을 그 cap 으로 clamp
-      //   — 여객수입 승선율 상한 체크박스 ON 시 iPax 행에 세팅됨.
+      // r.maxCap (백만원) 가 지정된 행은 매년 복리 상승 값을 그 cap 으로 clamp (여객수입 상한)
+      // r.compGain (백만원 배열) 가 지정된 행은 매년 그 값을 base growth 에 가산 (화물보상)
       proj[i] = Array.from({length: YN+1}, (_, k) => {
         if (base == null) return null;
-        const v = base * Math.pow(1 + g, k);
-        return (r.maxCap != null && v > r.maxCap) ? r.maxCap : v;
+        let v = base * Math.pow(1 + g, k);
+        if (r.maxCap != null && v > r.maxCap) v = r.maxCap;
+        if (r.compGain && r.compGain[k] > 0) v = v + r.compGain[k];
+        return v;
       });
     } else {
       const base = toMil(r.v);
@@ -7042,16 +7101,45 @@ function drawPeerPL10() {
     const _cellTitle = k => (r.cellTips && r.cellTips[k])
       ? ` title="${String(r.cellTips[k]).replace(/"/g, '&quot;')}" style="cursor:help"`
       : '';
-    // 승선율 상한 cap 이 실제로 걸린 셀 — 외곽선으로 시각 표시 (호박색 얇은 테두리).
-    //   r.maxCap 가 세팅된 행(여객수입)에서 projection 값이 cap 과 같으면 clamped 됨.
+    // 승선율 상한 cap 이 실제로 걸린 셀 — 호박색 얇은 외곽선.
+    //   r.maxCap 가 세팅된 행(여객수입)에서 projection 값이 cap 과 같으면 clamped.
     const _capHit  = (v) => (r.maxCap != null && v != null && Math.abs(v - r.maxCap) < 0.5);
     const _capCls  = (v) => _capHit(v) ? ' capped' : '';
     const _capAttr = (v) => _capHit(v) ? ` title="승선율 상한(${Math.round(r.maxCap).toLocaleString('ko-KR')}백만) 적용 중"` : '';
+    // 화물보상 — r.compGain[k] > 0 인 년차는 초록 외곽선 + 셀 안에 "+X.X%" 증감률 표시
+    //   % = compGain[k] / (projValue - compGain[k])  — 복리 기본 성장 대비 보상이 몇 % 더 필요한지
+    const _compHit = (k) => (r.compGain && k > 0 && k <= 10 && r.compGain[k] > 0);
+    const _compAvgHit = () => (r.compGain && r.compGain.slice(1).some(x => x > 0));
+    const _compCls = (k) => _compHit(k) ? ' comp-boost' : '';
+    const _compAttr = (k) => _compHit(k)
+      ? ` title="화물보상 +${Math.round(r.compGain[k]).toLocaleString('ko-KR')}백만 — 상한 손실 보전"`
+      : '';
+    // 여객수입 — 항차당 인원·승선율 / 화물수입 — 선적율. 공통 토글 window._showPaxPerVoy
+    //   각 년차 금액 아래에 역산한 metric 서브텍스트. 성장률 + cap/보상 반영된 projection 값에서 역산.
+    const _detailSuffix = (v, k) => {
+      if (!window._showPaxPerVoy || v == null) return '';
+      // 여객수입 — 항차당 N명 + 승선율 N%
+      if (r.gk === 'gPax' && r.fareWon > 0 && r.voyCount > 0 && r.peerCap > 0) {
+        const pax = v * 1e6 / r.fareWon;
+        const perVoy = Math.round(pax / r.voyCount);
+        const loadPct = perVoy / r.peerCap * 100;
+        return `<br><small style="font-size:9px;color:var(--muted);font-weight:500;display:block;line-height:1.2">항차당 ${perVoy.toLocaleString('ko-KR')}명<br>${loadPct.toFixed(1)}%</small>`;
+      }
+      // 화물수입 — 선적율 N.NN% (base 대비 v 비율 × 현재 iCargoLoad)
+      if (r.gk === 'gCargo' && p && p[0] > 0) {
+        const baseLoad = parseFloat(el('iCargoLoad')?.value) || 0;
+        if (baseLoad <= 0) return '';
+        const implied = baseLoad * (v / p[0]);
+        const _fmt = n => n.toFixed(2).replace(/\.?0+$/, '');
+        return `<br><small style="font-size:9px;color:var(--muted);font-weight:500;display:block;line-height:1.2">선적율<br>${_fmt(implied)}%</small>`;
+      }
+      return '';
+    };
     return `<tr class="${r.cls}${openCls}${r.tip ? ' tip' : ''}"${dataAttr}${clkAttr}${clkStyle}${tipAttr}${hiddenAttr}>
       <th>${caret}${r.name}</th>`
       + `
       <td class="base ${cellCls(p[0])}${_capCls(p[0])}"${_cellTitle(0)}${_capAttr(p[0])}>${_fmt(p[0])}</td>
-      ${p.slice(1).map((v, idx) => `<td class="${cellCls(v)}${_capCls(v)}"${_cellTitle(idx+1)}${_capAttr(v)}>${_fmt(v)}</td>`).join('')}
+      ${p.slice(1).map((v, idx) => `<td class="${cellCls(v)}${_capCls(v)}${_compCls(idx+1)}"${_cellTitle(idx+1)}${_capAttr(v)}${_compAttr(idx+1)}>${_fmt(v)}${_detailSuffix(v, idx+1)}</td>`).join('')}
       <td class="avg ${cellCls(avg)}${_capCls(avg)}"${_capAttr(avg)}>${_fmt(avg)}</td>
     </tr>`;
   }).join('');
@@ -8408,6 +8496,19 @@ function _refreshScenarioSummary() {
 // 로드 시 요약셀 초기화
 if (typeof _refreshScenarioSummary === 'function') _refreshScenarioSummary();
 
+// 대조선박 설정의 iCargoLoad 변경 → 현재 선택된 시나리오의 Cargo 입력에 동기화 (역방향 sync).
+//   역방향이 없으면 iCargoLoad 값이 revenue 계산(cargoLoadP = scnCargo/100) 에 반영 안 됨.
+el('iCargoLoad')?.addEventListener('input', () => {
+  const v = parseFloat(el('iCargoLoad').value);
+  if (isNaN(v)) return;
+  const scn = document.querySelector('input[name="iScenario"]:checked')?.value || 'normal';
+  const cap = scn.charAt(0).toUpperCase() + scn.slice(1);
+  const scnInp = el('i' + cap + 'Cargo');
+  if (scnInp) scnInp.value = v;
+  _refreshScenarioSummary();
+  render();
+});
+
 // ── 손익계산서 캡션 최악시나리오 전환 스위치 (단일연도·10개년·하마유 S0 공용) ─────
 // 세 호스트 (plBodyB-single · plBodyB-multi · ovHamayuCombo) 에 같은 스위치를 그려
 //   iWorstCase 를 공유 토글. render() 때마다 다시 그리고, 클릭 시 좌측 설정 블록 펼침 → 스크롤.
@@ -8554,6 +8655,22 @@ el('iPaxPeer').addEventListener('input',    () => { PAX_SRC = 'year';   render()
     if (e.target.id === 'iMaxLoadPeerB' || e.target.id === 'iMaxLoadPeerC') {
       if (_inA) _inA.value = e.target.value;
       if (_onA && _onA.checked) render();
+    }
+  });
+  // 화물보상 체크박스 (iCargoCompOnB · iCargoCompOnC) — 전역 상태 window._cargoCompOn 로 유지, 변경 시 render.
+  //   상한이 켜져있을 때만 UI 에 노출 (drawPeerPL 안에서 조건부 렌더). 두 쌍 어느 쪽에서 바꾸든 상태 동기화.
+  window._cargoCompOn = !!window._cargoCompOn;
+  // 항차당 표시 체크박스 (iShowPaxPerVoyC) — 전역 상태 window._showPaxPerVoy, 변경 시 render.
+  window._showPaxPerVoy = !!window._showPaxPerVoy;
+  document.addEventListener('change', e => {
+    if (!e.target) return;
+    if (e.target.id === 'iCargoCompOnB' || e.target.id === 'iCargoCompOnC') {
+      window._cargoCompOn = e.target.checked;
+      render();
+    }
+    if (e.target.id === 'iShowPaxPerVoyC') {
+      window._showPaxPerVoy = e.target.checked;
+      render();
     }
   });
 }
