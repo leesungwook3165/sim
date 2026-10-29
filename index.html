@@ -9685,10 +9685,11 @@ function _unwrapLngs(lls) {
   }
   return out;
 }
-function _polylineWrap(latlngs, opts) {
+function _polylineWrap(latlngs, opts, copies) {
   const fg = L.featureGroup();
   const unwrapped = _unwrapLngs(latlngs);
-  for (let n = -_WORLD_COPIES; n <= _WORLD_COPIES; n++) {
+  const C = (copies === undefined) ? _WORLD_COPIES : copies;
+  for (let n = -C; n <= C; n++) {
     L.polyline(n === 0 ? unwrapped : _shiftLatLngs(unwrapped, n * 360), opts).addTo(fg);
   }
   return fg;
@@ -9700,6 +9701,9 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
   if (!pts || !pts.length) { _aisSetStatus(labelStr + ': 데이터 없음'); return; }
 
   const g = L.layerGroup();
+  // 구간선은 캔버스 한 장에 그린다 — SVG 로 구간마다 path 를 만들면 지도를 끌 때마다
+  // 수백 개 노드를 재투영해서 버벅인다. 세계 복제도 하루 뷰에서는 끈다(copies 0).
+  const dayRenderer = L.canvas({ padding: 0.5 });
   // 왕복이면 복항편을 점선으로 구분해서 그린다 (같은 항로를 겹쳐 지나가므로).
   // 항적의 어느 지점을 클릭해도 그 구간의 AIS 값이 보이도록, 각 구간마다
   //  ① 눈에 보이는 색 선 ② 그 위에 투명하고 두꺼운 클릭용 선(팝업 부착)
@@ -9724,28 +9728,28 @@ function _renderAisPointSet(key, pts, labelStr, extraNote) {
     }
     if (landKm > 0.3) {
       landCount++;
-      _polylineWrap(latlngs, { color: '#ff2b2b', weight: 8, opacity: 0.3, interactive: false }).addTo(g);
+      _polylineWrap(latlngs, { color: '#ff2b2b', weight: 8, opacity: 0.3, interactive: false, renderer: dayRenderer }, 0).addTo(g);
     }
     // 원본 대조 — 보정·보간으로 모양이 바뀐 구간은 원본 직선을 회색으로 깔아
     // 무엇이 어떻게 달라졌는지 눈으로 바로 비교할 수 있게 한다 (편집 중에는 항상 켠다).
     if ((_aisShowRaw || _aisCorrEdit) && corr) {
       _polylineWrap([[a.lat, a.lon], [b.lat, b.lon]], {
-        color: "#8899aa", weight: 1.5, opacity: 0.65, dashArray: "3 4", interactive: false
-      }).addTo(g);
+        color: "#8899aa", weight: 1.5, opacity: 0.65, dashArray: "3 4", interactive: false, renderer: dayRenderer
+      }, 0).addTo(g);
     }
     _polylineWrap(latlngs, {
       color: corr ? '#c07bff' : _aisSpeedColor((a.speed + b.speed) / 2),
       weight: corr ? 4 : (isBack ? 4 : 3),
       opacity: corr ? 0.95 : (isBack ? 0.75 : 0.9),
-      dashArray: corr ? null : (isBack ? '5 7' : null), interactive: false
-    }).addTo(g);
+      dashArray: corr ? null : (isBack ? '5 7' : null), interactive: false, renderer: dayRenderer
+    }, 0).addTo(g);
 
     const segRawKm = _simDist([a.lat, a.lon], [b.lat, b.lon]);
     const segKm = corr ? _routeLen(corr.path) : segRawKm; // 보정했으면 그 경로 길이
     const segMin = (new Date(b.ts) - new Date(a.ts)) / 60000;
     const avgKts = _aisAvgKts(segKm, segMin);
     const nearPort = _nearestPortName(b.lat, b.lon, AIS_CALL_BUFFER_KM);
-    const hit = _polylineWrap(latlngs, { color: '#000', weight: 14, opacity: 0, interactive: true });
+    const hit = _polylineWrap(latlngs, { color: '#000', weight: 14, opacity: 0, interactive: true, renderer: dayRenderer }, 0);
     if (_aisCorrEdit) {
       // 편집 모드 — 팝업 대신 이 구간을 보정 대상으로 고른다
       const segA = a, segB = b;
