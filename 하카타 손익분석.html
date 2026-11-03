@@ -1079,7 +1079,8 @@
               <div class="fh" id="hPaxPeer">—</div>
               <div class="fh" id="hPerVoyPeer">—</div>
             </div>
-            <!-- 승선율 상한 (10년 예상 전용) — 여객수입이 복리로 올라도 이 % 승선율을 넘지 않도록 cap. -->
+            <!-- 승선율 상한 (10년 예상 전용) — 여객수입이 복리로 올라도 이 % 승선율을 넘지 않도록 cap.
+                 화물보상·항차·선적 표시는 손익계산서·10년 뷰의 여객수입 행 안에 inline 으로 들어감. -->
             <div class="f wide" style="padding:6px 8px;background:#F7FAFC;border:1px solid var(--rule);border-radius:3px;margin-top:4px">
               <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-weight:600;color:var(--navy)">
                 <input type="checkbox" id="iMaxLoadPeerOn" style="margin:0;cursor:pointer">
@@ -1282,6 +1283,9 @@
             <input type="checkbox" id="iFuelEngMode" hidden>
             <input type="hidden" id="iFuelEngKm"  value="213">
             <input type="hidden" id="iFuelEngKts" value="42">
+            <!-- 왕복 실측 연료 소모량 override — 체크 시 모델 환산값(tonRound) 대신 이 값을 쓰고 가격은 동일 적용 -->
+            <input type="checkbox" id="iFuelEngOverride" hidden>
+            <input type="hidden" id="iFuelEngOverrideTon" value="17.45">
             <!-- iFuelSimpleMode : 단순 모드 ON 이면 '편도 2천만원 × 항차수' 로 연료비 산출.
                  iFuelEngMode 와 상호 배타. 기본값 : 체크(단순 모드로 시작) — 보수적인 하한 가정에 맞춤. -->
             <input type="checkbox" id="iFuelSimpleMode" checked hidden>
@@ -1368,7 +1372,7 @@
                 <div class="dep-sub">감가상각 (정액법)</div>
                 <div class="f">
                   <label>선가 <small style="color:#bbb;font-weight:normal">비우면 보고서 값</small></label>
-                  <div class="ib"><input type="number" step="1000" min="0" id="iShipPricePeer" value="50000"><span class="u">백만원</span></div>
+                  <div class="ib"><input type="number" step="1000" min="0" id="iShipPricePeer" value="60000"><span class="u">백만원</span></div>
                 </div>
                 <div class="f">
                   <label>내용연수</label>
@@ -1411,7 +1415,7 @@
                 <div class="dep-sub">차입금 · 이자비용</div>
                 <div class="f">
                   <label>차입금 <small style="color:#bbb;font-weight:normal">비우면 미적용</small></label>
-                  <div class="ib"><input type="number" step="1000" min="0" id="iLoanPeer" value="20000"><span class="u">백만원</span></div>
+                  <div class="ib"><input type="number" step="1000" min="0" id="iLoanPeer" value="30000"><span class="u">백만원</span></div>
                 </div>
                 <div class="f">
                   <label>이자율</label>
@@ -2476,7 +2480,7 @@
               <input type="checkbox" id="iFuelSegAiTrend" style="margin:0">
               <b style="color:#8A5A12;font-size:12px">AI 유가추세 적용</b>
             </label>
-            <small style="color:#8A5A12;font-size:10.5px;flex:1">ICE LSGO 선물·Platts·Argus·MABUX 기반 LSMGO 10년 궤적 — 평균 ~$880/MT 수렴. 모든 모드에서 년차별 배율로 자동 적용.</small>
+            <small style="color:#8A5A12;font-size:10.5px;flex:1">ICE LSGO 선물·Platts·Argus·MABUX 기반 LSMGO 10년 궤적 — 6년 완만 하락, 저점 ~$920, 10년 평균 ~$1,083/MT. 모든 모드에서 년차별 배율로 자동 적용.</small>
             <button type="button" class="lnk" id="btnFuelAiEvidence"
                     title="LSMGO 전용 전망 근거 — 11개년 상세표"
                     style="font-size:10.5px;color:#8A5A12;padding:2px 6px;border:1px solid #D9A520;border-radius:2px;background:#fff;font-weight:600">근거 ⓘ</button>
@@ -2518,12 +2522,12 @@
           <!-- 근거 — 기본 숨김, 토글로 노출. LSMGO MT 단가·환율 예상 궤적을 명시 -->
           <div id="hFuelAiEvidence" hidden
                style="margin-top:10px;padding:10px 12px;background:#FBFCFD;border:1px solid var(--rule);border-radius:3px;font-size:10.5px;line-height:1.6;color:var(--ink)">
-            <b style="color:var(--navy);font-size:11.5px">연료비 10년 추세 — 전쟁 전 평균($820) 복귀 가정</b>
+            <b style="color:var(--navy);font-size:11.5px">연료비 10년 추세 — 6년 완만 하락 · 저점 ~$920</b>
             <div style="margin-top:4px;color:#33415A;font-size:10px;line-height:1.55">
               <b>핵심 가정 3가지</b>
-              <br>&nbsp;&nbsp;① 현 시세($1,490)는 러시아-우크라이나 전쟁·중동 지정학 프리미엄이 포함된 가격
-              <br>&nbsp;&nbsp;② 전쟁 종료·공급 정상화 시 LSMGO는 2024년 평균 $820 수준으로 회귀
-              <br>&nbsp;&nbsp;③ IMO 2030 규제·바이오혼합 의무로 중장기(y+6 이후) 완만한 상승
+              <br>&nbsp;&nbsp;① 현 시세($1,333 실측)는 러시아-우크라이나 전쟁 · 이란 긴장 · 중동 지정학 프리미엄 반영
+              <br>&nbsp;&nbsp;② 양 전선 완전 종료 어려워 pre-war $820 복귀 비현실적 — 6년 걸쳐 완만 하락, 저점 ~$920
+              <br>&nbsp;&nbsp;③ IMO 2030 규제·바이오혼합 의무로 중장기(y+7 이후) 완만 반등 → 10년 평균 ~$1,083
             </div>
             <table id="hFuelAiEvidenceTbl" style="width:100%;border-collapse:collapse;margin-top:8px;font-size:10px">
               <thead>
@@ -2537,67 +2541,67 @@
               </thead>
               <tbody>
                 <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+0 · 2026</b></td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$1,490</td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,410</td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$1,333</td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,325</td>
                   <td style="padding:3px 6px;text-align:right">×1.000</td>
-                  <td style="padding:3px 6px">현 시세 (전쟁 프리미엄 포함)</td></tr>
+                  <td style="padding:3px 6px">현 시세 (실측 · 러시아-우크라이나 전쟁 + 이란·중동 지정학 프리미엄 반영)</td></tr>
                 <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+1 · 2027</b></td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$1,252</td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,380</td>
-                  <td style="padding:3px 6px;text-align:right">×0.840</td>
-                  <td style="padding:3px 6px">OPEC+ 감산 완화 예정 · 공급 증가로 가격 하락 시작</td></tr>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$1,280</td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,340</td>
+                  <td style="padding:3px 6px;text-align:right">×0.960</td>
+                  <td style="padding:3px 6px">우크라이나 휴전 가능성·이란 긴장 완화 · OPEC+ 공급 점진</td></tr>
                 <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+2 · 2028</b></td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$1,050</td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$1,220</td>
                   <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,350</td>
-                  <td style="padding:3px 6px;text-align:right">×0.705</td>
-                  <td style="padding:3px 6px">미국 셰일 증산·중동 안정화 → 전쟁 프리미엄 해소</td></tr>
+                  <td style="padding:3px 6px;text-align:right">×0.915</td>
+                  <td style="padding:3px 6px">러시아 수출 정상화 시도 · 전쟁 프리미엄 서서히 해소</td></tr>
                 <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+3 · 2029</b></td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$919</td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,330</td>
-                  <td style="padding:3px 6px;text-align:right">×0.617</td>
-                  <td style="padding:3px 6px">전쟁 전 평균($820)에 접근 · 정제설비 증설 반영</td></tr>
-                <tr style="background:#FFFBEE"><td style="padding:3px 6px;color:#8A5A12"><b>y+4 · 2030</b></td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums"><b>$820</b></td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,320</td>
-                  <td style="padding:3px 6px;text-align:right">×0.550</td>
-                  <td style="padding:3px 6px"><b>저점 · 전쟁 전 평균 수렴</b> · IMO 2030 GHG 감축 전환기</td></tr>
-                <tr style="background:#FFFBEE"><td style="padding:3px 6px;color:#8A5A12"><b>y+5 · 2031</b></td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$810</td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums"><b>1,320</b></td>
-                  <td style="padding:3px 6px;text-align:right">×0.544</td>
-                  <td style="padding:3px 6px">저유황 공급 안정 · 저점 유지 · 원화 강세 피크</td></tr>
-                <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+6 · 2032</b></td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$830</td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,330</td>
-                  <td style="padding:3px 6px;text-align:right">×0.557</td>
-                  <td style="padding:3px 6px">IMO 2030 발효 · 저유황 수요 증가 반영 시작</td></tr>
-                <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+7 · 2033</b></td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$860</td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,350</td>
-                  <td style="padding:3px 6px;text-align:right">×0.577</td>
-                  <td style="padding:3px 6px">신선박 교체 수요 · LSMGO 소비량 확대</td></tr>
-                <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+8 · 2034</b></td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$890</td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$1,150</td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,360</td>
+                  <td style="padding:3px 6px;text-align:right">×0.863</td>
+                  <td style="padding:3px 6px">정제능력 증설·중동 안정화 반영 시작</td></tr>
+                <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+4 · 2030</b></td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$1,080</td>
                   <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,370</td>
-                  <td style="padding:3px 6px;text-align:right">×0.597</td>
-                  <td style="padding:3px 6px">바이오 혼합 의무화 확대 · 단가 완만 상승</td></tr>
+                  <td style="padding:3px 6px;text-align:right">×0.810</td>
+                  <td style="padding:3px 6px">지정학 프리미엄 완화 · $1,000 유지</td></tr>
+                <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+5 · 2031</b></td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$1,000</td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,370</td>
+                  <td style="padding:3px 6px;text-align:right">×0.750</td>
+                  <td style="padding:3px 6px">심리적 저지선 접근 · IMO 2030 발효 전</td></tr>
+                <tr style="background:#FFFBEE"><td style="padding:3px 6px;color:#8A5A12"><b>y+6 · 2032</b></td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums"><b>$920</b></td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,365</td>
+                  <td style="padding:3px 6px;text-align:right">×0.690</td>
+                  <td style="padding:3px 6px"><b>저점 · IMO 2030 발효 전후</b> (바이오혼합 비용 제한적)</td></tr>
+                <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+7 · 2033</b></td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$940</td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,370</td>
+                  <td style="padding:3px 6px;text-align:right">×0.705</td>
+                  <td style="padding:3px 6px">IMO 2030 바이오혼합 수요 반영</td></tr>
+                <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+8 · 2034</b></td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$970</td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,375</td>
+                  <td style="padding:3px 6px;text-align:right">×0.728</td>
+                  <td style="padding:3px 6px">신선박 LSMGO 수요 증가</td></tr>
                 <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+9 · 2035</b></td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$920</td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$1,000</td>
                   <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,385</td>
-                  <td style="padding:3px 6px;text-align:right">×0.617</td>
-                  <td style="padding:3px 6px">10년 평균 가격대 복귀 · 바이오 비용 반영 지속</td></tr>
+                  <td style="padding:3px 6px;text-align:right">×0.750</td>
+                  <td style="padding:3px 6px">10년 평균 가격대 복귀</td></tr>
                 <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+10 · 2036</b></td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$950</td>
+                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$1,020</td>
                   <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,400</td>
-                  <td style="padding:3px 6px;text-align:right">×0.638</td>
-                  <td style="padding:3px 6px">IMO 2050 중간 지표 반영 · 10년 평균 ~$880/MT</td></tr>
+                  <td style="padding:3px 6px;text-align:right">×0.765</td>
+                  <td style="padding:3px 6px">IMO 2050 중간 지표 반영 · 10년 평균 ~$1,083/MT</td></tr>
               </tbody>
             </table>
             <div style="margin-top:8px;padding:7px 10px;background:#F5F9FE;border-left:3px solid var(--navy);font-size:10px;line-height:1.6;color:#33415A">
-              <b style="color:var(--navy)">왜 이렇게 가정했는가 (3단계 논리)</b>
-              <br>&nbsp;&nbsp;<b>1️. 과거 평균</b> — Platts 싱가포르 MGO 2015~2024 평균 가격대는 <b>$500 ~ $820</b> 범위
-              <br>&nbsp;&nbsp;<b>2️. 현재 가격</b> — 2026년 10월 기준 $1,490 (지정학 리스크로 +82% 프리미엄 포함)
-              <br>&nbsp;&nbsp;<b>3️. 10년 평균</b> — 전쟁 종료 · IMO 규제 반영 시 과거 평균대로 회귀, <b>10년 평균 ~$880 (보수적 중앙치)</b>
+              <b style="color:var(--navy)">왜 이렇게 가정했는가</b>
+              <br>&nbsp;&nbsp;<b>1️. 현 시세</b> — 2026년 10월 실측 벙커가 $1,333 (러시아-우크라이나 전쟁 + 이란·중동 지정학 프리미엄 반영)
+              <br>&nbsp;&nbsp;<b>2️. 6년 완만 하락</b> — 양 전선 (우크라이나·이란) 완전 종료 어려워 pre-war $820 복귀 비현실적. 2030년 $1,000 유지, 2032년 저점 ~$920 수준
+              <br>&nbsp;&nbsp;<b>3️. 10년 평균</b> — IMO 2030 바이오혼합 + 신선박 LSMGO 수요로 중장기 반등 → <b>10년 평균 ~$1,083 (보수적 중앙치)</b>
               <br><br>
               <b style="color:var(--navy)">편도단가 산출</b> — 산타모니카호 편도 운항 톤수 × (LSMGO $/MT × ₩/$) ÷ 10,000 = 편도단가 (만원)
             </div>
@@ -2610,7 +2614,7 @@
               <a href="https://www.bunkerindex.com/prices/port.php?p=109&amp;n=busan-republic-of-korea" target="_blank" rel="noopener" style="color:var(--sky)">BunkerIndex Busan ↗</a> ·
               <a href="https://www.imo.org/en/MediaCentre/PressBriefings/pages/Revised-GHG-reduction-strategy-for-global-shipping-adopted-.aspx" target="_blank" rel="noopener" style="color:var(--sky)">IMO 2030/2050 ↗</a> ·
               <a href="https://frankfurter.dev/" target="_blank" rel="noopener" style="color:var(--sky)">환율 Frankfurter ↗</a>
-              · 10년 평균 복리 -4.4%/년
+              · 10년 평균 복리 -2.6%/년 · 저점 y+6 ($920)
             </div>
           </div>
 
@@ -3429,9 +3433,9 @@ const DEFAULTS  = { head:30, sailor:13, crew:7, fare:81000, vc:0, tgt:15, voy:49
                     // 거리 배율 — seaworld 산타모니카 운임표는 진도-제주 ≈ 85km 기준.
                     // 부산-하카타는 213km 라 운항 거리가 2.51배 → 화물 수입에 그만큼 가산.
                     cargoDist:2.51,
-                    // 선가·차입금은 화면에서 백만원으로 받는다 (500억 = 50,000백만원)
-                    shipPricePeer:50000, lifePeer:15, salvagePeer:1, salvageUnit:'krw',
-                    loanPeer:20000, loanRatePeer:3.5,
+                    // 선가·차입금은 화면에서 백만원으로 받는다 (600억 = 60,000백만원)
+                    shipPricePeer:60000, lifePeer:15, salvagePeer:1, salvageUnit:'krw',
+                    loanPeer:30000, loanRatePeer:3.5,
                     loanYears:15, loanGrace:3, loanMethod:'equal',
                     tgtPeer:15, tgtPeerAuto:false,
                     opEtcPct:{fuel:83.45,port:11.15,ins:5.13,repair:0.00,store:0.27},
@@ -3700,7 +3704,24 @@ function model(){
   const fuelSimpleOneway = Math.max(0, scnFuelRT * 10000);
   const _engUsd = fuelEsc ? fuelNow : fuelBase;
   const _engFx  = fuelEsc ? fxNow   : fxBase;
-  const fuelEngEst   = fuelEngEstimate(fuelEngKm, fuelEngKts, voyPeer, _engUsd, _engFx);
+  let fuelEngEst   = fuelEngEstimate(fuelEngKm, fuelEngKts, voyPeer, _engUsd, _engFx);
+  // 실측 override — iFuelEngOverride 체크 시 왕복 톤수를 iFuelEngOverrideTon 으로 교체, 가격·항차는 그대로.
+  //   mainTonAnnual/genTonAnnual 등 세부 분해값은 모델 환산치 그대로 두되(참고용), 합계·금액은 실측 기반.
+  {
+    const _ovOn  = !!el('iFuelEngOverride')?.checked;
+    const _ovTon = parseFloat(el('iFuelEngOverrideTon')?.value) || 0;
+    if (_ovOn && _ovTon > 0) {
+      const _tonOne   = _ovTon / 2;
+      const _annualTon = _tonOne * voyPeer;
+      fuelEngEst = { ...fuelEngEst,
+        tonOne: _tonOne, tonRound: _ovTon, annualTon: _annualTon,
+        annualWon: _annualTon * fuelEngEst.krwPerMt,
+        onewayWon: _tonOne  * fuelEngEst.krwPerMt,
+        roundWon:  _ovTon   * fuelEngEst.krwPerMt,
+        overrideOn: true, overrideTonRound: _ovTon,
+      };
+    }
+  }
   const fuelSimpleAnnualWon = fuelSimpleOneway * voyPeer;              // 편도단가 × 항차 (유가증가율 적용 안 함)
   const etcPeer = etcBase.map(t => {
     if (t.id === 'fuel' && fuelEngOn) {
@@ -5388,7 +5409,7 @@ let PEER_PL = null;
 // 단순 모드 연료비 10개년 년차별 편도단가 (만원 편도).
 //   enabled=false 면 현재 시나리오 편도단가가 10년 전구간 적용 (gFuel 복리).
 //   years[k] = k 년차(y+0..y+10)의 편도단가 (만원). null 이면 시나리오값으로 폴백.
-// 기본 ON — 10개년 단순 모드 유가는 AI 유가추세(LSMGO 10년 평균 ~$880/MT) 반영이 디폴트.
+// 기본 ON — 10개년 단순 모드 유가는 AI 유가추세(LSMGO 10년 평균 ~$1,083/MT) 반영이 디폴트.
 // 년차 셀 실제값은 _applyAiTrend 가 FUEL_AI_TREND 정의 뒤에 1회 시드함 (하단).
 let FUEL_SEG = { enabled:true, aiTrend:true, years:new Array(11).fill(null) };
 
@@ -5877,8 +5898,7 @@ function drawPeerPL(m) {
     ? (m.paxPeer / (m.peer.pax * m.voyPeer) * 100).toFixed(1) + '%' : '—';
   // 선적율은 7.25 처럼 소수점 둘째 자리까지 쓸 수 있으므로 toFixed(2) 후 뒤쪽 0 만 떼낸다.
   const _cargoLoad = (num('iCargoLoad', DEFAULTS.cargoLoad)).toFixed(2).replace(/\.?0+$/, '') + '%';
-  // 여객수입 행 옆에 승선율 상한 체크박스 + 입력란 (좌측 설정 패널과 양방향 동기화 — JS wiring 블록 참조)
-  //   상한이 켜져있을 때만 "화물보상" 체크박스가 함께 노출됨 — 상한으로 깎인 여객수입만큼 화물수입을 자동 보전.
+  // 여객수입 행 안에 inline 체크박스 (상한·화물보상) — 좌측 설정 패널의 iMaxLoadPeerOn 과 양방향 동기화.
   const _maxOnChecked = !!el('iMaxLoadPeerOn')?.checked;
   const _maxVal       = parseFloat(el('iMaxLoadPeer')?.value) || 60;
   const _cargoCompOn  = !!window._cargoCompOn;
@@ -5892,12 +5912,13 @@ function drawPeerPL(m) {
     + `상한 승선율`
     + `<input type="number" min="0" max="100" step="1" id="iMaxLoadPeerB" value="${_maxVal}"${_maxOnChecked ? '' : ' disabled'} style="width:42px;padding:1px 3px;font-size:10.5px;text-align:right;font-variant-numeric:tabular-nums">`
     + `<span style="color:#5C6B7F">%</span></label>${_compBox}`;
-  // 단일연도 손익계산서 : 상한+보상 모두 ON + 승선율이 상한을 넘길 때만 보전 적용 (default iLoadPeer 50 < 60 → 보전 0)
+  // 단일연도 손익계산서 : 상한+보상 모두 ON + 승선율이 상한을 넘길 때만 보전 적용.
   const _capWonSing  = (_maxOnChecked && m.peer && m.peer.pax > 0 && m.voyPeer > 0 && m.farePeer > 0)
     ? m.peer.pax * (_maxVal / 100) * m.voyPeer * m.farePeer : null;
   const _paxLossSing = (_capWonSing != null && paxRev > _capWonSing) ? (paxRev - _capWonSing) : 0;
   const _showComp    = _maxOnChecked && _cargoCompOn && _paxLossSing > 0;
-  const _dispPaxRev    = (_capWonSing != null && paxRev > _capWonSing) ? _capWonSing : paxRev;
+  // 매출 라인 display — 상한+보상 **둘 다 ON** 일 때만 교체. 보상 OFF 면 raw 그대로 유지.
+  const _dispPaxRev    = _showComp ? _capWonSing : paxRev;
   const _dispCargoRev  = _showComp ? cargoRev + _paxLossSing : cargoRev;
   html += rowD(`여객수입 <span class="tagv est">승선율 ${_loadPct}</span>${_inlineCap}`,   _dispPaxRev,   sales);
   // 산타모니카 : CARGO_CASES.extra 는 운임표 미산정 항목이라 계산 금액에 '+α' 표기
@@ -6303,7 +6324,7 @@ function drawPeerPL(m) {
   if (_maxLoadOn && m.peer && m.peer.pax > 0 && m.voyPeer > 0 && m.farePeer > 0) {
     _paxMaxCapMil = m.peer.pax * (_maxLoadPct / 100) * m.voyPeer * m.farePeer / 1e6;
   }
-  // 10년 뷰 여객수입 행 옆 인라인 컨트롤 (iMaxLoadPeerOnC/iMaxLoadPeerC + iCargoCompOnC + iShowPaxPerVoyC)
+  // 10년 뷰 여객수입 행 옆 inline 컨트롤 (iMaxLoadPeerOnC/iMaxLoadPeerC + iCargoCompOnC + iShowPaxPerVoyC)
   const _cargoCompOn10 = !!window._cargoCompOn;
   const _showPaxOn10   = !!window._showPaxPerVoy;
   const _compBox10 = _maxLoadOn
@@ -6311,7 +6332,7 @@ function drawPeerPL(m) {
       + `<input type="checkbox" id="iCargoCompOnC" style="margin:0;cursor:pointer;accent-color:#1C6B4A"${_cargoCompOn10 ? ' checked' : ''}>`
       + `화물보상</label>`
     : '';
-  const _paxVoyBox = ` <label style="display:inline-flex;align-items:center;gap:3px;margin-left:4px;font-weight:400;font-size:10.5px;color:var(--muted);cursor:pointer;vertical-align:middle" title="체크 시 — 여객수입 셀에 '항차당 N명 N%', 화물수입 셀에 '선적율 N%' 서브텍스트 표시 (성장률·cap·보상 반영)">`
+  const _paxVoyBox = ` <label style="display:inline-flex;align-items:center;gap:3px;margin-left:4px;font-weight:400;font-size:10.5px;color:var(--muted);cursor:pointer;vertical-align:middle" title="체크 시 — 여객수입 셀에 '항차당 N명 N%', 화물수입 셀에 '선적율 N%' 서브텍스트 표시">`
     + `<input type="checkbox" id="iShowPaxPerVoyC" style="margin:0;cursor:pointer"${_showPaxOn10 ? ' checked' : ''}>`
     + `항차·선적 표시</label>`;
   const _inlineCap10 = ` <label style="display:inline-flex;align-items:center;gap:3px;margin-left:6px;font-weight:400;font-size:10.5px;color:var(--navy);cursor:pointer;vertical-align:middle" title="좌측 '시뮬레이션 승객수' 블록과 동기화 · 체크 시 10년 여객수입이 이 승선율에 해당하는 금액을 넘지 못하도록 cap">`
@@ -6618,10 +6639,9 @@ function drawPeerPL(m) {
   const iOpP = add({ cls:'lead', name:'Ⅴ. 영업이익(손실)', v:null, agg:[[iGross,1],[iSga,-1]] });
   // 영업이익률 행 — 매년 opProfit ÷ sales 로 계산해 %로 표기. ratio 는 drawPeerPL10 이 전용 처리.
   add({ cls:'d sub2', name:'· 영업이익률', ratio:{ num:iOpP, den:iSales }, isPct:true });
-  // 영업이익 누계 — y+1 부터 매년 누적 합계. 10년 투자 회수 관점에서 핵심 지표.
-  //   base 열(y+0 / 58기)은 null — 기준년이라 누계 대상 아님.
-  add({ cls:'d sub2', name:'· 영업이익 누계 <span class="tagv est" title="y+1 부터 매년 영업이익(손실)을 누적 합산한 금액. 10년 투자 회수 가늠용.">y+1 ~</span>',
-        cum: iOpP, cumFrom: 1 });
+  // 영업이익 누계 — y+0 부터 매년 누적 합계 (11년 전체). 현재년 손익 포함한 투자 회수 가늠.
+  add({ cls:'d sub2', name:'· 영업이익 누계 <span class="tagv est" title="y+0 부터 매년 영업이익(손실)을 누적 합산한 금액. 11년 전체 투자 회수 가늠용.">y+0 ~</span>',
+        cum: iOpP, cumFrom: 0 });
 
   // ── Ⅷ 법인세 · Ⅸ 당기순이익 · 수지분석 ──────────────────────────────────
   // 10개년 뷰에서는 iOpP(Ⅴ 영업이익)가 이미 선체이자를 뺀 "법인세차감전" 성격이다
@@ -6685,19 +6705,21 @@ function drawPeerPL(m) {
         agg:_availKids, groupIn:'post_tax' });
 
   // 원금커버배수 : (당기순 + 감가 − 유보금) ÷ 그 해 원금 — 차입금이 있을 때만 추가.
-  // 선체이자는 운항원가에 이미 들어가 있으니 당기순이익 밑으론 원금만 남는다.
-  // 분자는 '이자·세금·유보 치른 뒤 남은 영업현금' — 10개년 뷰에서는 iOpP 가 이미
-  // 선체이자를 뺀 상태라 opp + dep 가 EBITDA − 이자 와 같다.
-  // 분모는 연차별 실제 원금. 거치 중 원금이 0인 해는 분모 0이라 비율을 계산하지 않는다.
+  //   거치년도 (원금 0) 는 분모 0 이라 피크원금 (상환 시작 후 그 해 원금) 으로 참고값 산출.
+  //   fmtRatio 는 음수를 "거치 (|v|x)" 로 해석 — 거치년도 셀은 음수 저장해 식별.
+  const _peakPrinMil = Math.max(0, ...prinSeries) / 1e6;
   if (iHull !== null) {
-    add({ cls:'n', name:'원금커버배수 <span style="color:var(--muted);font-size:9px">지분 관점</span> <span class="tagv est" title="선체이자가 운항원가에 들어가 있으니 당기순이익 밑으론 원금만 남는다. 분자 = 당기순이익 + 감가 − 우발수리유보금 − 선박대체유보금 (= 이자·세금·유보 치른 뒤 남은 영업현금). 분모 = 그 해 원금 — 거치 중 원금이 0인 해는 비율을 계산하지 않는다. 1.0 미만이면 그 해 원금을 못 갚는다는 뜻이다.">(당기순 + 감가 − 유보) ÷ 그 해 원금</span> <span style="color:var(--muted);font-size:9.5px">1.0 미만 상환 부족</span>',
+    add({ cls:'n', name:'원금커버배수 <span style="color:var(--muted);font-size:9px">지분 관점</span> <span class="tagv est" title="선체이자가 운항원가에 들어가 있으니 당기순이익 밑으론 원금만 남는다. 분자 = 당기순이익 + 감가 − 우발수리유보금 − 선박대체유보금 (= 이자·세금·유보 치른 뒤 남은 영업현금). 분모 = 그 해 원금. 거치년도는 괄호 참고값 (피크원금 분모). 1.0 미만이면 그 해 원금을 못 갚는다는 뜻이다.">(당기순 + 감가 − 유보) ÷ 그 해 원금</span> <span style="color:var(--muted);font-size:9.5px">1.0 미만 상환 부족</span>',
           transform:{ from:[iOpP, iOpDep, iPrin, iTax, iCapex, iSinking],
                       fn:(opp, dep, prin, tax, capex, sink) => {
                         // 10개년 뷰: opp 는 선체이자 뺀 뒤이므로 (opp - tax) 가 당기순이익.
                         // (당기순 + 감가 − 유보) = opp + dep − tax + capex + sink (capex·sink 는 음수)
                         const coverCF = opp + dep - tax + capex + sink;
                         const principal = Math.abs(prin);
-                        return principal > 0 ? coverCF / principal : null;
+                        if (principal > 0) return coverCF / principal;
+                        // 거치년도 — 피크원금 분모로 참고값 산출 (음수 반환 → fmtRatio 가 "거치" 로 식별)
+                        if (_peakPrinMil > 0) return -(coverCF / _peakPrinMil);
+                        return null;
                       }},
           isRatio:true, groupIn:'post_tax' });
   }
@@ -7123,7 +7145,8 @@ function drawPeerPL10() {
         const pax = v * 1e6 / r.fareWon;
         const perVoy = Math.round(pax / r.voyCount);
         const loadPct = perVoy / r.peerCap * 100;
-        return `<br><small style="font-size:9px;color:var(--muted);font-weight:500;display:block;line-height:1.2">항차당 ${perVoy.toLocaleString('ko-KR')}명<br>${loadPct.toFixed(1)}%</small>`;
+        // "항차당 N명" 을 한 줄로 묶으면 자릿수 많은 worst 에서 "명" 이 다음 줄로 떨어지므로 라벨/값 분리해 세 줄로.
+        return `<br><small style="font-size:9px;color:var(--muted);font-weight:500;display:block;line-height:1.2">항차당<br>${perVoy.toLocaleString('ko-KR')}명<br>${loadPct.toFixed(1)}%</small>`;
       }
       // 화물수입 — 선적율 N.NN% (base 대비 v 비율 × 현재 iCargoLoad)
       if (r.gk === 'gCargo' && p && p[0] > 0) {
@@ -7138,7 +7161,7 @@ function drawPeerPL10() {
     return `<tr class="${r.cls}${openCls}${r.tip ? ' tip' : ''}"${dataAttr}${clkAttr}${clkStyle}${tipAttr}${hiddenAttr}>
       <th>${caret}${r.name}</th>`
       + `
-      <td class="base ${cellCls(p[0])}${_capCls(p[0])}"${_cellTitle(0)}${_capAttr(p[0])}>${_fmt(p[0])}</td>
+      <td class="base ${cellCls(p[0])}${_capCls(p[0])}"${_cellTitle(0)}${_capAttr(p[0])}>${_fmt(p[0])}${_detailSuffix(p[0], 0)}</td>
       ${p.slice(1).map((v, idx) => `<td class="${cellCls(v)}${_capCls(v)}${_compCls(idx+1)}"${_cellTitle(idx+1)}${_capAttr(v)}${_compAttr(idx+1)}>${_fmt(v)}${_detailSuffix(v, idx+1)}</td>`).join('')}
       <td class="avg ${cellCls(avg)}${_capCls(avg)}"${_capAttr(avg)}>${_fmt(avg)}</td>
     </tr>`;
@@ -7518,33 +7541,33 @@ function fuelSeg10Series(voyPeer, fallbackMan) {
 let _fuelSegSel = new Set();   // 선택된 년차 index (0~10)
 let _fuelSegDrag = { active:false, start:null };
 
-// AI 유가추세 배율 (y+0..y+10) — "LSMGO 평균 ~$880 수렴" 가정
-//   현 시점(y+0) LSMGO ×1.82 = pre-war 평균 $820 대비 ~82% 상승. 저유황 공급 안정화·IMO 규제
-//   반영 속도를 LSMGO 직접 전망(ICE LSGO 선물·Platts·Argus·MABUX) 기반으로 재조정.
+// AI 유가추세 배율 (y+0..y+10) — "LSMGO 10년 평균 ~$1,083 수렴" 가정 (보수적 전망)
+//   y+0 LSMGO = $1,333 (실측 벙커가 · 러시아-우크라이나 전쟁 + 이란 긴장 지정학 프리미엄 반영).
+//   2024 pre-war $820 복귀는 양 전선 완전 종료가 전제라 비현실적 → 6년 완만 하락 가정.
 //
-//   y+0~y+2 : 저유황 공급 안정화 → 지정학 프리미엄 축소 (-16% ~ -30%)
-//   y+3~y+5 : pre-war 평균 $820 수렴 (바닥 ×0.544 = $810, IMO 2030 발효 직전 저점)
-//   y+6~y+10: IMO 2030 저유황 수요 반영 + 바이오혼합 비용 → 완만 반등 ($830~$950)
+//   y+0~y+6 : 완만한 6년 하락 (-31%) — 이란 긴장 지속·OPEC+ 공급 조절 반영
+//   y+6     : 저점 ×0.690 = $920 (IMO 2030 발효 전후 심리적 저지선 접근)
+//   y+7~y+10: IMO 2030 바이오혼합 + 신선박 LSMGO 수요 → 완만 반등 ($940~$1,020)
 //
-//   10년 평균 ≈ $880/MT (배율 평균 ≈ 0.591) — 2015-2024 Platts Singapore MGO 역사 평균 범위.
-//   10년 평균 복리 ≈ -4.4%/년.
-//   ※ ICE LSGO 36개월 선물곡선 역행 신호 + Platts/Argus 중기 전망의 중앙치 기준.
-const FUEL_AI_TREND  = [1.000, 0.840, 0.705, 0.617, 0.550, 0.544, 0.557, 0.577, 0.597, 0.617, 0.638];
-// 년차별 LSMGO $/MT · 환율 ₩/$ — 셀 툴팁에서 산식을 보여줄 때 쓰는 참고치. 근거 테이블과 동기.
-const FUEL_AI_USD_MT = [1490, 1252, 1050,  919,  820,  810,  830,  860,  890,  920,  950];
-const FUEL_AI_FX     = [1410, 1380, 1350, 1330, 1320, 1320, 1330, 1350, 1370, 1385, 1400];
+//   10년 평균 ≈ $1,083/MT (배율 평균 ≈ 0.815) — pre-war $500-700 복귀는 어렵고
+//   러시아-우크라이나 장기 정체·이란 긴장·IMO 규제 상시화로 $900+ floor 유지 가정.
+// 셀 USD/FX 수정 시 배율 (ratio) 도 함께 재계산되므로 let. 저장된 trend 는 사용자 조정 후 상태.
+let FUEL_AI_TREND  = [1.000, 0.960, 0.915, 0.863, 0.810, 0.750, 0.690, 0.705, 0.728, 0.750, 0.765];
+// 년차별 LSMGO $/MT · 환율 ₩/$ — 셀 안에서 직접 수정 가능 (let). 바뀌면 그 년차 편도만원 자동 재계산.
+let FUEL_AI_USD_MT = [1333, 1280, 1220, 1150, 1080, 1000,  920,  940,  970, 1000, 1020];
+let FUEL_AI_FX     = [1325, 1340, 1350, 1360, 1370, 1370, 1365, 1370, 1375, 1385, 1400];
 const FUEL_AI_RATIONALE = [
-  '현 시점 · 중동 저유황 유통 리스크',
-  '저유황 공급 안정화 → MABUX 음전환',
-  '싱가포르 LSMGO 수급 완화',
-  '저유황 디젤 정제능력 확대 → 프리미엄 축소',
-  '저점 · pre-war 평균 수렴 · IMO 2030 발효 직전',
-  '저유황 공급 과잉 · 저가 유지',
-  'IMO 2030 저유황 수요 증가',
-  '저유황 바이오혼합 요구 상향',
-  '바이오 LSMGO 비용 반영 완만 상승',
+  '현 시세 (실측 · 러시아-우크라이나 전쟁 + 이란·중동 지정학 프리미엄 반영)',
+  '우크라이나 휴전 가능성·이란 긴장 완화 · OPEC+ 공급 점진',
+  '러시아 수출 정상화 시도 · 전쟁 프리미엄 서서히 해소',
+  '정제능력 증설·중동 안정화 반영 시작',
+  '지정학 프리미엄 완화 · $1,000 유지',
+  '심리적 저지선 접근 · IMO 2030 발효 전',
+  '저점 · IMO 2030 발효 전후 (바이오혼합 비용 제한적)',
+  'IMO 2030 바이오혼합 수요 반영',
   '신선박 LSMGO 수요 증가',
-  'IMO 2030 완전 적용 · 10년 평균 수렴',
+  '10년 평균 가격대 복귀',
+  'IMO 2050 중간지표 반영 · 10년 평균 ~$1,080',
 ];
 function _aiTrendDescribe(fallback) {
   const items = FUEL_AI_TREND.map((m, k) => {
@@ -7578,15 +7601,64 @@ function _drawFuelSegGrid(fallbackMan) {
     const bdr = selected ? '#154B8C' : (isCustom ? '#D9A520' : 'var(--rule)');
     const txt = selected ? '#fff'    : (isCustom ? '#8A5A12' : 'var(--muted)');
     const yr  = selected ? '#CFE' : (isCustom ? '#B07A20' : 'var(--muted)');
+    const subColor = selected ? '#fff' : (isCustom ? '#8A5A12' : 'var(--navy)');
+    const inputBg  = selected ? 'rgba(255,255,255,0.15)' : '#fff';
+    const inputBrd = selected ? 'rgba(255,255,255,0.4)'  : 'var(--rule)';
+    const usd = FUEL_AI_USD_MT[k] != null ? FUEL_AI_USD_MT[k] : '';
+    const fx  = FUEL_AI_FX[k]     != null ? FUEL_AI_FX[k]     : '';
+    const inpStyle = `width:100%;padding:1px 2px;font-size:8.5px;text-align:right;font-variant-numeric:tabular-nums;
+                      border:1px solid ${inputBrd};border-radius:2px;background:${inputBg};color:${subColor}`;
     html.push(`<div data-fsg-cell="${k}" style="
-      padding:8px 4px;border:1px solid ${bdr};border-radius:4px;background:${bg};color:${txt};
-      text-align:center;cursor:pointer;font-size:10px;line-height:1.3;transition:all .1s">
+      padding:6px 3px 5px;border:1px solid ${bdr};border-radius:4px;background:${bg};color:${txt};
+      text-align:center;cursor:pointer;font-size:10px;line-height:1.25;transition:all .1s"
+      title="y+${k} (${2025+k}) · 편도 ${display.toLocaleString('ko-KR')}만원 · LSMGO $${usd}/MT · 환율 ₩${fx}/$ — $/₩ 수정 시 배율·만원 자동 재계산">
       <div style="font-size:9px;color:${yr};margin-bottom:2px">y+${k}<br>${2025+k}</div>
-      <div style="font-weight:700;font-variant-numeric:tabular-nums">${display.toLocaleString('ko-KR')}</div>
-      <div style="font-size:8.5px;opacity:0.8">${isCustom ? '수동' : '기본'}</div>
+      <div style="font-weight:700;font-variant-numeric:tabular-nums">${display.toLocaleString('ko-KR')}<small style="font-size:7.5px;font-weight:500;opacity:0.75;margin-left:1px">만</small></div>
+      <div style="display:flex;align-items:center;gap:1px;margin-top:3px" onclick="event.stopPropagation()">
+        <span style="font-size:8px;color:${subColor};opacity:0.7">$</span>
+        <input type="number" data-fsg-usd="${k}" step="10" min="0" value="${usd}" style="${inpStyle}">
+      </div>
+      <div style="display:flex;align-items:center;gap:1px;margin-top:1px" onclick="event.stopPropagation()">
+        <span style="font-size:8px;color:${subColor};opacity:0.7">₩</span>
+        <input type="number" data-fsg-fx="${k}" step="1" min="0" value="${fx}" style="${inpStyle}">
+      </div>
+      <div style="font-size:8px;opacity:0.75;margin-top:2px">${isCustom ? '수동' : '기본'}</div>
     </div>`);
   }
   host.innerHTML = html.join('');
+  // USD/FX 수정 시 — 배율 재계산 + 그 년차 편도만원 재계산 (fallback × ratio) + 다시 그리기 + render
+  //   ratio[k] = (USD[k] × FX[k]) / (USD[0] × FX[0])  — y+0 기준 상대비.
+  //   y+0 자체를 수정하면 base 가 바뀌므로 **모든 년차** 의 ratio 를 다시 계산해야 반영 됨 (안 그러면 y+0 입력이 아무 효과 없음).
+  const _recalc = (k) => {
+    const usd0 = FUEL_AI_USD_MT[0], fx0 = FUEL_AI_FX[0];
+    if (!(usd0 > 0 && fx0 > 0)) return;
+    const _rebuild = (i) => {
+      FUEL_AI_TREND[i] = (FUEL_AI_USD_MT[i] * FUEL_AI_FX[i]) / (usd0 * fx0);
+      if (FUEL_SEG.aiTrend) FUEL_SEG.years[i] = Math.round(fallbackMan * FUEL_AI_TREND[i]);
+    };
+    if (k === 0) {
+      // y+0 base 변경 — 모든 년차 ratio 재계산 (각 년차의 $·FX 는 그대로 둔 채 base 상대비만 shift)
+      for (let i = 0; i <= 10; i++) _rebuild(i);
+    } else {
+      _rebuild(k);
+    }
+    _drawFuelSegGrid(fallbackMan);
+    if (typeof render === 'function') render();
+  };
+  host.querySelectorAll('[data-fsg-usd]').forEach(inp => inp.addEventListener('change', () => {
+    const k = +inp.dataset.fsgUsd;
+    const v = parseFloat(inp.value);
+    if (!(v > 0)) return;
+    FUEL_AI_USD_MT[k] = v;
+    _recalc(k);
+  }));
+  host.querySelectorAll('[data-fsg-fx]').forEach(inp => inp.addEventListener('change', () => {
+    const k = +inp.dataset.fsgFx;
+    const v = parseFloat(inp.value);
+    if (!(v > 0)) return;
+    FUEL_AI_FX[k] = v;
+    _recalc(k);
+  }));
   // 선택 요약
   const sel = document.getElementById('hFuelSegSel');
   if (sel) {
@@ -7600,6 +7672,8 @@ function _drawFuelSegGrid(fallbackMan) {
   host.querySelectorAll('[data-fsg-cell]').forEach(cell => {
     const k = +cell.dataset.fsgCell;
     cell.addEventListener('mousedown', e => {
+      // input/USD·FX 수정 영역 클릭 시엔 preventDefault 하지 않음 — focus 이동이 가능하게.
+      if (e.target && (e.target.tagName === 'INPUT' || e.target.closest('[data-fsg-usd],[data-fsg-fx]'))) return;
       e.preventDefault();
       if (e.shiftKey && _fuelSegDrag.start !== null) {
         // Shift+클릭 — 범위 확장
@@ -7659,6 +7733,19 @@ function openFuelSegModal() {
   if (ai) ai.checked = !!FUEL_SEG.aiTrend;
   const valInp = document.getElementById('iFuelSegVal');
   if (valInp) valInp.value = fallback;
+  // 달러 기준 입력란 초기값 — y+0 참조값 ($1,333 / ₩1,325) 로 세팅
+  const _usd0 = (typeof FUEL_AI_USD_MT !== 'undefined') ? FUEL_AI_USD_MT[0] : 1333;
+  const _fx0  = (typeof FUEL_AI_FX     !== 'undefined') ? FUEL_AI_FX[0]     : 1325;
+  const usdInp = document.getElementById('iFuelSegUsd');
+  if (usdInp && !usdInp.value) usdInp.value = _usd0;
+  const fxInp  = document.getElementById('iFuelSegFx');
+  if (fxInp && !fxInp.value) fxInp.value = _fx0;
+  // 톤수 참조 — 실측 override 설정 있으면 그 값, 아니면 17.45 기본
+  const _ovOn  = !!el('iFuelEngOverride')?.checked;
+  const _ovTon = parseFloat(el('iFuelEngOverrideTon')?.value) || 0;
+  const _tonsRef = (_ovOn && _ovTon > 0) ? _ovTon : 17.45;
+  const tonRefEl = document.getElementById('hFuelSegTonRef');
+  if (tonRefEl) tonRefEl.textContent = _tonsRef.toFixed(2).replace(/\.?0+$/, '');
   // 모드별 UI 가변 — 단순 모드만 년차 셀/편도만원 입력이 유효. 그 외는 AI 유가추세만.
   const modeTag    = document.getElementById('hFuelSegModeTag');
   const modeBanner = document.getElementById('hFuelSegModeBanner');
@@ -7694,6 +7781,26 @@ function openFuelSegModal() {
     const fallback = +document.getElementById('ovFuelSeg').dataset.fallback || 2200;
     const targets = _fuelSegSel.size ? [..._fuelSegSel] : Array.from({length:11}, (_,i)=>i);
     targets.forEach(k => FUEL_SEG.years[k] = v);
+    _drawFuelSegGrid(fallback);
+  });
+
+  // 달러 기준 수동 입력 적용 — USD × 톤수 × FX ÷ 10,000 = 편도만원
+  const applyUsdBtn = document.getElementById('btnFuelSegApplyUsd');
+  if (applyUsdBtn) applyUsdBtn.addEventListener('click', () => {
+    const usd = parseFloat(document.getElementById('iFuelSegUsd').value);
+    const fx  = parseFloat(document.getElementById('iFuelSegFx').value);
+    if (!(usd > 0) || !(fx > 0)) { alert('달러 단가($/MT)와 환율(₩/$)을 모두 입력해주세요.'); return; }
+    // 톤수 — 실측 override 가 설정됐으면 그 값, 아니면 17.45 (user 공학적 계산 reference) 기본
+    const ovOn  = !!el('iFuelEngOverride')?.checked;
+    const ovTon = parseFloat(el('iFuelEngOverrideTon')?.value) || 0;
+    const tonsRound = (ovOn && ovTon > 0) ? ovTon : 17.45;
+    const tonsOne   = tonsRound / 2;
+    // 편도 만원 = (USD × 톤수 × FX) / 10,000
+    const won  = usd * tonsOne * fx;
+    const man  = Math.round(won / 10000);
+    const fallback = +document.getElementById('ovFuelSeg').dataset.fallback || 2200;
+    const targets = _fuelSegSel.size ? [..._fuelSegSel] : Array.from({length:11}, (_,i)=>i);
+    targets.forEach(k => FUEL_SEG.years[k] = man);
     _drawFuelSegGrid(fallback);
   });
 
@@ -8211,12 +8318,20 @@ function render(){
   const _tgtTile = el('kTgt').closest('.hkpi');
   if (_manualPax) {
     const _userSim = onPeer ? m.simPeer(paxV) : m.sim(paxV);
+    // 사용자 입력 승객수 KPI 의 영업이익률 — 메인 영업손익 KPI(opV) 기준과 일치시킴.
+    //   paxV == m.paxPeer 이므로 PEER_PL 직접 재사용 가능 (완전 일치, 공식 간 미세 차이 제거)
+    //   onPeer 아닐 때는 기존 sim.margin 그대로 (base ship 쪽 로직 유지)
+    let _userMargin = _userSim.margin;
+    if (onPeer) {
+      const _opForM = _useKifrs ? (PEER_PL.opProfit || 0) : (PEER_PL.opProfit10 != null ? PEER_PL.opProfit10 : PEER_PL.opProfit || 0);
+      _userMargin = PEER_PL.sales > 0 ? _opForM / PEER_PL.sales : _userSim.margin;
+    }
     _setTxt('kTgtT', '사용자 입력 승객수');
     el('kTgt').innerHTML = won(paxV) + '<small>명</small>';
     el('kTgtS').innerHTML = _paxLine(paxV, '')
       + `<br><span style="color:#F3C77A;font-weight:600">사용자 입력 — 50% 기준 대비 ${dlt(paxV - _pax50)}명</span>`
       + `<br><span style="color:#C3D8EF;font-size:9px">${_revMix(paxV)}</span>`
-      + `<br>${_marginSpan(_userSim.margin)}`;   // 영업이익률은 맨 아래
+      + `<br>${_marginSpan(_userMargin)}`;   // 영업이익률은 맨 아래 (탭별 기준)
     // 테두리로 수동 모드임을 표시
     _tgtTile.style.outline = '2px solid #F3C77A';
     _tgtTile.style.outlineOffset = '2px';
@@ -8253,10 +8368,30 @@ function render(){
     _setTxt('kPeer50PaxT', peerNm + ' 50% 승선율 승객수');
     if (_pax50 !== null) {
       const _sim50 = m.simPeer(_pax50);
+      // 50% 승선율 KPI 의 영업이익률 — 메인 영업손익 KPI(opV) 기준과 일치시킴.
+      //   조건부 PEER_PL 재사용 : iPaxPeer == _pax50 이면 두 KPI 가 같은 시나리오 → PEER_PL 그대로
+      //                             (drawPeerPL 공식 ≈ simPeer 공식 간 미세 차이 ~0.2%p 완전 제거)
+      //   다를 때는 simPeer 기반 + delta10 fallback (50% 승선율 KPI 는 _pax50 기준이라 다를 수 있음)
+      const _paxMatchesP50 = Math.abs((m.paxPeer || 0) - _pax50) < 1 && PEER_PL && PEER_PL.sales > 0;
+      let _sim50Margin;
+      if (_paxMatchesP50) {
+        // 완전 일치 — opV 와 같은 소스 사용 (opProfit10 또는 opProfit)
+        const _opForMargin = _useKifrs ? (PEER_PL.opProfit || 0) : (PEER_PL.opProfit10 != null ? PEER_PL.opProfit10 : PEER_PL.opProfit || 0);
+        _sim50Margin = PEER_PL.sales > 0 ? _opForMargin / PEER_PL.sales : 0;
+      } else if (_useKifrs) {
+        _sim50Margin = _sim50.margin;
+      } else {
+        const _loan10 = (parseFloat((el('iLoanPeer')?.value || '').replace(/,/g,'')) || 0) * 1e6;
+        const _rate10 = parseFloat(el('iLoanRatePeer')?.value) || 0;
+        const _intExp10 = _loan10 > 0 && _rate10 > 0 ? _loan10 * (_rate10 / 100) : 0;
+        const _rep10y   = (typeof GROW !== 'undefined' && GROW.repair10yBase > 0) ? GROW.repair10yBase * 1e6 : 0;
+        const _op10     = _sim50.op - _intExp10 - _rep10y;
+        _sim50Margin    = _sim50.sales > 0 ? _op10 / _sim50.sales : 0;
+      }
       el('kPeer50Pax').innerHTML  = won(_pax50) + '<small>명</small>';
       el('kPeer50PaxS').innerHTML = _paxLine(_pax50, '')
         + `<br><span style="color:#C3D8EF;font-size:9px">${_revMix(_pax50)}</span>`
-        + `<br>${_marginSpan(_sim50.margin)}`;  // 영업이익률은 맨 아래
+        + `<br>${_marginSpan(_sim50Margin)}`;  // 영업이익률은 맨 아래 (탭별 기준)
       el('kPeer50PaxS').style.whiteSpace = 'normal';
       el('kPeer50PaxS').style.wordBreak  = 'keep-all';
     } else {
@@ -8641,7 +8776,8 @@ el('iPaxPeer').addEventListener('input',    () => { PAX_SRC = 'year';   render()
   if (_inA) _inA.addEventListener('input', () => {
     if (_onA && _onA.checked) render();
   });
-  // B (손익계산서 인라인) · C (10년 인라인) 둘 다 동적이라 document 위임. 어느 쪽에서 바꾸든 A 로 반영 + render.
+  // B (손익계산서 inline) · C (10년 inline) 둘 다 drawPeerPL 재실행마다 DOM 새로 생성 → document 위임.
+  //   어느 쪽에서 바꾸든 좌측 패널 A 로 반영 + render.
   document.addEventListener('change', e => {
     if (!e.target) return;
     if (e.target.id === 'iMaxLoadPeerOnB' || e.target.id === 'iMaxLoadPeerOnC') {
@@ -8657,11 +8793,10 @@ el('iPaxPeer').addEventListener('input',    () => { PAX_SRC = 'year';   render()
       if (_onA && _onA.checked) render();
     }
   });
-  // 화물보상 체크박스 (iCargoCompOnB · iCargoCompOnC) — 전역 상태 window._cargoCompOn 로 유지, 변경 시 render.
-  //   상한이 켜져있을 때만 UI 에 노출 (drawPeerPL 안에서 조건부 렌더). 두 쌍 어느 쪽에서 바꾸든 상태 동기화.
+  // 화물보상 (B·C) — 전역 상태 window._cargoCompOn 로 유지, 변경 시 render
   window._cargoCompOn = !!window._cargoCompOn;
-  // 항차당 표시 체크박스 (iShowPaxPerVoyC) — 전역 상태 window._showPaxPerVoy, 변경 시 render.
-  window._showPaxPerVoy = !!window._showPaxPerVoy;
+  // 항차·선적 표시 (C) — 기본 ON
+  if (typeof window._showPaxPerVoy === 'undefined') window._showPaxPerVoy = true;
   document.addEventListener('change', e => {
     if (!e.target) return;
     if (e.target.id === 'iCargoCompOnB' || e.target.id === 'iCargoCompOnC') {
@@ -9473,7 +9608,7 @@ async function print3ScenariosPL10() {
   ];
   const _scnCap = k => k[0].toUpperCase() + k.slice(1);
   const scnRow = (label, fn, unit='') => `<tr>
-    <th style="padding:4px 10px;text-align:left;background:#F5F9FE;color:#154B8C;font-weight:700;width:28%">${label}</th>
+    <th style="padding:4px 10px;text-align:left;background:#F5F9FE;color:#154B8C;font-weight:700;width:28%;word-break:keep-all;white-space:nowrap">${label}</th>
     ${scenarios.map(s => `<td style="padding:4px 10px;text-align:right;background:${s.bg};font-variant-numeric:tabular-nums">${fn(s.k)}${unit}</td>`).join('')}
   </tr>`;
   const scnHead = `<tr>
@@ -9490,7 +9625,7 @@ async function print3ScenariosPL10() {
   const portOn   = typeof PORT_FEE_STATE !== 'undefined' && PORT_FEE_STATE.enabled;
   const aiOn2    = typeof FUEL_SEG !== 'undefined' && FUEL_SEG.enabled && FUEL_SEG.aiTrend;
   const _condRow = (k, v, note='') => `<tr>
-    <th style="padding:4px 10px;text-align:left;background:#F5F9FE;color:#154B8C;font-weight:700;width:30%">${k}</th>
+    <th style="padding:4px 10px;text-align:left;background:#F5F9FE;color:#154B8C;font-weight:700;width:30%;word-break:keep-all;white-space:nowrap">${k}</th>
     <td style="padding:4px 10px;font-size:9.5pt">${v}${note ? ` <span style="color:#5C6B7F;font-size:9pt">· ${note}</span>` : ''}</td>
   </tr>`;
 
@@ -9584,17 +9719,17 @@ async function print3ScenariosPL10() {
                   ${_condRow('연간 승객수',      _fmtN(paxPeer) + '명')}
                   ${_condRow('승선율',           loadPeer + '%')}
                   ${_condRow('지상직 / 선원 / 승무원', _fmtN(_n('iHeadPeer')) + ' / ' + _fmtN(_n('iSailorPeer')) + ' / ' + _fmtN(_n('iCrewPeer')) + ' 명')}
-                  ${_condRow('대리점비',         agencyOn ? _n('iAgencyPeer') + '% × 일본비중 ' + _n('iAgencyJapanShare') + '%' : '해제')}
+                  ${_condRow('대리점비',         agencyOn ? _n('iAgencyPeer') + '% × 매출 일본비중 ' + _n('iAgencyJapanShare') + '%' : '해제')}
                   ${_condRow('목표 영업이익률', _n('iTgtPeer') + '%')}
                 </tbody>
               </table>
               <table>
                 <tbody>
                   ${_condRow('연료 산출 모드',  fuelMode + ' 모드')}
-                  ${_condRow('AI 유가추세',      aiOn2 ? '적용 중 (LSMGO 10년 평균 ~$880/MT)' : '미적용')}
+                  ${_condRow('AI 유가추세',      aiOn2 ? '적용 중 (LSMGO 10년 평균 ~$1,083/MT)' : '미적용')}
                   ${_condRow('항비 수동 산식',  portOn  ? '적용 중 (부산+하카타 세목별 PDF 산식)' : '미적용')}
-                  ${_condRow('유가 기준',        _fmtN(_n('iFuelBase')) + ' $/MT (2024)')}
-                  ${_condRow('환율 기준',        _fmtN(_n('iFxBase')) + ' 원/$ (2024)')}
+                  ${_condRow('유가 기준<br><small style="color:#5C6B7F;font-weight:400">(참조선박)</small>',        _fmtN(_n('iFuelBase')) + ' $/MT (2024)')}
+                  ${_condRow('환율 기준<br><small style="color:#5C6B7F;font-weight:400">(참조선박)</small>',        _fmtN(_n('iFxBase')) + ' 원/$ (2024)')}
                   ${_condRow('선가 / 내용연수', _fmtN(_n('iShipPricePeer')) + '백만 / ' + _fmtN(_n('iLifePeer')) + '년')}
                   ${_condRow('차입금 / 이자율', _fmtN(_n('iLoanPeer')) + '백만 / ' + _n('iLoanRatePeer') + '%' + (_c('iJpyLoan') ? ' (엔화 1.56%)' : ''))}
                   ${_condRow('세금 적용',        _c('iTonnageTax') ? '톤세 (조세특례제한법 §104-10)' : '누진 법인세')}
@@ -9970,17 +10105,36 @@ async function print3ScenariosPL10() {
   `;
 
   // ── 부산 ↔ 일본 4개 항로 선사별 총수송인원 (2017~2026E) ────────────────────
-  const fukYears = ['2017','2018','2019','2020','2022','2023','2024','2025','2026(1~6)','2026E','합계'];
+  // 년도 헤더 — 특이 사건 라벨(노재팬/코로나) 포함. idx 와 fukRows 의 d 배열이 1:1 대응.
+  const fukYears = [
+    { y:'2017' },
+    { y:'2018' },
+    { y:'2019', ev:'노재팬' },
+    { y:'2020', ev:'코로나' },
+    { y:'2022', ev:'코로나 지속' },
+    { y:'2023', ev:'코로나 여파' },
+    { y:'2024' },
+    { y:'2025' },
+    { y:'2026(1~6)' },
+    { y:'2026E' },
+    { y:'합계' },
+  ];
   const fukRows = [
     // 후쿠오카 · RORO (카멜리아)
     { nm:'카멜리아 (RORO)',           d:[171858, 186193, 119576,  12642,      0, 106673, 180564, 182011, 106632, 205864, 1066149] },
     { nm:'카멜리아 소계 (RORO)',      d:[171858, 186193, 119576,  12642,      0, 106673, 180564, 182011, 106632, 205864, 1066149], sub:true, tag:'carm' },
     // 후쿠오카 · 고속선 (비틀·JR큐슈·코비·퀸비틀)
-    { nm:'비틀',                       d:[183181, 181520, 144797,  13796,   1167,  13872,      0,      0,      0,      0,  538333] },
-    { nm:'JR큐슈 (퀸비틀)',            d:[     0,      0,      0,      0,      0,  96400,  75186,      0,      0,      0,  171586] },
+    //   hl:{ idx:{label, title} } — 특정 년도 셀에 붉은 외곽선 + 셀 안 라벨 + hover 설명.
+    { nm:'비틀',                       d:[183181, 181520, 144797,  13796,   1167,  13872,      0,      0,      0,      0,  538333],
+      hl:{ 5:{label:'1~3월 (3개월)', title:'비틀 1~3월만 운항, 이후 종료', pos:'right'} } },
+    { nm:'JR큐슈 (퀸비틀)',            d:[     0,      0,      0,      0,      0,  96400,  75186,      0,      0,      0,  171586],
+      hl:{ 5:{label:'4~12월 (9개월)', title:'퀸비틀 2023.4 신규 취항', pos:'below'},
+           6:{label:'1~8월 (유효운항 약 5개월)', title:'2024.1~8월 운항 중 6월 선수부 균열·침수 → 수리 후 7·8월 비정상 운항 → 8월 13일 운항 철수', pos:'right'} } },
     { nm:'코비',                       d:[ 52065,      0,      0,      0,      0,      0,      0,      0,      0,      0,   52065] },
     { nm:'퀸비틀 (단독)',              d:[     0,      0,      0,      0,   1864,      0,      0,      0,      0,      0,    1864] },
-    { nm:'고속선 소계',                d:[235246, 181520, 144797,  13796,   3031, 110272,  75186,      0,      0,      0,  763848], sub:true, tag:'hs' },
+    { nm:'고속선 소계',                d:[235246, 181520, 144797,  13796,   3031, 110272,  75186,      0,      0,      0,  763848], sub:true, tag:'hs',
+      hl:{ 0:{label:'코로나 전 피크', title:'역대 최대 수요 (2017)'},
+           1:{label:'코로나 전 수요', title:'코로나·노재팬 전 (2018)'} } },
     // 후쿠오카 합계 (RORO + 고속선)
     { nm:'후쿠오카 소계',              d:[407104, 367713, 264373,  26438,   3031, 216945, 255750, 182011, 106632, 205864, 1829997], sub:true, tag:'fuk' },
     // 시모노세키
@@ -10014,9 +10168,37 @@ async function print3ScenariosPL10() {
         <div class="grow-cell">
           <table style="font-size:9.5pt">
             <thead>
+              <!-- Timeline 바 — 노재팬 (2019.7~) 과 코로나 팬데믹 (2020.3.11~2023.5.11 WHO 기준) 기한을 년도 header 위에 선으로 표시 -->
+              <tr>
+                <th style="background:#fff;border:none"></th>
+                <!-- cols 0, 1: 2017, 2018 — 빈 셀 -->
+                <th style="background:#fff;border:none"></th>
+                <th style="background:#fff;border:none"></th>
+                <!-- col 2: 2019 — 노재팬 라벨 (호박색 선) -->
+                <th style="padding:2px 4px;background:#FFF4D6;color:#8A5A12;font-size:7.5pt;font-weight:700;
+                           border:1.5px solid #D9A520;border-radius:3px 3px 0 0;line-height:1.2;text-align:center;letter-spacing:-0.2px">
+                  노재팬<br><span style="font-size:7pt;font-weight:500">2019.7 ~</span>
+                </th>
+                <!-- cols 3, 4, 5: 2020, 2022, 2023 — 코로나 팬데믹 (붉은 선) -->
+                <th colspan="3" style="padding:2px 4px;background:#FBE5E2;color:#A8392F;font-size:7.5pt;font-weight:700;
+                                       border:1.5px solid #A8392F;border-radius:3px 3px 0 0;line-height:1.2;text-align:center;letter-spacing:-0.2px">
+                  코로나 팬데믹 · <b>2020.3.11 ~ 2023.5.11</b>
+                  <br><span style="font-size:7pt;font-weight:500">(WHO 공식 팬데믹 선언 ~ PHEIC 해제)</span>
+                </th>
+                <!-- cols 6~10: 2024, 2025, 2026(1~6), 2026E, 합계 — 빈 셀 -->
+                <th style="background:#fff;border:none"></th>
+                <th style="background:#fff;border:none"></th>
+                <th style="background:#fff;border:none"></th>
+                <th style="background:#fff;border:none"></th>
+                <th style="background:#fff;border:none"></th>
+              </tr>
               <tr style="background:#154B8C;color:#fff">
                 <th style="text-align:left;width:160px">선사</th>
-                ${fukYears.map(y => `<th style="text-align:right;font-weight:700;${y==='합계'?'background:#0E3767':''}">${y}</th>`).join('')}
+                ${fukYears.map(yObj => {
+                  const y  = yObj.y;
+                  const bg = (y === '합계') ? 'background:#0E3767;' : '';
+                  return `<th style="text-align:right;font-weight:700;line-height:1.2;${bg}">${y}</th>`;
+                }).join('')}
               </tr>
             </thead>
             <tbody>
@@ -10042,19 +10224,39 @@ async function print3ScenariosPL10() {
                   ${r.d.map((v, i) => {
                     const isLast = i === r.d.length - 1;
                     const totalBg = c ? c.totalBg : '#EDF1F7';
-                    return `<td style="text-align:right;font-variant-numeric:tabular-nums${isLast ? `;background:${totalBg};font-weight:800` : ''}${r.grand && isLast ? ';color:#A8392F' : ''}">${_fmtNZ(v)}</td>`;
+                    // r.hl[i] = {label, title} — 붉은 외곽선 + 별표(★) + 셀 위 말풍선 라벨 + hover 설명
+                    const hl = r.hl && r.hl[i];
+                    const hlStyle = hl
+                      ? ';position:relative;outline:2.5px solid #A8392F;outline-offset:-2px;background:#FBE5E2 !important;color:#5C1A14;font-weight:700'
+                      : '';
+                    const hlTitle = hl ? ` title="${hl.title || hl.label || ''}"` : '';
+                    const hlStar  = hl ? `<span style="color:#A8392F;font-weight:800;font-size:9pt;margin-right:2px">★</span>` : '';
+                    // 말풍선 — pos: 'above'(기본) · 'below' · 'right' 세 방향. 각 방향마다 꼬리 위치/모양 다름.
+                    //   짙은 빨강 배경, 셀 가리는 거 피하려 데이터 셀 상황에 맞춰 방향 지정.
+                    const pos = (hl && hl.pos) || 'above';
+                    let bubblePos, tailStyle;
+                    if (pos === 'below') {
+                      bubblePos = 'top:calc(100% + 2px);left:50%;transform:translateX(-50%)';
+                      tailStyle = 'bottom:100%;left:50%;transform:translateX(-50%);border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:5px solid #A8392F';
+                    } else if (pos === 'right') {
+                      bubblePos = 'top:50%;left:calc(100% + 5px);transform:translateY(-50%)';
+                      tailStyle = 'top:50%;right:100%;transform:translateY(-50%);border-top:4px solid transparent;border-bottom:4px solid transparent;border-right:5px solid #A8392F';
+                    } else {
+                      // above (default)
+                      bubblePos = 'bottom:calc(100% + 2px);left:50%;transform:translateX(-50%)';
+                      tailStyle = 'top:100%;left:50%;transform:translateX(-50%);border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid #A8392F';
+                    }
+                    const hlBubble = hl && hl.label ? `
+                      <div style="position:absolute;${bubblePos};z-index:10;
+                                  background:#A8392F;color:#fff;font-size:7.5pt;font-weight:700;padding:2px 6px;border-radius:3px;
+                                  white-space:nowrap;line-height:1.2;letter-spacing:-0.2px;
+                                  box-shadow:0 1px 3px rgba(0,0,0,0.25)">${hl.label}<div style="position:absolute;${tailStyle};width:0;height:0"></div></div>` : '';
+                    return `<td${hlTitle} style="text-align:right;font-variant-numeric:tabular-nums${isLast ? `;background:${totalBg};font-weight:800` : ''}${r.grand && isLast ? ';color:#A8392F' : ''}${hlStyle}">${hlBubble}${hlStar}${_fmtNZ(v)}</td>`;
                   }).join('')}
                 </tr>`;
               }).join('')}
             </tbody>
           </table>
-        </div>
-        <div class="intro-note" style="background:#F5F9FE;border-left:3px solid #154B8C;color:#33415A">
-          <b style="color:#154B8C">사실 요약 (4개 항로)</b>
-          <p>· 2017~2026E 누적 수송인원: <b>6,727,380명</b> · 2026E 연환산 <b>1,103,860명</b></p>
-          <p>· 2025년 항로별 소계: 쓰시마 541,111 · 후쿠오카 182,011 · 시모노세키 164,137 · 오사카 49,538</p>
-          <p>· 2026E 항로별 소계: 쓰시마 686,630 · 후쿠오카 205,864 · 시모노세키 173,825 · 오사카 37,541</p>
-          <p>· 2025년 후쿠오카 고속선 전사(JR큐슈·비틀·코비·퀸비틀) 수송인원 <b>0명</b> · 2026E 후쿠오카 합계 전원 RORO(카멜리아)</p>
         </div>
       </div>
     </section>
@@ -10126,13 +10328,6 @@ async function print3ScenariosPL10() {
             </tbody>
           </table>
         </div>
-        <div class="intro-note" style="background:#F5F9FE;border-left:3px solid #154B8C;color:#33415A">
-          <b style="color:#154B8C">사실 요약 (후쿠오카 + 키타큐슈)</b>
-          <p>· 2노선 합계: 2017년 1,330,237 · 2024년 1,421,884 · 2025년 1,532,127 · 2026E 2,348,872명</p>
-          <p>· 후쿠오카 2025년 상위 3사: 에어부산 575,122 · 티웨이 346,063 · 제주항공 270,419</p>
-          <p>· 키타큐슈 : 2017년 108,667명 → 2025년 8,206명(에어로케이 단독) → 2026E 60,696명 회복세</p>
-          <p>· 2026(1~6) 대한항공 후쿠오카 실적 0명 (2025년 160,494명 → 노선 중단 추정)</p>
-        </div>
       </div>
     </section>
   `;
@@ -10159,8 +10354,8 @@ async function print3ScenariosPL10() {
     <section class="intro-section" style="margin:0 0 10px">
       <div class="intro-header" style="border-top:5px solid #D9A520;background:#FFF8EC;padding:8px 12px;margin:0 0 10px;display:flex;justify-content:space-between;align-items:flex-end">
         <div>
-          <div style="font-size:14pt;font-weight:800;color:#8A5A12">AI 유가추세 적용 근거 — LSMGO 10년 추세 ($820 복귀 가정)</div>
-          <div style="font-size:9pt;color:#5C6B7F;margin-top:2px">현 시세 $1,490 (전쟁 프리미엄) → 2030년 $820 저점 → 10년 평균 ~$880/MT</div>
+          <div style="font-size:14pt;font-weight:800;color:#8A5A12">AI 유가추세 적용 근거 — LSMGO 10년 추세 (6년 완만 하락 · 저점 ~$920)</div>
+          <div style="font-size:9pt;color:#5C6B7F;margin-top:2px">현 시세 $1,333 (실측 벙커가) → 6년 완만 하락 → 2032년 $920 저점 → 10년 평균 ~$1,083/MT</div>
         </div>
         ${_pageTag(PP.fuelAi)}
       </div>
@@ -10168,9 +10363,9 @@ async function print3ScenariosPL10() {
         <div class="grow-cell">
           <div style="padding:8px 12px;background:#FFFBEE;border:1px solid #E0B870;border-radius:3px;margin-bottom:8px;font-size:10pt;line-height:1.6;color:#33415A">
             <b style="color:#8A5A12">핵심 가정 3가지</b>
-            <p style="margin:3px 0 0">① 현 시세($1,490)는 러시아-우크라이나 전쟁·중동 지정학 프리미엄이 포함된 가격</p>
-            <p style="margin:0">② 전쟁 종료·공급 정상화 시 LSMGO는 2024년 평균 $820 수준으로 회귀</p>
-            <p style="margin:0">③ IMO 2030 규제·바이오혼합 의무로 중장기(y+6 이후) 완만한 상승</p>
+            <p style="margin:3px 0 0">① 현 시세($1,333 실측)는 러시아-우크라이나 전쟁 · 이란 긴장 · 중동 지정학 프리미엄 반영</p>
+            <p style="margin:0">② 양 전선 완전 종료 어려워 pre-war $820 복귀 비현실적 — 6년 걸쳐 완만 하락, 저점 ~$920</p>
+            <p style="margin:0">③ IMO 2030 규제·바이오혼합 의무로 중장기(y+7 이후) 완만 반등 → 10년 평균 ~$1,083</p>
           </div>
           <table style="width:100%;border-collapse:collapse;border:1px solid #B4C2D4;font-size:9pt">
             <thead>
@@ -10184,17 +10379,17 @@ async function print3ScenariosPL10() {
             </thead>
             <tbody>
               ${[
-                ['y+0 · 2026', '$1,490', '1,410', '×1.000', '현 시세 (전쟁 프리미엄 포함)',                                   false],
-                ['y+1 · 2027', '$1,252', '1,380', '×0.840', 'OPEC+ 감산 완화 예정 · 공급 증가로 가격 하락 시작',             false],
-                ['y+2 · 2028', '$1,050', '1,350', '×0.705', '미국 셰일 증산·중동 안정화 → 전쟁 프리미엄 해소',                false],
-                ['y+3 · 2029', '$919',   '1,330', '×0.617', '전쟁 전 평균($820)에 접근 · 정제설비 증설 반영',                 false],
-                ['y+4 · 2030', '<b>$820</b>', '1,320', '×0.550', '<b>저점 · 전쟁 전 평균 수렴</b> · IMO 2030 GHG 감축 전환기', true],
-                ['y+5 · 2031', '$810',   '<b>1,320</b>', '×0.544', '저유황 공급 안정 · 저점 유지 · 원화 강세 피크',           true],
-                ['y+6 · 2032', '$830',   '1,330', '×0.557', 'IMO 2030 발효 · 저유황 수요 증가 반영 시작',                     false],
-                ['y+7 · 2033', '$860',   '1,350', '×0.577', '신선박 교체 수요 · LSMGO 소비량 확대',                           false],
-                ['y+8 · 2034', '$890',   '1,370', '×0.597', '바이오 혼합 의무화 확대 · 단가 완만 상승',                       false],
-                ['y+9 · 2035', '$920',   '1,385', '×0.617', '10년 평균 가격대 복귀 · 바이오 비용 반영 지속',                  false],
-                ['y+10 · 2036','$950',   '1,400', '×0.638', 'IMO 2050 중간 지표 반영 · 10년 평균 ~$880/MT',                   false],
+                ['y+0 · 2026', '$1,333', '1,325', '×1.000', '현 시세 (실측 · 러시아-우크라이나 전쟁 + 이란·중동 지정학 프리미엄 반영)', false],
+                ['y+1 · 2027', '$1,280', '1,340', '×0.960', '우크라이나 휴전 가능성·이란 긴장 완화 · OPEC+ 공급 점진',       false],
+                ['y+2 · 2028', '$1,220', '1,350', '×0.915', '러시아 수출 정상화 시도 · 전쟁 프리미엄 서서히 해소',           false],
+                ['y+3 · 2029', '$1,150', '1,360', '×0.863', '정제능력 증설·중동 안정화 반영 시작',                             false],
+                ['y+4 · 2030', '$1,080', '1,370', '×0.810', '지정학 프리미엄 완화 · $1,000 유지',                              false],
+                ['y+5 · 2031', '$1,000', '1,370', '×0.750', '심리적 저지선 접근 · IMO 2030 발효 전',                            false],
+                ['y+6 · 2032', '<b>$920</b>', '1,365', '×0.690', '<b>저점 · IMO 2030 발효 전후</b> (바이오혼합 비용 제한적)',  true],
+                ['y+7 · 2033', '$940',   '1,370', '×0.705', 'IMO 2030 바이오혼합 수요 반영',                                   false],
+                ['y+8 · 2034', '$970',   '1,375', '×0.728', '신선박 LSMGO 수요 증가',                                           false],
+                ['y+9 · 2035', '$1,000', '1,385', '×0.750', '10년 평균 가격대 복귀',                                            false],
+                ['y+10 · 2036','$1,020', '1,400', '×0.765', 'IMO 2050 중간 지표 반영 · 10년 평균 ~$1,083/MT',                   false],
               ].map(([yr, lsmgo, fx, mul, reason, hi]) => `
                 <tr${hi ? ' style="background:#FFFBEE"' : ''}>
                   <td style="padding:4px 8px;color:#8A5A12;font-weight:700;border:1px solid #D7DFE9">${yr}</td>
@@ -10207,17 +10402,17 @@ async function print3ScenariosPL10() {
             </tbody>
           </table>
           <div style="margin-top:10px;padding:8px 12px;background:#F5F9FE;border-left:3px solid #154B8C;border-radius:2px;font-size:9.5pt;line-height:1.65;color:#33415A">
-            <b style="color:#154B8C">왜 이렇게 가정했는가 (3단계 논리)</b>
-            <p style="margin:3px 0 0">· <b>과거 평균</b> — Platts 싱가포르 MGO 2015~2024 평균 가격대는 <b>$500 ~ $820</b> 범위</p>
-            <p style="margin:0">· <b>현재 가격</b> — 2026년 10월 기준 $1,490 (지정학 리스크로 +82% 프리미엄 포함)</p>
-            <p style="margin:0">· <b>10년 평균</b> — 전쟁 종료·IMO 규제 반영 시 과거 평균대로 회귀, <b>10년 평균 ~$880 (보수적 중앙치)</b></p>
+            <b style="color:#154B8C">왜 이렇게 가정했는가</b>
+            <p style="margin:3px 0 0">· <b>현 시세</b> — 2026년 10월 실측 벙커가 $1,333 (러시아-우크라이나 전쟁 + 이란·중동 지정학 프리미엄 반영)</p>
+            <p style="margin:0">· <b>6년 완만 하락</b> — 양 전선(우크라이나·이란) 완전 종료 어려워 pre-war $820 복귀 비현실적. 2030년 $1,000 유지, 2032년 저점 ~$920</p>
+            <p style="margin:0">· <b>10년 평균</b> — IMO 2030 바이오혼합 + 신선박 LSMGO 수요로 중장기 반등, <b>10년 평균 ~$1,083 (보수적 중앙치)</b></p>
             <p style="margin:4px 0 0;padding-top:4px;border-top:1px dashed #B4C2D4"><b style="color:#154B8C">편도단가 산출</b> — 산타모니카호 편도 운항 톤수 × (LSMGO $/MT × ₩/$) ÷ 10,000 = 편도단가 (만원)</p>
           </div>
         </div>
         <div class="intro-note" style="background:#F5F9FE;border-left:3px solid #154B8C;color:#33415A">
           <b style="color:#154B8C">출처</b>
           <p style="margin:2px 0 0">· ICE LSGO 선물 · S&amp;P Platts Marine Fuels · Argus Marine Fuels · MABUX · Ship &amp; Bunker · BunkerIndex Busan · IMO 2030/2050 · 환율 Frankfurter</p>
-          <p style="margin:0">· 10년 평균 복리 <b>-4.4%/년</b> (y+0 → y+10)</p>
+          <p style="margin:0">· 10년 평균 복리 <b>-2.6%/년</b> (y+0 → y+10) · 저점 y+6 ($920)</p>
         </div>
       </div>
     </section>
@@ -10242,7 +10437,7 @@ async function print3ScenariosPL10() {
             _tocRow(`P ${PP.ships}`,  '선박 3척 비교', '— ① 엘도라도 · <b>② 산타모니카 ★ 매입 검토</b> · ③ 오션플라워2'),
             _tocRow(`P ${PP.cond}`,   '분석 전제·조건 요약', '— 3-시나리오 조건값 · 기타 전제'),
             _tocRow(`P ${PP.growth}`, '10개년 증감률 가정',   '— 계정과목별 연 복리 증감률'),
-            ...(aiOn ? [_tocRow(`P ${PP.fuelAi}`, '<b>AI 유가추세 적용 근거</b>', '— LSMGO 10년 추세·환율·배율·사유 (전쟁 전 $820 복귀 가정)', true)] : []),
+            ...(aiOn ? [_tocRow(`P ${PP.fuelAi}`, '<b>AI 유가추세 적용 근거</b>', '— LSMGO 10년 추세·환율·배율·사유 (6년 완만 하락 · 저점 ~$920 · 10년 평균 ~$1,083)', true)] : []),
           ])}
           ${_tocGroup(`Ⅱ. 시장 레퍼런스 (P ${PP.qb} ~ P ${PP.air})`, [
             _tocRow(`P ${PP.qb}`,  '퀸비틀 운항실적',       '— 경쟁선 벤치마크 (2023~2024)'),
@@ -11325,6 +11520,25 @@ function populateFuelEngineering(){
       </div>
       <div><b>항차 수</b> : ${_wonFmt(voy)} 항차/년 <span style="color:var(--muted);font-size:11px">(좌측 '대조선 항차' 설정)</span></div>
     </div>`;
+  // ── 실측 override 블록 — 체크 시 왕복 톤수를 수동 입력값으로 교체 (가격은 동일) ──
+  const _ovOn  = !!el('iFuelEngOverride')?.checked;
+  const _ovTon = parseFloat(el('iFuelEngOverrideTon')?.value) || 17.45;
+  const _override = `
+    <div style="margin-bottom:12px;padding:10px 12px;background:${_ovOn ? '#E8F5EE' : '#F5F9FE'};
+                border:1px solid ${_ovOn ? '#78B090' : 'var(--line2)'};border-radius:4px;
+                display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:11.5px">
+      <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-weight:700;color:${_ovOn ? '#1C6B4A' : 'var(--navy)'}">
+        <input type="checkbox" id="iFuelEngOverrideModal" ${_ovOn ? 'checked' : ''} style="margin:0;cursor:pointer;accent-color:#1C6B4A">
+        실측 왕복 소모량 적용
+      </label>
+      <input type="number" id="iFuelEngOverrideTonModal" step="0.1" min="0" value="${_ovTon}" ${_ovOn ? '' : 'disabled'}
+             style="width:72px;padding:3px 6px;font-size:12px;text-align:right;font-variant-numeric:tabular-nums;border:1px solid var(--line2);border-radius:3px">
+      <span style="color:#5C6B7F">톤/왕복</span>
+      <span style="color:#5C6B7F;font-size:10.5px;margin-left:4px">— 체크 시 아래 환산 톤수 대신 이 값으로 교체, 가격·항차는 동일 적용</span>
+      ${_ovOn ? `<div style="width:100%;margin-top:4px;padding-top:6px;border-top:1px dashed #78B090;font-size:11px;color:#1C6B4A">
+        <b>적용 중</b>: 왕복 ${_ton(_ovTon)}톤 × ${_wonFmt(voy/2)}회 왕복 = 연간 <b>${_ton(_ovTon * voy/2)}톤</b> · 연간 연료비 <b>${_wonFmt(_ovTon * voy/2 * est.krwPerMt / 1e6)}백만원</b>
+      </div>` : ''}
+    </div>`;
   // ── 전제 (서지 노트처럼) ──
   const _lphPerEngine45 = 4260 / 4;    // 1,065
   const _formula = `
@@ -11518,7 +11732,7 @@ function populateFuelEngineering(){
       · 실측 기준점 : <b>45노트 운항 시 주기관 4,260 ℓ/h</b> · 발전기 <b>28.7 ℓ/h</b> (1일 0.59톤 = 28.7ℓ×24h×0.86kg/ℓ ≈ 592kg) — 산타모니카호 운항시뮬레이션 분석자료<br>
       · 밀도 — LSMGO <b>0.86 kg/ℓ</b> (ISO 8217 표준)
     </div>`;
-  body.innerHTML = _summary + _formula + _current + _scenario + _ref42Block + _speedTable + _sources;
+  body.innerHTML = _summary + _override + _formula + _current + _scenario + _ref42Block + _speedTable + _sources;
   // 모달 내 km·kts 입력란 변경 시 숨은 input 과 동기화 후 손익계산서·모달 모두 재계산
   const _bindModal = (inputId, hiddenId) => {
     const inp = document.getElementById(inputId);
@@ -11533,6 +11747,20 @@ function populateFuelEngineering(){
   };
   _bindModal('iFuelEngKmModal',  'iFuelEngKm');
   _bindModal('iFuelEngKtsModal', 'iFuelEngKts');
+  // 실측 override 체크박스 · 톤수 입력 — hidden input 과 양방향 동기화 + render
+  const _ovChk = document.getElementById('iFuelEngOverrideModal');
+  const _ovInp = document.getElementById('iFuelEngOverrideTonModal');
+  if (_ovChk) _ovChk.addEventListener('change', () => {
+    const h = el('iFuelEngOverride'); if (h) h.checked = _ovChk.checked;
+    render();
+    populateFuelEngineering();
+  });
+  if (_ovInp) _ovInp.addEventListener('change', () => {
+    const v = parseFloat(_ovInp.value);
+    if (!(v > 0)) return;
+    const h = el('iFuelEngOverrideTon'); if (h) h.value = v;
+    if (el('iFuelEngOverride')?.checked) { render(); populateFuelEngineering(); }
+  });
 }
 
 // ── 선박대체유보금 연차표 ─────────────────────────────────────────────────
