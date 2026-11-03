@@ -10238,19 +10238,9 @@ async function print3ScenariosPL10() {
     { nm:'4개 항로 합계',              d:[1398287, 1420760, 891207, 60778, 5824, 601177, 844103, 936797, 568447, 1103860, 6727380], grand:true },
   ];
   const _fmtNZ = n => n === 0 ? '-' : n.toLocaleString('ko-KR');
-  const fukPage = `
-    <section class="intro-section" style="margin:0 0 10px">
-      <div class="intro-header" style="border-top:5px solid #154B8C;background:#F5F9FE;padding:8px 12px;margin:0 0 10px;display:flex;justify-content:space-between;align-items:flex-end">
-        <div>
-          <div style="font-size:14pt;font-weight:800;color:#154B8C">부산 ↔ 일본 4개 항로 — 선사별 연도 총수송인원</div>
-          <div style="font-size:9pt;color:#555;margin-top:2px">단위: 명 · 2017~2026E · 후쿠오카·시모노세키·오사카·쓰시마 · 원본 자료: 타선사 월별수송실적 2017-2026</div>
-        </div>
-        ${_pageTag(PP.fuk)}
-      </div>
-      <div class="intro-main">
-        <div class="grow-cell">
-          <table style="font-size:9.5pt">
-            <thead>
+  // 년도 헤더 위 특이 사건 띠 — 선사별 총수송인원 표와 항공 여객 실적 표가 같은 11개 연도 열을
+  // 쓰므로 한 줄을 공유한다 (선사 열 1 + 2017 ~ 합계 11).
+  const _eventBandRow = `
               <!-- Timeline 바 — 노재팬 (2019.7~) 과 코로나 팬데믹 (2020.3.11~2023.5.11 WHO 기준) 기한을 년도 header 위에 선으로 표시 -->
               <tr>
                 <th style="background:#fff;border:none"></th>
@@ -10268,13 +10258,36 @@ async function print3ScenariosPL10() {
                   코로나 팬데믹 · <b>2020.3.11 ~ 2023.5.11</b>
                   <br><span style="font-size:7pt;font-weight:500">(WHO 공식 팬데믹 선언 ~ PHEIC 해제)</span>
                 </th>
-                <!-- cols 6~10: 2024, 2025, 2026(1~6), 2026E, 합계 — 빈 셀 -->
+                <!-- cols 6, 7: 2024, 2025 — 빈 셀 -->
                 <th style="background:#fff;border:none"></th>
                 <th style="background:#fff;border:none"></th>
+                <!-- col 8: 2026(1~6) — 상반기 실적 (남색 선) -->
+                <th style="padding:2px 4px;background:#E6F0FA;color:#154B8C;font-size:7.5pt;font-weight:700;
+                           border:1.5px solid #154B8C;border-radius:3px 3px 0 0;line-height:1.2;text-align:center;letter-spacing:-0.2px">
+                  상반기 실적<br><span style="font-size:7pt;font-weight:500">2026.1 ~ 6</span>
+                </th>
+                <!-- col 9: 2026E — 계절성 예측 (초록 점선, 실적 아님) -->
+                <th style="padding:2px 4px;background:#E8F5EE;color:#1C6B4A;font-size:7.5pt;font-weight:700;
+                           border:1.5px dashed #1C6B4A;border-radius:3px 3px 0 0;line-height:1.2;text-align:center;letter-spacing:-0.2px">
+                  계절성 예측<br><span style="font-size:7pt;font-weight:500">상반기 ÷ 상반기 비중</span>
+                </th>
+                <!-- col 10: 합계 — 빈 셀 -->
                 <th style="background:#fff;border:none"></th>
-                <th style="background:#fff;border:none"></th>
-                <th style="background:#fff;border:none"></th>
-              </tr>
+              </tr>`;
+  const fukPage = `
+    <section class="intro-section" style="margin:0 0 10px">
+      <div class="intro-header" style="border-top:5px solid #154B8C;background:#F5F9FE;padding:8px 12px;margin:0 0 10px;display:flex;justify-content:space-between;align-items:flex-end">
+        <div>
+          <div style="font-size:14pt;font-weight:800;color:#154B8C">부산 ↔ 일본 4개 항로 — 선사별 연도 총수송인원</div>
+          <div style="font-size:9pt;color:#555;margin-top:2px">단위: 명 · 2017~2026E · 후쿠오카·시모노세키·오사카·쓰시마 · 원본 자료: 타선사 월별수송실적 2017-2026</div>
+        </div>
+        ${_pageTag(PP.fuk)}
+      </div>
+      <div class="intro-main">
+        <div class="grow-cell">
+          <table style="font-size:9.5pt">
+            <thead>
+              ${_eventBandRow}
               <tr style="background:#154B8C;color:#fff">
                 <th style="text-align:left;width:160px">선사</th>
                 ${fukYears.map(yObj => {
@@ -10381,6 +10394,7 @@ async function print3ScenariosPL10() {
         <div class="grow-cell">
           <table style="font-size:9.5pt">
             <thead>
+              ${_eventBandRow}
               <tr style="background:#154B8C;color:#fff">
                 <th style="text-align:left;width:120px">항공사</th>
                 ${airYears.map(y => `<th style="text-align:right;font-weight:700;${y==='총합계'?'background:#0E3767':''}">${y}</th>`).join('')}
