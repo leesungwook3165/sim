@@ -1212,6 +1212,10 @@
     .ais-tb-refchk { display: inline-flex; align-items: center; gap: 3px; margin-left: 8px; color: #ffd75e; }
     .ais-tb-unit.abnormal { opacity: 0.4; }
     .ais-tb-unit.abnormal.sel { opacity: 0.7; }
+    /* 정비 기간 — 회색 빗금 + 🔧. 비정상 처리된 날이라도 정비임을 읽을 수 있게 흐림을 풀어 준다 */
+    .ais-tb-unit.maintday { opacity: 0.85; color: #c9d4e0;
+      background-image: repeating-linear-gradient(135deg, rgba(160,170,185,0.22) 0 3px, transparent 3px 7px); }
+    .ais-tb-unit.maintday.sel { opacity: 1; border-bottom-color: #c9d4e0; }
     .ais-tb-unit.yearsep { border-left: 2px solid rgba(120,190,255,0.55); } /* 연도 바뀌는 지점 */
     /* 선택한 날짜의 시간대 세부 행 */
     .ais-tb-subtl-row {
@@ -7692,7 +7696,13 @@ const _AIS_VESSELS = {
   panstarmiracle:{ label:'팬스타 미라클호',      sub:'팬스타·부산↔오사카', file:'panstarmiracle_track-data-2025-03-01,2026-09-01.csv', color:'#33ccaa' },
   panstaracro:{ label:'팬스타 아크로호',        sub:'팬스타', file:'panstaracro_track-data-2026-08-06,2026-10-14.csv', color:'#44ddbb', openAll:true },
   tsushimalink:{ label:'팬스타 쓰시마링크호',  sub:'팬스타·부산↔쓰시마', file:'tushimalink_track-data-2023-01-01,2027-01-01.csv', color:'#8899ff' },
-  santamonica: { label:'산타모니카호',          sub:'제주항로·중고매입 후보', file:'santamonica_track-data-2022-01-01,2027-01-01.csv', color:'#ffcc44' },
+  santamonica: { label:'산타모니카호',          sub:'제주항로·중고매입 후보', file:'santamonica_track-data-2022-01-01,2027-01-01.csv', color:'#ffcc44',
+    // 정비 기간 — 날짜 버튼에 🔧 표식. AIS 는 진도(34.375, 126.135)에 0노트로 매일 찍혀 있다.
+    //   2025.10.18 마지막 운항 → 10.19 부터 휴항. 2026.2.19 · 2.23 두 번 나간 건 수리 후 시운전으로 보고, 정기 운항 재개는 3.11.
+    maint: [{ from:'2025-10-19', to:'2026-03-10',
+              label:'정비 — 추자항 접안 사고로 워터젯 버킷 파손 · 해외 부품 수급으로 149일 휴항 (한라일보 2026.11.03)',
+              trials:['2026-02-19','2026-02-23'] }],
+    note:'🔧 2025.10.19 ~ 2026.3.10 정비 휴항 (추자항 접안 사고 → 워터젯 버킷 파손, 부품 수급 149일) · 2.19·2.23 은 시운전' },
   eldorado:    { label:'엘도라도 익스프레스호', file:'eldorado_track-data-2023-07-01,2026-11-01.csv',    color:'#88ff55' },
   koreapride:  { label:'코리아프라이드호',      sub:'인천연안부두↔백령도', file:'koreapride_track-data-2023-01-01,2027-01-01.csv', color:'#55ccff' },
   umiterashi:  { label:'우미테라시호',           file:'umiterashi_track-data-2021-01-01,2027-01-01.csv',  color:'#ff4d7a' },
@@ -9898,7 +9908,9 @@ function _renderAisDay(key, dateStr) {
   const callTxt = q && q.calls && q.calls.length
     ? ' · ⚓기항 ' + q.calls.map(c => c.name.replace(/(국제여객터미널|국제터미널|여객선터미널|항)$/, '') + ' ' + Math.round(c.durMin) + '분').join(', ')
     : '';
-  const extra = q ? `${q.origin}${callTxt}${q.isNormal ? '' : ' · ⚠비정상(' + q.reasons.join(', ') + ')'}` : '';
+  const maint = _aisMaintAt(key, dateStr);
+  const extra = (maint ? _aisMaintTxt(maint, dateStr) + (q ? ' · ' : '') : '')
+    + (q ? `${q.origin}${callTxt}${q.isNormal ? '' : ' · ⚠비정상(' + q.reasons.join(', ') + ')'}` : '');
   const all = _aisDayTrack(key, dateStr);
   let shown = all, suffix = '';
   if (_aisSubLegSel) {
@@ -10247,7 +10259,9 @@ function _aisTbRenderTl(key) {
   if (wrapM) wrapM.style.display = months.length ? 'flex' : 'none';
   if (rowM) rowM.innerHTML = months.map(mo => {
     const nDays = _aisDays(key, mo).length;
-    return `<button class="ais-tb-unit${mo === _aisSelMonth ? ' sel' : ''}" onclick="_aisPickMonth('${mo}')" title="${mo} · ${nDays}일">${+mo.slice(5, 7)}월</button>`;
+    const nMaint = _aisDays(key, mo).filter(x => _aisMaintAt(key, x)).length;
+    const mTitle = nMaint ? ' · 🔧 정비 ' + nMaint + '일' : '';
+    return `<button class="ais-tb-unit${mo === _aisSelMonth ? ' sel' : ''}${nMaint && nMaint === nDays ? ' maintday' : ''}" onclick="_aisPickMonth('${mo}')" title="${mo} · ${nDays}일${mTitle}">${nMaint ? '🔧' : ''}${+mo.slice(5, 7)}월</button>`;
   }).join('');
 
   const days = _aisDays(key, _aisSelMonth);
@@ -10269,12 +10283,15 @@ function _aisTbRenderTl(key) {
     const bestNote = _aisBestGet(key, dt);        // null이면 최적일 아님
     // 표식은 버튼 안에 보이는 것이라 아이콘을 쓴다 (title 속성에는 글자만 넣는다 —
     // 속성 안에 SVG 가 들어가면 따옴표가 부딪혀 마크업이 깨진다)
-    const marks = (bestNote != null ? '◆' : '')
+    const maint = _aisMaintAt(key, dt);           // 정비 기간이면 🔧 (시운전일 포함)
+    const marks = (maint ? '🔧' : '')
+      + (bestNote != null ? '◆' : '')
       + (nCorr ? icon('pencil', { size: 10 }) : '')
       + (nLand ? icon('warn', { size: 10 }) : '');
-    const workTitle = (bestNote != null ? ' · ◆최적일' + (bestNote ? '(' + bestNote + ')' : '') : '')
+    const workTitle = (maint ? ' · ' + _aisMaintTxt(maint, dt) : '')
+      + (bestNote != null ? ' · ◆최적일' + (bestNote ? '(' + bestNote + ')' : '') : '')
       + (nCorr ? ' · 보정 ' + nCorr + '구간' : '') + (nLand ? ' · 육지관통 ' + nLand + '구간' : '');
-    return `<button class="ais-tb-unit${dt === _aisSelDay ? ' sel' : ''}${abnormal ? ' abnormal' : ''}${isRef ? ' refday' : ''}${bestNote != null ? ' bestday' : ''}${nLand ? ' landday' : ''}${nCorr ? ' corrday' : ''}" onclick="_aisPickDay('${dt}')" title="${title}${workTitle}">${isRef ? '★' : ''}${marks}${+dt.slice(8, 10)}일</button>`;
+    return `<button class="ais-tb-unit${dt === _aisSelDay ? ' sel' : ''}${abnormal ? ' abnormal' : ''}${maint ? ' maintday' : ''}${isRef ? ' refday' : ''}${bestNote != null ? ' bestday' : ''}${nLand ? ' landday' : ''}${nCorr ? ' corrday' : ''}" onclick="_aisPickDay('${dt}')" title="${title}${workTitle}">${isRef ? '★' : ''}${marks}${+dt.slice(8, 10)}일</button>`;
   }).join('') : '<span class="ais-tb-empty">이 달에는 조건에 맞는 날짜가 없습니다</span>';
 
   _aisRenderCrumb();
@@ -10284,6 +10301,20 @@ function _aisTbRenderTl(key) {
       if (sel) sel.scrollIntoView({ inline: 'center', block: 'nearest' });
     });
   });
+}
+
+// ── 정비 기간 ──
+// 선박 항목의 maint:[{from,to,label,trials}] 에 든 날짜면 그 항목을 돌려준다 (없으면 null).
+function _aisMaintAt(key, dateStr) {
+  const list = (_AIS_VESSELS[key] || {}).maint;
+  if (!list || !dateStr) return null;
+  const d = dateStr.slice(0, 10);
+  return list.find(m => d >= m.from && d <= m.to) || null;
+}
+function _aisMaintTxt(m, dateStr) {
+  if (!m) return '';
+  const trial = m.trials && m.trials.includes(dateStr.slice(0, 10));
+  return '🔧 ' + (trial ? '시운전 · ' : '') + m.label + ' (' + m.from + ' ~ ' + m.to + ')';
 }
 
 // ── 단계별 선택 ──
