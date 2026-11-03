@@ -3819,6 +3819,41 @@ function model(){
     return (fixedAtPeer(q) + vc*q - Oo*(1-rr) + apcH*cargo) / (q * kRpax);
   };
 
+  // 10년 뷰(pl10) 전용 overlay — 선체이자(y+0) + 수리비(첫해). 승객수·항차와 무관한 고정비.
+  //   drawTgt·drawCVP 가 pl10 탭에서 이걸 fx 항에 더해 10년 기준 BEP·목표 승객수·margin 을 구한다.
+  //   헤더 KPI(opProfit10) 와 같은 좌표계에서 그려지도록 분리된 변형(simPeer10/qForPeer10/pForPeer10).
+  const _loan10_m    = Math.max(0, num('iLoanPeer', 0)) * 1e6;
+  const _rate10_m    = Math.max(0, num('iLoanRatePeer', 0));
+  const _intExp10_m  = _loan10_m > 0 && _rate10_m > 0 ? _loan10_m * (_rate10_m / 100) : 0;
+  const _rep10y_m    = (typeof GROW !== 'undefined' && GROW.repair10yBase > 0) ? GROW.repair10yBase * 1e6 : 0;
+  const peerOverlay10 = _intExp10_m + _rep10y_m;
+  const simPeer10 = (q, Oo = Opeer) => {
+    const r = simPeer(q, Oo);
+    const op10 = r.op - peerOverlay10;
+    return { ...r, cost: r.cost + peerOverlay10, op: op10, margin: r.sales ? op10 / r.sales : 0 };
+  };
+  const qForPeer10 = (rr, Oo = Opeer) => {
+    const cargo = Math.max(0, Oo - rentRev);
+    const kRpax = 1 - rr - apcH;
+    const den   = kRpax*farePeer - vc;
+    if (den <= 0 || kRpax <= 0) return null;
+    let v_ = voyPeer;
+    for (let k = 0; k < 12; k++) {
+      const q = (costFpeer + peerOverlay10 + svPerVoyPeer*v_ - Oo*(1-rr) + apcH*cargo) / den;
+      if (!(q > 0)) return 0;
+      const need = voyForPeer(q);
+      if (need === v_) return q;
+      v_ = need;
+    }
+    return null;
+  };
+  const pForPeer10 = (rr, q, Oo = Opeer) => {
+    const cargo = Math.max(0, Oo - rentRev);
+    const kRpax = 1 - rr - apcH;
+    if (!(q > 0) || kRpax <= 0) return null;
+    return (fixedAtPeer(q) + peerOverlay10 + vc*q - Oo*(1-rr) + apcH*cargo) / (q * kRpax);
+  };
+
   const ebitda = !items.find(x => x.id === 'opDep').on;   // 감가상각비를 끄면 EBITDA 기준
   const feeVar = (items.find(x => x.id === 'fee').kind === 'var');
 
@@ -3878,6 +3913,7 @@ function model(){
            opDepShipPeer, moorageOn, moorageInvest, moorageLife, moorageDepAnn,
            shipPricePeer, lifePeer, salvageWon, salvageUnit, cargoRevP, isSantaP,
            voyForPeer, qForPeer, simPeer, pForPeer, fixedAtPeer,
+           simPeer10, qForPeer10, pForPeer10, peerOverlay10,
            fareEcoPeer, mixPeer, mixSumPeer, fareSeatPeer, fuelPeer, farePeer,
            paxAct, pax, paxPeer, qFor, pFor, sim, cur: sim(pax) };
 }
@@ -4232,6 +4268,9 @@ function drawVat(){
 // 금액이 아니라 비중으로 말하면 목표가 훨씬 또렷해진다. 실적 운항원가율을 어디까지
 // 눌러야 하는지가 한 줄로 나온다.
 function drawRatio(m){
+  // 매출·운항원가·판관비 비율표 — K-IFRS 분류 기준(opc/sga 는 선체이자·수리비 미포함).
+  //   drawTgt·drawCVP 는 pl10 에서 10년 overlay 로 BEP 를 재조정하지만, 이 비율표는 opc/sga 셀 자체를
+  //   재구성해야 overlay 를 반영할 수 있어 범위를 벗어남 — 그대로 K-IFRS 로 둔다.
   const V = view(m);
   // 운항원가·판관비 각각 '금액 (비율)' 한 셀로 통합 — 비율은 보조 수치로 작게 병기
   const line = (label, S, opc, sga, labor, r, cls) =>
@@ -4453,16 +4492,22 @@ function opcGapTag(side){
 // 아래는 탭에 맞는 한 벌을 골라 같은 이름으로 돌려주는 얇은 껍데기다.
 // forcePeer=true 로 호출하면 ACTIVE_TAB 과 무관하게 대조선박(산타모니카) 뷰를 돌려준다.
 // — 목표이익율·CVP 패널에서 쓴다. 엘도라도호 실적은 보여줄 필요가 없다는 결정.
-function view(m, forcePeer){
+// use10=true 면 10년 overlay(선체이자+수리비) 를 입힌 변형(simPeer10/qForPeer10/pForPeer10) 을 쓴다.
+//   → 헤더 KPI(opProfit10) 와 동일한 좌표계에서 drawTgt·drawCVP 가 BEP·목표·margin 을 재구성.
+function view(m, forcePeer, use10){
   const onPeer = forcePeer || (ACTIVE_TAB === 'tabB');
   const _peerNm = m.peer ? m.peer.name.split(' · ')[0] : '대조';
   const _baseNm = m.ship ? m.ship.name.split(' · ')[0] : '엘도라도호';
+  // onPeer 모드에서 use10 가 켜지면 overlay 변형, 아니면 K-IFRS 원본
+  const _simP   = (onPeer && use10 && m.simPeer10)  ? m.simPeer10  : m.simPeer;
+  const _qForP  = (onPeer && use10 && m.qForPeer10) ? m.qForPeer10 : m.qForPeer;
+  const _pForP  = (onPeer && use10 && m.pForPeer10) ? m.pForPeer10 : m.pForPeer;
   return onPeer ? {
     // 대조 탭엔 실적 숫자가 없다 — paxAct 자리에 iLoadPeer(승선율)·iPaxPeer 로 만든 가정값이 들어간다.
     //   라벨만 '산타모니카호 대비' 로 두면 마치 실적 대비처럼 읽혀 혼동을 유발하므로 '가정' 수식어로 못박는다.
     //   (참조 탭은 '엘도라도호 실적' 로 이미 못박혀 있어 비대칭이었다.)
-    onPeer:true, tag:_peerNm + ' 가정', label:'현재 설정', ship:m.peer,
-    qFor:m.qForPeer, pFor:m.pForPeer, sim:m.simPeer, cur:m.simPeer(m.paxPeer),
+    onPeer:true, use10:!!use10, tag:_peerNm + ' 가정', label:'현재 설정', ship:m.peer,
+    qFor:_qForP, pFor:_pForP, sim:_simP, cur:_simP(m.paxPeer),
     fare:m.farePeer, pax:m.paxPeer, paxAct:m.paxPeer, voy:m.voyPeer, head:m.headPeer,
     items:m.itemsPeer, svPerVoy_of:m.svPerVoy_ofPeer, voyFor:m.voyForPeer,
     O:m.Opeer, Onc:A.dutyFreeRent, cargo:m.cargoRevP,   // Onc = 화물을 뺀 여객 외 수입
@@ -4479,7 +4524,10 @@ function view(m, forcePeer){
 
 function drawTgt(m){
   // 산타모니카(peer) 전용 — 엘도라도 실적은 이 패널에선 안 보여준다.
-  const V = view(m, true);
+  // pl10 탭이거나 10년 인쇄 중이면 10년 overlay 를 입힌 변형 사용 — 헤더 KPI(opProfit10) 와 동일 좌표계.
+  const _curMtabT = document.querySelector('.mtab.on')?.dataset.mtab;
+  const _use10T   = !!window._FORCE_PL10_VIEW || _curMtabT === 'pl10';
+  const V = view(m, true, _use10T);
   const qT = V.qFor(m.r), q0 = V.qFor(0);
   const _hold = V.onPeer ? peerHold() : '';
   const _baseNm = m.ship ? m.ship.name.split(' · ')[0] : '엘도라도호';
@@ -4678,7 +4726,10 @@ function drawCVP(m){
   const H = Math.max(260, Math.round(box.clientHeight ||  300));
   const L=64, R=16, T=14, B=34;
   // 산타모니카(peer) 전용 — 엘도라도 실적은 이 패널에선 안 보여준다.
-  const V = view(m, true);
+  // pl10 탭이거나 10년 인쇄 중이면 10년 overlay 변형 — 비용선·BEP·목표점이 10년 기준(헤더 KPI 와 일치)으로 그려진다.
+  const _curMtabCVP = document.querySelector('.mtab.on')?.dataset.mtab;
+  const _use10CVP   = !!window._FORCE_PL10_VIEW || _curMtabCVP === 'pl10';
+  const V = view(m, true, _use10CVP);
   const qT = V.qFor(m.r), q0 = V.qFor(0);
   // 과거 실적 상한선 2개 — 역대 최대(2017)·2위(2018) 수송인원. qMax 산출에 포함돼 그래프 범위 보장.
   const Q_PEAK_2017 = 235246;   // 역대 최대 — 2017년 후쿠오카 고속선 합계 (비틀·JR큐슈·코비·퀸비틀)
@@ -8196,12 +8247,17 @@ function render(){
   //   · 손익계산서 탭(plPeer) : K-IFRS (opProfit) — 손익계산서 표 Ⅴ.영업이익과 일치 (+129)
   //   · 10개년 예상 탭(pl10)  : 선체이자+10년 수리비 포함 (opProfit10) — 10년 표 y+0 Ⅴ.영업이익과 일치 (-1,243)
   const _curMtab  = document.querySelector('.mtab.on')?.dataset.mtab;
-  const _useKifrs = (_curMtab === 'plPeer');
+  // _FORCE_PL10_VIEW 는 3-시나리오 10년 인쇄 중 플래그 — plPeer 탭에서 발동돼도 헤더가 10년 기준으로 그려지도록.
+  const _useKifrs = !window._FORCE_PL10_VIEW && (_curMtab === 'plPeer');
   const opV   = onPeer ? (_useKifrs ? P.opProfit : (P.opProfit10 != null ? P.opProfit10 : P.opProfit)) : A.opProfit;
   const salV  = onPeer ? P.sales    : A.sales;
   const ebV   = onPeer ? (_useKifrs ? P.ebitda   : (P.ebitda10   != null ? P.ebitda10   : P.ebitda))   : A.opProfit + m.DEP;
-  const bepV  = onPeer ? m.qForPeer(0)   : q0;
-  const tgtV  = onPeer ? m.qForPeer(m.r) : qT;
+  // BEP·목표 승객수도 영업이익 기준과 좌표계 일치 — pl10 탭이면 10년 overlay 를 입힌 qForPeer10 사용.
+  //   → "손익분기 승객수" 라고 적힌 pax 에서 opProfit10 margin 이 정확히 0 이 되도록 (영업손익 KPI 와 수학적 정합성).
+  //   plPeer 탭(K-IFRS) 은 opProfit margin 이 0 인 pax 로 그대로 둠.
+  const _bepFn = onPeer && !_useKifrs && m.qForPeer10 ? m.qForPeer10 : m.qForPeer;
+  const bepV  = onPeer ? _bepFn(0)   : q0;
+  const tgtV  = onPeer ? _bepFn(m.r) : qT;
   const paxV  = onPeer ? m.paxPeer  : m.paxAct;
   const voyV  = onPeer ? m.voyPeer  : m.voy;
   const shipV = onPeer ? m.peer     : m.ship;
@@ -9127,6 +9183,10 @@ async function print3ScenariosPL10() {
   const scnColors = { worst: '#A8392F', normal: '#154B8C', best: '#1C6B4A' };
   const scnBg     = { worst: '#FFF4F4', normal: '#F6F9FC', best: '#F0FBF5' };
   const origScn = document.querySelector('input[name="iScenario"]:checked')?.value || 'normal';
+  // 3-시나리오 10년 인쇄는 어느 탭에서 발동되든 10년 기준으로 캡처되어야 한다 —
+  // drawTgt·drawCVP 가 이 플래그를 보고 overlay 변형을 사용 (헤더 KPI 와 좌표계 일치).
+  const _prevForce10 = window._FORCE_PL10_VIEW;
+  window._FORCE_PL10_VIEW = true;
   const sections = [];
   const waitRender = () => new Promise(r => setTimeout(r, 80));
   const _fmtWon = n => (n == null || !isFinite(n)) ? '—' : Math.round(n).toLocaleString('ko-KR');
@@ -9158,14 +9218,21 @@ async function print3ScenariosPL10() {
       const ebitda10 = (P && P.ebitda10 != null) ? P.ebitda10 : (opP10 + dep);
       // sim50 (50% 승선율 시) 는 10년 표에 없어서 simPeer 로 뽑되, 같은 10년 조정(= opP10 − sim.op 의 차이) 을 반영.
       const _delta10 = sim ? (sim.op - opP10) : 0;    // 양수 — 선체이자 + 수리비 ≈ 1,372M 수준
-      const bep    = m.qForPeer ? m.qForPeer(0)   : null;        // 손익분기 승객수
-      const tgt    = m.qForPeer ? m.qForPeer(m.r) : null;        // 목표 영업이익률 달성 승객수
+      // BEP·목표 승객수는 10년 기준(헤더·drawTgt 와 동일) — 10년 overlay 를 적용한 qForPeer10 사용
+      const bep    = m.qForPeer10 ? m.qForPeer10(0)   : (m.qForPeer ? m.qForPeer(0)   : null);
+      const tgt    = m.qForPeer10 ? m.qForPeer10(m.r) : (m.qForPeer ? m.qForPeer(m.r) : null);
       const cap    = m.peer && m.peer.pax > 0 ? m.peer.pax : 0;
       const voy    = m.voyPeer || 0;
       const peerCap = cap * voy;
       const pax50  = cap > 0 ? Math.round(cap * 0.5 * voy) : null;
       const sim50  = (pax50 && m.simPeer) ? m.simPeer(pax50) : null;
-      const sim50Op10 = sim50 ? sim50.op - _delta10 : null;
+      // 50% 승선율 KPI 영업손익 — render() 헤더 KPI 와 일관성:
+      //   paxCur == pax50 이면 PEER_PL.opProfit10 그대로 (헤더와 완전 일치),
+      //   아니면 sim50.op - _delta10 (사용자 입력 pax 와 다를 때 fallback)
+      const _paxMatchesP50_pr = (pax50 != null) && Math.abs(paxCur - pax50) < 1 && P && P.sales > 0;
+      const sim50Op10 = _paxMatchesP50_pr ? opP10 : (sim50 ? sim50.op - _delta10 : null);
+      // 50% KPI margin denominator 도 매칭 시 PEER_PL.sales 사용 — 공식 간 미세 차이 제거
+      const _sim50Sales = _paxMatchesP50_pr ? P.sales : (sim50 ? sim50.sales : 0);
       const utilPct = (voy / (365*2)) * 100;
       kpi.sales     = sales;
       kpi.opProfit  = opP10;
@@ -9181,7 +9248,7 @@ async function print3ScenariosPL10() {
       kpi.tgtR      = m.r;
       kpi.pax50     = pax50;
       kpi.sim50Op   = sim50Op10;
-      kpi.sim50Mg   = (sim50 && sim50.sales > 0) ? sim50Op10 / sim50.sales : null;
+      kpi.sim50Mg   = (_sim50Sales > 0 && sim50Op10 != null) ? sim50Op10 / _sim50Sales : null;
       kpi.voy       = voy;
       kpi.utilPct   = utilPct;
       kpi.cap       = cap;
@@ -9190,6 +9257,18 @@ async function print3ScenariosPL10() {
       kpi.scnFuel   = m.scnFuel || 0;
       kpi.scnCargo  = m.scnCargo || 0;
       kpi.scnFuelRT = m.scnFuelRT || 0;
+      // ── 메인 헤더 KPI 수치만 textContent 로 캡처 — 포맷·반올림·사인은 메인과 동일, 레이아웃은 kpiCard 자체 ─
+      //   innerHTML 삽입 시 메인 navy 배경용 inline-color(#C3D8EF 등) 가 흰 배경 print3 에서 깨져 보여
+      //   순수 텍스트만 뽑아 kpiCard 의 깔끔한 inline-style 로 재조립. (높이·배치 안정)
+      const _hT = sel => document.querySelector(sel)?.textContent?.replace(/\s+/g, ' ').trim() || '';
+      kpi.hdr = {
+        actOp:   _hT('#kActOp'),      actOpS:  _hT('#kActOpS'),
+        eb:      _hT('#kEb'),          ebS:    _hT('#kEbS'),
+        bep:     _hT('#kBep'),         bepS:   _hT('#kBepS'),
+        tgtT:    _hT('#kTgtT'),        tgt:    _hT('#kTgt'),       tgtS:    _hT('#kTgtS'),
+        peer50T: _hT('#kPeer50PaxT'),  peer50: _hT('#kPeer50Pax'), peer50S: _hT('#kPeer50PaxS'),
+        util:    _hT('#kUtil'),        utilS:  _hT('#kUtilS'),
+      };
     }
     // ── CVP SVG 캡처 (drawCVP 가 강제 peer 모드로 렌더) ─────────────────
     // CVP 패널은 화면상 숨어있을 수 있음 — drawCVP(LAST_M) 를 명시 호출로 보장.
@@ -9237,7 +9316,8 @@ async function print3ScenariosPL10() {
                     html: clone.innerHTML, sub: subTxt, kpi, cvpSvg,
                     tgtCap, tgtCap2, tgtMiniHTML, tgtTblHTML, ratioTblHTML });
   }
-  // 원래 시나리오로 복원
+  // 원래 시나리오로 복원 — 플래그 해제 후 render() 를 재실행해 사용자가 보고 있던 탭 기준으로 복귀
+  window._FORCE_PL10_VIEW = _prevForce10;
   const origRadio = document.querySelector(`input[name="iScenario"][value="${origScn}"]`);
   if (origRadio) { origRadio.checked = true; origRadio.dispatchEvent(new Event('change')); }
   await waitRender();
@@ -9250,13 +9330,11 @@ async function print3ScenariosPL10() {
   const aiOn = !!(FUEL_SEG && FUEL_SEG.enabled && FUEL_SEG.aiTrend);
   const kpiCard = (s) => {
     const k = s.kpi || {};
+    const h = k.hdr || {};
+    // 색상 — opProfit·ebitda·sim50Mg 부호로 결정 (메인 .v.neg/.v.pos CSS 는 상속 안되므로 inline 지정)
     const colOp = k.opProfit < 0 ? '#A8392F' : '#1C6B4A';
     const colEb = k.ebitda   < 0 ? '#A8392F' : '#1C6B4A';
-    const bepGap = (k.bep != null && k.paxCur != null) ? (k.bep - k.paxCur) : null;
-    const tgtGap = (k.tgt != null && k.paxCur != null) ? (k.tgt - k.paxCur) : null;
     const sim50Col = k.sim50Mg != null && k.sim50Mg < 0 ? '#A8392F' : '#1C6B4A';
-    // AI 유가추세 ON 이면 — 년차별 편도단가(만원) 를 전제 라인 아래에 한 줄 추가
-    //   (단순 모드 전용 — fuelSimpleOn 조건 확인하진 않지만 FUEL_SEG.enabled 자체가 단순 모드에서만 유의미)
     const _aiBadge = aiOn
       ? ` &nbsp;<span style="background:#FFF4D6;color:#8A5A12;padding:1px 7px;border-radius:3px;font-size:8.5pt;font-weight:700;border:1px solid #D9A520">AI 유가추세 적용</span>`
       : '';
@@ -9265,38 +9343,43 @@ async function print3ScenariosPL10() {
            <b>년차별 편도단가 (만원)</b> — ${(FUEL_SEG.years||[]).map((v,i)=>`y+${i} ${v==null?'—':Number(v).toLocaleString('ko-KR')}`).join(' · ')}
          </div>`
       : '';
+    // ── 메인 헤더 수치 그대로 + 깔끔한 레이아웃 ────────────────────────────
+    //   서브텍스트는 overflow 자르지 않고 전부 노출 — 좁은 셀에서 자연 wrap 되지만
+    //   폰트 축소 + line-height 축소 + word-break:keep-all 로 한글 음절 중간 안 끊기게.
+    //   vertical-align:top 로 셀 높이 차이가 나도 상단 정렬 통일.
+    const _mainStyle = 'font-size:10.5pt;font-weight:700;line-height:1.15';
+    const _subStyle  = 'font-size:7pt;font-weight:400;line-height:1.3;margin-top:2px;word-break:keep-all';
+    const _cellBase  = 'padding:5px 7px;vertical-align:top';
+    const _cell = (main, sub, mainCol, subCol) => `
+      <td style="${_cellBase}${mainCol?';color:'+mainCol:''}">
+        <div style="${_mainStyle}">${main || '—'}</div>
+        <div style="${_subStyle};color:${subCol || mainCol || '#555'}">${sub || ''}</div>
+      </td>`;
     return `
     <div class="exec-kpi" style="margin:0 0 10px;border:2px solid ${s.color};border-radius:4px;overflow:hidden;background:#fff">
       <div style="padding:4px 10px;background:${s.color};color:#fff;font-size:9.5pt;font-weight:700">
         [임원 요약] 영업 핵심 지표${_aiBadge} &nbsp;·&nbsp; 전제 : 승선율 ${_fmtPct(k.loadCur,1)} (${_fmtWon(k.paxCur)}명) · 운임 ${_fmtWon(k.scnFare)}원+할증 ${_fmtWon(k.scnFuel)}원 · 선적율 ${(k.scnCargo||0).toFixed(2).replace(/\.?0+$/, '')}% · 연 ${_fmtWon(k.voy)}항차 · 단순연료 ${_fmtWon(k.scnFuelRT)}만원/편도
       </div>
       ${_aiLine}
-      <table style="width:100%;border-collapse:collapse;font-size:9pt">
+      <table style="width:100%;border-collapse:collapse;font-size:9pt;table-layout:fixed">
         <thead>
-          <!-- 시나리오 테마 색상으로 헤더 통일 — 해당 시나리오 안 모든 보조 표가 같은 색 -->
           <tr style="background:${s.color};color:#fff;border-bottom:1px solid ${s.color}">
-            <th style="padding:5px 7px;text-align:left;width:17%">영업손익</th>
-            <th style="padding:5px 7px;text-align:left;width:14%">EBITDA</th>
-            <th style="padding:5px 7px;text-align:left;width:17%">손익분기 승객수</th>
-            <th style="padding:5px 7px;text-align:left;width:19%">목표(${_fmtPct(k.tgtR,0)}) 달성 승객수</th>
-            <th style="padding:5px 7px;text-align:left;width:17%">50% 승선율 (${_fmtWon(k.pax50)}명)</th>
-            <th style="padding:5px 7px;text-align:left;width:16%">가동률</th>
+            <th style="padding:4px 7px;text-align:left;width:17%;font-size:8.5pt">영업손익</th>
+            <th style="padding:4px 7px;text-align:left;width:14%;font-size:8.5pt">EBITDA</th>
+            <th style="padding:4px 7px;text-align:left;width:17%;font-size:8.5pt">손익분기 승객수</th>
+            <th style="padding:4px 7px;text-align:left;width:19%;font-size:8.5pt">${h.tgtT || '목표 달성 승객수'}</th>
+            <th style="padding:4px 7px;text-align:left;width:17%;font-size:8.5pt">${h.peer50T || '50% 승선율 승객수'}</th>
+            <th style="padding:4px 7px;text-align:left;width:16%;font-size:8.5pt">가동률</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td style="padding:5px 6px;color:${colOp};font-weight:700">${_sign(k.opProfit)}${_fmtMil(Math.abs(k.opProfit))}<br>
-              <span style="font-size:8pt;font-weight:400;color:${colOp}">영업이익률 ${_fmtPct(k.opMargin,1)}</span></td>
-            <td style="padding:5px 6px;color:${colEb};font-weight:700">${_sign(k.ebitda)}${_fmtMil(Math.abs(k.ebitda))}<br>
-              <span style="font-size:8pt;font-weight:400;color:${colEb}">마진 ${_fmtPct(k.ebMargin,1)}</span></td>
-            <td style="padding:5px 6px;font-weight:700">${k.bep!=null?_fmtWon(k.bep)+'명':'—'}<br>
-              <span style="font-size:8pt;font-weight:400;color:#555">승선율 ${k.bepLoad!=null?_fmtPct(k.bepLoad,1):'—'} ${bepGap!=null?`· 현재 설정 승선율 ${_fmtPct(k.loadCur,1)} 대비 ${bepGap<0?'+':'△'}${_fmtWon(Math.abs(bepGap))}명`:''}</span></td>
-            <td style="padding:5px 6px;font-weight:700">${k.tgt!=null?_fmtWon(k.tgt)+'명':'—'}<br>
-              <span style="font-size:8pt;font-weight:400;color:#555">승선율 ${k.tgtLoad!=null?_fmtPct(k.tgtLoad,1):'—'} ${tgtGap!=null?`· 현재 설정 승선율 ${_fmtPct(k.loadCur,1)} 대비 ${tgtGap<0?'+':'△'}${_fmtWon(Math.abs(tgtGap))}명`:''}</span></td>
-            <td style="padding:5px 6px;font-weight:700;color:${sim50Col}">${k.sim50Op!=null?_sign(k.sim50Op)+_fmtMil(Math.abs(k.sim50Op)):'—'}<br>
-              <span style="font-size:8pt;font-weight:400;color:${sim50Col}">영업이익률 ${k.sim50Mg!=null?_fmtPct(k.sim50Mg,1):'—'}</span></td>
-            <td style="padding:5px 6px;font-weight:700">${k.utilPct?k.utilPct.toFixed(1)+'%':'—'}<br>
-              <span style="font-size:8pt;font-weight:400;color:#555">연 ${_fmtWon(k.voy)}항차 ÷ 730일</span></td>
+            ${_cell(h.actOp,  h.actOpS,  colOp,    colOp)}
+            ${_cell(h.eb,     h.ebS,     colEb,    colEb)}
+            ${_cell(h.bep,    h.bepS,    null,     '#555')}
+            ${_cell(h.tgt,    h.tgtS,    null,     '#555')}
+            ${_cell(h.peer50, h.peer50S, sim50Col, sim50Col)}
+            ${_cell(h.util || (k.utilPct?k.utilPct.toFixed(1)+'%':'—'), h.utilS || `연 ${_fmtWon(k.voy)}항차 ÷ 730일`, null, '#555')}
           </tr>
         </tbody>
       </table>
