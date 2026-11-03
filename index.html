@@ -7701,9 +7701,17 @@ const _AIS_VESSELS = {
     //   2025.10.18 마지막 운항 → 10.19 부터 휴항. 2026.2.19 · 2.23 두 번 나간 건 수리 후 시운전으로 보고, 정기 운항 재개는 3.11.
     maint: [{ from:'2025-10-19', to:'2026-03-10',
               label:'정비 — 추자항 접안 사고로 워터젯 버킷 파손 · 해외 부품 수급으로 149일 휴항 (한라일보 2026.11.03)',
-              trials:['2026-02-19','2026-02-23'] }],
+              days:{ '2026-02-19':'시운전', '2026-02-23':'시운전' } }],
     note:'🔧 2025.10.19 ~ 2026.3.10 정비 휴항 (추자항 접안 사고 → 워터젯 버킷 파손, 부품 수급 149일) · 2.19·2.23 은 시운전' },
-  eldorado:    { label:'엘도라도 익스프레스호', file:'eldorado_track-data-2023-07-01,2026-11-01.csv',    color:'#88ff55' },
+  eldorado:    { label:'엘도라도 익스프레스호', file:'eldorado_track-data-2023-07-01,2026-11-01.csv',    color:'#88ff55',
+    // AIS : 2025.4.4 마지막 운항 → 포항(36.051, 129.378) 계류 → 영도(35.102, 129.060) 입거(입거 중 AIS 거의 꺼짐) → 2026.4.6 출거 → 4.10 재취항.
+    maint: [{ from:'2025-04-05', to:'2025-11-02',
+              label:'수리 대기 — 2025.4 엔진 1기 결함으로 포항 계류, 정밀진단 후 기관 전체 교체로 확대',
+              days:{ '2025-10-18':'시운전' } },
+            { from:'2025-11-03', to:'2026-04-06',
+              label:'영도 조선소 입거 — 엔진 수리·기관 교체(약 80억 · 보험 처리) · 2026.4.10 재취항 (세계일보 2026.4.12)',
+              days:{ '2025-11-04':'회항 포항→영도', '2026-04-06':'출거 · 시운전 후 포항 복귀' } }],
+    note:'🔧 2025.4.5 ~ 2026.4.6 수리 휴항 (엔진 결함 → 포항 계류 → 11.3 영도 입거 엔진 수리) · 2026.4.10 재취항' },
   koreapride:  { label:'코리아프라이드호',      sub:'인천연안부두↔백령도', file:'koreapride_track-data-2023-01-01,2027-01-01.csv', color:'#55ccff' },
   umiterashi:  { label:'우미테라시호',           file:'umiterashi_track-data-2021-01-01,2027-01-01.csv',  color:'#ff4d7a' },
   panstargrace:{ label:'팬스타 그레이스호',      sub:'팬스타·운항예정', file:'panstargrace_track-data-2025-07-01,2026-09-01.csv', color:'#ffdd55', openDay:'2026-07-29' },
@@ -10313,8 +10321,9 @@ function _aisMaintAt(key, dateStr) {
 }
 function _aisMaintTxt(m, dateStr) {
   if (!m) return '';
-  const trial = m.trials && m.trials.includes(dateStr.slice(0, 10));
-  return '🔧 ' + (trial ? '시운전 · ' : '') + m.label + ' (' + m.from + ' ~ ' + m.to + ')';
+  const d = dateStr.slice(0, 10);
+  const dayLbl = (m.days && m.days[d]) || (m.trials && m.trials.includes(d) ? '시운전' : '');
+  return '🔧 ' + (dayLbl ? dayLbl + ' · ' : '') + m.label + ' (' + m.from + ' ~ ' + m.to + ')';
 }
 
 // ── 단계별 선택 ──
