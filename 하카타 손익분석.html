@@ -1704,9 +1704,22 @@
           <div id="plBodyB" hidden>
             <div class="plbar">
               <button type="button" class="lnk" id="btnPeerAll">모두 펼치기</button>
-              <button type="button" class="lnk" id="btnPrint3Scn" hidden
+              <!-- 3-시나리오 인쇄 — 안 1/2/3 각각 독립 출력 + 통합 + 설정 -->
+              <button type="button" class="lnk" id="btnPrint3Scn1" hidden
                       style="color:var(--navy);font-weight:600"
-                      title="worst/normal/best 3개 시나리오의 10개년 손익계산서를 모두 펼친 상태로 한 번에 인쇄">3-시나리오 10개년 인쇄</button>
+                      title="1번안 — 과거 전제 (AI 유가추세 $1,490 복귀) · 선가 550억 · 차입 250억">1안 인쇄</button>
+              <button type="button" class="lnk" id="btnPrint3Scn2" hidden
+                      style="color:var(--navy);font-weight:600"
+                      title="2번안 — 현재 전제 (AI 유가추세 수정반영) · 선가 550억 · 차입 250억">2안 인쇄</button>
+              <button type="button" class="lnk" id="btnPrint3Scn3" hidden
+                      style="color:var(--navy);font-weight:600"
+                      title="3번안 — 현재 전제 · 현재 선가 600억 · 차입 300억">3안 인쇄(현재 셋팅반영)</button>
+              <button type="button" class="lnk" id="btnPrint3Int" hidden
+                      style="color:#8A5A12;font-weight:700"
+                      title="1·2·3안 모두를 하나의 창에 쌓아 통합 출력">통합 인쇄</button>
+              <button type="button" class="lnk" id="btnPrint3Settings" hidden
+                      style="color:#5C6B7F;font-weight:600"
+                      title="각 안의 선가·차입·슬로건 수정">⚙ 안별 설정</button>
               <button type="button" class="lnk" id="btnTrafficRef" hidden
                       style="margin-left:auto"
                       title="선사/항공사 수송실적 — 새 창으로 열기">선사/항공사 수송실적 ↗</button>
@@ -2775,6 +2788,37 @@
     <div class="mbody">
       <section class="card">
         <div class="body" id="companyWageBody" style="font-size:12px">—</div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="ovPrint3Settings" role="dialog" aria-modal="true" aria-label="3-시나리오 인쇄 — 안별 설정">
+  <div class="modal" style="width:min(820px,95vw)">
+    <header>
+      <div>
+        <h3>3-시나리오 인쇄 — 안별 설정</h3>
+        <p>선가·차입·슬로건을 수정. 저장 시 모든 '안 인쇄' 와 '통합 인쇄' 에 반영됨 (브라우저에 저장).</p>
+      </div>
+      <button class="x" data-close aria-label="닫기">✕</button>
+    </header>
+    <div class="mbody">
+      <section class="card">
+        <div class="body" id="print3SettingsBody" style="font-size:12.5px"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;padding:12px 14px;border-top:1px solid var(--rule)">
+          <button type="button" id="btnPrint3ResetDefaults"
+                  style="padding:6px 14px;border:1px solid var(--rule);background:#fff;color:#A8392F;border-radius:3px;cursor:pointer">
+            전체 초기화 (기본값 복원)
+          </button>
+          <button type="button" data-close
+                  style="padding:6px 14px;border:1px solid var(--rule);background:#fff;color:var(--muted);border-radius:3px;cursor:pointer">
+            닫기
+          </button>
+          <button type="button" id="btnPrint3SaveSettings"
+                  style="padding:6px 16px;border:1px solid var(--navy);background:var(--navy);color:#fff;border-radius:3px;cursor:pointer;font-weight:700">
+            저장
+          </button>
+        </div>
       </section>
     </div>
   </div>
@@ -7624,11 +7668,16 @@ let _fuelSegDrag = { active:false, start:null };
 //
 //   10년 평균 ≈ $1,083/MT (배율 평균 ≈ 0.815) — pre-war $500-700 복귀는 어렵고
 //   러시아-우크라이나 장기 정체·이란 긴장·IMO 규제 상시화로 $900+ floor 유지 가정.
-// 셀 USD/FX 수정 시 배율 (ratio) 도 함께 재계산되므로 let. 저장된 trend 는 사용자 조정 후 상태.
+//
+// ── 근거 페이지(5쪽) 표시 기준 ────────────────────────────────────────
+//   y+0 USD $1,490 · FX ₩1,410 (2026.11 초 피크 시세) 를 1.000 기준으로 TOC 표시.
+//   USD 는 TREND × 1,490 반올림, FX 는 완만 하락 (저점 2030 ₩1,320 → 반등 2036 ₩1,400).
+//   실제 fuel 금액 계산은 TREND 로만 결정 (fallback × TREND[k]).
+// 셀 USD/FX 수정 시 배율도 함께 재계산되므로 let.
 let FUEL_AI_TREND  = [1.000, 0.960, 0.915, 0.863, 0.810, 0.750, 0.690, 0.705, 0.728, 0.750, 0.765];
-// 년차별 LSMGO $/MT · 환율 ₩/$ — 셀 안에서 직접 수정 가능 (let). 바뀌면 그 년차 편도만원 자동 재계산.
-let FUEL_AI_USD_MT = [1333, 1280, 1220, 1150, 1080, 1000,  920,  940,  970, 1000, 1020];
-let FUEL_AI_FX     = [1325, 1340, 1350, 1360, 1370, 1370, 1365, 1370, 1375, 1385, 1400];
+// 년차별 LSMGO $/MT · 환율 ₩/$ — y+0 $1,490·₩1,410 시작, TREND 기반 표시. 셀 수정 시 재계산.
+let FUEL_AI_USD_MT = [1490, 1430, 1364, 1286, 1207, 1118, 1028, 1050, 1085, 1118, 1140];
+let FUEL_AI_FX     = [1410, 1380, 1350, 1330, 1320, 1320, 1330, 1350, 1370, 1385, 1400];
 const FUEL_AI_RATIONALE = [
   '현 시세 (실측 · 러시아-우크라이나 전쟁 + 이란·중동 지정학 프리미엄 반영)',
   '우크라이나 휴전 가능성·이란 긴장 완화 · OPEC+ 공급 점진',
@@ -7641,6 +7690,25 @@ const FUEL_AI_RATIONALE = [
   '신선박 LSMGO 수요 증가',
   '10년 평균 가격대 복귀',
   'IMO 2050 중간지표 반영 · 10년 평균 ~$1,080',
+];
+// ── 3-시나리오 10년 인쇄 '1번안' 전용 과거 전제 ─────────────────────────
+//   y+0 ($1,490) 가정 · 저유황 공급 과잉 → pre-war 수준 복귀 가정 (c77c6ea 이전 상태).
+//   USD·FX·TREND·RATIONALE 모두 그 시점 그대로 복원해 1번안 출력에 override.
+const LEGACY_AI_TREND  = [1.000, 0.840, 0.705, 0.617, 0.550, 0.544, 0.557, 0.577, 0.597, 0.617, 0.638];
+const LEGACY_AI_USD_MT = [1490, 1252, 1050,  919,  820,  810,  830,  860,  890,  920,  950];
+const LEGACY_AI_FX     = [1410, 1380, 1350, 1330, 1320, 1320, 1330, 1350, 1370, 1385, 1400];
+const LEGACY_AI_RATIONALE = [
+  '현 시점 · 중동 저유황 유통 리스크',
+  '저유황 공급 안정화 → MABUX 음전환',
+  '싱가포르 LSMGO 수급 완화',
+  '저유황 디젤 정제능력 확대 → 프리미엄 축소',
+  '저점 · pre-war 평균 수렴 · IMO 2030 발효 직전',
+  '저유황 공급 과잉 · 저가 유지',
+  'IMO 2030 저유황 수요 증가',
+  '저유황 바이오혼합 요구 상향',
+  '바이오 LSMGO 비용 반영 완만 상승',
+  '신선박 LSMGO 수요 증가',
+  'IMO 2030 완전 적용 · 10년 평균 수렴',
 ];
 function _aiTrendDescribe(fallback) {
   const items = FUEL_AI_TREND.map((m, k) => {
@@ -9044,7 +9112,11 @@ function applyPLView(){
   { const b = el('btnTrafficRef'); if (b) b.hidden = !multi;
     const c = el('btnCapRef');     if (c) c.hidden = !multi;
     const h = el('btnHamayuCombo');if (h) h.hidden = !multi;
-    const p = el('btnPrint3Scn');  if (p) p.hidden = !multi; }
+    const p1 = el('btnPrint3Scn1'); if (p1) p1.hidden = !multi;
+    const p2 = el('btnPrint3Scn2'); if (p2) p2.hidden = !multi;
+    const p3 = el('btnPrint3Scn3'); if (p3) p3.hidden = !multi;
+    const pI = el('btnPrint3Int');  if (pI) pI.hidden = !multi;
+    const pS = el('btnPrint3Settings'); if (pS) pS.hidden = !multi; }
 
   // 좌측 설정 카드 : 10개년에서는 '대조 선박 설정' 과 '증감률 가정' 두 탭 사이를 전환한다.
   // ACTIVE_TAB 은 model() 의 peer/base 분기와 연결돼 있어 10개년 모드에서도 'tabB' 로 유지한다.
@@ -9199,7 +9271,33 @@ function printPL() {
 }
 
 // 10개년 손익계산서 — worst/normal/best 3-시나리오 모두 인쇄 (감춰진 계정과목까지)
-async function print3ScenariosPL10() {
+//   option : 1 = 과거 전제 ($1,490 복귀 가정) + 선가 550억 · 차입 250억
+//            2 = 현재 전제 유지                + 선가 550억 · 차입 250억
+//            3 = 현재 전제 · 현재 선가/차입 그대로 (기본)
+async function print3ScenariosPL10(option, opts) {
+  const _opt = (option === 1 || option === 2 || option === 3) ? option : 3;
+  // useLegacyFuel : 1안 — FUEL_AI_* 전부 LEGACY override (TREND·USD·FX·RATIONALE 과거 그대로)
+  // use1490Start  : 2,3안 — y+0 USD $1,490 · FX ₩1,410 통일, USD[k] = TREND[k] × 1490 반올림
+  //                 TREND 자체는 수정된 현재 상태 그대로 유지 (수식 USD×FX/(USD[0]×FX[0]) = TREND 성립)
+  // localStorage 에 안별 override 저장값이 있으면 default 를 덮어씀 (설정 모달에서 사용자가 수정).
+  //   저장 구조 : { opt1:{shipPrice, loan, slogan}, opt2:{...}, opt3:{...} }
+  const _savedOpts = (() => {
+    try { return JSON.parse(localStorage.getItem('print3Options') || '{}'); }
+    catch(_) { return {}; }
+  })();
+  const _mkCfg = (k, def) => ({ ...def, ...(_savedOpts['opt'+k] || {}) });
+  const OPT_CFG = {
+    1: _mkCfg(1, { label:'1번안', sub:'3-시나리오 비교',
+         slogan:'유가의 조기 안정화 예상 — 선가 550억 (300억 자기자본 + 250억 차입)',
+         shipPrice:55000, loan:25000, useLegacyFuel:true,  use1490Start:false }),
+    2: _mkCfg(2, { label:'2번안', sub:'3-시나리오 비교',
+         slogan:'유가 안정화 완만 예상 — 선가 550억 (300억 자기자본 + 250억 차입)',
+         shipPrice:55000, loan:25000, useLegacyFuel:false, use1490Start:true  }),
+    3: _mkCfg(3, { label:'3번안', sub:'3-시나리오 비교',
+         slogan:'유가 안정화 완만 예상 — 선가 600억 (300억 자기자본 + 300억 차입)',
+         shipPrice:null,  loan:null,  useLegacyFuel:false, use1490Start:true  }),
+  };
+  const cfg = OPT_CFG[_opt];
   const scns = ['worst', 'normal', 'best'];
   const scnLabels = { worst: 'WORST (하한 시나리오)', normal: 'NORMAL (기본 시나리오)', best: 'BEST (상한 시나리오)' };
   const scnColors = { worst: '#A8392F', normal: '#154B8C', best: '#1C6B4A' };
@@ -9209,6 +9307,42 @@ async function print3ScenariosPL10() {
   // drawTgt·drawCVP 가 이 플래그를 보고 overlay 변형을 사용 (헤더 KPI 와 좌표계 일치).
   const _prevForce10 = window._FORCE_PL10_VIEW;
   window._FORCE_PL10_VIEW = true;
+  // ── 안 override : 선가·차입·FUEL_AI_* 원복용 백업 → 반드시 원상복구 (finally 없이 end 에서 수행) ──
+  const _savedShipPrice = el('iShipPricePeer')?.value;
+  const _savedLoan      = el('iLoanPeer')?.value;
+  const _savedTrend     = FUEL_AI_TREND.slice();
+  const _savedUsd       = FUEL_AI_USD_MT.slice();
+  const _savedFx        = FUEL_AI_FX.slice();
+  const _savedRat       = FUEL_AI_RATIONALE.slice();
+  // Override 적용 — 선가·차입은 input value + change dispatch (DEFAULTS·render 가 연쇄 반응)
+  if (cfg.shipPrice != null && el('iShipPricePeer')) {
+    el('iShipPricePeer').value = cfg.shipPrice;
+    el('iShipPricePeer').dispatchEvent(new Event('change'));
+  }
+  if (cfg.loan != null && el('iLoanPeer')) {
+    el('iLoanPeer').value = cfg.loan;
+    el('iLoanPeer').dispatchEvent(new Event('change'));
+  }
+  if (cfg.useLegacyFuel) {
+    // 1안 : FUEL_AI_* 전부 LEGACY (TREND·USD·FX·RATIONALE) 로 교체
+    for (let k = 0; k <= 10; k++) {
+      FUEL_AI_TREND[k]     = LEGACY_AI_TREND[k];
+      FUEL_AI_USD_MT[k]    = LEGACY_AI_USD_MT[k];
+      FUEL_AI_FX[k]        = LEGACY_AI_FX[k];
+      FUEL_AI_RATIONALE[k] = LEGACY_AI_RATIONALE[k];
+    }
+    if (typeof _applyAiTrend === 'function') _applyAiTrend(2200);
+  } else if (cfg.use1490Start) {
+    // 2,3안 : FX 는 1안 LEGACY 패턴(y+0 1410 → y+4,5 1320 저점 → y+10 1400, 현실적 U자) 그대로.
+    //         USD 는 배율 유지하도록 역산 : USD[k] = TREND[k] × (USD[0]=1490 × FX[0]=1410) / FX[k]
+    //         → USD × FX / (1490 × 1410) = TREND 성립. TREND·RATIONALE 는 현재 그대로 유지.
+    const _BASE = 1490 * 1410;
+    for (let k = 0; k <= 10; k++) {
+      FUEL_AI_FX[k]     = LEGACY_AI_FX[k];
+      FUEL_AI_USD_MT[k] = Math.round(FUEL_AI_TREND[k] * _BASE / LEGACY_AI_FX[k]);
+    }
+    if (typeof _applyAiTrend === 'function') _applyAiTrend(2200);
+  }
   const sections = [];
   const waitRender = () => new Promise(r => setTimeout(r, 80));
   const _fmtWon = n => (n == null || !isFinite(n)) ? '—' : Math.round(n).toLocaleString('ko-KR');
@@ -9338,14 +9472,37 @@ async function print3ScenariosPL10() {
                     html: clone.innerHTML, sub: subTxt, kpi, cvpSvg,
                     tgtCap, tgtCap2, tgtMiniHTML, tgtTblHTML, ratioTblHTML });
   }
-  // 원래 시나리오로 복원 — 플래그 해제 후 render() 를 재실행해 사용자가 보고 있던 탭 기준으로 복귀
+  // ── AI 유가추세 근거 페이지용 스냅샷 — 원상복구 전에 override 된 FUEL_AI_* 값을 떠둔다.
+  //    원상복구 후에 fuelAiPage 가 생성되면 override 가 사라져 "현재 상태" 로만 그려지는 버그 방지.
+  const _snapFuelAi = {
+    usd: FUEL_AI_USD_MT.slice(),
+    fx:  FUEL_AI_FX.slice(),
+    tr:  FUEL_AI_TREND.slice(),
+    rat: FUEL_AI_RATIONALE.slice(),
+  };
+  // 원래 상태 복원 — 플래그 해제 + 선가·차입·FUEL_AI_* 원복 + 시나리오 radio 복원 + render() 재실행
   window._FORCE_PL10_VIEW = _prevForce10;
+  if (_savedShipPrice != null && el('iShipPricePeer')) {
+    el('iShipPricePeer').value = _savedShipPrice;
+    el('iShipPricePeer').dispatchEvent(new Event('change'));
+  }
+  if (_savedLoan != null && el('iLoanPeer')) {
+    el('iLoanPeer').value = _savedLoan;
+    el('iLoanPeer').dispatchEvent(new Event('change'));
+  }
+  for (let k = 0; k <= 10; k++) {
+    FUEL_AI_TREND[k]     = _savedTrend[k];
+    FUEL_AI_USD_MT[k]    = _savedUsd[k];
+    FUEL_AI_FX[k]        = _savedFx[k];
+    FUEL_AI_RATIONALE[k] = _savedRat[k];
+  }
   const origRadio = document.querySelector(`input[name="iScenario"][value="${origScn}"]`);
   if (origRadio) { origRadio.checked = true; origRadio.dispatchEvent(new Event('change')); }
   await waitRender();
-  // 새 창에 3 섹션을 쌓아 인쇄
-  const w = window.open('', 'print3Scn', 'width=1200,height=900');
-  if (!w) { alert('팝업 차단으로 인쇄 창을 열 수 없습니다. 팝업 허용 후 다시 시도해 주세요.'); return; }
+  // returnHtml 모드가 아니면 창 열기 — 통합 인쇄 경로에서는 창을 밖에서 관리
+  const _returnHtmlOnly = !!(opts && opts.returnHtml);
+  const w = _returnHtmlOnly ? null : window.open('', `print3Scn_${option}`, 'width=1200,height=900');
+  if (!_returnHtmlOnly && !w) { alert('팝업 차단으로 인쇄 창을 열 수 없습니다. 팝업 허용 후 다시 시도해 주세요.'); return; }
   const today = new Date().toISOString().slice(0, 10);
   // ── 섹션별 KPI 카드 + 전제 요약 + 10개년 표 + CVP 그래프 ─────────────
   // AI 유가추세 상태 — 각 섹션 공통. 년차별 편도단가 라인(y+0..y+10) 도 함께 출력.
@@ -9789,7 +9946,8 @@ async function print3ScenariosPL10() {
     <section class="intro-section" style="margin:0 0 10px">
       <div class="intro-header" style="border-top:5px solid #154B8C;background:#F5F9FE;padding:8px 12px;margin:0 0 10px;display:flex;justify-content:space-between;align-items:flex-end">
         <div>
-          <div style="font-size:14pt;font-weight:800;color:#154B8C">분석 전제·조건 요약</div>
+          <div style="font-size:14pt;font-weight:800;color:#154B8C">[${cfg.label}] 분석 전제·조건 요약</div>
+          <div style="font-size:10.5pt;color:#8A5A12;margin-top:3px;font-weight:700">${cfg.slogan || ''}</div>
           <div style="font-size:9pt;color:#555;margin-top:2px">${today} 기준 · 산타모니카호 하카타 투입 시나리오</div>
         </div>
         ${_pageTag(PP.cond)}
@@ -9835,8 +9993,8 @@ async function print3ScenariosPL10() {
                   ${_condRow('항비 수동 산식',  portOn  ? '적용 중 (부산+하카타 세목별 PDF 산식)' : '미적용')}
                   ${_condRow('유가 기준<br><small style="color:#5C6B7F;font-weight:400">(참조선박)</small>',        _fmtN(_n('iFuelBase')) + ' $/MT (2024)')}
                   ${_condRow('환율 기준<br><small style="color:#5C6B7F;font-weight:400">(참조선박)</small>',        _fmtN(_n('iFxBase')) + ' 원/$ (2024)')}
-                  ${_condRow('선가 / 내용연수', _fmtN(_n('iShipPricePeer')) + '백만 / ' + _fmtN(_n('iLifePeer')) + '년')}
-                  ${_condRow('차입금 / 이자율', _fmtN(_n('iLoanPeer')) + '백만 / ' + _n('iLoanRatePeer') + '%' + (_c('iJpyLoan') ? ' (엔화 1.56%)' : ''))}
+                  ${_condRow('선가 / 내용연수', _fmtN(cfg.shipPrice != null ? cfg.shipPrice : _n('iShipPricePeer')) + '백만 / ' + _fmtN(_n('iLifePeer')) + '년')}
+                  ${_condRow('차입금 / 이자율', _fmtN(cfg.loan != null ? cfg.loan : _n('iLoanPeer')) + '백만 / ' + _n('iLoanRatePeer') + '%' + (_c('iJpyLoan') ? ' (엔화 1.56%)' : ''))}
                   ${_condRow('세금 적용',        _c('iTonnageTax') ? '톤세 (조세특례제한법 §104-10)' : '누진 법인세')}
                 </tbody>
               </table>
@@ -10469,12 +10627,65 @@ async function print3ScenariosPL10() {
   `;
   // ── 5페이지 (조건부) — AI 유가추세 적용시 근거 ──────────────────────────────
   //   AI 유가추세 ON 일 때만 포함 — 전제·조건 뒤에 두어 "이 가정으로 손익을 돌렸다" 는 흐름 유지.
-  const fuelAiPage = !aiOn ? '' : `
+  //   표 데이터는 _snapFuelAi (for 루프 종료 후·원상복구 전 떠둔 override 스냅샷) 에서 읽음.
+  //   이렇게 하지 않으면 원상복구 이후 fuelAiPage 생성 시점에 FUEL_AI_* 가 원상 상태로 되돌아가 1안/2안 구분이 안 됨.
+  let fuelAiPage = '';
+  if (aiOn) {
+    const _usdArr = (_snapFuelAi && _snapFuelAi.usd) || [];
+    const _fxArr  = (_snapFuelAi && _snapFuelAi.fx)  || [];
+    const _trArr  = (_snapFuelAi && _snapFuelAi.tr)  || [];
+    const _ratArr = (_snapFuelAi && _snapFuelAi.rat) || [];
+    // 저점 index — TREND 최소값 위치. 테이블 하이라이트 + 설명 문구에 활용.
+    let _lowK = 0, _lowV = Infinity;
+    for (let k = 0; k <= 10; k++) {
+      if (_trArr[k] != null && _trArr[k] < _lowV) { _lowV = _trArr[k]; _lowK = k; }
+    }
+    const _yearBase = 2026;
+    const _fmtUsd = v => v == null ? '—' : '$' + Math.round(v).toLocaleString('ko-KR');
+    const _fmtFx  = v => v == null ? '—' : Math.round(v).toLocaleString('ko-KR');
+    const _fmtTr  = v => v == null ? '—' : '×' + Number(v).toFixed(3);
+    const _yrLbl  = k => `y+${k} · ${_yearBase + k}`;
+    const _rowsHtml = Array.from({length: 11}, (_, k) => {
+      const hi   = (k === _lowK);
+      const _ud  = _fmtUsd(_usdArr[k]);
+      const _fx  = _fmtFx(_fxArr[k]);
+      const _tr  = _fmtTr(_trArr[k]);
+      const _rat = _ratArr[k] || '';
+      return `
+        <tr${hi ? ' style="background:#FFFBEE"' : ''}>
+          <td style="padding:4px 8px;color:#8A5A12;font-weight:700;border:1px solid #D7DFE9">${_yrLbl(k)}</td>
+          <td style="padding:4px 8px;text-align:right;font-variant-numeric:tabular-nums;border:1px solid #D7DFE9">${hi ? '<b>' + _ud + '</b>' : _ud}</td>
+          <td style="padding:4px 8px;text-align:right;font-variant-numeric:tabular-nums;border:1px solid #D7DFE9">${_fx}</td>
+          <td style="padding:4px 8px;text-align:right;border:1px solid #D7DFE9">${hi ? '<b>' + _tr + '</b>' : _tr}</td>
+          <td style="padding:4px 8px;border:1px solid #D7DFE9">${hi ? '<b>' + _rat + '</b>' : _rat}</td>
+        </tr>`;
+    }).join('');
+    const _y0Usd  = _usdArr[0] != null ? Math.round(_usdArr[0]).toLocaleString('ko-KR') : '—';
+    const _lowUsd = _usdArr[_lowK] != null ? Math.round(_usdArr[_lowK]).toLocaleString('ko-KR') : '—';
+    const _lowYr  = _yearBase + _lowK;
+    const _validUsd = _usdArr.filter(v => v != null && isFinite(v));
+    const _avgUsdRaw = _validUsd.length ? Math.round(_validUsd.reduce((a,b) => a + b, 0) / _validUsd.length) : 0;
+    // 1안(과거 전제·$820 복귀 가정) 은 PDF 표기와 동일하게 "~$880 (보수적 중앙치)" 로 고정.
+    //   수학적 평균 ($981) 이 아닌 pre-war 평균대 회귀 목표치. 2·3안은 실제 평균 그대로.
+    const _avgStr = cfg.useLegacyFuel ? '880' : _avgUsdRaw.toLocaleString('ko-KR');
+    // y+0 → y+10 10년 복리 CAGR — PDF 5페이지 하단 "10년 평균 복리" 와 동일 산출.
+    const _cagr = (_usdArr[0] > 0 && _usdArr[10] > 0)
+      ? (Math.pow(_usdArr[10] / _usdArr[0], 1/10) - 1) * 100 : null;
+    const _cagrStr = _cagr != null ? (_cagr >= 0 ? '+' : '') + _cagr.toFixed(1) + '%/년' : '—';
+    // 현재가 대비 y+0 프리미엄 — 과거 평균 $500~$820 범위 기준. 전쟁 전 대비 가산폭 산출.
+    const _preWarAvg = 660;  // $500~$820 중앙치
+    const _premium = (_usdArr[0] > 0) ? ((_usdArr[0] / _preWarAvg - 1) * 100) : null;
+    const _premiumStr = _premium != null ? (_premium >= 0 ? '+' : '') + Math.round(_premium) + '%' : '—';
+    // 안별 "핵심 가정 3가지" 문구 — RATIONALE 이 있으면 그걸 요약, 없으면 generic
+    const _rat0  = _ratArr[0]  || '현 시세 (전쟁·지정학 프리미엄 반영)';
+    const _ratLo = _ratArr[_lowK] || '저점';
+    const _ratEnd = _ratArr[10] || '10년 평균 수렴';
+    fuelAiPage = `
     <section class="intro-section" style="margin:0 0 10px">
       <div class="intro-header" style="border-top:5px solid #D9A520;background:#FFF8EC;padding:8px 12px;margin:0 0 10px;display:flex;justify-content:space-between;align-items:flex-end">
         <div>
-          <div style="font-size:14pt;font-weight:800;color:#8A5A12">AI 유가추세 적용 근거 — LSMGO 10년 추세 (6년 완만 하락 · 저점 ~$920)</div>
-          <div style="font-size:9pt;color:#5C6B7F;margin-top:2px">현 시세 $1,333 (실측 벙커가) → 6년 완만 하락 → 2032년 $920 저점 → 10년 평균 ~$1,083/MT</div>
+          <div style="font-size:14pt;font-weight:800;color:#8A5A12">AI 유가추세 적용 근거 — LSMGO 10년 추세 (${cfg.label})</div>
+          <div style="font-size:9pt;color:#5C6B7F;margin-top:2px">현 시세 $${_y0Usd} (전쟁 프리미엄 포함) → ${_lowYr}년 $${_lowUsd} 저점 → 10년 평균 ~$${_avgStr}/MT</div>
         </div>
         ${_pageTag(PP.fuelAi)}
       </div>
@@ -10482,9 +10693,9 @@ async function print3ScenariosPL10() {
         <div class="grow-cell">
           <div style="padding:8px 12px;background:#FFFBEE;border:1px solid #E0B870;border-radius:3px;margin-bottom:8px;font-size:10pt;line-height:1.6;color:#33415A">
             <b style="color:#8A5A12">핵심 가정 3가지</b>
-            <p style="margin:3px 0 0">① 현 시세($1,333 실측)는 러시아-우크라이나 전쟁 · 이란 긴장 · 중동 지정학 프리미엄 반영</p>
-            <p style="margin:0">② 양 전선 완전 종료 어려워 pre-war $820 복귀 비현실적 — 6년 걸쳐 완만 하락, 저점 ~$920</p>
-            <p style="margin:0">③ IMO 2030 규제·바이오혼합 의무로 중장기(y+7 이후) 완만 반등 → 10년 평균 ~$1,083</p>
+            <p style="margin:3px 0 0">① 현 시세 ($${_y0Usd}) — ${_rat0}</p>
+            <p style="margin:0">② ${_lowYr}년 저점 $${_lowUsd} (×${Number(_lowV).toFixed(3)}) — ${_ratLo}</p>
+            <p style="margin:0">③ y+10 ($${(_usdArr[10]||0).toLocaleString('ko-KR')}) — ${_ratEnd}</p>
           </div>
           <table style="width:100%;border-collapse:collapse;border:1px solid #B4C2D4;font-size:9pt">
             <thead>
@@ -10496,46 +10707,24 @@ async function print3ScenariosPL10() {
                 <th style="padding:4px 8px;text-align:left">주요 사유 (예정된 공급·수요·규제 이벤트)</th>
               </tr>
             </thead>
-            <tbody>
-              ${[
-                ['y+0 · 2026', '$1,333', '1,325', '×1.000', '현 시세 (실측 · 러시아-우크라이나 전쟁 + 이란·중동 지정학 프리미엄 반영)', false],
-                ['y+1 · 2027', '$1,280', '1,340', '×0.960', '우크라이나 휴전 가능성·이란 긴장 완화 · OPEC+ 공급 점진',       false],
-                ['y+2 · 2028', '$1,220', '1,350', '×0.915', '러시아 수출 정상화 시도 · 전쟁 프리미엄 서서히 해소',           false],
-                ['y+3 · 2029', '$1,150', '1,360', '×0.863', '정제능력 증설·중동 안정화 반영 시작',                             false],
-                ['y+4 · 2030', '$1,080', '1,370', '×0.810', '지정학 프리미엄 완화 · $1,000 유지',                              false],
-                ['y+5 · 2031', '$1,000', '1,370', '×0.750', '심리적 저지선 접근 · IMO 2030 발효 전',                            false],
-                ['y+6 · 2032', '<b>$920</b>', '1,365', '×0.690', '<b>저점 · IMO 2030 발효 전후</b> (바이오혼합 비용 제한적)',  true],
-                ['y+7 · 2033', '$940',   '1,370', '×0.705', 'IMO 2030 바이오혼합 수요 반영',                                   false],
-                ['y+8 · 2034', '$970',   '1,375', '×0.728', '신선박 LSMGO 수요 증가',                                           false],
-                ['y+9 · 2035', '$1,000', '1,385', '×0.750', '10년 평균 가격대 복귀',                                            false],
-                ['y+10 · 2036','$1,020', '1,400', '×0.765', 'IMO 2050 중간 지표 반영 · 10년 평균 ~$1,083/MT',                   false],
-              ].map(([yr, lsmgo, fx, mul, reason, hi]) => `
-                <tr${hi ? ' style="background:#FFFBEE"' : ''}>
-                  <td style="padding:4px 8px;color:#8A5A12;font-weight:700;border:1px solid #D7DFE9">${yr}</td>
-                  <td style="padding:4px 8px;text-align:right;font-variant-numeric:tabular-nums;border:1px solid #D7DFE9">${lsmgo}</td>
-                  <td style="padding:4px 8px;text-align:right;font-variant-numeric:tabular-nums;border:1px solid #D7DFE9">${fx}</td>
-                  <td style="padding:4px 8px;text-align:right;border:1px solid #D7DFE9">${mul}</td>
-                  <td style="padding:4px 8px;border:1px solid #D7DFE9">${reason}</td>
-                </tr>
-              `).join('')}
-            </tbody>
+            <tbody>${_rowsHtml}</tbody>
           </table>
           <div style="margin-top:10px;padding:8px 12px;background:#F5F9FE;border-left:3px solid #154B8C;border-radius:2px;font-size:9.5pt;line-height:1.65;color:#33415A">
-            <b style="color:#154B8C">왜 이렇게 가정했는가</b>
-            <p style="margin:3px 0 0">· <b>현 시세</b> — 2026년 10월 실측 벙커가 $1,333 (러시아-우크라이나 전쟁 + 이란·중동 지정학 프리미엄 반영)</p>
-            <p style="margin:0">· <b>6년 완만 하락</b> — 양 전선(우크라이나·이란) 완전 종료 어려워 pre-war $820 복귀 비현실적. 2030년 $1,000 유지, 2032년 저점 ~$920</p>
-            <p style="margin:0">· <b>10년 평균</b> — IMO 2030 바이오혼합 + 신선박 LSMGO 수요로 중장기 반등, <b>10년 평균 ~$1,083 (보수적 중앙치)</b></p>
+            <b style="color:#154B8C">왜 이렇게 가정했는가 (3단계 논리)</b>
+            <p style="margin:3px 0 0">· <b>과거 평균</b> — Platts 싱가포르 MGO 2015~2024 평균 가격대는 <b>$500 ~ $820</b> 범위</p>
+            <p style="margin:0">· <b>현재 가격</b> — 2026년 10월 기준 $${_y0Usd} (지정학 리스크로 ${_premiumStr} 프리미엄 포함)</p>
+            <p style="margin:0">· <b>10년 평균</b> — 전쟁 종료·IMO 규제 반영 시 과거 평균대로 회귀, <b>10년 평균 ~$${_avgStr} (보수적 중앙치)</b></p>
             <p style="margin:4px 0 0;padding-top:4px;border-top:1px dashed #B4C2D4"><b style="color:#154B8C">편도단가 산출</b> — 산타모니카호 편도 운항 톤수 × (LSMGO $/MT × ₩/$) ÷ 10,000 = 편도단가 (만원)</p>
           </div>
         </div>
         <div class="intro-note" style="background:#F5F9FE;border-left:3px solid #154B8C;color:#33415A">
           <b style="color:#154B8C">출처</b>
           <p style="margin:2px 0 0">· ICE LSGO 선물 · S&amp;P Platts Marine Fuels · Argus Marine Fuels · MABUX · Ship &amp; Bunker · BunkerIndex Busan · IMO 2030/2050 · 환율 Frankfurter</p>
-          <p style="margin:0">· 10년 평균 복리 <b>-2.6%/년</b> (y+0 → y+10) · 저점 y+6 ($920)</p>
+          <p style="margin:0">· 10년 평균 복리 <b>${_cagrStr}</b> (y+0 → y+10) · 저점 y+${_lowK} ($${_lowUsd})</p>
         </div>
       </div>
-    </section>
-  `;
+    </section>`;
+  }
 
   // ── 목차 — 동적 페이지 번호 (aiOn 이면 fuelAi 가 P 5 로 삽입되어 뒤 페이지 전부 +1 밀림)
   const _scnStart = INTRO_PAGES + 1;
@@ -10545,8 +10734,9 @@ async function print3ScenariosPL10() {
     <section class="intro-section" style="margin:0 0 10px">
       <div class="intro-header" style="border-top:5px solid #154B8C;background:#F5F9FE;padding:10px 14px;margin:0 0 12px;display:flex;justify-content:space-between;align-items:flex-end">
         <div>
-          <div style="font-size:17pt;font-weight:800;color:#154B8C">문서 구성 · 목차</div>
-          <div style="font-size:9.5pt;color:#555;margin-top:3px">하카타 10개년 손익계산서 — 3-시나리오 비교 (${today}) · 총 ${TOTAL_PAGES} 페이지</div>
+          <div style="font-size:17pt;font-weight:800;color:#154B8C">[${cfg.label}] 문서 구성 · 목차</div>
+          <div style="font-size:11pt;color:#8A5A12;margin-top:3px;font-weight:700">${cfg.slogan || cfg.sub}</div>
+          <div style="font-size:9.5pt;color:#555;margin-top:2px">하카타 10개년 손익계산서 — ${cfg.sub} (${today}) · 총 ${TOTAL_PAGES} 페이지</div>
         </div>
         ${_pageTag(PP.toc)}
       </div>
@@ -10556,7 +10746,19 @@ async function print3ScenariosPL10() {
             _tocRow(`P ${PP.ships}`,  '선박 3척 비교', '— ① 엘도라도 · <b>② 산타모니카 ★ 매입 검토</b> · ③ 오션플라워2'),
             _tocRow(`P ${PP.cond}`,   '분석 전제·조건 요약', '— 3-시나리오 조건값 · 기타 전제'),
             _tocRow(`P ${PP.growth}`, '10개년 증감률 가정',   '— 계정과목별 연 복리 증감률'),
-            ...(aiOn ? [_tocRow(`P ${PP.fuelAi}`, '<b>AI 유가추세 적용 근거</b>', '— LSMGO 10년 추세·환율·배율·사유 (6년 완만 하락 · 저점 ~$920 · 10년 평균 ~$1,083)', true)] : []),
+            ...(aiOn ? (() => {
+              // TOC 서브텍스트 — _snapFuelAi 에서 y+0·저점·평균 계산해 안별로 다르게 노출
+              const _u = (_snapFuelAi && _snapFuelAi.usd) || [];
+              const _t = (_snapFuelAi && _snapFuelAi.tr)  || [];
+              let _lK = 0, _lV = Infinity;
+              for (let k = 0; k <= 10; k++) if (_t[k] != null && _t[k] < _lV) { _lV = _t[k]; _lK = k; }
+              const _y0 = _u[0] != null ? Math.round(_u[0]).toLocaleString('ko-KR') : '—';
+              const _lo = _u[_lK] != null ? Math.round(_u[_lK]).toLocaleString('ko-KR') : '—';
+              const _vv = _u.filter(v => v != null && isFinite(v));
+              const _av = _vv.length ? Math.round(_vv.reduce((a,b) => a + b, 0) / _vv.length).toLocaleString('ko-KR') : '—';
+              return [_tocRow(`P ${PP.fuelAi}`, '<b>AI 유가추세 적용 근거</b>',
+                `— y+0 $${_y0} → 저점 $${_lo} (y+${_lK}) → 10년 평균 ~$${_av}/MT`, true)];
+            })() : []),
           ])}
           ${_tocGroup(`Ⅱ. 시장 레퍼런스 (P ${PP.qb} ~ P ${PP.air})`, [
             _tocRow(`P ${PP.qb}`,  '퀸비틀 운항실적',       '— 경쟁선 벤치마크 (2023~2024)'),
@@ -10576,11 +10778,10 @@ async function print3ScenariosPL10() {
 
   const intros = tocPage + shipsAllPage + condPage + growthPage + fuelAiPage + qbPage + carPage + fukPage + airPage;
 
-  w.document.open();
-  w.document.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8">
+  const _fullHtml = `<!doctype html><html lang="ko"><head><meta charset="utf-8">
     <!-- base href : window.open 은 about:blank 이라 상대경로 이미지가 안 뜬다. 부모 창 위치 기준으로 보정. -->
     <base href="${window.location.href}">
-    <title>하카타 10개년 손익계산서 — 3-시나리오 (${today})</title>
+    <title>[${cfg.label}] 하카타 10개년 손익계산서 — 3-시나리오 (${today})</title>
     <style>
       /* A4 landscape 10mm 사방 여백 — 프린터 safe area 유지하며 콘텐츠 영역 최대화. */
       @page { size: A4 landscape; margin: 10mm;
@@ -10959,40 +11160,223 @@ async function print3ScenariosPL10() {
         });
       });
     </sc`+`ript>
-  </body></html>`);
+  </body></html>`;
+  // 통합 인쇄 (print3IntegratedPL10) 에서는 HTML 만 반환 — 창은 바깥에서 관리
+  if (_returnHtmlOnly) {
+    return { html: _fullHtml, label: cfg.label, cfg, intros, body, TOTAL_PAGES };
+  }
+  w.document.open();
+  w.document.write(_fullHtml);
   w.document.close();
 }
 {
-  const _b2 = document.getElementById('btnPrint3Scn');
-  if (_b2) _b2.addEventListener('click', e => {
-    e.preventDefault(); e.stopPropagation();
-    // 창을 click 핸들러에서 즉시 연다 — async 내부(await 뒤)에서 열면 gesture context 손실로 조용히 차단될 수 있음.
-    const w = window.open('about:blank', 'print3Scn', 'width=1200,height=900');
-    if (!w) {
-      alert('팝업 차단으로 인쇄 창을 열 수 없습니다. 브라우저 주소창 우측 팝업 아이콘에서 허용 후 다시 시도해 주세요.');
-      return;
-    }
-    try {
-      w.document.open();
-      w.document.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>인쇄 준비 중…</title></head>
-        <body style="margin:0;padding:60px;font-family:'맑은 고딕',sans-serif;background:#F6F9FC;color:#154B8C">
-          <div style="font-size:18pt;font-weight:700;margin-bottom:10px">3-시나리오 10개년 손익계산서 — 인쇄 준비 중…</div>
-          <div style="font-size:11pt;color:#5C6B7F;line-height:1.6">
-            시나리오별 손익계산서를 수집하고 전제 요약·선박 소개·수송실적을 조립하는 중입니다.<br>
-            수 초 안에 완성된 보고서가 이 창에 나타나고 인쇄 미리보기가 자동으로 열립니다.
-          </div>
-        </body></html>`);
-      w.document.close();
-    } catch(_) {}
-    print3ScenariosPL10(w).catch(err => {
-      console.error('[print3ScenariosPL10] 실패:', err);
+  // 안 1/2/3 각각 독립 인쇄 — 각 버튼이 자기 window.open name 을 가져 세 창이 동시 생성 가능.
+  const _bindPrint3 = (id, option, labelKo, subKo) => {
+    const _b = document.getElementById(id);
+    if (!_b) return;
+    _b.addEventListener('click', e => {
+      e.preventDefault(); e.stopPropagation();
+      const w = window.open('about:blank', `print3Scn_${option}`, 'width=1200,height=900');
+      if (!w) {
+        alert('팝업 차단으로 인쇄 창을 열 수 없습니다. 브라우저 주소창 우측 팝업 아이콘에서 허용 후 다시 시도해 주세요.');
+        return;
+      }
       try {
         w.document.open();
-        w.document.write('<pre style="padding:20px;color:#A8392F;font-family:monospace;white-space:pre-wrap">인쇄 생성 중 오류:\n\n' + (err && err.stack ? err.stack : err) + '</pre>');
+        w.document.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${labelKo} 인쇄 준비 중…</title></head>
+          <body style="margin:0;padding:60px;font-family:'맑은 고딕',sans-serif;background:#F6F9FC;color:#154B8C">
+            <div style="font-size:18pt;font-weight:700;margin-bottom:10px">[${labelKo}] 하카타 10개년 손익계산서 — 인쇄 준비 중…</div>
+            <div style="font-size:10.5pt;color:#5C6B7F;line-height:1.6">
+              <b>전제 :</b> ${subKo}<br>
+              시나리오별 손익계산서를 수집하고 전제 요약·선박 소개·수송실적을 조립하는 중입니다.<br>
+              수 초 안에 완성된 보고서가 이 창에 나타나고 인쇄 미리보기가 자동으로 열립니다.
+            </div>
+          </body></html>`);
         w.document.close();
       } catch(_) {}
-      alert('3-시나리오 인쇄 중 오류 — 열린 창을 확인하세요:\n' + (err && err.message ? err.message : err));
+      print3ScenariosPL10(option).catch(err => {
+        console.error('[print3ScenariosPL10] 실패:', err);
+        try {
+          w.document.open();
+          w.document.write('<pre style="padding:20px;color:#A8392F;font-family:monospace;white-space:pre-wrap">인쇄 생성 중 오류:\n\n' + (err && err.stack ? err.stack : err) + '</pre>');
+          w.document.close();
+        } catch(_) {}
+        alert(`[${labelKo}] 인쇄 중 오류 — 열린 창을 확인하세요:\n` + (err && err.message ? err.message : err));
+      });
     });
+  };
+  _bindPrint3('btnPrint3Scn1', 1, '1번안', '과거 전제 (AI 유가추세 $1,490 복귀) · 선가 550억 · 차입 250억');
+  _bindPrint3('btnPrint3Scn2', 2, '2번안', '현재 전제 (AI 유가추세 수정반영) · 선가 550억 · 차입 250억');
+  _bindPrint3('btnPrint3Scn3', 3, '3번안', '현재 전제 · 현재 선가 600억 · 차입 300억');
+}
+
+// ── 통합 인쇄 — 1·2·3안 모두를 하나의 창에 쌓아 출력 ──────────────────────────
+//   각 안의 완성된 HTML 리포트를 받아 body 만 추출, page-break 로 구분해 조립.
+async function print3IntegratedPL10() {
+  const w = window.open('about:blank', 'print3Integrated', 'width=1200,height=900');
+  if (!w) {
+    alert('팝업 차단으로 인쇄 창을 열 수 없습니다. 브라우저 주소창 우측 팝업 아이콘에서 허용 후 다시 시도해 주세요.');
+    return;
+  }
+  try {
+    w.document.open();
+    w.document.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>통합 인쇄 준비 중…</title></head>
+      <body style="margin:0;padding:60px;font-family:'맑은 고딕',sans-serif;background:#F6F9FC;color:#154B8C">
+        <div style="font-size:18pt;font-weight:700;margin-bottom:10px">통합 출력 — 1·2·3안 전체 — 준비 중…</div>
+        <div style="font-size:10.5pt;color:#5C6B7F;line-height:1.6">
+          세 안의 리포트를 순차 생성하는 중입니다. 각 안마다 시나리오 전환·render·캡처가 필요해<br>
+          20~40초 가량 소요될 수 있습니다.
+        </div>
+      </body></html>`);
+    w.document.close();
+  } catch(_) {}
+  const parts = [];
+  for (const opt of [1, 2, 3]) {
+    try {
+      const r = await print3ScenariosPL10(opt, { returnHtml: true });
+      if (r && r.html) parts.push(r);
+    } catch(err) {
+      console.error('[print3IntegratedPL10] option', opt, '실패:', err);
+    }
+  }
+  if (parts.length === 0) {
+    try {
+      w.document.open();
+      w.document.write('<pre style="padding:20px;color:#A8392F">통합 생성 실패 — 콘솔 확인</pre>');
+      w.document.close();
+    } catch(_) {}
+    return;
+  }
+  // 각 안 HTML 의 body 만 추출해 page-break 로 구분 조립. head 는 첫 안의 것 재사용.
+  const parser = new DOMParser();
+  const firstDoc = parser.parseFromString(parts[0].html, 'text/html');
+  const headHtml = firstDoc.head.innerHTML;
+  const today = new Date().toISOString().slice(0, 10);
+  const bodies = parts.map((p, i) => {
+    const doc = parser.parseFromString(p.html, 'text/html');
+    const inner = doc.body.innerHTML;
+    // 첫 안은 page-break 없음 (불필요한 빈 페이지 방지)
+    const pb = (i === 0) ? '' : 'page-break-before:always;';
+    return `<div class="opt-divider" data-opt="${i+1}" style="${pb}">${inner}</div>`;
+  });
+  const integratedHtml = `<!doctype html><html lang="ko"><head>
+    ${headHtml.replace(/<title>[\s\S]*?<\/title>/i, '')}
+    <title>통합 출력 — 1·2·3안 (${today})</title>
+  </head><body>
+    ${bodies.join('\n')}
+  </body></html>`;
+  try {
+    w.document.open();
+    w.document.write(integratedHtml);
+    w.document.close();
+  } catch(_) {}
+}
+{
+  const _bInt = document.getElementById('btnPrint3Int');
+  if (_bInt) _bInt.addEventListener('click', e => {
+    e.preventDefault(); e.stopPropagation();
+    print3IntegratedPL10().catch(err => {
+      console.error('[print3IntegratedPL10] 실패:', err);
+      alert('통합 인쇄 중 오류: ' + (err && err.message ? err.message : err));
+    });
+  });
+}
+
+// ── 3-시나리오 인쇄 — 안별 설정 모달 (localStorage 에 저장) ──────────────────
+//   사용자가 선가·차입·슬로건을 수정하면 'print3Options' 에 저장 → 다음 인쇄에 반영.
+//   저장 구조 : { opt1:{shipPrice, loan, slogan}, opt2:{...}, opt3:{...} }
+//   3안 shipPrice/loan 은 null 입력 시 "현재 설정 그대로" 로 fallback.
+const PRINT3_DEFAULTS = {
+  1: { shipPrice:55000, loan:25000,
+       slogan:'유가의 조기 안정화 예상 — 선가 550억 (300억 자기자본 + 250억 차입)' },
+  2: { shipPrice:55000, loan:25000,
+       slogan:'유가 안정화 완만 예상 — 선가 550억 (300억 자기자본 + 250억 차입)' },
+  3: { shipPrice:null,  loan:null,
+       slogan:'유가 안정화 완만 예상 — 선가 600억 (300억 자기자본 + 300억 차입)' },
+};
+function _loadPrint3Opts() {
+  try { return JSON.parse(localStorage.getItem('print3Options') || '{}'); }
+  catch(_) { return {}; }
+}
+function _savePrint3Opts(obj) {
+  try { localStorage.setItem('print3Options', JSON.stringify(obj)); return true; }
+  catch(_) { return false; }
+}
+function _renderPrint3Settings() {
+  const host = document.getElementById('print3SettingsBody');
+  if (!host) return;
+  const saved = _loadPrint3Opts();
+  const _cur = k => ({ ...PRINT3_DEFAULTS[k], ...(saved['opt'+k] || {}) });
+  const _labelOf = k => ['','1번안','2번안','3번안'][k];
+  const _descOf = k => ({
+    1: '과거 전제 (LEGACY $1,490 복귀 가정)',
+    2: '현재 수정 배율 (y+0 $1,490 · 저점 ×0.690)',
+    3: '현재 수정 배율 · 선가/차입은 공란 시 메인 입력값 그대로 사용',
+  })[k];
+  const _fmtShip = v => (v == null || v === '') ? '' : String(v);
+  const html = [1,2,3].map(k => {
+    const c = _cur(k);
+    return `
+      <div style="padding:12px 14px;border-bottom:1px solid var(--rule)">
+        <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:2px">${_labelOf(k)}</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">${_descOf(k)}</div>
+        <div style="display:grid;grid-template-columns:120px 1fr 120px 1fr;gap:6px 10px;align-items:center;font-size:12px">
+          <label>선가 (백만원)</label>
+          <input type="number" data-p3="shipPrice" data-opt="${k}" value="${_fmtShip(c.shipPrice)}"
+                 placeholder="${k===3?'(공란=현재값)':''}" style="padding:4px 6px;border:1px solid var(--rule);border-radius:3px;width:100%">
+          <label>차입 (백만원)</label>
+          <input type="number" data-p3="loan" data-opt="${k}" value="${_fmtShip(c.loan)}"
+                 placeholder="${k===3?'(공란=현재값)':''}" style="padding:4px 6px;border:1px solid var(--rule);border-radius:3px;width:100%">
+          <label>슬로건</label>
+          <input type="text" data-p3="slogan" data-opt="${k}" value="${(c.slogan || '').replace(/"/g,'&quot;')}"
+                 style="padding:4px 6px;border:1px solid var(--rule);border-radius:3px;width:100%;grid-column:span 3">
+        </div>
+      </div>`;
+  }).join('');
+  host.innerHTML = html;
+}
+// 설정 버튼 → 모달 열기
+{
+  const _bSet = document.getElementById('btnPrint3Settings');
+  if (_bSet) _bSet.addEventListener('click', e => {
+    e.preventDefault(); e.stopPropagation();
+    _renderPrint3Settings();
+    if (typeof openOv === 'function') openOv('ovPrint3Settings');
+  });
+}
+// 저장
+{
+  const _bSave = document.getElementById('btnPrint3SaveSettings');
+  if (_bSave) _bSave.addEventListener('click', () => {
+    const next = {};
+    [1,2,3].forEach(k => {
+      const key = 'opt'+k;
+      next[key] = {};
+      document.querySelectorAll(`[data-p3][data-opt="${k}"]`).forEach(inp => {
+        const field = inp.dataset.p3;
+        let v = inp.value;
+        if (field === 'shipPrice' || field === 'loan') {
+          v = (v === '' || v == null) ? null : Math.max(0, parseFloat(v) || 0);
+        }
+        next[key][field] = v;
+      });
+    });
+    if (_savePrint3Opts(next)) {
+      alert('저장되었습니다. 다음 인쇄부터 반영됩니다.');
+      const ov = document.getElementById('ovPrint3Settings');
+      if (ov && typeof closeOv === 'function') closeOv(ov);
+    } else {
+      alert('저장 실패 — localStorage 접근 불가');
+    }
+  });
+}
+// 초기화
+{
+  const _bRst = document.getElementById('btnPrint3ResetDefaults');
+  if (_bRst) _bRst.addEventListener('click', () => {
+    if (!confirm('모든 안의 설정을 기본값으로 되돌립니다. 계속하시겠습니까?')) return;
+    try { localStorage.removeItem('print3Options'); } catch(_) {}
+    _renderPrint3Settings();
   });
 }
 
