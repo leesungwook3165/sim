@@ -9333,13 +9333,15 @@ async function print3ScenariosPL10(option, opts) {
     }
     if (typeof _applyAiTrend === 'function') _applyAiTrend(2200);
   } else if (cfg.use1490Start) {
-    // 2,3안 : FX 는 1안 LEGACY 패턴(y+0 1410 → y+4,5 1320 저점 → y+10 1400, 현실적 U자) 그대로.
-    //         USD 는 배율 유지하도록 역산 : USD[k] = TREND[k] × (USD[0]=1490 × FX[0]=1410) / FX[k]
-    //         → USD × FX / (1490 × 1410) = TREND 성립. TREND·RATIONALE 는 현재 그대로 유지.
-    const _BASE = 1490 * 1410;
+    // 2,3안 : FX 는 완만한 U자 (y+0 ₩1,325 → y+6 피크 ₩1,420 → y+10 ₩1,385).
+    //         현재 메인 FX(~1325) 에서 출발, 저점 유가 시기 달러 강세 완만 반영.
+    //         USD 역산 : USD[k] = TREND[k] × (1490 × FX[0]) / FX[k]  (배율 유지 수식)
+    //         → 저점 LSMGO ~$959 (사용자 요구 "900 중후반" 반영), TREND·RATIONALE 는 그대로.
+    const _ALT_FX = [1325, 1340, 1360, 1380, 1400, 1415, 1420, 1415, 1405, 1395, 1385];
+    const _BASE = 1490 * _ALT_FX[0];
     for (let k = 0; k <= 10; k++) {
-      FUEL_AI_FX[k]     = LEGACY_AI_FX[k];
-      FUEL_AI_USD_MT[k] = Math.round(FUEL_AI_TREND[k] * _BASE / LEGACY_AI_FX[k]);
+      FUEL_AI_FX[k]     = _ALT_FX[k];
+      FUEL_AI_USD_MT[k] = Math.round(FUEL_AI_TREND[k] * _BASE / _ALT_FX[k]);
     }
     if (typeof _applyAiTrend === 'function') _applyAiTrend(2200);
   }
