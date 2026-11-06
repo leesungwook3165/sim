@@ -11249,23 +11249,35 @@ async function print3IntegratedPL10() {
     } catch(_) {}
     return;
   }
-  // 각 안 HTML 의 body 만 추출해 page-break 로 구분 조립. head 는 첫 안의 것 재사용.
+  // 각 안의 content 페이지만 추출해 조립. 툴바·책 네비·wiring script 는 첫 안에서만 가져온다
+  // — body 전체를 이어붙이면 같은 id(#pgToolbar, #btnPrintSel 등) 가 세 번 겹쳐 메뉴가 먹통이 된다.
   const parser = new DOMParser();
   const firstDoc = parser.parseFromString(parts[0].html, 'text/html');
   const headHtml = firstDoc.head.innerHTML;
   const today = new Date().toISOString().slice(0, 10);
-  const bodies = parts.map((p, i) => {
+  // content 페이지(.intro-section · .scn-section) 만 꺼낸다 — 안 사이는 page-break 로 구분
+  const pagesHtml = parts.map((p, i) => {
     const doc = parser.parseFromString(p.html, 'text/html');
-    const inner = doc.body.innerHTML;
-    // 첫 안은 page-break 없음 (불필요한 빈 페이지 방지)
-    const pb = (i === 0) ? '' : 'page-break-before:always;';
-    return `<div class="opt-divider" data-opt="${i+1}" style="${pb}">${inner}</div>`;
-  });
+    const pgs = [...doc.querySelectorAll('.intro-section, .scn-section')];
+    return pgs.map((pg, j) => {
+      if (i > 0 && j === 0) pg.style.pageBreakBefore = 'always';   // 안 경계만 강제 개페이지
+      return pg.outerHTML;
+    }).join('\n');
+  }).join('\n');
+  // 첫 안에서 툴바·책네비·wiring <script> 만 떼어와 한 벌만 붙인다
+  const firstBody   = firstDoc.body;
+  const toolbarHtml = (firstBody.querySelector('#pgToolbar')  || { outerHTML: '' }).outerHTML;
+  const navPrevHtml = (firstBody.querySelector('#bookPrev')   || { outerHTML: '' }).outerHTML;
+  const navNextHtml = (firstBody.querySelector('#bookNext')   || { outerHTML: '' }).outerHTML;
+  const scriptHtml  = [...firstBody.querySelectorAll('script')].map(s => s.outerHTML).join('\n');
   const integratedHtml = `<!doctype html><html lang="ko"><head>
     ${headHtml.replace(/<title>[\s\S]*?<\/title>/i, '')}
     <title>통합 출력 — 1·2·3안 (${today})</title>
   </head><body>
-    ${bodies.join('\n')}
+    ${pagesHtml}
+    ${toolbarHtml}
+    ${navPrevHtml}${navNextHtml}
+    ${scriptHtml}
   </body></html>`;
   try {
     w.document.open();
