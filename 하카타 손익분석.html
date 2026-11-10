@@ -2555,102 +2555,11 @@
           </div>
 
           <!-- 근거 — 기본 숨김, 토글로 노출. LSMGO MT 단가·환율 예상 궤적을 명시 -->
+          <!-- 내부는 _renderFuelAiEvidence() 가 FUEL_AI_USD_MT·FX·TREND·RATIONALE 배열에서
+               실시간 생성 — 하드코딩 금지. 배율·저점·10년평균 등은 전부 계산값. -->
           <div id="hFuelAiEvidence" hidden
                style="margin-top:10px;padding:10px 12px;background:#FBFCFD;border:1px solid var(--rule);border-radius:3px;font-size:10.5px;line-height:1.6;color:var(--ink)">
-            <b style="color:var(--navy);font-size:11.5px">연료비 10년 추세 — 6년 완만 하락 · 저점 ~$920</b>
-            <div style="margin-top:4px;color:#33415A;font-size:10px;line-height:1.55">
-              <b>핵심 가정 3가지</b>
-              <br>&nbsp;&nbsp;① 현 시세($1,333 실측)는 러시아-우크라이나 전쟁 · 이란 긴장 · 중동 지정학 프리미엄 반영
-              <br>&nbsp;&nbsp;② 양 전선 완전 종료 어려워 pre-war $820 복귀 비현실적 — 6년 걸쳐 완만 하락, 저점 ~$920
-              <br>&nbsp;&nbsp;③ IMO 2030 규제·바이오혼합 의무로 중장기(y+7 이후) 완만 반등 → 10년 평균 ~$1,083
-            </div>
-            <table id="hFuelAiEvidenceTbl" style="width:100%;border-collapse:collapse;margin-top:8px;font-size:10px">
-              <thead>
-                <tr style="background:#F5F9FE;color:var(--navy)">
-                  <th style="padding:4px 6px;text-align:left;width:56px">연도</th>
-                  <th style="padding:4px 6px;text-align:right;width:58px">LSMGO</th>
-                  <th style="padding:4px 6px;text-align:right;width:56px">환율</th>
-                  <th style="padding:4px 6px;text-align:right;width:50px">배율</th>
-                  <th style="padding:4px 6px;text-align:left">주요 사유 (예정된 공급·수요·규제 이벤트)</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+0 · 2026</b></td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$1,333</td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,325</td>
-                  <td style="padding:3px 6px;text-align:right">×1.000</td>
-                  <td style="padding:3px 6px">현 시세 (실측 · 러시아-우크라이나 전쟁 + 이란·중동 지정학 프리미엄 반영)</td></tr>
-                <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+1 · 2027</b></td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$1,280</td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,340</td>
-                  <td style="padding:3px 6px;text-align:right">×0.960</td>
-                  <td style="padding:3px 6px">우크라이나 휴전 가능성·이란 긴장 완화 · OPEC+ 공급 점진</td></tr>
-                <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+2 · 2028</b></td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$1,220</td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,350</td>
-                  <td style="padding:3px 6px;text-align:right">×0.915</td>
-                  <td style="padding:3px 6px">러시아 수출 정상화 시도 · 전쟁 프리미엄 서서히 해소</td></tr>
-                <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+3 · 2029</b></td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$1,150</td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,360</td>
-                  <td style="padding:3px 6px;text-align:right">×0.863</td>
-                  <td style="padding:3px 6px">정제능력 증설·중동 안정화 반영 시작</td></tr>
-                <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+4 · 2030</b></td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$1,080</td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,370</td>
-                  <td style="padding:3px 6px;text-align:right">×0.810</td>
-                  <td style="padding:3px 6px">지정학 프리미엄 완화 · $1,000 유지</td></tr>
-                <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+5 · 2031</b></td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$1,000</td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,370</td>
-                  <td style="padding:3px 6px;text-align:right">×0.750</td>
-                  <td style="padding:3px 6px">심리적 저지선 접근 · IMO 2030 발효 전</td></tr>
-                <tr style="background:#FFFBEE"><td style="padding:3px 6px;color:#8A5A12"><b>y+6 · 2032</b></td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums"><b>$920</b></td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,365</td>
-                  <td style="padding:3px 6px;text-align:right">×0.690</td>
-                  <td style="padding:3px 6px"><b>저점 · IMO 2030 발효 전후</b> (바이오혼합 비용 제한적)</td></tr>
-                <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+7 · 2033</b></td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$940</td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,370</td>
-                  <td style="padding:3px 6px;text-align:right">×0.705</td>
-                  <td style="padding:3px 6px">IMO 2030 바이오혼합 수요 반영</td></tr>
-                <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+8 · 2034</b></td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$970</td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,375</td>
-                  <td style="padding:3px 6px;text-align:right">×0.728</td>
-                  <td style="padding:3px 6px">신선박 LSMGO 수요 증가</td></tr>
-                <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+9 · 2035</b></td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$1,000</td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,385</td>
-                  <td style="padding:3px 6px;text-align:right">×0.750</td>
-                  <td style="padding:3px 6px">10년 평균 가격대 복귀</td></tr>
-                <tr><td style="padding:3px 6px;color:#8A5A12"><b>y+10 · 2036</b></td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">$1,020</td>
-                  <td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">1,400</td>
-                  <td style="padding:3px 6px;text-align:right">×0.765</td>
-                  <td style="padding:3px 6px">IMO 2050 중간 지표 반영 · 10년 평균 ~$1,083/MT</td></tr>
-              </tbody>
-            </table>
-            <div style="margin-top:8px;padding:7px 10px;background:#F5F9FE;border-left:3px solid var(--navy);font-size:10px;line-height:1.6;color:#33415A">
-              <b style="color:var(--navy)">왜 이렇게 가정했는가</b>
-              <br>&nbsp;&nbsp;<b>1️. 현 시세</b> — 2026년 10월 실측 벙커가 $1,333 (러시아-우크라이나 전쟁 + 이란·중동 지정학 프리미엄 반영)
-              <br>&nbsp;&nbsp;<b>2️. 6년 완만 하락</b> — 양 전선 (우크라이나·이란) 완전 종료 어려워 pre-war $820 복귀 비현실적. 2030년 $1,000 유지, 2032년 저점 ~$920 수준
-              <br>&nbsp;&nbsp;<b>3️. 10년 평균</b> — IMO 2030 바이오혼합 + 신선박 LSMGO 수요로 중장기 반등 → <b>10년 평균 ~$1,083 (보수적 중앙치)</b>
-              <br><br>
-              <b style="color:var(--navy)">편도단가 산출</b> — 산타모니카호 편도 운항 톤수 × (LSMGO $/MT × ₩/$) ÷ 10,000 = 편도단가 (만원)
-            </div>
-            <div style="margin-top:4px;font-size:10px;color:var(--muted)">
-              <a href="https://www.theice.com/products/34361119/Low-Sulphur-Gasoil-Futures" target="_blank" rel="noopener" style="color:var(--sky)">ICE LSGO 선물 ↗</a> ·
-              <a href="https://www.spglobal.com/commodityinsights/en/our-methodology/price-assessments/oil/marine-fuel-price-assessments" target="_blank" rel="noopener" style="color:var(--sky)">S&amp;P Platts Marine Fuels ↗</a> ·
-              <a href="https://www.argusmedia.com/en/oil-products/argus-marine-fuels" target="_blank" rel="noopener" style="color:var(--sky)">Argus Marine Fuels ↗</a> ·
-              <a href="https://mabux.com/" target="_blank" rel="noopener" style="color:var(--sky)">MABUX ↗</a> ·
-              <a href="https://shipandbunker.com/prices" target="_blank" rel="noopener" style="color:var(--sky)">Ship &amp; Bunker ↗</a> ·
-              <a href="https://www.bunkerindex.com/prices/port.php?p=109&amp;n=busan-republic-of-korea" target="_blank" rel="noopener" style="color:var(--sky)">BunkerIndex Busan ↗</a> ·
-              <a href="https://www.imo.org/en/MediaCentre/PressBriefings/pages/Revised-GHG-reduction-strategy-for-global-shipping-adopted-.aspx" target="_blank" rel="noopener" style="color:var(--sky)">IMO 2030/2050 ↗</a> ·
-              <a href="https://frankfurter.dev/" target="_blank" rel="noopener" style="color:var(--sky)">환율 Frankfurter ↗</a>
-              · 10년 평균 복리 -2.6%/년 · 저점 y+6 ($920)
-            </div>
+            <!-- JS 로 채운다 -->
           </div>
 
           <!-- 하단 버튼 -->
@@ -7691,6 +7600,78 @@ const FUEL_AI_RATIONALE = [
   '10년 평균 가격대 복귀',
   'IMO 2050 중간지표 반영 · 10년 평균 ~$1,080',
 ];
+// 근거 팝업을 FUEL_AI_* 배열에서 실시간 재생성 (하드코딩된 값과 어긋나지 않게)
+function _renderFuelAiEvidence() {
+  const host = document.getElementById('hFuelAiEvidence');
+  if (!host) return;
+  const usd = FUEL_AI_USD_MT, fx = FUEL_AI_FX, trend = FUEL_AI_TREND, rat = FUEL_AI_RATIONALE;
+  if (!usd || !fx || !trend || !rat) return;
+  const N = usd.length;
+  const minU   = Math.min(...usd);
+  const minIdx = usd.indexOf(minU);
+  const avgU   = Math.round(usd.reduce((a, b) => a + b, 0) / N);
+  const dropYr = minIdx;                          // y+0 → 저점까지 걸린 햇수
+  // y+0 이 어느 해인가 — iFuelLivePrice(json)에서 price_date 를 먼저 보고, 없으면 오늘 기준
+  const startYear = (() => {
+    try {
+      const d = FUEL_STATE && FUEL_STATE.liveDate ? new Date(FUEL_STATE.liveDate) : new Date();
+      return isNaN(d.getTime()) ? new Date().getFullYear() : d.getFullYear();
+    } catch(_) { return new Date().getFullYear(); }
+  })();
+  const fmt = n => n.toLocaleString('ko-KR');
+  const rows = usd.map((u, k) => {
+    const yr = startYear + k;
+    const isMin = k === minIdx;
+    const trowSty = isMin ? ' style="background:#FFFBEE"' : '';
+    const usdStr  = isMin ? `<b>$${fmt(u)}</b>` : `$${fmt(u)}`;
+    const reason  = isMin ? `<b>저점 · ${rat[k]}</b>` : rat[k];
+    return `<tr${trowSty}><td style="padding:3px 6px;color:#8A5A12"><b>y+${k} · ${yr}</b></td>`
+         + `<td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">${usdStr}</td>`
+         + `<td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums">${fmt(fx[k])}</td>`
+         + `<td style="padding:3px 6px;text-align:right">×${trend[k].toFixed(3)}</td>`
+         + `<td style="padding:3px 6px">${reason}</td></tr>`;
+  }).join('');
+  host.innerHTML = `
+    <b style="color:var(--navy);font-size:11.5px">연료비 10년 추세 — ${dropYr}년 완만 하락 · 저점 ~$${fmt(minU)}</b>
+    <div style="margin-top:4px;color:#33415A;font-size:10px;line-height:1.55">
+      <b>핵심 가정 3가지</b>
+      <br>&nbsp;&nbsp;① 현 시세($${fmt(usd[0])} 실측)는 러시아-우크라이나 전쟁 · 이란 긴장 · 중동 지정학 프리미엄 반영
+      <br>&nbsp;&nbsp;② 양 전선 완전 종료 어려워 pre-war $820 복귀 비현실적 — ${dropYr}년 걸쳐 완만 하락, 저점 ~$${fmt(minU)}
+      <br>&nbsp;&nbsp;③ IMO 2030 규제·바이오혼합 의무로 중장기(y+${minIdx + 1} 이후) 완만 반등 → 10년 평균 ~$${fmt(avgU)}
+    </div>
+    <table id="hFuelAiEvidenceTbl" style="width:100%;border-collapse:collapse;margin-top:8px;font-size:10px">
+      <thead>
+        <tr style="background:#F5F9FE;color:var(--navy)">
+          <th style="padding:4px 6px;text-align:left;width:56px">연도</th>
+          <th style="padding:4px 6px;text-align:right;width:58px">LSMGO</th>
+          <th style="padding:4px 6px;text-align:right;width:56px">환율</th>
+          <th style="padding:4px 6px;text-align:right;width:50px">배율</th>
+          <th style="padding:4px 6px;text-align:left">주요 사유 (예정된 공급·수요·규제 이벤트)</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div style="margin-top:8px;padding:7px 10px;background:#F5F9FE;border-left:3px solid var(--navy);font-size:10px;line-height:1.6;color:#33415A">
+      <b style="color:var(--navy)">왜 이렇게 가정했는가</b>
+      <br>&nbsp;&nbsp;<b>1. 현 시세</b> — ${startYear}년 실측 벙커가 $${fmt(usd[0])} (러시아-우크라이나 전쟁 + 이란·중동 지정학 프리미엄 반영)
+      <br>&nbsp;&nbsp;<b>2. ${dropYr}년 완만 하락</b> — 양 전선 (우크라이나·이란) 완전 종료 어려워 pre-war $820 복귀 비현실적. ${startYear + dropYr}년 저점 ~$${fmt(minU)} 수준
+      <br>&nbsp;&nbsp;<b>3. 10년 평균</b> — IMO 2030 바이오혼합 + 신선박 LSMGO 수요로 중장기 반등 → <b>10년 평균 ~$${fmt(avgU)} (보수적 중앙치)</b>
+      <br><br>
+      <b style="color:var(--navy)">편도단가 산출</b> — 산타모니카호 편도 운항 톤수 × (LSMGO $/MT × ₩/$) ÷ 10,000 = 편도단가 (만원)
+    </div>
+    <div style="margin-top:4px;font-size:10px;color:var(--muted)">
+      <a href="https://www.theice.com/products/34361119/Low-Sulphur-Gasoil-Futures" target="_blank" rel="noopener" style="color:var(--sky)">ICE LSGO 선물 ↗</a> ·
+      <a href="https://www.spglobal.com/commodityinsights/en/our-methodology/price-assessments/oil/marine-fuel-price-assessments" target="_blank" rel="noopener" style="color:var(--sky)">S&amp;P Platts Marine Fuels ↗</a> ·
+      <a href="https://www.argusmedia.com/en/oil-products/argus-marine-fuels" target="_blank" rel="noopener" style="color:var(--sky)">Argus Marine Fuels ↗</a> ·
+      <a href="https://mabux.com/" target="_blank" rel="noopener" style="color:var(--sky)">MABUX ↗</a> ·
+      <a href="https://shipandbunker.com/prices" target="_blank" rel="noopener" style="color:var(--sky)">Ship &amp; Bunker ↗</a> ·
+      <a href="https://www.bunkerindex.com/prices/port.php?p=109&amp;n=busan-republic-of-korea" target="_blank" rel="noopener" style="color:var(--sky)">BunkerIndex Busan ↗</a> ·
+      <a href="https://www.imo.org/en/MediaCentre/PressBriefings/pages/Revised-GHG-reduction-strategy-for-global-shipping-adopted-.aspx" target="_blank" rel="noopener" style="color:var(--sky)">IMO 2030/2050 ↗</a> ·
+      <a href="https://frankfurter.dev/" target="_blank" rel="noopener" style="color:var(--sky)">환율 Frankfurter ↗</a>
+      · 저점 y+${minIdx} ($${fmt(minU)})
+    </div>`;
+}
+
 // ── 3-시나리오 10년 인쇄 '1번안' 전용 과거 전제 ─────────────────────────
 //   y+0 ($1,490) 가정 · 저유황 공급 과잉 → pre-war 수준 복귀 가정 (c77c6ea 이전 상태).
 //   USD·FX·TREND·RATIONALE 모두 그 시점 그대로 복원해 1번안 출력에 override.
@@ -7977,12 +7958,13 @@ function openFuelSegModal() {
   const chk = document.getElementById('iFuelSegEnabled');
   if (chk) chk.addEventListener('change', () => { FUEL_SEG.enabled = chk.checked; });
 
-  // 근거 보기 토글
+  // 근거 보기 토글 — 열 때 FUEL_AI_* 배열에서 실시간 재생성 (하드코딩 지양)
   const evBtn = document.getElementById('btnFuelAiEvidence');
   const evBox = document.getElementById('hFuelAiEvidence');
   if (evBtn && evBox) evBtn.addEventListener('click', () => {
     evBox.hidden = !evBox.hidden;
     evBtn.textContent = evBox.hidden ? '근거 ⓘ' : '근거 ✕';
+    if (!evBox.hidden) _renderFuelAiEvidence();
   });
 
   // AI 유가추세 적용 — 체크 시 년차 셀 일괄 자동 산출
