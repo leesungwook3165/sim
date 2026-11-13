@@ -3,865 +3,1288 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>부산-하카타 운임 최적화 도구</title>
+<title>부산-하카타 운임 최적화 캘린더</title>
 <style>
   :root {
-    --bg: #0a1628;
-    --bg2: #111d35;
-    --bg3: #1a2a45;
-    --border: rgba(80,160,255,0.2);
-    --accent: #4a9eff;
-    --accent2: #2ecc71;
-    --warn: #f39c12;
-    --text: #c8daf0;
-    --text2: #8aabcc;
-    --red: #e74c3c;
+    --bg:#0a1628; --bg2:#111d35; --bg3:#1a2a45; --bg4:#0d1e38;
+    --border:rgba(80,160,255,0.2); --border2:rgba(80,160,255,0.35);
+    --accent:#4a9eff; --accent2:#2ecc71; --warn:#f39c12;
+    --text:#c8daf0; --text2:#8aabcc; --text3:#5a7ba3;
+    --red:#e74c3c; --low:#2ecc71; --mid:#f39c12; --high:#e74c3c; --unk:#5a7ba3;
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', 'Malgun Gothic', sans-serif; font-size: 14px; min-height: 100vh; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); font-family:'Segoe UI','Malgun Gothic',sans-serif; font-size:13px; min-height:100vh; }
 
-  header {
-    background: var(--bg2);
-    border-bottom: 1px solid var(--border);
-    padding: 14px 24px;
-    display: flex; align-items: center; gap: 16px;
-  }
-  header h1 { font-size: 18px; font-weight: 700; color: #fff; }
-  header span { color: var(--text2); font-size: 12px; }
-
-  .layout { display: grid; grid-template-columns: 340px 1fr; gap: 0; height: calc(100vh - 57px); }
-
-  .sidebar {
-    background: var(--bg2);
-    border-right: 1px solid var(--border);
-    padding: 20px 16px;
-    overflow-y: auto;
-    display: flex; flex-direction: column; gap: 18px;
-  }
-
-  .main { padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 18px; }
-
-  .card {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 16px;
-  }
-  .card-title {
-    font-size: 12px; font-weight: 700; color: var(--accent);
-    text-transform: uppercase; letter-spacing: 0.8px;
-    margin-bottom: 14px;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .card-title .badge {
-    background: var(--accent); color: #000; font-size: 10px;
-    padding: 1px 6px; border-radius: 10px; letter-spacing: 0;
-  }
-
-  label { display: block; font-size: 11px; color: var(--text2); margin-bottom: 4px; margin-top: 10px; }
-  label:first-of-type { margin-top: 0; }
-
-  input, select {
-    width: 100%; background: #0d1e38; border: 1px solid var(--border);
-    color: var(--text); border-radius: 6px; padding: 7px 10px;
-    font-size: 13px; outline: none;
-    transition: border-color .2s;
-  }
-  input:focus, select:focus { border-color: var(--accent); }
-  input[type="date"] { color-scheme: dark; }
-
-  .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-
-  button {
-    cursor: pointer; border: none; border-radius: 6px;
-    font-size: 13px; font-weight: 600; padding: 9px 16px;
-    transition: opacity .15s, transform .1s;
-  }
-  button:hover { opacity: 0.88; }
-  button:active { transform: scale(0.97); }
-
-  .btn-primary { background: var(--accent); color: #000; width: 100%; margin-top: 12px; }
-  .btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
-  .btn-sm { padding: 5px 12px; font-size: 12px; }
-  .btn-success { background: var(--accent2); color: #000; }
-
-  .tag-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
-  .tag {
-    background: var(--bg); border: 1px solid var(--border);
-    border-radius: 12px; padding: 3px 10px; font-size: 11px; color: var(--text2);
-    cursor: pointer; transition: border-color .15s, color .15s;
-  }
-  .tag:hover, .tag.active { border-color: var(--accent); color: var(--accent); }
-
-  .status-bar {
-    display: flex; align-items: center; gap: 8px;
-    font-size: 12px; color: var(--text2);
-    padding: 8px 0;
-  }
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text2); flex-shrink: 0; }
-  .dot.ok { background: var(--accent2); }
-  .dot.err { background: var(--red); }
-  .dot.loading { background: var(--warn); animation: pulse 1s infinite; }
+  header { background:var(--bg2); border-bottom:1px solid var(--border); padding:12px 20px;
+           display:flex; align-items:center; gap:16px; }
+  header h1 { font-size:16px; font-weight:700; color:#fff; letter-spacing:-.2px; }
+  header .sub { color:var(--text2); font-size:11.5px; margin-left:8px; font-weight:400; }
+  header .spacer { margin-left:auto; }
+  header .status { display:flex; align-items:center; gap:8px; font-size:11.5px; color:var(--text2); }
+  .dot { width:7px; height:7px; border-radius:50%; background:var(--text3); }
+  .dot.ok { background:var(--accent2); } .dot.err { background:var(--red); }
+  .dot.loading { background:var(--warn); animation:pulse 1s infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-  .api-url-row {
-    display: flex; gap: 6px; align-items: center; margin-bottom: 10px;
-  }
-  .api-url-row input { flex: 1; font-size: 11px; font-family: monospace; }
-  .method-badge {
-    background: #1a3a6b; color: var(--accent); font-size: 11px; font-weight: 700;
-    padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border);
-    white-space: nowrap;
-  }
+  .layout { display:grid; grid-template-columns:1fr 340px; gap:0; height:calc(100vh - 51px); }
+  .main { padding:16px 18px; overflow-y:auto; }
+  .side { background:var(--bg2); border-left:1px solid var(--border); padding:16px; overflow-y:auto;
+          display:flex; flex-direction:column; gap:14px; }
 
-  .response-box {
-    background: #080f1e; border: 1px solid var(--border); border-radius: 8px;
-    padding: 14px; font-family: 'Consolas', monospace; font-size: 11px;
-    color: #7ec8e3; max-height: 320px; overflow-y: auto;
-    white-space: pre-wrap; word-break: break-all;
-    line-height: 1.6;
+  .toolbar { display:flex; align-items:center; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+  .toolbar .range-nav { display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text); }
+  .toolbar button { cursor:pointer; background:var(--bg3); color:var(--text); border:1px solid var(--border);
+                    border-radius:5px; padding:5px 12px; font-size:12px; font-family:inherit; }
+  .toolbar button:hover { border-color:var(--accent); color:var(--accent); }
+  .toolbar button.primary { background:var(--accent); color:#000; border-color:var(--accent); font-weight:600; }
+  .toolbar button.primary:hover { color:#000; opacity:.9; }
+  .toolbar .basis-pick, .toolbar .class-pick {
+    display:inline-flex; align-items:center; gap:0; border:1px solid var(--border); border-radius:5px; overflow:hidden;
   }
-  .response-box.err { color: var(--red); }
-  .response-box.empty { color: var(--text2); font-style: italic; }
+  .toolbar .basis-pick button, .toolbar .class-pick button { border:0; border-radius:0; padding:5px 10px; }
+  .toolbar .basis-pick button + button, .toolbar .class-pick button + button { border-left:1px solid var(--border); }
+  .toolbar .basis-pick button.on, .toolbar .class-pick button.on { background:var(--accent); color:#000; font-weight:600; }
+  .toolbar .basis-pick .lbl, .toolbar .class-pick .lbl { padding:0 8px 0 10px; font-size:11px; color:var(--text3); }
+  .toolbar .legend { display:flex; align-items:center; gap:10px; margin-left:auto; font-size:11px; color:var(--text2); }
+  .toolbar .legend .lg { display:inline-flex; align-items:center; gap:4px; }
+  .toolbar .legend .sw { width:10px; height:10px; border-radius:2px; }
 
-  .price-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  .price-table th {
-    background: #0d1e38; color: var(--text2); font-size: 11px; font-weight: 600;
-    padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border);
+  /* 양방향 섹션 */
+  .dir-section { margin-bottom:22px; }
+  .dir-head { display:flex; align-items:center; gap:10px; padding:8px 12px; margin-bottom:10px;
+              background:var(--bg2); border:1px solid var(--border); border-left:4px solid var(--accent);
+              border-radius:4px; font-size:13px; color:var(--text); }
+  .dir-head b { color:#fff; font-weight:700; letter-spacing:-.2px; }
+  .dir-head .dir-sub { color:var(--text3); font-size:11px; margin-left:auto; font-family:monospace; }
+  .cal-wrap-inner { display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; }
+  @media (max-width:1400px) { .cal-wrap-inner { grid-template-columns:repeat(2, 1fr); } }
+  @media (max-width:800px)  { .cal-wrap-inner { grid-template-columns:1fr; } }
+
+  /* 캘린더 그리드 */
+  .cal-wrap { display:flex; flex-direction:column; }
+  .cal { background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:10px 10px 12px; }
+  .cal h3 { font-size:13px; font-weight:700; color:#fff; margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+  .cal h3 .mo-sub { font-size:10.5px; color:var(--text3); font-weight:400; margin-left:auto; }
+  .dow { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin-bottom:4px; }
+  .dow div { font-size:10px; color:var(--text3); text-align:center; padding:3px 0; font-weight:600; letter-spacing:.3px; }
+  .dow div.sun { color:#e78b8b; } .dow div.sat { color:#8bb0e7; }
+  .grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
+  .cell { position:relative; min-height:82px; padding:4px 5px; border-radius:4px;
+          background:var(--bg4); border:1px solid transparent; cursor:pointer; transition:border-color .12s, background .12s; }
+  .cell:hover:not(.empty):not(.past) { border-color:var(--accent); }
+  .cell.empty { background:transparent; cursor:default; }
+  .cell.past { opacity:.25; cursor:not-allowed; }
+  /* 과거 — 범위 안이고 데이터 있으면 가격은 보여주되 팝업 비활성 */
+  .cell.historical { opacity:.55; cursor:default; filter:grayscale(.3); }
+  .cell.historical:hover { border-color:transparent; }
+  .cell.historical .ferry { color:#8aabcc; }
+  .cell.historical .lv { opacity:.6; }
+  .cell.sel { border-color:var(--accent); background:#162d50; }
+  .cell.today { outline:2px solid #F1C40F; outline-offset:-2px; }
+  .cell.today .d { color:#F1C40F; }
+  .cell.today .today-dot { background:#F1C40F; }
+  .cell.loading { background:repeating-linear-gradient(135deg, var(--bg4) 0 8px, #0f1f3a 8px 16px); }
+  .cell .d { font-size:10.5px; font-weight:600; color:var(--text2); display:flex; align-items:center; gap:3px; }
+  .cell .d.sun { color:#e78b8b; } .cell .d.sat { color:#8bb0e7; }
+  .cell .today-dot { display:inline-block; width:4px; height:4px; border-radius:50%; background:var(--accent); vertical-align:2px; }
+  .cell .lv { display:inline-block; width:8px; height:8px; border-radius:2px; margin-left:auto; }
+  .cell .lv.low { background:var(--low); } .cell .lv.typical { background:var(--mid); }
+  .cell .lv.high { background:var(--high); } .cell .lv.unknown { background:var(--unk); }
+  /* 항공 기준가 : 작게 표시 — 참조용 */
+  .cell .air-row { display:flex; align-items:baseline; gap:3px; font-size:10.5px; margin-top:3px;
+                   color:var(--text2); font-variant-numeric:tabular-nums; }
+  .cell .air-row .lbl { font-size:9px; color:var(--text3); font-weight:500; }
+  .cell .air-row .val { font-weight:600; }
+  /* 추천 페리 운임 : 큰 수 — 주된 숫자 */
+  .cell .ferry { display:flex; align-items:baseline; gap:3px; margin-top:2px;
+                 font-variant-numeric:tabular-nums; letter-spacing:-.3px; }
+  .cell .ferry .lbl { font-size:9px; color:var(--accent); font-weight:600; letter-spacing:.2px; }
+  .cell .ferry .val { font-size:13.5px; font-weight:700; color:#fff; }
+  .cell .ferry .k { font-size:9.5px; color:var(--text3); font-weight:400; }
+  .cell .cnt { font-size:9px; color:var(--text3); margin-top:1px; }
+
+  /* 사이드 상세 패널 */
+  .side .card { background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:12px 14px; }
+  .side .card h4 { font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase;
+                   letter-spacing:.6px; margin-bottom:10px; display:flex; align-items:center; gap:6px; }
+  .side .card h4 .r { margin-left:auto; font-size:10.5px; color:var(--text3); font-weight:400; text-transform:none; letter-spacing:0; }
+  .kv { display:flex; justify-content:space-between; align-items:center; font-size:12px; padding:3px 0; }
+  .kv .k { color:var(--text2); } .kv .v { color:var(--text); font-weight:600; font-variant-numeric:tabular-nums; }
+  .kv .v.big { font-size:20px; color:#fff; letter-spacing:-.5px; }
+  .kv .v.ferry { color:var(--accent); font-size:22px; }
+  .kv .sub { font-size:10.5px; color:var(--text3); margin-left:6px; font-weight:400; }
+  .divider { height:1px; background:var(--border); margin:8px 0; }
+  .lv-badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:10.5px; font-weight:700; }
+  .lv-badge.low { background:rgba(46,204,113,0.16); color:var(--low); }
+  .lv-badge.typical { background:rgba(243,156,18,0.16); color:var(--mid); }
+  .lv-badge.high { background:rgba(231,76,60,0.16); color:var(--high); }
+  .lv-badge.unknown { background:rgba(90,123,163,0.16); color:var(--text2); }
+
+  input[type=text], input[type=password], input[type=number], select {
+    width:100%; background:var(--bg4); border:1px solid var(--border); color:var(--text);
+    border-radius:5px; padding:6px 9px; font-size:12px; font-family:inherit; outline:none;
   }
-  .price-table td { padding: 9px 10px; border-bottom: 1px solid rgba(80,160,255,0.08); }
-  .price-table tr:hover td { background: rgba(74,158,255,0.05); }
-  .price-badge {
-    display: inline-block; padding: 2px 8px; border-radius: 10px;
-    font-size: 11px; font-weight: 700;
+  input:focus, select:focus { border-color:var(--accent); }
+  label { display:block; font-size:10.5px; color:var(--text2); margin-bottom:3px; margin-top:8px; letter-spacing:.2px; }
+  label:first-of-type { margin-top:0; }
+  .slider-row { display:flex; align-items:center; gap:8px; margin-top:3px; }
+  .slider-row input[type=range] { flex:1; accent-color:var(--accent); height:4px; padding:0; background:var(--bg); }
+  .slider-row .sv { min-width:40px; text-align:right; color:var(--accent); font-weight:700; font-size:12px; }
+  .chk-row { display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--text); margin-top:8px; }
+  .chk-row input[type=checkbox] { width:auto; accent-color:var(--accent); cursor:pointer; }
+  .side .empty-hint { color:var(--text3); font-size:11.5px; text-align:center; padding:12px 0; line-height:1.6; }
+
+  .notice { font-size:11px; color:var(--warn); background:rgba(243,156,18,0.08);
+            border:1px solid rgba(243,156,18,0.3); border-radius:5px; padding:7px 9px; line-height:1.5; margin-top:6px; }
+  .progress { height:4px; background:var(--bg4); border-radius:2px; overflow:hidden; margin-top:8px; }
+  .progress .bar { height:100%; background:var(--accent); width:0; transition:width .25s; }
+
+  /* ── 로딩 스피너 오버레이 ── */
+  .spinner-overlay {
+    position:fixed; inset:0; background:rgba(5,12,25,0.78); z-index:200;
+    display:none; align-items:center; justify-content:center; flex-direction:column; gap:14px;
   }
-  .price-badge.low { background: rgba(46,204,113,0.15); color: var(--accent2); }
-  .price-badge.mid { background: rgba(243,156,18,0.15); color: var(--warn); }
-  .price-badge.high { background: rgba(231,76,60,0.15); color: var(--red); }
-
-  .ferry-result {
-    background: linear-gradient(135deg, rgba(74,158,255,0.1), rgba(46,204,113,0.05));
-    border: 1px solid rgba(74,158,255,0.3);
-    border-radius: 10px; padding: 20px;
+  .spinner-overlay.on { display:flex; }
+  .spinner {
+    width:52px; height:52px; border-radius:50%;
+    border:4px solid rgba(74,158,255,0.18);
+    border-top-color:var(--accent);
+    animation:spin .9s linear infinite;
   }
-  .ferry-price { font-size: 32px; font-weight: 800; color: #fff; margin: 8px 0; }
-  .ferry-price span { font-size: 16px; color: var(--text2); font-weight: 400; }
-  .ferry-breakdown { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 16px; }
-  .fb-item { background: var(--bg3); border-radius: 8px; padding: 12px; text-align: center; }
-  .fb-item .val { font-size: 18px; font-weight: 700; color: var(--accent); margin-top: 4px; }
-  .fb-item .lbl { font-size: 10px; color: var(--text2); }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .spinner-text { font-size:13px; color:var(--text); font-weight:600; letter-spacing:.2px; }
+  .spinner-sub { font-size:11px; color:var(--text2); font-variant-numeric:tabular-nums; }
+  .spinner-bar { width:260px; height:4px; background:var(--bg4); border-radius:2px; overflow:hidden; }
+  .spinner-bar .f { height:100%; background:var(--accent); width:0; transition:width .25s; }
 
-  .section-header {
-    font-size: 12px; font-weight: 700; color: var(--text2);
-    margin: 4px 0 10px; padding-bottom: 8px;
-    border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: space-between;
+  /* 버튼 안에서 쓰는 작은 스피너 */
+  .btn-spin { display:inline-block; width:10px; height:10px; border-radius:50%;
+              border:2px solid rgba(0,0,0,0.25); border-top-color:#000;
+              animation:spin .7s linear infinite; vertical-align:-1px; margin-right:5px; }
+
+  /* ───── 모달 (날짜 상세) ───── */
+  .modal-overlay { position:fixed; inset:0; background:rgba(5,12,25,0.78); z-index:100;
+                   display:none; align-items:center; justify-content:center; padding:20px; }
+  .modal-overlay.open { display:flex; }
+  .modal { background:var(--bg2); border:1px solid var(--border2); border-radius:10px;
+           width:min(820px, 100%); max-height:90vh; display:flex; flex-direction:column; overflow:hidden; }
+  .modal-head { padding:14px 18px; display:flex; align-items:center; gap:12px; border-bottom:1px solid var(--border); background:var(--bg3); }
+  .modal-head h3 { font-size:15px; font-weight:700; color:#fff; }
+  .modal-head .sub { font-size:11.5px; color:var(--text2); margin-left:4px; }
+  .modal-head .spacer { margin-left:auto; }
+  .modal-close { background:transparent; border:0; color:var(--text2); font-size:24px; cursor:pointer; padding:0 4px; line-height:1; }
+  .modal-close:hover { color:#fff; }
+  .modal-body { padding:16px 18px; overflow-y:auto; display:flex; flex-direction:column; gap:14px; }
+
+  .summary-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  .sm-tile { background:var(--bg3); border:1px solid var(--border); border-radius:6px; padding:10px 12px; cursor:pointer; transition:border-color .12s; }
+  .sm-tile:hover { border-color:var(--accent); }
+  .sm-tile.on { border-color:var(--accent); background:#162d50; }
+  .sm-tile .lbl { font-size:10.5px; color:var(--text3); margin-bottom:3px; }
+  .sm-tile .val { font-size:16px; font-weight:700; color:#fff; font-variant-numeric:tabular-nums; letter-spacing:-.3px; }
+  .sm-tile .val .u { font-size:10px; color:var(--text3); font-weight:400; margin-left:1px; }
+  .sm-tile .tag { font-size:9.5px; color:var(--text3); margin-top:2px; }
+  .sm-tile.ferry { background:linear-gradient(135deg, rgba(74,158,255,0.13), rgba(46,204,113,0.06));
+                   border-color:rgba(74,158,255,0.35); cursor:default; }
+  .sm-tile.ferry:hover { border-color:rgba(74,158,255,0.35); }
+  .sm-tile.ferry .val { color:var(--accent); }
+  .sm-tile.ferry .tag { color:var(--accent); }
+
+  .flight-list { display:flex; flex-direction:column; gap:6px; max-height:340px; overflow-y:auto;
+                 padding-right:4px; scrollbar-width:thin; scrollbar-color:var(--border2) transparent; }
+  .flight-list::-webkit-scrollbar { width:8px; }
+  .flight-list::-webkit-scrollbar-thumb { background:var(--border2); border-radius:4px; }
+  .flight-list::-webkit-scrollbar-track { background:transparent; }
+  .flight-row { display:grid; grid-template-columns:46px 1fr auto auto; gap:12px; align-items:center;
+                padding:9px 12px; background:var(--bg3); border:1px solid var(--border); border-radius:6px; }
+  .flight-row img { width:34px; height:34px; border-radius:4px; background:#fff; object-fit:contain; padding:3px; }
+  .flight-row .airline { font-size:12px; color:var(--text); font-weight:600; }
+  .flight-row .fno { font-size:10.5px; color:var(--text3); margin-left:4px; }
+  .flight-row .times { font-size:11px; color:var(--text2); margin-top:2px; font-variant-numeric:tabular-nums; }
+  .flight-row .dur { font-size:10.5px; color:var(--text3); text-align:right; font-variant-numeric:tabular-nums; }
+  .flight-row .price { font-size:14px; font-weight:700; color:#fff; font-variant-numeric:tabular-nums; min-width:80px; text-align:right; }
+  .flight-row.lowest { border-color:rgba(46,204,113,0.5); background:rgba(46,204,113,0.06); }
+  .flight-row.lowest .price { color:var(--low); }
+  .flight-row.highest { border-color:rgba(231,76,60,0.4); background:rgba(231,76,60,0.05); }
+  .flight-row.highest .price { color:var(--high); }
+
+  .section-label { font-size:10.5px; color:var(--text3); font-weight:600; text-transform:uppercase;
+                   letter-spacing:.5px; padding:0 0 4px; border-bottom:1px solid var(--border); margin-bottom:6px; }
+
+  /* 반응형 */
+  @media (max-width:1100px) {
+    .layout { grid-template-columns:1fr; height:auto; }
+    .side { border-left:0; border-top:1px solid var(--border); }
+    .cal-wrap { grid-template-columns:1fr; }
+    .summary-grid { grid-template-columns:repeat(2,1fr); }
   }
-
-  .endpoint-list { display: flex; flex-direction: column; gap: 6px; }
-  .endpoint-item {
-    background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
-    padding: 8px 10px; cursor: pointer; display: flex; align-items: center; gap: 8px;
-    transition: border-color .15s;
-  }
-  .endpoint-item:hover { border-color: var(--accent); }
-  .endpoint-item .ep-method { font-size: 10px; font-weight: 700; color: var(--accent); min-width: 32px; }
-  .endpoint-item .ep-path { font-size: 11px; font-family: monospace; color: var(--text); }
-  .endpoint-item .ep-desc { font-size: 10px; color: var(--text2); margin-left: auto; }
-
-  .cors-warning {
-    background: rgba(231,76,60,0.1); border: 1px solid rgba(231,76,60,0.3);
-    border-radius: 8px; padding: 12px; font-size: 12px; color: #f0a0a0;
-  }
-  .cors-warning strong { color: var(--red); display: block; margin-bottom: 4px; }
-
-  .slider-row { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
-  .slider-row input[type=range] {
-    flex: 1; height: 4px; padding: 0; background: var(--bg);
-    accent-color: var(--accent);
-  }
-  .slider-val { min-width: 52px; text-align: right; color: var(--accent); font-weight: 700; }
-
-  .tabs { display: flex; gap: 2px; margin-bottom: 14px; }
-  .tab {
-    padding: 6px 16px; font-size: 12px; font-weight: 600; border-radius: 6px 6px 0 0;
-    cursor: pointer; color: var(--text2); background: var(--bg);
-    border: 1px solid var(--border); border-bottom: none;
-    transition: color .15s, background .15s;
-  }
-  .tab.active { color: var(--accent); background: var(--bg3); }
-
-  .tab-content { display: none; }
-  .tab-content.active { display: block; }
-
-  .log-entry { font-size: 11px; font-family: monospace; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
-  .log-entry .ts { color: var(--text2); margin-right: 8px; }
-  .log-entry.req .method { color: var(--warn); }
-  .log-entry.res .code { margin-right: 6px; }
-  .log-entry.res .code.ok { color: var(--accent2); }
-  .log-entry.res .code.err { color: var(--red); }
 </style>
 </head>
 <body>
 
 <header>
   <div>
-    <h1>⛴ 부산-하카타 운임 최적화 도구</h1>
-    <span>항공권 실시간 가격 → 최적 페리 운임 산정</span>
+    <h1>부산-하카타 운임 최적화 캘린더<span class="sub">PUS ↔ FUK · 60일 벤치마크</span></h1>
   </div>
-  <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
-    <div class="status-bar">
-      <div class="dot" id="apiDot"></div>
-      <span id="apiStatus">API 미연결</span>
-    </div>
+  <div class="spacer"></div>
+  <div class="status">
+    <span id="statusMode">더미 데이터 모드</span>
+    <span style="color:var(--text3)">·</span>
+    <span id="statusUpdate">마지막 갱신: —</span>
+    <div class="dot" id="statusDot"></div>
   </div>
 </header>
 
 <div class="layout">
-  <!-- ===== SIDEBAR ===== -->
-  <div class="sidebar">
 
-    <!-- 검색 조건 -->
-    <div class="card">
-      <div class="card-title">✈ 항공 검색 조건</div>
+  <div class="main">
 
-      <div class="input-row">
-        <div>
-          <label>출발지</label>
-          <input id="origin" value="PUS" maxlength="3" style="text-transform:uppercase; text-align:center; font-weight:700;">
-        </div>
-        <div>
-          <label>도착지</label>
-          <input id="dest" value="FUK" maxlength="3" style="text-transform:uppercase; text-align:center; font-weight:700;">
-        </div>
+    <div class="toolbar">
+      <div class="range-nav">
+        <button onclick="shiftRange(-30)">◄</button>
+        <span id="rangeLabel">—</span>
+        <button onclick="shiftRange(+30)">►</button>
+        <button onclick="resetRange()" title="오늘 기준 60일로 되돌리기">오늘부터</button>
+      </div>
+      <button class="primary" onclick="refreshAll()" id="btnRefresh">60일 재조회</button>
+
+      <div class="basis-pick" title="캘린더 셀 큰 숫자·페리 추천 운임의 기준">
+        <span class="lbl">기준:</span>
+        <button data-basis="min" onclick="setBasis('min')">최저</button>
+        <button data-basis="avg" onclick="setBasis('avg')">평균</button>
+        <button data-basis="max" onclick="setBasis('max')">최고</button>
       </div>
 
-      <label>출발일</label>
-      <input type="date" id="depDate">
-
-      <label>귀환일 (복편)</label>
-      <input type="date" id="retDate">
-
-      <label>인원</label>
-      <div class="input-row">
-        <div>
-          <label style="margin-top:0">성인</label>
-          <input type="number" id="adults" value="1" min="1" max="9">
-        </div>
-        <div>
-          <label style="margin-top:0">소아</label>
-          <input type="number" id="children" value="0" min="0" max="9">
-        </div>
+      <div class="class-pick" title="좌석 등급 — 변경 시 캐시 폐기 후 재조회 필요">
+        <span class="lbl">좌석:</span>
+        <button data-tc="1" onclick="setClass(1)">이코노미</button>
+        <button data-tc="2" onclick="setClass(2)">프리미엄</button>
+        <button data-tc="3" onclick="setClass(3)">비즈니스</button>
+        <button data-tc="4" onclick="setClass(4)">퍼스트</button>
       </div>
 
-      <label>날짜 빠른 선택</label>
-      <div class="tag-row" id="dateQuick"></div>
-
-      <button class="btn-primary" onclick="searchFlights()">🔍 항공 가격 조회</button>
+      <div class="legend">
+        <span class="lg"><span class="sw" style="background:var(--low)"></span>저렴</span>
+        <span class="lg"><span class="sw" style="background:var(--mid)"></span>보통</span>
+        <span class="lg"><span class="sw" style="background:var(--high)"></span>비싼</span>
+        <span class="lg"><span class="sw" style="background:var(--unk)"></span>자료부족</span>
+      </div>
     </div>
 
-    <!-- 운임 파라미터 -->
+    <div class="progress" id="progressWrap" style="display:none">
+      <div class="bar" id="progressBar"></div>
+    </div>
+
+    <div class="cal-wrap" id="calWrap">
+    </div>
+
+  </div>
+
+  <div class="side">
+
     <div class="card">
-      <div class="card-title">⚙ 운임 최적화 설정</div>
+      <h4>선택한 날짜 <span class="r" id="detailDate">—</span></h4>
+      <div id="detailBody" class="empty-hint">
+        캘린더에서 날짜를 누르면 항공사·운임 상세가 팝업으로 뜹니다.
+      </div>
+    </div>
+
+    <div class="card">
+      <h4>운임 산정 설정</h4>
 
       <label>항공 대비 페리 가격비 (%)</label>
       <div class="slider-row">
-        <input type="range" id="ratioSlider" min="30" max="100" value="68" oninput="updateRatioLabel(this.value); calcFerry();">
-        <div class="slider-val" id="ratioLabel">68%</div>
+        <input type="range" id="ratio" min="40" max="100" value="76" oninput="onSettingChange()">
+        <div class="sv" id="ratioVal">76%</div>
       </div>
 
-      <label>최저 운임 하한 (원)</label>
-      <input type="number" id="minFare" value="60000" step="5000" oninput="calcFerry()">
+      <label>최저 운임 하한 / 상한 <span id="fareUnitLbl" style="color:var(--text3)">(원)</span></label>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px">
+        <input type="number" id="minFare" value="60000" step="5000" oninput="onSettingChange()">
+        <input type="number" id="maxFare" value="250000" step="5000" oninput="onSettingChange()">
+      </div>
 
-      <label>최고 운임 상한 (원)</label>
-      <input type="number" id="maxFare" value="250000" step="5000" oninput="calcFerry()">
-
-      <label>선종 보정계수</label>
-      <select id="vesselFactor" onchange="calcFerry()">
-        <option value="1.0">일반 페리 (1.0x)</option>
-        <option value="1.25" selected>고속 페리 - 퀸비틀급 (1.25x)</option>
-        <option value="0.85">차량 도선 병행 RoPax (0.85x)</option>
-        <option value="0.70">화물 위주 로로선 (0.70x)</option>
-      </select>
-
-      <label>선실 등급</label>
-      <select id="cabinClass" onchange="calcFerry()">
-        <option value="economy">이코노미 (기준)</option>
-        <option value="first" selected>일등실 (+35%)</option>
-        <option value="cabin">침대칸 (+55%)</option>
-      </select>
+      <label style="margin-top:14px">항공 조회 조건 <small style="color:var(--text3);font-weight:400">(변경 시 캐시 폐기)</small></label>
+      <div style="display:grid; grid-template-columns:1.2fr 1fr 1fr; gap:6px">
+        <select id="travelClass" onchange="onQueryParamChange()">
+          <option value="1">이코노미</option>
+          <option value="2">프리미엄 이코노미</option>
+          <option value="3">비즈니스</option>
+          <option value="4">퍼스트</option>
+        </select>
+        <input type="number" id="adults"   title="성인"  min="1" max="9" step="1" value="1" onchange="onQueryParamChange()">
+        <input type="number" id="children" title="소아"  min="0" max="8" step="1" value="0" onchange="onQueryParamChange()">
+      </div>
+      <div style="font-size:10px; color:var(--text3); margin-top:3px">
+        좌·중·우: 좌석등급 / 성인 / 소아
+      </div>
     </div>
 
-    <!-- 엔드포인트 목록 -->
     <div class="card">
-      <div class="card-title">🔌 API 엔드포인트</div>
-      <div class="endpoint-list" id="endpointList"></div>
+      <h4>SerpApi 연결 <span class="r" id="keyState">—</span></h4>
+      <label>API 키</label>
+      <input type="password" id="apiKey" placeholder="SerpApi 키를 붙여넣기">
+      <div style="display:flex; gap:6px; margin-top:8px">
+        <button class="primary" style="flex:1; padding:6px 10px; font-size:12px"
+                onclick="saveKey()">저장</button>
+        <button style="flex:1; padding:6px 10px; font-size:12px; background:var(--bg3); color:var(--text); border:1px solid var(--border); border-radius:5px; cursor:pointer"
+                onclick="clearKey()">삭제</button>
+      </div>
+
+      <label>통화 (API · 표기 단위)</label>
+      <select id="currency" onchange="onCurrencyChange()">
+        <option value="KRW">원화 KRW (₩)</option>
+        <option value="JPY">일본 엔 JPY (¥)</option>
+        <option value="USD">미 달러 USD ($)</option>
+        <option value="EUR">유로 EUR (€)</option>
+      </select>
+
+      <div class="notice" id="keyNotice" style="display:none"></div>
+      <div style="font-size:10.5px; color:var(--text3); margin-top:8px; line-height:1.5">
+        키는 <b>localStorage</b> 에만 저장 — 소스에는 하드코딩 안 됨. 노출 시 <a href="https://serpapi.com/manage-api-key" target="_blank" style="color:var(--accent)">대시보드</a> 에서 Rotate.
+      </div>
     </div>
+
+    <div class="card">
+      <h4>데이터 모드 <span class="r" id="quotaBadge">—</span></h4>
+      <div class="chk-row">
+        <input type="checkbox" id="useMock" checked onchange="onModeChange()">
+        <span>더미 데이터 모드 (API 키 없어도 UI 확인)</span>
+      </div>
+      <div id="quotaBar" style="height:6px; background:var(--bg4); border-radius:3px; overflow:hidden; margin-top:8px">
+        <div id="quotaBarFill" style="height:100%; width:0%; background:var(--accent); transition:width .3s"></div>
+      </div>
+      <div style="font-size:10.5px; color:var(--text3); margin-top:6px; line-height:1.5">
+        해제 시 실제 Google Flights 호출. <b>월 250회 무료 플랜</b> 기준 재조회 1회당 최대 <b>20 호출</b> (샘플링)·
+        <br>D-0~6: 매일 / D-7~30: 3일 간격 / D-31~60: 7일 간격. 샘플 사이는 보간.
+      </div>
+      <button onclick="clearCache()" style="margin-top:10px; width:100%; padding:6px 10px; font-size:11.5px; background:var(--bg3); color:var(--text2); border:1px solid var(--border); border-radius:5px; cursor:pointer">
+        캐시 전체 비우기 (localStorage 데이터 삭제)
+      </button>
+    </div>
+
   </div>
+</div>
 
-  <!-- ===== MAIN ===== -->
-  <div class="main">
+<!-- ======================= 로딩 스피너 오버레이 ======================= -->
+<div class="spinner-overlay" id="spinOverlay">
+  <div class="spinner"></div>
+  <div class="spinner-text" id="spinText">조회 중…</div>
+  <div class="spinner-sub" id="spinSub">0 / 0</div>
+  <div class="spinner-bar"><div class="f" id="spinBar"></div></div>
+</div>
 
-
-    <!-- 탭 -->
-    <div>
-      <div class="tabs">
-        <div class="tab active" onclick="switchTab('results')">항공가격 결과</div>
-        <div class="tab" onclick="switchTab('ferry')">페리 운임 산정</div>
-        <div class="tab" onclick="switchTab('explorer')">API 탐색기</div>
-        <div class="tab" onclick="switchTab('log')">요청 로그</div>
-      </div>
-
-      <!-- 항공 결과 -->
-      <div class="tab-content active" id="tab-results">
-        <div class="card">
-          <div class="card-title">✈ 항공권 가격 현황 <span class="badge" id="flightCount">0건</span></div>
-          <div id="flightResultArea">
-            <div style="color:var(--text2); font-size:13px; text-align:center; padding:40px 0;">
-              좌측에서 검색 조건을 입력하고 조회 버튼을 누르세요.
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-title">📊 가격 분포 요약</div>
-          <div id="priceStats" style="color:var(--text2); font-size:13px; padding:10px 0;">
-            데이터 없음
-          </div>
-        </div>
-      </div>
-
-      <!-- 페리 운임 -->
-      <div class="tab-content" id="tab-ferry">
-        <div class="card">
-          <div class="card-title">⛴ 최적 운임 산정 결과</div>
-          <div id="ferryResult">
-            <div style="color:var(--text2); font-size:13px; text-align:center; padding:40px 0;">
-              항공 가격 조회 후 자동 계산됩니다.
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-title">📈 운임 전략 가이드</div>
-          <div id="ferryStrategy" style="font-size:13px; line-height:1.7; color:var(--text2);">
-            항공 데이터 조회 후 표시됩니다.
-          </div>
-        </div>
-      </div>
-
-      <!-- API 탐색기 -->
-      <div class="tab-content" id="tab-explorer">
-        <div class="card">
-          <div class="card-title">🧪 직접 API 호출</div>
-
-          <div class="api-url-row">
-            <div class="method-badge" id="explorerMethod">GET</div>
-            <input id="explorerUrl" value="" placeholder="https://api.myrealtrip.com/..." style="font-family:monospace; font-size:12px;">
-            <button class="btn-secondary btn-sm" onclick="explorerCall()">전송</button>
-          </div>
-
-          <label>요청 헤더 (JSON)</label>
-          <textarea id="explorerHeaders" rows="3" style="width:100%; background:#0d1e38; border:1px solid var(--border); color:var(--text); border-radius:6px; padding:8px; font-family:monospace; font-size:11px; resize:vertical;"></textarea>
-
-          <label>요청 바디 (POST/JSON, 비워두면 GET)</label>
-          <textarea id="explorerBody" rows="5" style="width:100%; background:#0d1e38; border:1px solid var(--border); color:var(--text); border-radius:6px; padding:8px; font-family:monospace; font-size:11px; resize:vertical;"></textarea>
-
-          <div style="margin-top:10px; display:flex; gap:6px;">
-            <button class="btn-secondary btn-sm" onclick="setExplorerMethod('GET')">GET</button>
-            <button class="btn-secondary btn-sm" onclick="setExplorerMethod('POST')">POST</button>
-            <button class="btn-secondary btn-sm" onclick="formatExplorerBody()">JSON 정렬</button>
-            <button class="btn-secondary btn-sm" onclick="clearExplorer()">초기화</button>
-          </div>
-
-          <label style="margin-top:14px;">응답</label>
-          <div class="response-box empty" id="explorerResponse">응답이 여기 표시됩니다.</div>
-        </div>
-      </div>
-
-      <!-- 로그 -->
-      <div class="tab-content" id="tab-log">
-        <div class="card">
-          <div class="card-title">📋 요청/응답 로그
-            <button class="btn-secondary btn-sm" onclick="clearLog()" style="margin-left:auto">초기화</button>
-          </div>
-          <div id="logArea" style="max-height:500px; overflow-y:auto;"></div>
-        </div>
-      </div>
+<!-- ======================= 날짜 상세 모달 ======================= -->
+<div class="modal-overlay" id="modal" onclick="if (event.target === this) closeModal()">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h3 id="modalTitle">—</h3>
+      <span class="sub" id="modalSub">—</span>
+      <div class="spacer"></div>
+      <button class="modal-close" onclick="closeModal()" aria-label="닫기">×</button>
+    </div>
+    <div class="modal-body" id="modalBody">
     </div>
   </div>
 </div>
 
 <script>
-// ===== API 설정 =====
-// 키는 런타임에 조합 (소스 직접 노출 방지)
-const _k = (s => { try { return atob(s); } catch(e){ return ''; } })(
-  'V25sakxtUm1pbXJYQ0pBSEhKcXI5eWVsUlg2TkVwcTZnMW9pOTJBWVRJekptZm9HWXVwOF9Nd2dfb013dHJVcg=='
-);
+'use strict';
 
-const BASE_URLS = [
-  'https://partner-ext-api.myrealtrip.com',
-];
-let _activeBase = BASE_URLS[0];
-
-const ENDPOINTS = [
-  { method:'POST', path:'/v1/products/flight/calendar/window',
-    desc:'180일 왕복 캘린더 (날짜 불필요)',
-    bodyFn: (orig, dest) => ({ depCityCd: orig, arrCityCd: dest, period: 3 }) },
-  { method:'POST', path:'/v1/products/flight/calendar',
-    desc:'기간별 왕복 캘린더 (startDate/endDate)',
-    bodyFn: (orig, dest, dep) => ({ depCityCd: orig, arrCityCd: dest, period: 3,
-      startDate: dep, endDate: new Date(Date.now()+30*24*60*60*1000).toISOString().slice(0,10) }) },
-  { method:'GET',  path:'/v1/products',  desc:'상품 목록' },
-  { method:'GET',  path:'/health',       desc:'서버 상태' },
-];
-
-// ===== 로그 =====
-const _logs = [];
-function addLog(type, msg) {
-  const ts = new Date().toLocaleTimeString('ko');
-  _logs.unshift({ type, msg, ts });
-  renderLog();
+// ══════════════════════════════════════════════════════════════════
+//  상수
+// ══════════════════════════════════════════════════════════════════
+const DAY_MS = 86400000;
+// 전액 표기 — 통화 기호 포함 (1,234,567원 / ¥1,234,567 / $123.45)
+function curMeta() { return CCY[state.settings.currency] || CCY.KRW; }
+function fmtFull(n) {
+  if (n == null) return '—';
+  const m = curMeta();
+  if (m.man !== false && m.sym === '원') return Math.round(n).toLocaleString('ko-KR') + '원';
+  if (m.man !== false && m.sym === '¥')  return m.sym + Math.round(n).toLocaleString('ja-JP');
+  return m.sym + (n).toLocaleString('en-US', { maximumFractionDigits: 2 });
 }
-function renderLog() {
-  const area = document.getElementById('logArea');
-  area.innerHTML = _logs.slice(0, 100).map(l => {
-    if (l.type === 'req') {
-      const [method, ...rest] = l.msg.split(' ');
-      return `<div class="log-entry req"><span class="ts">${l.ts}</span><span class="method">${method}</span> ${rest.join(' ')}</div>`;
-    } else if (l.type === 'res') {
-      const [code, ...rest] = l.msg.split(' ');
-      const cls = +code < 400 ? 'ok' : 'err';
-      return `<div class="log-entry res"><span class="ts">${l.ts}</span><span class="code ${cls}">${code}</span>${rest.join(' ')}</div>`;
-    }
-    return `<div class="log-entry"><span class="ts">${l.ts}</span>${l.msg}</div>`;
-  }).join('');
-}
-function clearLog() { _logs.length = 0; renderLog(); }
+const WON = n => fmtFull(n);
 
-// ===== API 호출 공통 =====
-async function apiCall(method, url, body = null) {
-  addLog('req', `${method} ${url}`);
-  setStatus('loading', '요청 중...');
-  const headers = {
-    'Authorization': `Bearer ${_k}`,
-    'X-API-Key': _k,
-    'Accept': 'application/json',
-    'Content-Type': 'application/json',
-  };
-  const opts = { method, headers, mode: 'cors' };
-  if (body) opts.body = JSON.stringify(body);
+// 캘린더 축약 표기 — KRW/JPY 는 만 단위(소수 둘째 자리), USD/EUR 는 원래 값 (K 단위)
+function fmtAbbr(n) {
+  if (n == null) return '—';
+  const m = curMeta();
+  if (m.man) {
+    const v = (n || 0) / 10000;
+    return v.toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  return n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+}
+const WON_MAN = n => fmtAbbr(n);
+// 캘린더 셀 축약 단위 라벨 (만 / '' / K 없음)
+function abbrUnit() { return curMeta().abbrUnit || ''; }
+const FMT_DATE = d => d.toISOString().slice(0,10);
+const PARSE_DATE = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const DOW = ['일','월','화','수','목','금','토'];
+const MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+
+const RANGE_DAYS = 120;    // 4개월
+const DIRECTIONS = [
+  { key:'out', from:'PUS', to:'FUK', nm:'김해 → 후쿠오카' },
+  { key:'ret', from:'FUK', to:'PUS', nm:'후쿠오카 → 김해' },
+];
+const CACHE_TTL = (dN) => {
+  if (dN <= 7)  return 24;
+  if (dN <= 30) return 72;
+  return 168;
+};
+const FREE_MAX_CALLS_PER_REFRESH = 20;
+const QUOTA_WARN_THRESHOLD = 200;
+
+// 로컬 테스트 시에만 아래 상수에 키를 넣어 쓰는 용도.
+// ⚠️ 공개 리포에 푸시할 때는 반드시 '' 로 두세요 — 봇이 수분 내 스캔해 쿼터 소진.
+//    평소 사용은 사이드바 "SerpApi 연결" 카드에서 키 저장 → localStorage 에만 저장.
+const HARDCODED_SERPAPI_KEY = '';
+
+// SerpApi 는 브라우저에서 직접 호출 시 CORS 가 막힘 (서버사이드 설계).
+//
+// 방법 1 (권장) : 로컬 Python 프록시 사용
+//   `python proxy_server.py` 로 서버 실행 → CORS_PROXY='' 로 두면
+//   자동으로 /serpapi 경로를 거쳐 호출됨 (키 외부 노출 없음).
+//
+// 방법 2 : 공개 CORS 프록시 (서비스 유료화·불안정 — 임시용)
+//   const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+//   const CORS_PROXY = 'https://api.codetabs.com/v1/proxy?quest=';
+const CORS_PROXY = '';   // 로컬 proxy_server.py 사용 중
+
+// 한국-일본 노선 주요 항공사. logo URL 은 Google Flights 가 쓰는 CDN (SerpApi 응답과 동일).
+const AIRLINES = [
+  { code:'LJ', nm:'진에어',       logo:'https://www.gstatic.com/flights/airline_logos/70px/LJ.png' },
+  { code:'7C', nm:'제주항공',     logo:'https://www.gstatic.com/flights/airline_logos/70px/7C.png' },
+  { code:'BX', nm:'에어부산',     logo:'https://www.gstatic.com/flights/airline_logos/70px/BX.png' },
+  { code:'TW', nm:'티웨이항공',   logo:'https://www.gstatic.com/flights/airline_logos/70px/TW.png' },
+  { code:'KE', nm:'대한항공',     logo:'https://www.gstatic.com/flights/airline_logos/70px/KE.png' },
+  { code:'OZ', nm:'아시아나항공', logo:'https://www.gstatic.com/flights/airline_logos/70px/OZ.png' },
+];
+
+// ══════════════════════════════════════════════════════════════════
+//  상태 & 저장
+// ══════════════════════════════════════════════════════════════════
+// 키 우선순위 : localStorage > 하드코딩 > ''
+const _initialKey = localStorage.getItem('serpApiKey') || HARDCODED_SERPAPI_KEY || '';
+const state = {
+  rangeStart: new Date(),
+  data: loadData(),
+  selected: null,
+  settings: loadSettings(),
+  mock: !_initialKey,                         // 키 있으면 자동으로 실제 모드
+  apiKey: _initialKey,
+  quota: loadQuota(),
+};
+state.rangeStart.setHours(0,0,0,0);
+
+function loadData() {
   try {
-    const res = await fetch(url, opts);
-    const text = await res.text();
-    addLog('res', `${res.status} ${res.statusText} (${url.split('?')[0].split('/').slice(-2).join('/')})`);
-    let json = null;
-    try { json = JSON.parse(text); } catch(e){}
-    setStatus(res.ok ? 'ok' : 'err', res.ok ? `${res.status} OK` : `${res.status} 오류`);
-    return { ok: res.ok, status: res.status, text, json };
-  } catch(err) {
-    addLog('res', `ERR ${err.message}`);
-    setStatus('err', 'CORS/네트워크 오류');
-    return { ok: false, status: 0, text: err.message, json: null, corsError: /blocked|CORS|Failed to fetch/.test(err.message) };
+    const d = JSON.parse(localStorage.getItem('fareOptData') || '{}');
+    // 구 버전 (flat {date→d}) → 폐기 후 재생성
+    if (!d.out || !d.ret) {
+      console.log('[fare_optimizer] 레거시 데이터 구조 감지 — 폐기 후 재생성');
+      localStorage.removeItem('fareOptData');
+      return { out:{}, ret:{} };
+    }
+    return d;
+  } catch(_) { return { out:{}, ret:{} }; }
+}
+function saveData() { localStorage.setItem('fareOptData', JSON.stringify(state.data)); }
+// 통화별 포맷 메타 — 심볼·만 단위 사용 여부·기본 상·하한 (현지 통화 기준)
+const CCY = {
+  KRW: { sym:'원',   abbrUnit:'만', man:true,  minFare:60000,  maxFare:250000, hlApi:'ko', glApi:'kr' },
+  JPY: { sym:'¥',    abbrUnit:'万', man:true,  minFare:5000,   maxFare:25000,  hlApi:'ja', glApi:'jp' },
+  USD: { sym:'$',    abbrUnit:'',   man:false, minFare:40,     maxFare:200,    hlApi:'en', glApi:'us' },
+  EUR: { sym:'€',    abbrUnit:'',   man:false, minFare:40,     maxFare:200,    hlApi:'en', glApi:'de' },
+};
+
+function loadSettings() {
+  try { return Object.assign({
+    ratio:76, basis:'avg', currency:'KRW', minFare:60000, maxFare:250000,
+    travelClass:1, adults:1, children:0,
+  }, JSON.parse(localStorage.getItem('fareOptSettings') || '{}')); }
+  catch(_) { return { ratio:76, basis:'avg', currency:'KRW', minFare:60000, maxFare:250000,
+                      travelClass:1, adults:1, children:0 }; }
+}
+function saveSettings() { localStorage.setItem('fareOptSettings', JSON.stringify(state.settings)); }
+function loadQuota() {
+  const now = new Date().toISOString().slice(0,7);
+  try { const q = JSON.parse(localStorage.getItem('fareOptQuota') || '{}');
+        return q.month === now ? q : { month:now, used:0 }; }
+  catch(_) { return { month:now, used:0 }; }
+}
+function saveQuota() { localStorage.setItem('fareOptQuota', JSON.stringify(state.quota)); }
+function bumpQuota(n) {
+  const nowMo = new Date().toISOString().slice(0,7);
+  if (state.quota.month !== nowMo) state.quota = { month:nowMo, used:0 };
+  state.quota.used += n; saveQuota();
+  renderQuotaUI();
+}
+
+function applySettingsToUI() {
+  document.getElementById('ratio').value = state.settings.ratio;
+  document.getElementById('ratioVal').textContent = state.settings.ratio + '%';
+  document.getElementById('minFare').value = state.settings.minFare;
+  document.getElementById('maxFare').value = state.settings.maxFare;
+  const curSel = document.getElementById('currency');
+  if (curSel) curSel.value = state.settings.currency;
+  const tc = document.getElementById('travelClass');
+  if (tc) tc.value = state.settings.travelClass;
+  const ad = document.getElementById('adults');
+  if (ad) ad.value = state.settings.adults;
+  const ch = document.getElementById('children');
+  if (ch) ch.value = state.settings.children;
+  // 기준 선택 버튼 하이라이트
+  document.querySelectorAll('.basis-pick button[data-basis]').forEach(b => {
+    b.classList.toggle('on', b.dataset.basis === state.settings.basis);
+  });
+  // 좌석 등급 버튼 하이라이트
+  document.querySelectorAll('.class-pick button[data-tc]').forEach(b => {
+    b.classList.toggle('on', +b.dataset.tc === state.settings.travelClass);
+  });
+}
+function onSettingChange() {
+  state.settings.ratio     = +document.getElementById('ratio').value;
+  state.settings.minFare   = +document.getElementById('minFare').value;
+  state.settings.maxFare   = +document.getElementById('maxFare').value;
+  document.getElementById('ratioVal').textContent = state.settings.ratio + '%';
+  saveSettings();
+  recalcAll();
+}
+function setBasis(b) {
+  state.settings.basis = b;
+  saveSettings();
+  applySettingsToUI();
+  recalcAll();
+}
+function onQueryParamChange() {
+  // 좌석등급/인원이 바뀌면 기존 캐시(다른 조건 기준) 는 의미 없음 → 폐기
+  state.settings.travelClass = +document.getElementById('travelClass').value || 1;
+  state.settings.adults      = Math.max(1, +document.getElementById('adults').value || 1);
+  state.settings.children    = Math.max(0, +document.getElementById('children').value || 0);
+  saveSettings();
+  applySettingsToUI();
+  state.data = { out:{}, ret:{} };
+  saveData();
+  renderCalendar();
+  renderDetail();
+  showKeyNotice('조회 조건 변경 → 캐시 비움. 재조회 눌러 새로 채우세요.', 'warn');
+}
+function setClass(tc) {
+  state.settings.travelClass = tc;
+  saveSettings();
+  applySettingsToUI();
+  // 좌석등급 바뀌면 가격 체계 자체가 달라짐 → 캐시 폐기
+  state.data = { out:{}, ret:{} };
+  saveData();
+  renderCalendar();
+  renderDetail();
+  showKeyNotice('좌석등급 변경 → 캐시 비움. 재조회 눌러주세요.', 'warn');
+}
+function onCurrencyChange() {
+  const prev = state.settings.currency;
+  const next = document.getElementById('currency').value;
+  if (prev === next) return;
+  state.settings.currency = next;
+  // 통화 바뀌면 min/maxFare 기본값도 새 통화에 맞춰 조정 (사용자 수정값이 0이거나 이전 통화 기본값이면)
+  const meta = CCY[next];
+  state.settings.minFare = meta.minFare;
+  state.settings.maxFare = meta.maxFare;
+  saveSettings();
+  applySettingsToUI();
+  // 통화가 다르면 기존 캐시 데이터(원화 가격) 와 혼동되므로 비움 → 다음 조회 때 재생성
+  state.data = { out:{}, ret:{} };
+  saveData();
+  renderCalendar();
+  renderDetail();
+  showKeyNotice(`통화 변경 → ${meta.sym} · 데이터 초기화됨. 재조회 눌러주세요.`, 'warn');
+}
+function recalcAll() {
+  DIRECTIONS.forEach(d => {
+    const bucket = state.data[d.key];
+    Object.keys(bucket).forEach(k => { bucket[k].ferryRec = calcFerry(bucket[k]); });
+  });
+  renderCalendar();
+  renderDetail();
+  if (state.selected) populateModal(state.selected.date, state.selected.dir);
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  더미 데이터 — 현실적 항공편 리스트 생성
+// ══════════════════════════════════════════════════════════════════
+function pad2(n){ return (n<10?'0':'')+n; }
+function timeFmt(mins) { return pad2(Math.floor(mins/60)) + ':' + pad2(mins%60); }
+// 통화별 기준 base (평일 평균가 기준 — 더미 데이터 중심값)
+const MOCK_BASE_BY_CCY = { KRW: 128000, JPY: 12800, USD: 95, EUR: 85 };
+function mockFlights(date, dirKey) {
+  const dow = date.getDay();
+  const weekendPrem = (dow === 5 || dow === 6) ? 1.30 : (dow === 0 ? 1.15 : 1.00);
+  const monthPhase  = date.getDate() >= 25 ? 1.12 : (date.getDate() >= 10 && date.getDate() <= 20 ? 0.95 : 1.00);
+  const saleDip     = (date.getDate() % 14 < 2) ? 0.78 : 1.00;
+  // 역방향(FUK→PUS)은 대체로 ~+8% 정도 비싼 경향 (일본 발 LCC 세금·수수료 더 비쌈)
+  const dirPrem = dirKey === 'ret' ? 1.08 : 1.00;
+  const basePrice = (MOCK_BASE_BY_CCY[state.settings.currency] || 128000) * weekendPrem * monthPhase * saleDip * dirPrem;
+  const roundTo = (MOCK_BASE_BY_CCY[state.settings.currency] || 128000) > 1000 ? 500 : 1;
+
+  // 실제 PUS↔FUK 는 하루 8~14편 수준 — 각 항공사가 1~3편씩 분산
+  // 각 항공사당 1~3편 생성 → 전체 6~15편
+  const flights = [];
+  AIRLINES.forEach(a => {
+    const perAirline = 1 + Math.floor(Math.random() * 3);       // 1~3편
+    for (let k = 0; k < perAirline; k++) {
+      const depMin = 360 + Math.floor(Math.random() * 720);       // 06:00 ~ 18:00
+      const dur = 65 + Math.floor(Math.random() * 15);
+      const arrMin = depMin + dur;
+      const spread = 0.65 + Math.random() * 0.85;                 // 0.65 ~ 1.50
+      const price = Math.round(basePrice * spread / roundTo) * roundTo;
+      flights.push({
+        airline: a.nm, airline_code: a.code, airline_logo: a.logo,
+        flight_number: a.code + ' ' + (100 + Math.floor(Math.random() * 300)),
+        dep_time: timeFmt(depMin), arr_time: timeFmt(arrMin),
+        duration: dur, price,
+      });
+    }
+  });
+  // 비인기 날 시뮬 (드물게) — 2~3편만
+  if (Math.random() < 0.05) {
+    flights.length = 2 + Math.floor(Math.random() * 2);
+  }
+  // 출발 시각 순으로 정렬 (리스트에선 가격순으로 다시 정렬)
+  flights.sort((a, b) => a.dep_time.localeCompare(b.dep_time));
+  return flights;
+}
+function mockDay(date, dirKey) {
+  const flights = mockFlights(date, dirKey);
+  const prices = flights.map(f => f.price).sort((a,b) => a - b);
+  const air_min = prices[0];
+  const air_max = prices[prices.length - 1];
+  const air_avg = Math.round(prices.reduce((a,b) => a+b, 0) / prices.length);
+  // typical 범위는 "노선 전체의 통상 가격대" — 실제 SerpApi price_insights 가 돌려주는 개념.
+  // 더미에선 기준 통화의 평일 평균치(약 128,000원) 를 중심으로 ±30% 범위로 고정.
+  const baseline = MOCK_BASE_BY_CCY[state.settings.currency] || 128000;
+  const tLow  = Math.round(baseline * 0.82);
+  const tHigh = Math.round(baseline * 1.28);
+  // 레벨 판정 — 현재 최저가 기준 (SerpApi 가 lowest_price 를 가지고 판정하는 것과 동일)
+  let level = 'typical';
+  if (air_min < tLow) level = 'low';
+  else if (air_min > tHigh) level = 'high';
+  if (Math.random() < 0.06) level = 'unknown';
+  return {
+    air_min, air_avg, air_max,
+    flights,
+    level,
+    typical: level === 'unknown' ? null : [tLow, tHigh],
+    fetchedAt: Date.now(),
+    isMock: true,
+  };
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  페리 추천 계산 (기준 운임 × ratio) — 고속페리 수하물 포함이라 보정 없음
+// ══════════════════════════════════════════════════════════════════
+function basePrice(d) {
+  if (!d) return 0;
+  const legacy = d.air || 0;    // 구 버전 호환
+  if (state.settings.basis === 'min') return d.air_min || d.air_avg || legacy;
+  if (state.settings.basis === 'max') return d.air_max || d.air_avg || legacy;
+  return d.air_avg || d.air_min || legacy;
+}
+function calcFerry(d) {
+  if (!d) return null;
+  const s = state.settings;
+  const bp = basePrice(d);
+  if (!bp) return null;
+  const raw = bp * (s.ratio / 100);
+  const roundTo = (s.currency === 'KRW' || s.currency === 'JPY') ? 500 : 1;
+  return Math.max(s.minFare, Math.min(s.maxFare, Math.round(raw / roundTo) * roundTo));
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  60일 전체 조회 (더미 즉시 / 실제 샘플링)
+// ══════════════════════════════════════════════════════════════════
+async function refreshAll() {
+  const btn = document.getElementById('btnRefresh');
+  const originalBtnText = btn.textContent;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="btn-spin"></span>조회 중…';
+  const dot = document.getElementById('statusDot');
+  dot.classList.add('loading');
+  const pw = document.getElementById('progressWrap');
+  const pb = document.getElementById('progressBar');
+  pw.style.display = 'block'; pb.style.width = '0%';
+  // 중앙 스피너 오버레이
+  const ov = document.getElementById('spinOverlay');
+  const spinBar = document.getElementById('spinBar');
+  const spinText = document.getElementById('spinText');
+  const spinSub = document.getElementById('spinSub');
+  ov.classList.add('on');
+  spinText.textContent = state.mock || !state.apiKey ? '더미 데이터 생성 중…' : 'SerpApi 호출 중…';
+  spinSub.textContent = '0 / —'; spinBar.style.width = '0%';
+
+  const dates = [];
+  for (let i = 0; i < RANGE_DAYS; i++) {
+    dates.push(FMT_DATE(new Date(state.rangeStart.getTime() + i * DAY_MS)));
+  }
+
+  let totalCalls = 0;
+  const totalSteps = dates.length * 2;
+  let stepDone = 0;
+  const tick = () => {
+    stepDone++;
+    const pct = (stepDone / totalSteps * 100).toFixed(1) + '%';
+    pb.style.width = pct;
+    spinBar.style.width = pct;
+    spinSub.textContent = `${stepDone} / ${totalSteps}`;
+  };
+
+  if (state.mock || !state.apiKey) {
+    for (const dir of DIRECTIONS) {
+      for (let i = 0; i < dates.length; i++) {
+        const dateStr = dates[i];
+        state.data[dir.key][dateStr] = mockDay(PARSE_DATE(dateStr), dir.key);
+        tick();
+        if (i % 10 === 0) await new Promise(r => setTimeout(r, 10));
+      }
+    }
+    document.getElementById('statusMode').textContent = '더미 데이터 모드';
+  } else {
+    // 방향별로 각각 샘플링
+    for (const dir of DIRECTIONS) {
+      spinText.textContent = `SerpApi 호출 중 · ${dir.nm}`;
+      const bucket = state.data[dir.key];
+      const stale = [];
+      dates.forEach((dateStr, i) => {
+        const cached = bucket[dateStr];
+        const ttlH = CACHE_TTL(i);
+        // isMock 데이터는 실제 모드에선 무조건 폐기 — 재호출 대상
+        const fresh = cached && !cached.isMock && (Date.now() - (cached.fetchedAt || 0)) < ttlH * 3600 * 1000;
+        if (fresh) return;
+        // 120일로 확장되었으므로 간격 조정
+        if (i <= 6) stale.push(dateStr);
+        else if (i <= 30 && i % 4 === 0) stale.push(dateStr);
+        else if (i > 30 && i <= 60 && i % 7 === 0) stale.push(dateStr);
+        else if (i > 60 && i % 14 === 0) stale.push(dateStr);
+      });
+      const perDirBudget = Math.floor(FREE_MAX_CALLS_PER_REFRESH / 2);  // 각 방향 10 호출
+      const toFetch = stale.slice(0, perDirBudget);
+      const remaining = 250 - state.quota.used;
+      const willCall = Math.min(toFetch.length, Math.max(0, remaining));
+      if (willCall < toFetch.length) {
+        alert(`월 호출 한도 임박 (${dir.nm})\n이번달 사용 ${state.quota.used}/250.\n남은 ${remaining}회만 호출합니다.`);
+      }
+      const actual = toFetch.slice(0, willCall);
+      // 병렬 배치 호출 — 5개 단위. SerpApi throttle 보호 + ~2배 빠른 로딩.
+      const BATCH_SIZE = 5;
+      for (let b = 0; b < actual.length; b += BATCH_SIZE) {
+        const batch = actual.slice(b, b + BATCH_SIZE);
+        await Promise.all(batch.map(async dateStr => {
+          try {
+            const fresh = await serpApiFetch(dateStr, dir);
+            if (fresh) { bucket[dateStr] = fresh; bumpQuota(1); totalCalls++; }
+          } catch(err) {
+            console.warn('[SerpApi]', dir.key, dateStr, err);
+          }
+          tick();
+        }));
+        // 배치 사이 짧은 쉬어가기 (SerpApi 서버 부담 완화)
+        if (b + BATCH_SIZE < actual.length) await new Promise(r => setTimeout(r, 300));
+      }
+      interpolateMissing(dates, dir.key);
+      // 샘플링 간 보간된 날짜도 진행 반영 (총 dates.length - 실제호출수만큼 추가)
+      for (let i = 0; i < dates.length - actual.length; i++) tick();
+    }
+    saveData();
+    document.getElementById('statusMode').textContent = `SerpApi · 이번 재조회 ${totalCalls}회 호출`;
+  }
+
+  // 양방향 모두 ferryRec 재계산
+  DIRECTIONS.forEach(dir => {
+    const bucket = state.data[dir.key];
+    dates.forEach(ds => { if (bucket[ds]) bucket[ds].ferryRec = calcFerry(bucket[ds]); });
+  });
+  document.getElementById('statusUpdate').textContent = '마지막 갱신: ' + new Date().toLocaleString('ko');
+  dot.classList.remove('loading'); dot.classList.add('ok');
+  btn.disabled = false;
+  btn.textContent = originalBtnText;
+  spinBar.style.width = '100%';
+  setTimeout(() => {
+    pw.style.display = 'none';
+    ov.classList.remove('on');
+  }, 400);
+  renderCalendar();
+  renderDetail();
+}
+
+function interpolateMissing(dates, dirKey) {
+  const bucket = state.data[dirKey];
+  let last = null;
+  dates.forEach(ds => {
+    if (bucket[ds] && bucket[ds].air_avg) last = { ...bucket[ds], interpolated:false };
+    else if (last) bucket[ds] = { ...last, interpolated:true, flights:last.flights || [] };
+  });
+  last = null;
+  for (let i = dates.length - 1; i >= 0; i--) {
+    const ds = dates[i];
+    if (bucket[ds] && bucket[ds].air_avg && !bucket[ds].interpolated) last = { ...bucket[ds], interpolated:false };
+    else if (!bucket[ds] && last) bucket[ds] = { ...last, interpolated:true, flights:last.flights || [] };
   }
 }
 
-function setStatus(state, msg) {
-  const dot = document.getElementById('apiDot');
-  const st = document.getElementById('apiStatus');
-  dot.className = 'dot ' + (state === 'ok' ? 'ok' : state === 'err' ? 'err' : 'loading');
-  st.textContent = msg;
+// ══════════════════════════════════════════════════════════════════
+//  SerpApi 호출 — Google Flights
+// ══════════════════════════════════════════════════════════════════
+async function serpApiFetch(dateStr, dir) {
+  // CORS_PROXY='' 면 로컬 proxy_server.py 를 쓴다 ("/serpapi?..." 경로 호출)
+  //   proxy_server.py 가 SerpApi 로 투명 전달하며 CORS 헤더 추가.
+  // CORS_PROXY 값이 있으면 공개 프록시 경유.
+  const useLocal = !CORS_PROXY;
+  const url = useLocal
+    ? new URL('/serpapi', location.origin)
+    : new URL('https://serpapi.com/search.json');
+  url.searchParams.set('engine',       'google_flights');
+  url.searchParams.set('departure_id', dir.from);
+  url.searchParams.set('arrival_id',   dir.to);
+  url.searchParams.set('outbound_date', dateStr);
+  url.searchParams.set('type',         '2');
+  const meta = curMeta();
+  url.searchParams.set('currency',     state.settings.currency || 'KRW');
+  url.searchParams.set('hl',           meta.hlApi);
+  url.searchParams.set('gl',           meta.glApi);
+  // 좌석등급 · 인원 · 직항 (PUS↔FUK 은 애초에 직항만 운항하므로 고정)
+  url.searchParams.set('travel_class', String(state.settings.travelClass || 1));
+  url.searchParams.set('adults',       String(state.settings.adults || 1));
+  if ((state.settings.children || 0) > 0) {
+    url.searchParams.set('children',   String(state.settings.children));
+  }
+  url.searchParams.set('stops',        '1');     // 1 = nonstop only (직항)
+  url.searchParams.set('api_key',      state.apiKey);
+  const targetUrl = url.toString();
+  const fetchUrl = useLocal
+    ? targetUrl
+    : CORS_PROXY + encodeURIComponent('https://serpapi.com/search.json?' + url.searchParams.toString());
+  console.log('[SerpApi]', dir.key, dateStr, targetUrl.replace(/api_key=[^&]+/, 'api_key=***'),
+              useLocal ? '(local proxy)' : '(public CORS proxy)');
+  const res = await fetch(fetchUrl);
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    console.error('[SerpApi] HTTP', res.status, txt.slice(0, 500));
+    throw new Error('HTTP ' + res.status + ': ' + txt.slice(0, 200));
+  }
+  const j = await res.json();
+  if (j.error) {
+    console.error('[SerpApi] 에러 응답:', j.error);
+    throw new Error('SerpApi: ' + j.error);
+  }
+  const allFlights = []
+    .concat(j.best_flights || [])
+    .concat(j.other_flights || []);
+  if (!allFlights.length) return null;
+  // SerpApi 응답을 내부 포맷으로 평탄화
+  const flights = allFlights.map(fg => {
+    const leg = (fg.flights && fg.flights[0]) || {};
+    return {
+      airline: leg.airline || '—',
+      airline_code: (leg.airline_code || '').toUpperCase(),
+      airline_logo: leg.airline_logo || '',
+      flight_number: leg.flight_number || '',
+      dep_time: (leg.departure_airport && leg.departure_airport.time) ? leg.departure_airport.time.slice(-5) : '',
+      arr_time: (leg.arrival_airport && leg.arrival_airport.time) ? leg.arrival_airport.time.slice(-5) : '',
+      duration: fg.total_duration || leg.duration || null,
+      price: fg.price,
+    };
+  }).filter(f => f.price);
+  if (!flights.length) return null;
+  const prices = flights.map(f => f.price).sort((a,b) => a-b);
+  const air_min = prices[0];
+  const air_max = prices[prices.length - 1];
+  const air_avg = Math.round(prices.reduce((a,b) => a+b, 0) / prices.length);
+  const insights = j.price_insights || {};
+  return {
+    air_min, air_avg, air_max,
+    flights,
+    level: insights.price_level || 'unknown',
+    typical: insights.typical_price_range || null,
+    fetchedAt: Date.now(),
+  };
 }
 
-// ===== 항공 검색 =====
-let _airFares = [];
+// ══════════════════════════════════════════════════════════════════
+//  캘린더 렌더 — 양방향 2개 섹션, 각 4개월
+// ══════════════════════════════════════════════════════════════════
+function renderCalendar() {
+  const wrap = document.getElementById('calWrap');
+  wrap.innerHTML = '';
+  const start = state.rangeStart;
+  const end = new Date(start.getTime() + (RANGE_DAYS - 1) * DAY_MS);
+  const months = [];
+  let cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+  while (cursor <= end) {
+    months.push(new Date(cursor));
+    cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+  }
+  DIRECTIONS.forEach(dir => {
+    const sec = document.createElement('div');
+    sec.className = 'dir-section';
+    sec.innerHTML = `<div class="dir-head"><span class="dir-arrow"></span><b>${dir.nm}</b><span class="dir-sub">${dir.from} → ${dir.to}</span></div>`;
+    const inner = document.createElement('div');
+    inner.className = 'cal-wrap-inner';
+    months.forEach(mo => inner.appendChild(renderMonth(mo, start, end, dir)));
+    sec.appendChild(inner);
+    wrap.appendChild(sec);
+  });
+  document.getElementById('rangeLabel').textContent =
+    `${start.getFullYear()}.${start.getMonth()+1}.${start.getDate()} ~ ${end.getFullYear()}.${end.getMonth()+1}.${end.getDate()} (${RANGE_DAYS}일)`;
+}
+function renderMonth(firstOfMonth, rangeStart, rangeEnd, dir) {
+  const wrap = document.createElement('div');
+  wrap.className = 'cal';
+  const y = firstOfMonth.getFullYear(), m = firstOfMonth.getMonth();
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const firstDow = firstOfMonth.getDay();
 
-async function loadCachedFares(depDate) {
-  try {
-    const r = await fetch('data/airfare.json?_=' + Date.now());
-    if (!r.ok) return null;
-    const json = await r.json();
-    if (!json.results || !json.results.length) return null;
-    // calendar/window 응답: data[] 배열, 각 항목에 totalPrice / airline / departureDate
-    const valid = json.results.filter(x => x.totalPrice);
-    if (!valid.length) return null;
-    const fares = valid.map(item => ({
-      airline:  item.airline || item.airlineCd || '?',
-      price:    item.totalPrice,
-      dep:      item.departureDate || '',
-      arr:      item.returnDate    || '',
-      transfer: item.transfer,
-      period:   item.period || json.period || 3,
-      raw:      item,
-    })).sort((a, b) => a.dep.localeCompare(b.dep));
-    return { fares, updatedAt: json.updatedAt, date: depDate };
-  } catch(e) { return null; }
+  const bucket = state.data[dir.key];
+  let inRange = 0, sumFerry = 0, cntFerry = 0;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dd = new Date(y, m, d);
+    if (dd < rangeStart || dd > rangeEnd) continue;
+    inRange++;
+    const dat = bucket[FMT_DATE(dd)];
+    if (dat && dat.ferryRec) { sumFerry += dat.ferryRec; cntFerry++; }
+  }
+  const avgTxt = cntFerry > 0 ? `페리평균 ${WON(sumFerry / cntFerry)}` : '—';
+
+  wrap.innerHTML = `<h3>${y}년 ${MONTHS[m]}<span class="mo-sub">${inRange}일 · ${avgTxt}</span></h3>`;
+
+  const dowRow = document.createElement('div');
+  dowRow.className = 'dow';
+  ['일','월','화','수','목','금','토'].forEach((n, i) => {
+    const el = document.createElement('div');
+    el.textContent = n;
+    if (i === 0) el.classList.add('sun');
+    if (i === 6) el.classList.add('sat');
+    dowRow.appendChild(el);
+  });
+  wrap.appendChild(dowRow);
+
+  const grid = document.createElement('div');
+  grid.className = 'grid';
+  for (let i = 0; i < firstDow; i++) {
+    const c = document.createElement('div');
+    c.className = 'cell empty';
+    grid.appendChild(c);
+  }
+  const today = new Date(); today.setHours(0,0,0,0);
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dd = new Date(y, m, d);
+    const dStr = FMT_DATE(dd);
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.dataset.date = dStr;
+    cell.dataset.dir = dir.key;
+    const dow = dd.getDay();
+
+    const inR = dd >= rangeStart && dd <= rangeEnd;
+    const past = dd < today;
+    const dat = bucket[dStr];
+
+    if (!inR) cell.classList.add('past');           // 범위 밖 — 진하게 희미
+    else if (past && dat) cell.classList.add('historical'); // 과거 + 데이터 있음 — 회색톤, 팝업 비활성
+    else if (past) cell.classList.add('past');       // 과거 + 데이터 없음 — 진하게 희미
+    if (state.selected && state.selected.date === dStr && state.selected.dir === dir.key) cell.classList.add('sel');
+    if (dd.getTime() === today.getTime()) cell.classList.add('today');
+
+    const todayDot = (dd.getTime() === today.getTime()) ? '<span class="today-dot"></span>' : '';
+    const dowCls = dow === 0 ? ' sun' : dow === 6 ? ' sat' : '';
+    const clickable = inR && !past && dat;
+
+    if (dat && inR) {
+      const bp = basePrice(dat);
+      const interp = dat.interpolated ? '<span title="보간값" style="font-size:9px;color:var(--text3);margin-left:2px">~</span>' : '';
+      const interpStyle = dat.interpolated ? 'style="opacity:.72"' : '';
+      const flightsCnt = (dat.flights && dat.flights.length) ? dat.flights.length : 0;
+      cell.innerHTML =
+        `<div class="d${dowCls}" ${interpStyle}>${d}${todayDot}${interp}<span class="lv ${dat.level}"></span></div>
+         <div class="air-row" ${interpStyle}><span class="lbl">항공</span><span class="val">${WON_MAN(bp)}${abbrUnit()}</span></div>
+         <div class="ferry" ${interpStyle}><span class="lbl">추천</span><span class="val">${WON_MAN(dat.ferryRec)}</span><span class="k">${abbrUnit()}</span></div>
+         ${flightsCnt ? `<div class="cnt" ${interpStyle}>${flightsCnt}편</div>` : ''}`;
+    } else if (inR && !past) {
+      cell.classList.add('loading');
+      cell.innerHTML = `<div class="d${dowCls}">${d}${todayDot}</div>`;
+    } else {
+      cell.innerHTML = `<div class="d${dowCls}">${d}${todayDot}</div>`;
+    }
+    if (clickable) cell.addEventListener('click', () => selectDate(dStr, dir.key));
+    grid.appendChild(cell);
+  }
+  wrap.appendChild(grid);
+  return wrap;
 }
 
-async function searchFlights() {
-  const origin   = document.getElementById('origin').value.toUpperCase().trim() || 'PUS';
-  const dest     = document.getElementById('dest').value.toUpperCase().trim()   || 'FUK';
-  const depDate  = document.getElementById('depDate').value;
-  const retDate  = document.getElementById('retDate').value;
-  const adults   = +document.getElementById('adults').value || 1;
-  const children = +document.getElementById('children').value || 0;
-
-  if (!depDate) { alert('출발일을 선택해주세요.'); return; }
-
-  document.getElementById('flightResultArea').innerHTML =
-    '<div style="text-align:center;padding:30px;color:var(--text2)">⏳ 캐시 데이터 확인 중...</div>';
-
-  // GitHub Actions가 수집해둔 캐시 JSON 시도 (CORS 없음)
-  const cached = await loadCachedFares(depDate);
-  if (cached) {
-    _airFares = cached.fares;
-    const ago = cached.updatedAt ? '(갱신: ' + new Date(cached.updatedAt).toLocaleString('ko') + ')' : '';
-    renderFlightResults(_airFares, false, `캐시 데이터 ${ago}`);
-    calcFerry();
+// ══════════════════════════════════════════════════════════════════
+//  셀 선택 + 사이드 상세 + 모달
+// ══════════════════════════════════════════════════════════════════
+function selectDate(dStr, dirKey) {
+  state.selected = { date: dStr, dir: dirKey };
+  document.querySelectorAll('.cell').forEach(c =>
+    c.classList.toggle('sel', c.dataset.date === dStr && c.dataset.dir === dirKey));
+  renderDetail();
+  openModal(dStr, dirKey);
+}
+function renderDetail() {
+  const host = document.getElementById('detailBody');
+  const dateLbl = document.getElementById('detailDate');
+  if (!state.selected) {
+    host.innerHTML = '<div class="empty-hint">캘린더에서 날짜를 누르면 항공사·운임 상세가 팝업으로 뜹니다.</div>';
+    dateLbl.textContent = '—';
     return;
   }
+  const { date: dStr, dir: dirKey } = state.selected;
+  const dirInfo = DIRECTIONS.find(x => x.key === dirKey);
+  const dd = PARSE_DATE(dStr);
+  const d = state.data[dirKey] ? state.data[dirKey][dStr] : null;
+  dateLbl.textContent = `${dirInfo.from}→${dirInfo.to} · ${dd.getMonth()+1}월 ${dd.getDate()}일 (${DOW[dd.getDay()]})`;
+  if (!d) {
+    host.innerHTML = '<div class="empty-hint">데이터 없음 — 재조회가 필요합니다.</div>';
+    return;
+  }
+  const s = state.settings;
+  const bp = basePrice(d);
+  const levelKo = { low:'저렴', typical:'보통', high:'비싼', unknown:'자료부족' }[d.level] || d.level;
+  const typicalTxt = d.typical ? `${WON(d.typical[0])} ~ ${WON(d.typical[1])}원` : '자료부족';
+  const basisKo = { min:'최저', avg:'평균', max:'최고' }[s.basis];
 
-  // 캐시 없음 — 안내 메시지만 표시 (직접 API 호출은 CORS로 항상 차단됨)
-  document.getElementById('flightResultArea').innerHTML =
-    `<div style="background:rgba(243,156,18,0.08);border:1px solid rgba(243,156,18,0.3);border-radius:8px;padding:20px;color:var(--warn);line-height:1.7">
-      <div style="font-weight:700;font-size:14px;margin-bottom:8px">⏳ 항공 운임 캐시 데이터 없음</div>
-      <div style="font-size:12px;color:var(--text2)">
-        GitHub Actions가 아직 데이터를 수집하지 않았거나 API 키가 미설정 상태입니다.<br><br>
-        <b style="color:var(--text)">해결 방법</b><br>
-        1. GitHub 저장소 → Settings → Secrets → <code>MYREALTRIP_API_KEY</code> 등록<br>
-        2. Actions → <b>Fetch Airfare (PUS→FUK)</b> → Run workflow<br>
-        3. 워크플로 완료 후 이 페이지 새로고침<br><br>
-        <span style="color:#667788;font-size:11px">브라우저에서 외부 API 직접 호출은 CORS 정책으로 차단됩니다. 서버 사이드(Actions) 수집만 동작합니다.</span>
-      </div>
+  host.innerHTML = `
+    <div class="kv"><span class="k">기준 운임 (${basisKo})</span>
+                    <span class="v big">${WON(bp)}</span></div>
+    <div class="kv"><span class="k">판정</span>
+                    <span class="v"><span class="lv-badge ${d.level}">${levelKo}</span></span></div>
+    <div class="kv"><span class="k">평소 가격대</span>
+                    <span class="v" style="font-size:11.5px">${typicalTxt}</span></div>
+    <div class="divider"></div>
+    <div class="kv"><span class="k">추천 페리 운임</span>
+                    <span class="v ferry">${WON(d.ferryRec)}</span></div>
+    <div class="kv"><span class="k sub">공식</span>
+                    <span class="v sub">${basisKo}가 × ${s.ratio}%</span></div>
+    <button style="margin-top:12px; width:100%; padding:8px; background:var(--accent); color:#000; border:0; border-radius:5px; font-weight:600; cursor:pointer"
+            onclick="openModal('${dStr}','${dirKey}')">항공사별 운항편 보기 (${(d.flights || []).length}편)</button>
+    <div style="font-size:10.5px; color:var(--text3); margin-top:10px">
+      조회 시각: ${new Date(d.fetchedAt).toLocaleString('ko')}
+      ${d.interpolated ? ' · <span style="color:var(--warn)">보간값</span>' : ''}
     </div>`;
 }
 
-// API 탐색기 직접 호출 응답에서 운임 추출
-function extractFares(json) {
-  const candidates = [];
-  const lists = [json.data, json, json.results, json.flights, json.items];
-  for (const lst of lists) {
-    if (Array.isArray(lst) && lst.length > 0) {
-      for (const item of lst) {
-        const price = item.totalPrice || item.price || item.amount || item.fare;
-        const airline = item.airline || item.airlineCd || item.carrier || '?';
-        const dep = item.departureDate || item.departureTime || item.departure || '';
-        const arr = item.returnDate    || item.arrivalTime   || item.arrival   || '';
-        if (price) candidates.push({ airline, price: +price, dep, arr, raw: item });
-      }
-      if (candidates.length > 0) return candidates;
-    }
-  }
-  return [];
+// ══════════════════════════════════════════════════════════════════
+//  모달 — 항공사별 운항편 리스트
+// ══════════════════════════════════════════════════════════════════
+function openModal(dStr, dirKey) {
+  state.selected = { date: dStr, dir: dirKey };
+  document.getElementById('modal').classList.add('open');
+  populateModal(dStr, dirKey);
 }
-
-// 목 데이터 (CORS 차단 시 대체용)
-function mockFares(orig, dest, date) {
-  const d = new Date(date);
-  const dow = d.getDay(); // 주말 할증
-  const base = dow === 0 || dow === 6 ? 148000 : 118000;
-  const airlines = [
-    { code:'7C', name:'제주항공',    mult:0.92 },
-    { code:'LJ', name:'진에어',      mult:0.95 },
-    { code:'OZ', name:'아시아나항공', mult:1.18 },
-    { code:'KE', name:'대한항공',    mult:1.25 },
-    { code:'BX', name:'에어부산',    mult:0.88 },
-    { code:'TW', name:'티웨이항공',  mult:0.91 },
-    { code:'ZE', name:'이스타항공',  mult:0.87 },
-  ];
-  const noise = () => 1 + (Math.random() - 0.5) * 0.12;
-  return airlines.map(a => ({
-    airline: a.name,
-    airlineCode: a.code,
-    price: Math.round(base * a.mult * noise() / 1000) * 1000,
-    dep: '08:40', arr: '09:55', duration: 75, mock: true,
-  })).sort((a,b) => a.price - b.price);
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
 }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-function renderFlightResults(fares, isMock = false, cacheNote = '') {
-  const count = document.getElementById('flightCount');
-  count.textContent = fares.length + '건' + (isMock ? ' (샘플)' : cacheNote ? ' (캐시)' : '');
-
-  if (fares.length === 0) {
-    document.getElementById('flightResultArea').innerHTML =
-      '<div style="text-align:center;padding:30px;color:var(--text2)">결과 없음 — API 응답에 항공편 데이터가 없습니다.</div>';
+function populateModal(dStr, dirKey) {
+  const dirInfo = DIRECTIONS.find(x => x.key === dirKey);
+  const d = state.data[dirKey] ? state.data[dirKey][dStr] : null;
+  const dd = PARSE_DATE(dStr);
+  const title = `${dirInfo.from} → ${dirInfo.to} · ${dd.getFullYear()}년 ${dd.getMonth()+1}월 ${dd.getDate()}일 (${DOW[dd.getDay()]})`;
+  document.getElementById('modalTitle').textContent = title;
+  const body = document.getElementById('modalBody');
+  if (!d) {
+    document.getElementById('modalSub').textContent = '데이터 없음';
+    body.innerHTML = '<div class="empty-hint">해당일 데이터 없음</div>';
     return;
   }
+  const s = state.settings;
+  const levelKo = { low:'저렴', typical:'보통', high:'비싼', unknown:'자료부족' }[d.level] || d.level;
+  document.getElementById('modalSub').innerHTML =
+    `<span class="lv-badge ${d.level}">${levelKo}</span>` +
+    (d.typical ? ` <span style="margin-left:6px">평소 ${WON(d.typical[0])}~${WON(d.typical[1])}</span>` : '') +
+    (d.interpolated ? ` <span style="color:var(--warn); margin-left:6px">보간값</span>` : '');
 
-  const prices = fares.map(f => f.price);
-  const minP = Math.min(...prices), maxP = Math.max(...prices);
-  const avgP = Math.round(prices.reduce((a,b)=>a+b,0)/prices.length);
+  const flights = (d.flights || []).slice().sort((a,b) => a.price - b.price);
+  const minP = flights.length ? flights[0].price : 0;
+  const maxP = flights.length ? flights[flights.length - 1].price : 0;
 
-  const rows = fares.map(f => {
-    const pct = (f.price - minP) / Math.max(1, maxP - minP);
-    const badgeCls = pct < 0.33 ? 'low' : pct < 0.67 ? 'mid' : 'high';
-    const badgeTxt = pct < 0.33 ? '저가' : pct < 0.67 ? '중가' : '고가';
-    return `<tr>
-      <td>${f.airline}</td>
-      <td>${f.dep || '-'}</td>
-      <td>${f.arr || '-'}</td>
-      <td style="font-weight:700; color:#fff;">${f.price.toLocaleString()}원</td>
-      <td><span class="price-badge ${badgeCls}">${badgeTxt}</span></td>
-    </tr>`;
+  // 상단 요약 : 최저/평균/최고/페리추천 4개 타일. 클릭으로 기준 변경.
+  const tile = (key, lbl, val, tag) => `
+    <div class="sm-tile ${state.settings.basis === key ? 'on' : ''}"
+         onclick="setBasis('${key}'); populateModal('${dStr}','${dirKey}')">
+      <div class="lbl">${lbl}</div>
+      <div class="val">${WON(val)}<span class="u">원</span></div>
+      <div class="tag">${tag}</div>
+    </div>`;
+  const ferryTile = `
+    <div class="sm-tile ferry">
+      <div class="lbl">추천 페리 운임</div>
+      <div class="val">${WON(d.ferryRec)}<span class="u">원</span></div>
+      <div class="tag">${ ({min:'최저', avg:'평균', max:'최고'})[state.settings.basis] }가 × ${s.ratio}%</div>
+    </div>`;
+
+  const flightRows = flights.map((f, i) => {
+    const cls = (f.price === minP) ? ' lowest' : (f.price === maxP && f.price !== minP) ? ' highest' : '';
+    const logo = f.airline_logo
+      ? `<img src="${f.airline_logo}" alt="${f.airline}" onerror="this.style.display='none'">`
+      : `<div style="width:34px; height:34px; border-radius:4px; background:#2a3a55; display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--text2); font-weight:700">${f.airline_code || ''}</div>`;
+    const dur = f.duration ? `${Math.floor(f.duration/60)}h ${f.duration%60}m` : '—';
+    const timeStr = (f.dep_time && f.arr_time) ? `${f.dep_time} → ${f.arr_time}` : '—';
+    return `
+      <div class="flight-row${cls}">
+        ${logo}
+        <div>
+          <div><span class="airline">${f.airline}</span><span class="fno">${f.flight_number || ''}</span></div>
+          <div class="times">${timeStr} <span style="color:var(--text3); margin-left:6px">${dur}</span></div>
+        </div>
+        <div class="dur">${cls.includes('lowest') ? '최저' : cls.includes('highest') ? '최고' : ''}</div>
+        <div class="price">${WON(f.price)}원</div>
+      </div>`;
   }).join('');
 
-  document.getElementById('flightResultArea').innerHTML = `
-    ${isMock ? '<div style="background:rgba(243,156,18,0.1);border:1px solid rgba(243,156,18,0.3);border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:var(--warn)">⚠ CORS 제한으로 인해 샘플 데이터를 표시합니다. 실제 API 연결 시 자동으로 교체됩니다.</div>' : ''}
-    <table class="price-table">
-      <thead><tr><th>항공사</th><th>출발일</th><th>귀환일</th><th>운임(왕복)</th><th>등급</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
+  body.innerHTML = `
+    <div class="section-label">기준 선택 — 클릭하면 캘린더·추천 운임 전체 기준이 바뀝니다</div>
+    <div class="summary-grid">
+      ${tile('min', '최저 운임', d.air_min, flights.length ? flights[0].airline : '—')}
+      ${tile('avg', '평균 운임', d.air_avg, `${flights.length}편 평균`)}
+      ${tile('max', '최고 운임', d.air_max, flights.length ? flights[flights.length-1].airline : '—')}
+      ${ferryTile}
+    </div>
 
-  document.getElementById('priceStats').innerHTML = `
-    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:12px;">
-      <div style="background:var(--bg3);border-radius:8px;padding:12px;text-align:center;">
-        <div style="font-size:10px;color:var(--text2)">최저</div>
-        <div style="font-size:20px;font-weight:800;color:var(--accent2)">${minP.toLocaleString()}<span style="font-size:12px;color:var(--text2)">원</span></div>
-      </div>
-      <div style="background:var(--bg3);border-radius:8px;padding:12px;text-align:center;">
-        <div style="font-size:10px;color:var(--text2)">평균</div>
-        <div style="font-size:20px;font-weight:800;color:var(--warn)">${avgP.toLocaleString()}<span style="font-size:12px;color:var(--text2)">원</span></div>
-      </div>
-      <div style="background:var(--bg3);border-radius:8px;padding:12px;text-align:center;">
-        <div style="font-size:10px;color:var(--text2)">최고</div>
-        <div style="font-size:20px;font-weight:800;color:var(--red)">${maxP.toLocaleString()}<span style="font-size:12px;color:var(--text2)">원</span></div>
+    <div>
+      <div class="section-label">항공사별 운항편 (${flights.length}편) — 가격 오름차순</div>
+      <div class="flight-list">
+        ${flightRows || '<div class="empty-hint">운항편 데이터 없음</div>'}
       </div>
     </div>
-    <div style="font-size:12px; color:var(--text2);">
-      조회 노선: PUS→FUK | 항공사 ${fares.length}개 | 최저 대비 최고 +${Math.round((maxP/minP-1)*100)}%
+
+    <div style="font-size:10.5px; color:var(--text3); padding-top:4px; border-top:1px solid var(--border)">
+      조회: ${new Date(d.fetchedAt).toLocaleString('ko')}
+      ${d.interpolated ? ' · 보간값 (인접 샘플 기반)' : ''}
+      · 공식: ${ ({min:'최저', avg:'평균', max:'최고'})[state.settings.basis] }가 × ${s.ratio}%
     </div>`;
 }
 
-// ===== 페리 운임 계산 =====
-function calcFerry() {
-  if (_airFares.length === 0) return;
-
-  const prices = _airFares.map(f => f.price);
-  const minAir = Math.min(...prices);
-  const avgAir = Math.round(prices.reduce((a,b)=>a+b,0)/prices.length);
-
-  const ratio   = +document.getElementById('ratioSlider').value / 100;
-  const minFare = +document.getElementById('minFare').value;
-  const maxFare = +document.getElementById('maxFare').value;
-  const vesselF = +document.getElementById('vesselFactor').value;
-  const cabin   = document.getElementById('cabinClass').value;
-
-  const cabinMult = { economy:1, first:1.35, cabin:1.55 }[cabin] || 1;
-
-  // 기준 운임 = 평균 항공가 × 비율 × 선종계수 × 선실계수
-  let baseFare = Math.round(avgAir * ratio * vesselF * cabinMult / 1000) * 1000;
-  baseFare = Math.max(minFare, Math.min(maxFare, baseFare));
-
-  // 등급별 파생
-  const ecoFare  = Math.round(baseFare / cabinMult / 1000) * 1000;
-  const firstF   = Math.round(ecoFare * 1.35 / 1000) * 1000;
-  const cabinF   = Math.round(ecoFare * 1.55 / 1000) * 1000;
-
-  // 최저 항공가 대비 경쟁력
-  const compRatio = Math.round((ecoFare / minAir) * 100);
-
-  document.getElementById('ferryResult').innerHTML = `
-    <div class="ferry-result">
-      <div style="font-size:11px;color:var(--text2)">권장 이코노미 기준 운임</div>
-      <div class="ferry-price">${ecoFare.toLocaleString()}<span>원</span></div>
-      <div style="font-size:12px;color:var(--text2)">
-        최저 항공가(${minAir.toLocaleString()}원) 대비
-        <strong style="color:${compRatio<80?'var(--accent2)':compRatio<100?'var(--warn)':'var(--red)'}">${compRatio}%</strong>
-        수준 · 평균 항공가(${avgAir.toLocaleString()}원) × ${Math.round(ratio*100)}%
-      </div>
-      <div class="ferry-breakdown">
-        <div class="fb-item">
-          <div class="lbl">이코노미</div>
-          <div class="val">${ecoFare.toLocaleString()}</div>
-          <div class="lbl">원</div>
-        </div>
-        <div class="fb-item">
-          <div class="lbl">일등실</div>
-          <div class="val">${firstF.toLocaleString()}</div>
-          <div class="lbl">원</div>
-        </div>
-        <div class="fb-item">
-          <div class="lbl">침대칸</div>
-          <div class="val">${cabinF.toLocaleString()}</div>
-          <div class="lbl">원</div>
-        </div>
-      </div>
-    </div>`;
-
-  const strategy = genStrategy(ecoFare, minAir, avgAir, compRatio);
-  document.getElementById('ferryStrategy').innerHTML = strategy;
-  switchTab('ferry');
+// ══════════════════════════════════════════════════════════════════
+//  범위 조작 · API 키 · 모드
+// ══════════════════════════════════════════════════════════════════
+function shiftRange(days) {
+  state.rangeStart = new Date(state.rangeStart.getTime() + days * DAY_MS);
+  state.rangeStart.setHours(0,0,0,0);
+  refreshAll();
 }
-
-function genStrategy(ferry, minAir, avgAir, compRatio) {
-  const lines = [];
-  if (compRatio < 60)
-    lines.push('🟢 <strong>공격적 저가 전략</strong>: 항공 최저가 대비 현저히 저렴해 가격 민감 승객 흡수에 유리합니다. 선사의 OHR(객실 점유율) 목표 달성 우선 시 적합합니다.');
-  else if (compRatio < 85)
-    lines.push('🟢 <strong>경쟁 우위 전략</strong>: 항공보다 확실히 저렴한 구간에 위치합니다. 부산-하카타 도심 항구간 접근성 강점을 홍보 포인트로 활용하세요.');
-  else if (compRatio < 100)
-    lines.push('🟡 <strong>근접 경쟁 전략</strong>: 항공 최저가와 근접합니다. 선내 서비스, 수하물 포함, 항구 입지 등 비가격 경쟁력을 강조해야 합니다.');
-  else
-    lines.push('🔴 <strong>운임 재검토 필요</strong>: 항공 최저가보다 비쌉니다. 비율을 낮추거나 기준 항공가를 최저가 기준으로 변경하세요.');
-
-  lines.push(`📊 <strong>시장 스프레드</strong>: 최저 항공가 ${minAir.toLocaleString()}원 ~ 평균 ${avgAir.toLocaleString()}원으로, 가격 탄력성이 ${Math.round((avgAir/minAir-1)*100)}% 폭으로 존재합니다.`);
-  lines.push(`⛴ <strong>부산-하카타 항로 특성</strong>: 소요시간 약 3시간(쾌속선), 5~6시간(일반)로 당일 귀환이 가능합니다. 비자 불필요(90일) + 면세 한도 800USD 포함 시 실질 가치는 명목 운임보다 높습니다.`);
-  lines.push(`💡 <strong>권장 조정 주기</strong>: 항공권 가격은 출발 21일 전, 14일 전, 7일 전에 급변합니다. 선사도 이 시점에 맞춰 얼리버드/막판 운임을 조정하면 수요 분산 효과가 큽니다.`);
-
-  return lines.map(l => `<p style="margin-bottom:10px;">${l}</p>`).join('');
+function resetRange() {
+  state.rangeStart = new Date();
+  state.rangeStart.setHours(0,0,0,0);
+  refreshAll();
 }
-
-// ===== API 탐색기 =====
-function setExplorerMethod(m) {
-  document.getElementById('explorerMethod').textContent = m;
+function saveKey() {
+  const k = document.getElementById('apiKey').value.trim();
+  if (!k) return;
+  localStorage.setItem('serpApiKey', k);
+  state.apiKey = k;
+  // 입력창은 비우지 않고 그대로 유지 — type="password" 라 화면엔 •••• 로만 보임
+  // 키 저장 → 더미 모드 자동 해제 (사용자가 실제 호출을 원하는 흐름)
+  state.mock = false;
+  const mockChk = document.getElementById('useMock');
+  if (mockChk) mockChk.checked = false;
+  renderKeyState();
+  renderQuotaUI();
+  showKeyNotice('키 저장 완료 · 실제 모드로 전환됨 — "60일 재조회" 눌러 호출 시작', 'ok');
 }
-
-function formatExplorerBody() {
-  try {
-    const el = document.getElementById('explorerBody');
-    el.value = JSON.stringify(JSON.parse(el.value), null, 2);
-  } catch(e) {}
-}
-
-function clearExplorer() {
-  document.getElementById('explorerBody').value = '';
-  document.getElementById('explorerResponse').textContent = '응답이 여기 표시됩니다.';
-  document.getElementById('explorerResponse').className = 'response-box empty';
-}
-
-async function explorerCall() {
-  const url    = document.getElementById('explorerUrl').value.trim();
-  const method = document.getElementById('explorerMethod').textContent;
-  const body   = document.getElementById('explorerBody').value.trim();
-  const box    = document.getElementById('explorerResponse');
-
-  if (!url) { alert('URL을 입력하세요.'); return; }
-
-  box.textContent = '⏳ 요청 중...';
-  box.className = 'response-box';
-
-  let extraHeaders = {};
-  try {
-    const h = document.getElementById('explorerHeaders').value.trim();
-    if (h) extraHeaders = JSON.parse(h);
-  } catch(e) {}
-
-  addLog('req', `${method} ${url}`);
-  try {
-    const res = await fetch(url, {
-      method,
-      mode: 'cors',
-      headers: {
-        'Authorization': `Bearer ${_k}`,
-        'X-API-Key': _k,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        ...extraHeaders,
-      },
-      ...(body && method !== 'GET' ? { body } : {}),
-    });
-    const text = await res.text();
-    addLog('res', `${res.status} ${res.statusText}`);
-    try {
-      const json = JSON.parse(text);
-      box.textContent = JSON.stringify(json, null, 2);
-      box.className = 'response-box' + (res.ok ? '' : ' err');
-    } catch(e) {
-      box.textContent = text;
-      box.className = 'response-box' + (res.ok ? '' : ' err');
-    }
-  } catch(err) {
-    addLog('res', `ERR ${err.message}`);
-    box.textContent = `[오류] ${err.message}\n\nCORS 차단의 경우 브라우저 확장 프로그램(Allow CORS)을 사용하거나,\nChrome을 --disable-web-security 옵션으로 실행하세요.`;
-    box.className = 'response-box err';
+function clearKey() {
+  localStorage.removeItem('serpApiKey');
+  // 하드코딩 키가 있으면 유지, 없으면 빈 상태
+  state.apiKey = HARDCODED_SERPAPI_KEY || '';
+  if (!state.apiKey) {
+    state.mock = true;
+    const mockChk = document.getElementById('useMock');
+    if (mockChk) mockChk.checked = true;
   }
+  renderKeyState();
+  showKeyNotice(state.apiKey ? '저장 키 삭제 → 하드코딩 키로 폴백' : '키 삭제 — 더미 모드로만 작동', 'warn');
 }
-
-// ===== 엔드포인트 목록 렌더링 =====
-function renderEndpoints() {
-  const el = document.getElementById('endpointList');
-  el.innerHTML = ENDPOINTS.map((e,i) => `
-    <div class="endpoint-item" onclick="loadEndpoint(${i})">
-      <span class="ep-method">${e.method}</span>
-      <span class="ep-path">${e.path}</span>
-      <span class="ep-desc">${e.desc}</span>
-    </div>`).join('');
-}
-
-function loadEndpoint(i) {
-  const e = ENDPOINTS[i];
-  const origin  = document.getElementById('origin').value.toUpperCase() || 'PUS';
-  const dest    = document.getElementById('dest').value.toUpperCase()   || 'FUK';
-  const depDate = document.getElementById('depDate').value || new Date().toISOString().slice(0,10);
-
-  document.getElementById('explorerUrl').value = _activeBase + e.path;
-  setExplorerMethod(e.method);
-
-  if (e.bodyFn) {
-    document.getElementById('explorerBody').value = JSON.stringify(e.bodyFn(origin, dest, depDate), null, 2);
+function renderKeyState() {
+  const s = document.getElementById('keyState');
+  const inp = document.getElementById('apiKey');
+  if (state.apiKey) {
+    s.textContent = '저장됨 (…' + state.apiKey.slice(-6) + ')';
+    s.style.color = 'var(--accent2)';
+    // 입력창에도 값을 유지 — type="password" 라 화면에는 •••• 로 표시됨
+    if (inp && inp.value !== state.apiKey) inp.value = state.apiKey;
   } else {
-    document.getElementById('explorerBody').value = '';
+    s.textContent = '미저장';
+    s.style.color = 'var(--text3)';
+    if (inp) inp.value = '';
   }
-
-  switchTab('explorer');
+}
+function showKeyNotice(msg, type) {
+  const el = document.getElementById('keyNotice');
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.style.color = type === 'ok' ? 'var(--accent2)' : 'var(--warn)';
+  el.style.borderColor = type === 'ok' ? 'rgba(46,204,113,.3)' : 'rgba(243,156,18,.3)';
+  el.style.background = type === 'ok' ? 'rgba(46,204,113,.08)' : 'rgba(243,156,18,.08)';
+  setTimeout(() => { el.style.display = 'none'; }, 5000);
+}
+function clearCache() {
+  if (!confirm('모든 캐시 데이터를 삭제합니다 (설정·키는 유지).\n계속하시겠습니까?')) return;
+  localStorage.removeItem('fareOptData');
+  state.data = { out:{}, ret:{} };
+  state.selected = null;
+  renderCalendar();
+  renderDetail();
+  showKeyNotice('캐시 삭제 완료 — "60일 재조회" 눌러 새로 채우세요', 'ok');
+}
+function onModeChange() {
+  state.mock = document.getElementById('useMock').checked;
+  if (!state.mock && !state.apiKey) {
+    showKeyNotice('실제 모드는 키가 필요 — 더미 모드로 되돌림', 'warn');
+    document.getElementById('useMock').checked = true;
+    state.mock = true;
+  }
+  renderQuotaUI();
+}
+function renderQuotaUI() {
+  const used = state.quota.used, limit = 250;
+  const pct = Math.min(100, used / limit * 100);
+  const badge = document.getElementById('quotaBadge');
+  const fill  = document.getElementById('quotaBarFill');
+  if (badge) {
+    badge.textContent = `${used} / ${limit} 호출`;
+    badge.style.color = used >= limit ? 'var(--red)'
+                      : used >= QUOTA_WARN_THRESHOLD ? 'var(--warn)' : 'var(--accent2)';
+  }
+  if (fill) {
+    fill.style.width = pct + '%';
+    fill.style.background = used >= limit ? 'var(--red)'
+                          : used >= QUOTA_WARN_THRESHOLD ? 'var(--warn)' : 'var(--accent)';
+  }
 }
 
-// ===== 날짜 초기화 =====
-function initDates() {
-  const today = new Date();
-  const next7 = new Date(today); next7.setDate(today.getDate() + 7);
-  const next14 = new Date(today); next14.setDate(today.getDate() + 14);
-
-  const fmt = d => d.toISOString().slice(0,10);
-
-  document.getElementById('depDate').value = fmt(next7);
-  document.getElementById('retDate').value = fmt(next14);
-
-  const quick = document.getElementById('dateQuick');
-  const options = [
-    { label: '1주 후', days: 7 },
-    { label: '2주 후', days: 14 },
-    { label: '1달 후', days: 30 },
-    { label: '주말', days: getDaysToWeekend() },
-  ];
-  quick.innerHTML = options.map(o =>
-    `<span class="tag" onclick="quickDate(${o.days})">${o.label}</span>`
-  ).join('');
-}
-
-function getDaysToWeekend() {
-  const d = new Date().getDay();
-  return d === 0 ? 6 : d === 6 ? 7 : 6 - d;
-}
-
-function quickDate(days) {
-  const d = new Date(); d.setDate(d.getDate() + days);
-  const d2 = new Date(d); d2.setDate(d.getDate() + 7);
-  const fmt = x => x.toISOString().slice(0,10);
-  document.getElementById('depDate').value = fmt(d);
-  document.getElementById('retDate').value = fmt(d2);
-}
-
-// ===== 탭 전환 =====
-function switchTab(name) {
-  document.querySelectorAll('.tab').forEach((t,i) => {
-    const names = ['results','ferry','explorer','log'];
-    t.className = 'tab' + (names[i] === name ? ' active' : '');
+// ══════════════════════════════════════════════════════════════════
+//  초기화
+// ══════════════════════════════════════════════════════════════════
+applySettingsToUI();
+renderKeyState();
+renderQuotaUI();
+// 초기 체크박스 상태 — 키가 있으면 실제 모드로 시작
+{ const mc = document.getElementById('useMock'); if (mc) mc.checked = state.mock; }
+const hasAnyData = DIRECTIONS.some(d => Object.keys(state.data[d.key] || {}).length > 0);
+if (!hasAnyData) {
+  refreshAll();
+} else {
+  DIRECTIONS.forEach(dir => {
+    const bucket = state.data[dir.key] || {};
+    Object.keys(bucket).forEach(k => { bucket[k].ferryRec = calcFerry(bucket[k]); });
   });
-  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-  document.getElementById('tab-' + name).classList.add('active');
+  renderCalendar();
+  renderDetail();
 }
-
-function updateRatioLabel(v) {
-  document.getElementById('ratioLabel').textContent = v + '%';
-}
-
-// ===== 초기화 =====
-initDates();
-renderEndpoints();
-// 탐색기 기본 URL
-document.getElementById('explorerUrl').value = BASE_URLS[0] + '/v1/products/flight/calendar/window';
-setStatus('', 'API 미연결');
 </script>
+
 </body>
 </html>
