@@ -49,13 +49,22 @@
   .toolbar .legend .lg { display:inline-flex; align-items:center; gap:4px; }
   .toolbar .legend .sw { width:10px; height:10px; border-radius:2px; }
 
-  /* 양방향 섹션 */
-  .dir-section { margin-bottom:22px; }
-  .dir-head { display:flex; align-items:center; gap:10px; padding:8px 12px; margin-bottom:10px;
-              background:var(--bg2); border:1px solid var(--border); border-left:4px solid var(--accent);
-              border-radius:4px; font-size:13px; color:var(--text); }
-  .dir-head b { color:#fff; font-weight:700; letter-spacing:-.2px; }
-  .dir-head .dir-sub { color:var(--text3); font-size:11px; margin-left:auto; font-family:monospace; }
+  /* 양방향 섹션 — 탭 전환 방식 */
+  .dir-section { margin-bottom:0; }
+  .dir-section[hidden] { display:none; }
+  /* 방향 탭 (캘린더 위에 전환 버튼) */
+  .dir-tabs { display:flex; gap:0; margin-bottom:14px; border-bottom:2px solid var(--border); }
+  .dir-tabs button {
+    flex:1; padding:10px 16px; border:0; background:transparent;
+    color:var(--text2); font-family:inherit; font-size:13px; font-weight:600;
+    cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px;
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    transition:color .15s, border-color .15s, background .15s;
+  }
+  .dir-tabs button:hover { color:var(--text); background:rgba(74,158,255,0.06); }
+  .dir-tabs button.on { color:var(--accent); border-bottom-color:var(--accent); }
+  .dir-tabs button .dir-sub-mono { font-size:11px; color:var(--text3); font-family:monospace; font-weight:400; }
+  .dir-tabs button.on .dir-sub-mono { color:var(--accent); opacity:.75; }
   /* 각 방향당 4개월을 2x2 그리드로 */
   .cal-wrap-inner { display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; }
   @media (max-width:800px) { .cal-wrap-inner { grid-template-columns:1fr; } }
@@ -492,9 +501,10 @@ const state = {
   data: loadData(),
   selected: null,
   settings: loadSettings(),
-  mock: !_initialKey && !_usingWorker,       // 로컬 키 OR Worker 중 하나만 있으면 실제 모드
+  mock: !_initialKey && !_usingWorker,
   apiKey: _initialKey,
   quota: loadQuota(),
+  activeDir: 'out',                          // 캘린더 탭 활성 방향 ('out' | 'ret')
 };
 state.rangeStart.setHours(0,0,0,0);
 
@@ -947,18 +957,32 @@ function renderCalendar() {
     months.push(new Date(cursor));
     cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
   }
+  // 방향 탭 (활성 방향만 아래 캘린더 노출)
+  const tabsBar = document.createElement('div');
+  tabsBar.className = 'dir-tabs';
   DIRECTIONS.forEach(dir => {
-    const sec = document.createElement('div');
-    sec.className = 'dir-section';
-    sec.innerHTML = `<div class="dir-head"><span class="dir-arrow"></span><b>${dir.nm}</b><span class="dir-sub">${dir.from} → ${dir.to}</span></div>`;
-    const inner = document.createElement('div');
-    inner.className = 'cal-wrap-inner';
-    months.forEach(mo => inner.appendChild(renderMonth(mo, start, end, dir)));
-    sec.appendChild(inner);
-    wrap.appendChild(sec);
+    const btn = document.createElement('button');
+    btn.innerHTML = `<b>${dir.nm}</b><span class="dir-sub-mono">${dir.from} → ${dir.to}</span>`;
+    if (dir.key === state.activeDir) btn.classList.add('on');
+    btn.onclick = () => setActiveDir(dir.key);
+    tabsBar.appendChild(btn);
   });
+  wrap.appendChild(tabsBar);
+  // 활성 방향 섹션만 렌더
+  const activeDir = DIRECTIONS.find(d => d.key === state.activeDir) || DIRECTIONS[0];
+  const sec = document.createElement('div');
+  sec.className = 'dir-section';
+  const inner = document.createElement('div');
+  inner.className = 'cal-wrap-inner';
+  months.forEach(mo => inner.appendChild(renderMonth(mo, start, end, activeDir)));
+  sec.appendChild(inner);
+  wrap.appendChild(sec);
   document.getElementById('rangeLabel').textContent =
     `${start.getFullYear()}.${start.getMonth()+1}.${start.getDate()} ~ ${end.getFullYear()}.${end.getMonth()+1}.${end.getDate()} (${RANGE_DAYS}일)`;
+}
+function setActiveDir(dirKey) {
+  state.activeDir = dirKey;
+  renderCalendar();
 }
 function renderMonth(firstOfMonth, rangeStart, rangeEnd, dir) {
   const wrap = document.createElement('div');
