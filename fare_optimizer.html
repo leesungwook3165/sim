@@ -38,13 +38,25 @@
   .toolbar button:hover { border-color:var(--accent); color:var(--accent); }
   .toolbar button.primary { background:var(--accent); color:#000; border-color:var(--accent); font-weight:600; }
   .toolbar button.primary:hover { color:#000; opacity:.9; }
-  .toolbar .basis-pick, .toolbar .class-pick {
+  .toolbar .basis-pick, .toolbar .class-pick, .toolbar .trip-pick, .toolbar .stay-pick {
     display:inline-flex; align-items:center; gap:0; border:1px solid var(--border); border-radius:5px; overflow:hidden;
   }
-  .toolbar .basis-pick button, .toolbar .class-pick button { border:0; border-radius:0; padding:5px 10px; }
-  .toolbar .basis-pick button + button, .toolbar .class-pick button + button { border-left:1px solid var(--border); }
-  .toolbar .basis-pick button.on, .toolbar .class-pick button.on { background:var(--accent); color:#000; font-weight:600; }
-  .toolbar .basis-pick .lbl, .toolbar .class-pick .lbl { padding:0 8px 0 10px; font-size:11px; color:var(--text3); }
+  .toolbar .basis-pick button, .toolbar .class-pick button,
+  .toolbar .trip-pick button, .toolbar .stay-pick button {
+    border:0; border-radius:0; padding:5px 10px;
+  }
+  .toolbar .basis-pick button + button, .toolbar .class-pick button + button,
+  .toolbar .trip-pick button + button, .toolbar .stay-pick button + button {
+    border-left:1px solid var(--border);
+  }
+  .toolbar .basis-pick button.on, .toolbar .class-pick button.on,
+  .toolbar .trip-pick button.on, .toolbar .stay-pick button.on {
+    background:var(--accent); color:#000; font-weight:600;
+  }
+  .toolbar .basis-pick .lbl, .toolbar .class-pick .lbl,
+  .toolbar .trip-pick .lbl, .toolbar .stay-pick .lbl {
+    padding:0 8px 0 10px; font-size:11px; color:var(--text3);
+  }
   .toolbar .legend { display:flex; align-items:center; gap:10px; margin-left:auto; font-size:11px; color:var(--text2); }
   .toolbar .legend .lg { display:inline-flex; align-items:center; gap:4px; }
   .toolbar .legend .sw { width:10px; height:10px; border-radius:2px; }
@@ -262,6 +274,21 @@
         <button data-basis="min" onclick="setBasis('min')">최저</button>
         <button data-basis="avg" onclick="setBasis('avg')">평균</button>
         <button data-basis="max" onclick="setBasis('max')">최고</button>
+      </div>
+
+      <div class="trip-pick" title="편도 / 왕복 번들가 전환 — 왕복은 체류일 지정 필요">
+        <span class="lbl">종류:</span>
+        <button data-trip="oneway" onclick="setTripType('oneway')">편도</button>
+        <button data-trip="round" onclick="setTripType('round')">왕복</button>
+      </div>
+
+      <div class="stay-pick" id="stayPick" style="display:none"
+           title="왕복 체류 일수 — 출발일 + N박 뒤 귀환">
+        <span class="lbl">체류:</span>
+        <button data-stay="1" onclick="setStayNights(1)">1박</button>
+        <button data-stay="2" onclick="setStayNights(2)">2박</button>
+        <button data-stay="3" onclick="setStayNights(3)">3박</button>
+        <button data-stay="4" onclick="setStayNights(4)">4박</button>
       </div>
 
       <div class="class-pick" title="좌석 등급 — 변경 시 캐시 폐기 후 재조회 필요">
@@ -511,14 +538,15 @@ state.rangeStart.setHours(0,0,0,0);
 function loadData() {
   try {
     const d = JSON.parse(localStorage.getItem('fareOptData') || '{}');
-    // 구 버전 (flat {date→d}) → 폐기 후 재생성
     if (!d.out || !d.ret) {
       console.log('[fare_optimizer] 레거시 데이터 구조 감지 — 폐기 후 재생성');
       localStorage.removeItem('fareOptData');
-      return { out:{}, ret:{} };
+      return { out:{}, ret:{}, rt_1:{}, rt_2:{}, rt_3:{}, rt_4:{} };
     }
+    // 왕복 bucket 보강 (구 버전엔 없을 수 있음)
+    ['rt_1','rt_2','rt_3','rt_4'].forEach(k => { if (!d[k]) d[k] = {}; });
     return d;
-  } catch(_) { return { out:{}, ret:{} }; }
+  } catch(_) { return { out:{}, ret:{}, rt_1:{}, rt_2:{}, rt_3:{}, rt_4:{} }; }
 }
 function saveData() { localStorage.setItem('fareOptData', JSON.stringify(state.data)); }
 // 통화별 포맷 메타 — 심볼·만 단위 사용 여부·기본 상·하한 (현지 통화 기준)
@@ -533,9 +561,11 @@ function loadSettings() {
   try { return Object.assign({
     ratio:76, basis:'avg', currency:'KRW', minFare:60000, maxFare:250000,
     travelClass:1, adults:1, children:0,
+    tripType:'oneway', stayNights:2,            // 'oneway' | 'round', 체류일
   }, JSON.parse(localStorage.getItem('fareOptSettings') || '{}')); }
   catch(_) { return { ratio:76, basis:'avg', currency:'KRW', minFare:60000, maxFare:250000,
-                      travelClass:1, adults:1, children:0 }; }
+                      travelClass:1, adults:1, children:0,
+                      tripType:'oneway', stayNights:2 }; }
 }
 function saveSettings() { localStorage.setItem('fareOptSettings', JSON.stringify(state.settings)); }
 function loadQuota() {
@@ -573,6 +603,16 @@ function applySettingsToUI() {
   document.querySelectorAll('.class-pick button[data-tc]').forEach(b => {
     b.classList.toggle('on', +b.dataset.tc === state.settings.travelClass);
   });
+  // 편도/왕복 토글 하이라이트
+  document.querySelectorAll('.trip-pick button[data-trip]').forEach(b => {
+    b.classList.toggle('on', b.dataset.trip === state.settings.tripType);
+  });
+  // 체류일 토글 하이라이트 + 노출 제어
+  document.querySelectorAll('.stay-pick button[data-stay]').forEach(b => {
+    b.classList.toggle('on', +b.dataset.stay === state.settings.stayNights);
+  });
+  const stayPick = document.getElementById('stayPick');
+  if (stayPick) stayPick.style.display = state.settings.tripType === 'round' ? 'inline-flex' : 'none';
 }
 function onSettingChange() {
   state.settings.ratio     = +document.getElementById('ratio').value;
@@ -605,12 +645,43 @@ function setClass(tc) {
   state.settings.travelClass = tc;
   saveSettings();
   applySettingsToUI();
-  // 좌석등급 바뀌면 가격 체계 자체가 달라짐 → 캐시 폐기
-  state.data = { out:{}, ret:{} };
+  state.data = { out:{}, ret:{}, rt_1:{}, rt_2:{}, rt_3:{}, rt_4:{} };
   saveData();
   renderCalendar();
   renderDetail();
   showKeyNotice('좌석등급 변경 → 캐시 비움. 재조회 눌러주세요.', 'warn');
+}
+// 왕복/편도 전환 — 캐시는 모드별로 분리되어 있어 폐기 안 함 (이미 캐시된 거 재사용)
+function setTripType(type) {
+  state.settings.tripType = type;
+  state.selected = null;              // 모드 바뀌면 선택 초기화
+  saveSettings();
+  applySettingsToUI();
+  renderCalendar();
+  renderDetail();
+}
+// 체류일 변경 — 다른 bucket 사용. 캐시 폐기 X (bucket 별 분리).
+function setStayNights(n) {
+  state.settings.stayNights = n;
+  state.selected = null;
+  saveSettings();
+  applySettingsToUI();
+  renderCalendar();
+  renderDetail();
+}
+// 현재 모드에서 사용할 bucket 키 ('out' | 'ret' | 'rt_N')
+function rtBucketKey() { return 'rt_' + state.settings.stayNights; }
+// bucket key → 사람용 라벨
+function dirLabel(key) {
+  const d = DIRECTIONS.find(x => x.key === key);
+  if (d) return { nm: d.nm, from: d.from, to: d.to, route: `${d.from} → ${d.to}` };
+  // rt_N
+  const m = /^rt_(\d+)$/.exec(key);
+  if (m) {
+    const n = +m[1];
+    return { nm: `왕복 ${n}박`, from: 'PUS', to: 'FUK', route: `PUS ↔ FUK · ${n}박` };
+  }
+  return { nm: key, from: '', to: '', route: key };
 }
 function onCurrencyChange() {
   const prev = state.settings.currency;
@@ -631,9 +702,11 @@ function onCurrencyChange() {
   showKeyNotice(`통화 변경 → ${meta.sym} · 데이터 초기화됨. 재조회 눌러주세요.`, 'warn');
 }
 function recalcAll() {
-  DIRECTIONS.forEach(d => {
-    const bucket = state.data[d.key];
-    Object.keys(bucket).forEach(k => { bucket[k].ferryRec = calcFerry(bucket[k]); });
+  // 편도 + 왕복 모든 bucket 에 ferryRec 재계산
+  const allKeys = ['out','ret','rt_1','rt_2','rt_3','rt_4'];
+  allKeys.forEach(k => {
+    const bucket = state.data[k] || {};
+    Object.keys(bucket).forEach(d => { bucket[d].ferryRec = calcFerry(bucket[d]); });
   });
   renderCalendar();
   renderDetail();
@@ -647,14 +720,16 @@ function pad2(n){ return (n<10?'0':'')+n; }
 function timeFmt(mins) { return pad2(Math.floor(mins/60)) + ':' + pad2(mins%60); }
 // 통화별 기준 base (평일 평균가 기준 — 더미 데이터 중심값)
 const MOCK_BASE_BY_CCY = { KRW: 128000, JPY: 12800, USD: 95, EUR: 85 };
-function mockFlights(date, dirKey) {
+function mockFlights(date, dirKey, isRound) {
   const dow = date.getDay();
   const weekendPrem = (dow === 5 || dow === 6) ? 1.30 : (dow === 0 ? 1.15 : 1.00);
   const monthPhase  = date.getDate() >= 25 ? 1.12 : (date.getDate() >= 10 && date.getDate() <= 20 ? 0.95 : 1.00);
   const saleDip     = (date.getDate() % 14 < 2) ? 0.78 : 1.00;
-  // 역방향(FUK→PUS)은 대체로 ~+8% 정도 비싼 경향 (일본 발 LCC 세금·수수료 더 비쌈)
   const dirPrem = dirKey === 'ret' ? 1.08 : 1.00;
-  const basePrice = (MOCK_BASE_BY_CCY[state.settings.currency] || 128000) * weekendPrem * monthPhase * saleDip * dirPrem;
+  // 왕복 번들 : 편도 2개 합에서 10~13% 할인된 총액. 더미 데이터에선 × 1.88 (편도 2 × 0.94).
+  const roundBundleMult = isRound ? 1.88 : 1.00;
+  const basePrice = (MOCK_BASE_BY_CCY[state.settings.currency] || 128000)
+                    * weekendPrem * monthPhase * saleDip * dirPrem * roundBundleMult;
   const roundTo = (MOCK_BASE_BY_CCY[state.settings.currency] || 128000) > 1000 ? 500 : 1;
 
   // 실제 PUS↔FUK 는 하루 8~14편 수준 — 각 항공사가 1~3편씩 분산
@@ -684,8 +759,8 @@ function mockFlights(date, dirKey) {
   flights.sort((a, b) => a.dep_time.localeCompare(b.dep_time));
   return flights;
 }
-function mockDay(date, dirKey) {
-  const flights = mockFlights(date, dirKey);
+function mockDay(date, dirKey, isRound) {
+  const flights = mockFlights(date, dirKey, isRound);
   const prices = flights.map(f => f.price).sort((a,b) => a - b);
   const air_min = prices[0];
   const air_max = prices[prices.length - 1];
@@ -757,8 +832,15 @@ async function refreshAll() {
     dates.push(FMT_DATE(new Date(state.rangeStart.getTime() + i * DAY_MS)));
   }
 
+  // 왕복 모드면 outbound(PUS→FUK) 1개만 호출 (return_date 를 쿼리 안에 넣음)
+  // 편도 모드면 out + ret 두 방향 모두 호출
+  const isRound = state.settings.tripType === 'round';
+  const loopDirs = isRound
+    ? [{ key: rtBucketKey(), from: 'PUS', to: 'FUK', nm: `왕복 (${state.settings.stayNights}박)` }]
+    : DIRECTIONS;
+
   let totalCalls = 0;
-  const totalSteps = dates.length * 2;
+  const totalSteps = dates.length * loopDirs.length;
   let stepDone = 0;
   const tick = () => {
     stepDone++;
@@ -769,19 +851,21 @@ async function refreshAll() {
   };
 
   if (state.mock || (!state.apiKey && !_usingWorker)) {
-    for (const dir of DIRECTIONS) {
+    for (const dir of loopDirs) {
+      if (!state.data[dir.key]) state.data[dir.key] = {};
       for (let i = 0; i < dates.length; i++) {
         const dateStr = dates[i];
-        state.data[dir.key][dateStr] = mockDay(PARSE_DATE(dateStr), dir.key);
+        state.data[dir.key][dateStr] = mockDay(PARSE_DATE(dateStr), dir.key, isRound);
         tick();
         if (i % 10 === 0) await new Promise(r => setTimeout(r, 10));
       }
     }
     document.getElementById('statusMode').textContent = '더미 데이터 모드';
   } else {
-    // 방향별로 각각 샘플링
-    for (const dir of DIRECTIONS) {
+    // 방향별로 각각 샘플링 (왕복은 1 bucket 만)
+    for (const dir of loopDirs) {
       spinText.textContent = `SerpApi 호출 중 · ${dir.nm}`;
+      if (!state.data[dir.key]) state.data[dir.key] = {};
       const bucket = state.data[dir.key];
       const stale = [];
       dates.forEach((dateStr, i) => {
@@ -796,7 +880,7 @@ async function refreshAll() {
         else if (i > 30 && i <= 60 && i % 7 === 0) stale.push(dateStr);
         else if (i > 60 && i % 14 === 0) stale.push(dateStr);
       });
-      const perDirBudget = Math.floor(FREE_MAX_CALLS_PER_REFRESH / 2);  // 각 방향 10 호출
+      const perDirBudget = Math.floor(FREE_MAX_CALLS_PER_REFRESH / loopDirs.length);  // 방향 수에 따라 분배
       const toFetch = stale.slice(0, perDirBudget);
       const remaining = 250 - state.quota.used;
       const willCall = Math.min(toFetch.length, Math.max(0, remaining));
@@ -828,9 +912,9 @@ async function refreshAll() {
     document.getElementById('statusMode').textContent = `SerpApi · 이번 재조회 ${totalCalls}회 호출`;
   }
 
-  // 양방향 모두 ferryRec 재계산
-  DIRECTIONS.forEach(dir => {
-    const bucket = state.data[dir.key];
+  // 활성 bucket (편도 양방향 OR 왕복 rt_N) 전부 ferryRec 재계산
+  loopDirs.forEach(dir => {
+    const bucket = state.data[dir.key] || {};
     dates.forEach(ds => { if (bucket[ds]) bucket[ds].ferryRec = calcFerry(bucket[ds]); });
   });
   document.getElementById('statusUpdate').textContent = '마지막 갱신: ' + new Date().toLocaleString('ko');
@@ -867,19 +951,26 @@ function interpolateMissing(dates, dirKey) {
 async function serpApiFetch(dateStr, dir) {
   // 3가지 경로:
   //   (a) localhost : /serpapi 경로 (proxy_server.py)
-  //   (b) 배포 + Worker URL 설정됨 : Cloudflare Worker (키 Worker 환경변수에서 주입)
-  //   (c) 그 외 : 공개 CORS 프록시 (레거시, 거의 안 씀)
+  //   (b) 배포 + Worker URL 설정됨 : Cloudflare Worker
+  //   (c) 그 외 : 공개 CORS 프록시 (레거시)
   const useLocal = !CORS_PROXY;
   const useWorker = CORS_PROXY && CORS_PROXY.startsWith('https://') &&
                     !CORS_PROXY.includes('?url=') && !CORS_PROXY.includes('?quest=');
   const url = useLocal ? new URL('/serpapi', location.origin)
             : useWorker ? new URL(CORS_PROXY)
             : new URL('https://serpapi.com/search.json');
+  // 왕복 모드 : dir 은 {from, to} 1개만 받아 outbound 로 쓰고, return_date 를 별도 세팅
+  const isRound = state.settings.tripType === 'round';
   url.searchParams.set('engine',       'google_flights');
   url.searchParams.set('departure_id', dir.from);
   url.searchParams.set('arrival_id',   dir.to);
   url.searchParams.set('outbound_date', dateStr);
-  url.searchParams.set('type',         '2');
+  url.searchParams.set('type',         isRound ? '1' : '2');
+  if (isRound) {
+    const outD = PARSE_DATE(dateStr);
+    const retD = new Date(outD.getTime() + state.settings.stayNights * DAY_MS);
+    url.searchParams.set('return_date', FMT_DATE(retD));
+  }
   const meta = curMeta();
   url.searchParams.set('currency',     state.settings.currency || 'KRW');
   url.searchParams.set('hl',           meta.hlApi);
@@ -890,8 +981,6 @@ async function serpApiFetch(dateStr, dir) {
     url.searchParams.set('children',   String(state.settings.children));
   }
   url.searchParams.set('stops',        '1');
-  // Worker 는 환경변수에서 키 주입 → URL 에 키 넣지 않음 (보안)
-  // 로컬·공개프록시 는 URL 에 키 넣음
   if (!useWorker) url.searchParams.set('api_key', state.apiKey);
   const targetUrl = url.toString();
   const fetchUrl = (useLocal || useWorker)
@@ -957,19 +1046,26 @@ function renderCalendar() {
     months.push(new Date(cursor));
     cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
   }
-  // 방향 탭 (활성 방향만 아래 캘린더 노출)
-  const tabsBar = document.createElement('div');
-  tabsBar.className = 'dir-tabs';
-  DIRECTIONS.forEach(dir => {
-    const btn = document.createElement('button');
-    btn.innerHTML = `<b>${dir.nm}</b><span class="dir-sub-mono">${dir.from} → ${dir.to}</span>`;
-    if (dir.key === state.activeDir) btn.classList.add('on');
-    btn.onclick = () => setActiveDir(dir.key);
-    tabsBar.appendChild(btn);
-  });
-  wrap.appendChild(tabsBar);
-  // 활성 방향 섹션만 렌더
-  const activeDir = DIRECTIONS.find(d => d.key === state.activeDir) || DIRECTIONS[0];
+  const isRound = state.settings.tripType === 'round';
+  let activeDir;
+  if (isRound) {
+    // 왕복 : 방향 탭 없음. rt_N 버킷의 출발일 기준 1개 캘린더.
+    activeDir = { key: rtBucketKey(), from: 'PUS', to: 'FUK',
+                  nm: `왕복 (${state.settings.stayNights}박)` };
+  } else {
+    // 편도 : 방향 탭 노출
+    const tabsBar = document.createElement('div');
+    tabsBar.className = 'dir-tabs';
+    DIRECTIONS.forEach(dir => {
+      const btn = document.createElement('button');
+      btn.innerHTML = `<b>${dir.nm}</b><span class="dir-sub-mono">${dir.from} → ${dir.to}</span>`;
+      if (dir.key === state.activeDir) btn.classList.add('on');
+      btn.onclick = () => setActiveDir(dir.key);
+      tabsBar.appendChild(btn);
+    });
+    wrap.appendChild(tabsBar);
+    activeDir = DIRECTIONS.find(d => d.key === state.activeDir) || DIRECTIONS[0];
+  }
   const sec = document.createElement('div');
   sec.className = 'dir-section';
   const inner = document.createElement('div');
@@ -1088,10 +1184,10 @@ function renderDetail() {
     return;
   }
   const { date: dStr, dir: dirKey } = state.selected;
-  const dirInfo = DIRECTIONS.find(x => x.key === dirKey);
+  const dirInfo = dirLabel(dirKey);
   const dd = PARSE_DATE(dStr);
   const d = state.data[dirKey] ? state.data[dirKey][dStr] : null;
-  dateLbl.textContent = `${dirInfo.from}→${dirInfo.to} · ${dd.getMonth()+1}월 ${dd.getDate()}일 (${DOW[dd.getDay()]})`;
+  dateLbl.textContent = `${dirInfo.route} · ${dd.getMonth()+1}월 ${dd.getDate()}일 (${DOW[dd.getDay()]})`;
   if (!d) {
     host.innerHTML = '<div class="empty-hint">데이터 없음 — 재조회가 필요합니다.</div>';
     return;
@@ -1136,10 +1232,10 @@ function closeModal() {
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
 function populateModal(dStr, dirKey) {
-  const dirInfo = DIRECTIONS.find(x => x.key === dirKey);
+  const dirInfo = dirLabel(dirKey);
   const d = state.data[dirKey] ? state.data[dirKey][dStr] : null;
   const dd = PARSE_DATE(dStr);
-  const title = `${dirInfo.from} → ${dirInfo.to} · ${dd.getFullYear()}년 ${dd.getMonth()+1}월 ${dd.getDate()}일 (${DOW[dd.getDay()]})`;
+  const title = `${dirInfo.route} · ${dd.getFullYear()}년 ${dd.getMonth()+1}월 ${dd.getDate()}일 (${DOW[dd.getDay()]})`;
   document.getElementById('modalTitle').textContent = title;
   const body = document.getElementById('modalBody');
   if (!d) {
@@ -1335,13 +1431,15 @@ renderKeyState();
 renderQuotaUI();
 // 초기 체크박스 상태 — 키가 있으면 실제 모드로 시작
 { const mc = document.getElementById('useMock'); if (mc) mc.checked = state.mock; }
-const hasAnyData = DIRECTIONS.some(d => Object.keys(state.data[d.key] || {}).length > 0);
+// 편도·왕복 양쪽 bucket 전부 체크 (활성 모드 기준)
+const _activeBuckets = state.settings.tripType === 'round' ? [rtBucketKey()] : ['out','ret'];
+const hasAnyData = _activeBuckets.some(k => Object.keys(state.data[k] || {}).length > 0);
 if (!hasAnyData) {
   refreshAll();
 } else {
-  DIRECTIONS.forEach(dir => {
-    const bucket = state.data[dir.key] || {};
-    Object.keys(bucket).forEach(k => { bucket[k].ferryRec = calcFerry(bucket[k]); });
+  _activeBuckets.forEach(k => {
+    const bucket = state.data[k] || {};
+    Object.keys(bucket).forEach(dstr => { bucket[dstr].ferryRec = calcFerry(bucket[dstr]); });
   });
   renderCalendar();
   renderDetail();
