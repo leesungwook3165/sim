@@ -322,13 +322,25 @@
 
     <div class="card">
       <h4>SerpApi 연결 <span class="r" id="keyState">—</span></h4>
-      <label>API 키</label>
-      <input type="password" id="apiKey" placeholder="SerpApi 키를 붙여넣기">
-      <div style="display:flex; gap:6px; margin-top:8px">
-        <button class="primary" style="flex:1; padding:6px 10px; font-size:12px"
-                onclick="saveKey()">저장</button>
-        <button style="flex:1; padding:6px 10px; font-size:12px; background:var(--bg3); color:var(--text); border:1px solid var(--border); border-radius:5px; cursor:pointer"
-                onclick="clearKey()">삭제</button>
+
+      <!-- Worker 모드 : 키 입력 숨기고 상태만 노출 -->
+      <div id="workerModeBox" style="display:none">
+        <div style="padding:8px 10px; background:rgba(46,204,113,0.08); border:1px solid rgba(46,204,113,0.3); border-radius:5px; font-size:11.5px; color:var(--accent2); line-height:1.5">
+          <b>Cloudflare Worker 연결됨</b><br>
+          <span style="color:var(--text2); font-size:10.5px">API 키는 서버 환경변수에서 관리됩니다 — 브라우저 입력 불필요.</span>
+        </div>
+      </div>
+
+      <!-- 로컬/직접 호출 모드 : 키 입력 노출 -->
+      <div id="keyInputBox">
+        <label>API 키</label>
+        <input type="password" id="apiKey" placeholder="SerpApi 키를 붙여넣기">
+        <div style="display:flex; gap:6px; margin-top:8px">
+          <button class="primary" style="flex:1; padding:6px 10px; font-size:12px"
+                  onclick="saveKey()">저장</button>
+          <button style="flex:1; padding:6px 10px; font-size:12px; background:var(--bg3); color:var(--text); border:1px solid var(--border); border-radius:5px; cursor:pointer"
+                  onclick="clearKey()">삭제</button>
+        </div>
       </div>
 
       <label>통화 (API · 표기 단위)</label>
@@ -340,7 +352,7 @@
       </select>
 
       <div class="notice" id="keyNotice" style="display:none"></div>
-      <div style="font-size:10.5px; color:var(--text3); margin-top:8px; line-height:1.5">
+      <div id="keyHelpTxt" style="font-size:10.5px; color:var(--text3); margin-top:8px; line-height:1.5">
         키는 <b>localStorage</b> 에만 저장 — 소스에는 하드코딩 안 됨. 노출 시 <a href="https://serpapi.com/manage-api-key" target="_blank" style="color:var(--accent)">대시보드</a> 에서 Rotate.
       </div>
     </div>
@@ -1221,10 +1233,24 @@ function clearKey() {
 function renderKeyState() {
   const s = document.getElementById('keyState');
   const inp = document.getElementById('apiKey');
+  // Worker 모드면 키 입력 UI 숨기고 "Worker 연결됨" 박스만 노출
+  const workerBox = document.getElementById('workerModeBox');
+  const keyBox = document.getElementById('keyInputBox');
+  const keyHelp = document.getElementById('keyHelpTxt');
+  if (_usingWorker) {
+    if (workerBox) workerBox.style.display = 'block';
+    if (keyBox)    keyBox.style.display    = 'none';
+    if (keyHelp)   keyHelp.style.display   = 'none';
+    s.textContent = 'Worker 연결';
+    s.style.color = 'var(--accent2)';
+    return;
+  }
+  if (workerBox) workerBox.style.display = 'none';
+  if (keyBox)    keyBox.style.display    = 'block';
+  if (keyHelp)   keyHelp.style.display   = 'block';
   if (state.apiKey) {
     s.textContent = '저장됨 (…' + state.apiKey.slice(-6) + ')';
     s.style.color = 'var(--accent2)';
-    // 입력창에도 값을 유지 — type="password" 라 화면에는 •••• 로 표시됨
     if (inp && inp.value !== state.apiKey) inp.value = state.apiKey;
   } else {
     s.textContent = '미저장';
