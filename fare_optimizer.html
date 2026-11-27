@@ -1325,7 +1325,8 @@ function renderMonth(firstOfMonth, rangeStart, rangeEnd, dir) {
                     ? state.data.camellia[dStr] : null;
       let camRow = '';
       if (cam && cam.krw_min) {
-        const camPrice = isRound ? cam.krw_min * 2 : cam.krw_min;
+        const camIsRound = state.settings.tripType === 'round';
+        const camPrice = camIsRound ? cam.krw_min * 2 : cam.krw_min;
         const camStyle = cam.camInterpolated || dat.interpolated ? 'style="opacity:.72"' : '';
         camRow = `<div class="cam-row" ${camStyle}>
                     <span class="lbl">카멜리아</span>
