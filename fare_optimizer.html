@@ -90,7 +90,7 @@
   .dow div { font-size:10px; color:var(--text3); text-align:center; padding:3px 0; font-weight:600; letter-spacing:.3px; }
   .dow div.sun { color:#e78b8b; } .dow div.sat { color:#8bb0e7; }
   .grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
-  .cell { position:relative; min-height:82px; padding:4px 5px; border-radius:4px;
+  .cell { position:relative; min-height:94px; padding:4px 5px; border-radius:4px;
           background:var(--bg4); border:1px solid transparent; cursor:pointer; transition:border-color .12s, background .12s; }
   .cell:hover:not(.empty):not(.past) { border-color:var(--accent); }
   .cell.empty { background:transparent; cursor:default; }
@@ -116,6 +116,12 @@
                    color:var(--text2); font-variant-numeric:tabular-nums; }
   .cell .air-row .lbl { font-size:9px; color:var(--text3); font-weight:500; }
   .cell .air-row .val { font-weight:600; }
+  /* 카멜리아 실 운임 : 항공 아래 작게 (실제 경쟁 선박 벤치마크) */
+  .cell .cam-row { display:flex; align-items:baseline; gap:3px; font-size:10.5px; margin-top:2px;
+                   color:#e0c89a; font-variant-numeric:tabular-nums; }
+  .cell .cam-row .lbl { font-size:9px; color:#c4a572; font-weight:600; letter-spacing:.2px; }
+  .cell .cam-row .val { font-weight:600; }
+  .cell .cam-row .k   { font-size:9px; color:#8a7555; font-weight:400; }
   /* 추천 페리 운임 : 큰 수 — 주된 숫자 */
   .cell .ferry { display:flex; align-items:baseline; gap:3px; margin-top:2px;
                  font-variant-numeric:tabular-nums; letter-spacing:-.3px; }
@@ -231,6 +237,25 @@
 
   .section-label { font-size:10.5px; color:var(--text3); font-weight:600; text-transform:uppercase;
                    letter-spacing:.5px; padding:0 0 4px; border-bottom:1px solid var(--border); margin-bottom:6px; }
+
+  /* 카멜리아 모달 섹션 */
+  .cam-box { background:linear-gradient(135deg, rgba(196,165,114,0.09), rgba(196,165,114,0.03));
+             border:1px solid rgba(196,165,114,0.28); border-radius:6px; padding:10px 12px; }
+  .cam-box .cam-head { display:flex; align-items:baseline; gap:8px; margin-bottom:8px; }
+  .cam-box .cam-head .nm { font-size:12px; color:#e0c89a; font-weight:700; }
+  .cam-box .cam-head .sub { font-size:10.5px; color:#8a7555; }
+  .cam-box .cam-head .min { margin-left:auto; font-size:14px; font-weight:700; color:#fff; font-variant-numeric:tabular-nums; }
+  .cam-box .cam-head .min .u { font-size:10px; color:#8a7555; font-weight:400; margin-left:2px; }
+  .cam-box .cam-grid { display:grid; grid-template-columns:1fr 90px 80px; gap:6px 10px; font-size:11.5px; }
+  .cam-box .cam-grid .row { display:contents; }
+  .cam-box .cam-grid .nm { color:var(--text); }
+  .cam-box .cam-grid .pr { text-align:right; color:#fff; font-weight:600; font-variant-numeric:tabular-nums; }
+  .cam-box .cam-grid .pr.na { color:var(--text3); font-weight:400; text-decoration:line-through; }
+  .cam-box .cam-grid .st { color:var(--accent2); font-size:10.5px; text-align:right; }
+  .cam-box .cam-grid .st.na { color:var(--text3); }
+  .cam-box .delta { margin-top:8px; font-size:10.5px; color:var(--text2); padding-top:8px;
+                    border-top:1px dashed rgba(196,165,114,0.2); }
+  .cam-box .delta b { color:#e0c89a; }
 
   /* 반응형 */
   @media (max-width:1100px) {
@@ -497,13 +522,16 @@ const QUOTA_WARN_THRESHOLD = 200;
 const HARDCODED_SERPAPI_KEY = '';
 
 // SerpApi 는 브라우저에서 직접 호출 시 CORS 가 막힘 (서버사이드 설계).
+// 카멜리아도 CORS + 세션쿠키 때문에 서버 대행 필요.
 // 환경별 자동 라우팅:
-//   localhost        → /serpapi (proxy_server.py)
-//   그 외 (배포)     → Cloudflare Worker (환경변수에 키 숨김)
-// Worker 배포 후 아래 URL 교체. '' 로 두면 로컬 모드 전용.
-const CLOUDFLARE_WORKER_URL = 'https://fare-worker.lsuk3165.workers.dev';
+//   localhost        → /serpapi · /camellia (proxy_server.py)
+//   그 외 (배포)     → 각각 전용 Cloudflare Worker
+//   '' 로 두면 로컬 모드 전용.
+const CLOUDFLARE_WORKER_URL          = 'https://fare-worker.lsuk3165.workers.dev';
+const CLOUDFLARE_CAMELLIA_WORKER_URL = 'https://camellia-fare.lsuk3165.workers.dev';
 const _isLocalhost = ['localhost', '127.0.0.1'].includes(location.hostname);
-const CORS_PROXY = (_isLocalhost || !CLOUDFLARE_WORKER_URL) ? '' : CLOUDFLARE_WORKER_URL;
+const CORS_PROXY     = (_isLocalhost || !CLOUDFLARE_WORKER_URL)          ? '' : CLOUDFLARE_WORKER_URL;
+const CAMELLIA_PROXY = (_isLocalhost || !CLOUDFLARE_CAMELLIA_WORKER_URL) ? '' : CLOUDFLARE_CAMELLIA_WORKER_URL;
 
 // 한국-일본 노선 주요 항공사. logo URL 은 Google Flights 가 쓰는 CDN (SerpApi 응답과 동일).
 const AIRLINES = [
@@ -541,12 +569,12 @@ function loadData() {
     if (!d.out || !d.ret) {
       console.log('[fare_optimizer] 레거시 데이터 구조 감지 — 폐기 후 재생성');
       localStorage.removeItem('fareOptData');
-      return { out:{}, ret:{}, rt_1:{}, rt_2:{}, rt_3:{}, rt_4:{} };
+      return { out:{}, ret:{}, rt_1:{}, rt_2:{}, rt_3:{}, rt_4:{}, camellia:{} };
     }
-    // 왕복 bucket 보강 (구 버전엔 없을 수 있음)
-    ['rt_1','rt_2','rt_3','rt_4'].forEach(k => { if (!d[k]) d[k] = {}; });
+    // 왕복 bucket + 카멜리아 bucket 보강 (구 버전엔 없을 수 있음)
+    ['rt_1','rt_2','rt_3','rt_4','camellia'].forEach(k => { if (!d[k]) d[k] = {}; });
     return d;
-  } catch(_) { return { out:{}, ret:{}, rt_1:{}, rt_2:{}, rt_3:{}, rt_4:{} }; }
+  } catch(_) { return { out:{}, ret:{}, rt_1:{}, rt_2:{}, rt_3:{}, rt_4:{}, camellia:{} }; }
 }
 function saveData() { localStorage.setItem('fareOptData', JSON.stringify(state.data)); }
 // 통화별 포맷 메타 — 심볼·만 단위 사용 여부·기본 상·하한 (현지 통화 기준)
@@ -630,12 +658,14 @@ function setBasis(b) {
 }
 function onQueryParamChange() {
   // 좌석등급/인원이 바뀌면 기존 캐시(다른 조건 기준) 는 의미 없음 → 폐기
+  // (카멜리아 가격은 항공 조건과 무관 → 유지)
   state.settings.travelClass = +document.getElementById('travelClass').value || 1;
   state.settings.adults      = Math.max(1, +document.getElementById('adults').value || 1);
   state.settings.children    = Math.max(0, +document.getElementById('children').value || 0);
   saveSettings();
   applySettingsToUI();
-  state.data = { out:{}, ret:{} };
+  state.data = { out:{}, ret:{}, rt_1:{}, rt_2:{}, rt_3:{}, rt_4:{},
+                 camellia: state.data.camellia || {} };
   saveData();
   renderCalendar();
   renderDetail();
@@ -645,7 +675,8 @@ function setClass(tc) {
   state.settings.travelClass = tc;
   saveSettings();
   applySettingsToUI();
-  state.data = { out:{}, ret:{}, rt_1:{}, rt_2:{}, rt_3:{}, rt_4:{} };
+  state.data = { out:{}, ret:{}, rt_1:{}, rt_2:{}, rt_3:{}, rt_4:{},
+                 camellia: state.data.camellia || {} };
   saveData();
   renderCalendar();
   renderDetail();
@@ -695,7 +726,9 @@ function onCurrencyChange() {
   saveSettings();
   applySettingsToUI();
   // 통화가 다르면 기존 캐시 데이터(원화 가격) 와 혼동되므로 비움 → 다음 조회 때 재생성
-  state.data = { out:{}, ret:{} };
+  // (카멜리아 가격은 원화 고정 → 유지, 셀 표시는 통화에 따라 숨김 처리)
+  state.data = { out:{}, ret:{}, rt_1:{}, rt_2:{}, rt_3:{}, rt_4:{},
+                 camellia: state.data.camellia || {} };
   saveData();
   renderCalendar();
   renderDetail();
@@ -860,6 +893,11 @@ async function refreshAll() {
         if (i % 10 === 0) await new Promise(r => setTimeout(r, 10));
       }
     }
+    // 카멜리아 더미도 전 날짜 생성 (방향·왕복 상관없이 공통)
+    if (!state.data.camellia) state.data.camellia = {};
+    for (let i = 0; i < dates.length; i++) {
+      state.data.camellia[dates[i]] = mockCamellia(PARSE_DATE(dates[i]));
+    }
     document.getElementById('statusMode').textContent = '더미 데이터 모드';
   } else {
     // 방향별로 각각 샘플링 (왕복은 1 bucket 만)
@@ -908,8 +946,42 @@ async function refreshAll() {
       // 샘플링 간 보간된 날짜도 진행 반영 (총 dates.length - 실제호출수만큼 추가)
       for (let i = 0; i < dates.length - actual.length; i++) tick();
     }
+    // ── 카멜리아 샘플링 ── (항공과 독립, 방향 불문 공통 버킷)
+    if (!state.data.camellia) state.data.camellia = {};
+    const camBucket = state.data.camellia;
+    const camStale = [];
+    dates.forEach((dateStr, i) => {
+      const cached = camBucket[dateStr];
+      const ttlH = CACHE_TTL(i);
+      const fresh = cached && !cached.isMock && !cached.camInterpolated &&
+                    (Date.now() - (cached.fetchedAt || 0)) < ttlH * 3600 * 1000;
+      if (fresh) return;
+      if (i <= 6) camStale.push(dateStr);
+      else if (i <= 30 && i % 4 === 0) camStale.push(dateStr);
+      else if (i > 30 && i <= 60 && i % 7 === 0) camStale.push(dateStr);
+      else if (i > 60 && i % 14 === 0) camStale.push(dateStr);
+    });
+    const camToFetch = camStale.slice(0, 15);    // 카멜리아 서버 보호 : 호출 15건/재조회
+    spinText.textContent = `카멜리아 호출 중 · ${camToFetch.length}건`;
+    let camCalls = 0;
+    const CAM_BATCH = 3;    // 공공 사이트 → 작은 배치
+    for (let b = 0; b < camToFetch.length; b += CAM_BATCH) {
+      const batch = camToFetch.slice(b, b + CAM_BATCH);
+      await Promise.all(batch.map(async dateStr => {
+        try {
+          const cam = await camelliaFetch(dateStr);
+          if (cam) { camBucket[dateStr] = cam; camCalls++; }
+        } catch (e) {
+          // 404 / Worker 미지원 / 접속 실패 — 조용히 넘어감
+          console.warn('[Camellia]', dateStr, e.message || e);
+        }
+      }));
+      if (b + CAM_BATCH < camToFetch.length) await new Promise(r => setTimeout(r, 400));
+    }
+    interpolateCamellia(dates);
     saveData();
-    document.getElementById('statusMode').textContent = `SerpApi · 이번 재조회 ${totalCalls}회 호출`;
+    document.getElementById('statusMode').textContent =
+      `SerpApi · 이번 재조회 ${totalCalls}회 호출 · 카멜리아 ${camCalls}건`;
   }
 
   // 활성 bucket (편도 양방향 OR 왕복 rt_N) 전부 ferryRec 재계산
@@ -1033,6 +1105,107 @@ async function serpApiFetch(dateStr, dir) {
 }
 
 // ══════════════════════════════════════════════════════════════════
+//  카멜리아 (뉴카멜리아호 PUS↔FUK 야간 페리) 호출 — 2-step 세션
+// ══════════════════════════════════════════════════════════════════
+// 프록시 경유 (CORS + 세션 쿠키 필요). PUS→FUK 편도 1건만 샘플링 —
+// 같은 날짜 FUK→PUS 는 대칭 가정, 왕복은 편도×2 로 추산 (후처리).
+async function camelliaFetch(dateStr) {
+  // 경로 : localhost 는 /camellia (proxy_server.py), 그 외는 전용 Camellia Worker + /camellia.
+  //        SerpApi 워커와 분리 — 각자 전용 도메인.
+  const useLocal  = !CAMELLIA_PROXY;
+  const useWorker = CAMELLIA_PROXY && CAMELLIA_PROXY.startsWith('https://');
+  let base;
+  if (useLocal)       base = new URL('/camellia', location.origin);
+  else if (useWorker) base = new URL(CAMELLIA_PROXY.replace(/\/+$/, '') + '/camellia');
+  else return null;    // Worker 미설정 → 카멜리아 데이터 생략
+
+  base.searchParams.set('oufuku', '1');      // 1=편도
+  base.searchParams.set('ow',      '2');     // PUS 코드
+  base.searchParams.set('ow_date', dateStr);
+  base.searchParams.set('rt',      '1');     // FUK 코드
+  base.searchParams.set('rt_date', '');
+  base.searchParams.set('number',  '1');
+  base.searchParams.set('process', '1');     // 1=가는편
+  base.searchParams.set('harbor',  '2');     // 2=부산 출발
+  base.searchParams.set('date',    dateStr);
+
+  const res = await fetch(base.toString());
+  if (!res.ok) throw new Error('Camellia HTTP ' + res.status);
+  const html = await res.text();
+  return parseCamelliaHTML(html, dateStr);
+}
+
+// koreaferry.co.kr plan HTML 파싱.
+//   tr.plan[data-trplan=ID]
+//     ├ span.plan-name   → 등급명
+//     ├ b.lead           → 가격 (KRW, 숫자+쉼표)
+//     └ td[colspan='4']  → 예약 불가 사유 (있으면 available=false)
+function parseCamelliaHTML(html, dateStr) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const plans = [];
+  doc.querySelectorAll('tr.plan').forEach(tr => {
+    const nameEl = tr.querySelector('span.plan-name, .plan-name');
+    const priceEl = tr.querySelector('b.lead, .lead');
+    const naEl = tr.querySelector('td[colspan="4"]');
+    const name = nameEl ? nameEl.textContent.trim() : '';
+    const priceText = priceEl ? priceEl.textContent.trim() : '';
+    const price = +priceText.replace(/[^\d]/g, '') || null;
+    const planId = tr.dataset.trplan || tr.getAttribute('data-trplan') || '';
+    const available = !naEl && !!price;
+    const note = naEl ? naEl.textContent.replace(/\s+/g, ' ').trim() : '';
+    plans.push({ planId, name, price, available, note });
+  });
+  const availablePrices = plans.filter(p => p.available).map(p => p.price);
+  const krw_min = availablePrices.length ? Math.min(...availablePrices) : null;
+  return {
+    krw_min,
+    plans,
+    fetchedAt: Date.now(),
+    dateStr,
+  };
+}
+
+// 더미 카멜리아 데이터 — 실제 가격대 기반 (공식 운임표 참고)
+function mockCamellia(date) {
+  const dow = date.getDay();
+  // 주말(금·토 출발) 할증 — 실제 카멜리아도 피크 요금 적용
+  const weekendPrem = (dow === 5 || dow === 6) ? 1.15 : 1.00;
+  const seasonPrem  = (date.getMonth() === 7 || date.getMonth() === 11) ? 1.08 : 1.00; // 8월·12월 성수기
+  const base2nd = Math.round(70000 * weekendPrem * seasonPrem / 500) * 500;
+  const baseBed = Math.round(85000 * weekendPrem * seasonPrem / 500) * 500;
+  const base1st = Math.round(100000 * weekendPrem * seasonPrem / 500) * 500;
+  const plans = [
+    { planId:'144', name:'2등 일반실 (실속 할인Ⅰ)', price:base2nd, available:true,  note:'' },
+    { planId:'173', name:'2등 침대실 (실속 할인Ⅰ)', price:baseBed, available:true,  note:'' },
+    { planId:'145', name:'1등 양실 (실속 할인Ⅰ)',   price:base1st,
+      available:Math.random() > 0.35, note:'인원부족' },
+  ];
+  const availablePrices = plans.filter(p => p.available).map(p => p.price);
+  const krw_min = availablePrices.length ? Math.min(...availablePrices) : null;
+  return { krw_min, plans, fetchedAt: Date.now(), isMock: true };
+}
+
+// 카멜리아 샘플 사이 보간 — 항공 interpolateMissing 과 동일 로직
+function interpolateCamellia(dates) {
+  const bucket = state.data.camellia;
+  if (!bucket) return;
+  let last = null;
+  dates.forEach(ds => {
+    if (bucket[ds] && bucket[ds].krw_min) last = { ...bucket[ds], camInterpolated:false };
+    else if (last) bucket[ds] = { ...last, camInterpolated:true };
+  });
+  last = null;
+  for (let i = dates.length - 1; i >= 0; i--) {
+    const ds = dates[i];
+    if (bucket[ds] && bucket[ds].krw_min && !bucket[ds].camInterpolated) {
+      last = { ...bucket[ds], camInterpolated:false };
+    } else if (!bucket[ds] && last) {
+      bucket[ds] = { ...last, camInterpolated:true };
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
 //  캘린더 렌더 — 양방향 2개 섹션, 각 4개월
 // ══════════════════════════════════════════════════════════════════
 function renderCalendar() {
@@ -1147,9 +1320,23 @@ function renderMonth(firstOfMonth, rangeStart, rangeEnd, dir) {
       const interp = dat.interpolated ? '<span title="보간값" style="font-size:9px;color:var(--text3);margin-left:2px">~</span>' : '';
       const interpStyle = dat.interpolated ? 'style="opacity:.72"' : '';
       const flightsCnt = (dat.flights && dat.flights.length) ? dat.flights.length : 0;
+      // 카멜리아 가격 (원화 전용 — 다른 통화 모드에선 숨김). 왕복 모드는 편도×2 추산.
+      const cam = (state.settings.currency === 'KRW' && state.data.camellia)
+                    ? state.data.camellia[dStr] : null;
+      let camRow = '';
+      if (cam && cam.krw_min) {
+        const camPrice = isRound ? cam.krw_min * 2 : cam.krw_min;
+        const camStyle = cam.camInterpolated || dat.interpolated ? 'style="opacity:.72"' : '';
+        camRow = `<div class="cam-row" ${camStyle}>
+                    <span class="lbl">카멜리아</span>
+                    <span class="val">${WON_MAN(camPrice)}</span>
+                    <span class="k">${abbrUnit()}</span>
+                  </div>`;
+      }
       cell.innerHTML =
         `<div class="d${dowCls}" ${interpStyle}>${d}${todayDot}${interp}<span class="lv ${dat.level}"></span></div>
          <div class="air-row" ${interpStyle}><span class="lbl">항공</span><span class="val">${WON_MAN(bp)}${abbrUnit()}</span></div>
+         ${camRow}
          <div class="ferry" ${interpStyle}><span class="lbl">추천</span><span class="val">${WON_MAN(dat.ferryRec)}</span><span class="k">${abbrUnit()}</span></div>
          ${flightsCnt ? `<div class="cnt" ${interpStyle}>${flightsCnt}편</div>` : ''}`;
     } else if (inR && !past) {
@@ -1288,6 +1475,40 @@ function populateModal(dStr, dirKey) {
       </div>`;
   }).join('');
 
+  // 카멜리아 비교 섹션 — 원화 모드에서만 표시 (가격 원화 고정)
+  const cam = (state.settings.currency === 'KRW' && state.data.camellia)
+                ? state.data.camellia[dStr] : null;
+  let camSection = '';
+  if (cam && cam.krw_min) {
+    const planRows = (cam.plans || []).map(p => `
+      <div class="row">
+        <div class="nm">${p.name || '—'}</div>
+        <div class="pr ${p.available ? '' : 'na'}">${p.price ? p.price.toLocaleString('ko-KR') + '원' : '—'}</div>
+        <div class="st ${p.available ? '' : 'na'}">${p.available ? '예약 가능' : (p.note || '예약 불가')}</div>
+      </div>`).join('');
+    const camTotal = state.settings.tripType === 'round' ? cam.krw_min * 2 : cam.krw_min;
+    const airRef = basePrice(d);    // 현재 기준 통화의 항공 운임
+    // 항공-카멜리아 비교 — 원화 모드이므로 airRef 도 원화
+    const diff = airRef - camTotal;
+    const diffPct = airRef > 0 ? (diff / airRef * 100) : 0;
+    const diffTxt = diff > 0
+      ? `카멜리아가 <b>${diff.toLocaleString('ko-KR')}원</b> 저렴 (<b>${diffPct.toFixed(1)}%↓</b>)`
+      : `카멜리아가 <b>${Math.abs(diff).toLocaleString('ko-KR')}원</b> 비쌈 (<b>${Math.abs(diffPct).toFixed(1)}%↑</b>)`;
+    const tripSfx = state.settings.tripType === 'round' ? ` · 왕복은 편도×2 추산` : '';
+    camSection = `
+      <div class="cam-box">
+        <div class="cam-head">
+          <span class="nm">카멜리아</span>
+          <span class="sub">뉴카멜리아호 · PUS→FUK 야간 페리${tripSfx}${cam.isMock ? ' · 더미' : ''}${cam.camInterpolated ? ' · 보간값' : ''}</span>
+          <span class="min">${camTotal.toLocaleString('ko-KR')}<span class="u">원 최저</span></span>
+        </div>
+        <div class="cam-grid">
+          ${planRows || '<div class="empty-hint" style="grid-column:1/-1">등급 데이터 없음</div>'}
+        </div>
+        <div class="delta">항공 ${ ({min:'최저', avg:'평균', max:'최고'})[state.settings.basis] }가 대비 ${diffTxt}</div>
+      </div>`;
+  }
+
   body.innerHTML = `
     <div class="section-label">기준 선택 — 클릭하면 캘린더·추천 운임 전체 기준이 바뀝니다</div>
     <div class="summary-grid">
@@ -1296,6 +1517,8 @@ function populateModal(dStr, dirKey) {
       ${tile('max', '최고 운임', d.air_max, flights.length ? flights[flights.length-1].airline : '—')}
       ${ferryTile}
     </div>
+
+    ${camSection}
 
     <div>
       <div class="section-label">항공사별 운항편 (${flights.length}편) — 가격 오름차순</div>
@@ -1390,7 +1613,7 @@ function showKeyNotice(msg, type) {
 function clearCache() {
   if (!confirm('모든 캐시 데이터를 삭제합니다 (설정·키는 유지).\n계속하시겠습니까?')) return;
   localStorage.removeItem('fareOptData');
-  state.data = { out:{}, ret:{} };
+  state.data = { out:{}, ret:{}, rt_1:{}, rt_2:{}, rt_3:{}, rt_4:{}, camellia:{} };
   state.selected = null;
   renderCalendar();
   renderDetail();
