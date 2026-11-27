@@ -449,15 +449,13 @@ const QUOTA_WARN_THRESHOLD = 200;
 const HARDCODED_SERPAPI_KEY = '';
 
 // SerpApi 는 브라우저에서 직접 호출 시 CORS 가 막힘 (서버사이드 설계).
-//
-// 방법 1 (권장) : 로컬 Python 프록시 사용
-//   `python proxy_server.py` 로 서버 실행 → CORS_PROXY='' 로 두면
-//   자동으로 /serpapi 경로를 거쳐 호출됨 (키 외부 노출 없음).
-//
-// 방법 2 : 공개 CORS 프록시 (서비스 유료화·불안정 — 임시용)
-//   const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
-//   const CORS_PROXY = 'https://api.codetabs.com/v1/proxy?quest=';
-const CORS_PROXY = '';   // 로컬 proxy_server.py 사용 중
+// 환경별 자동 라우팅:
+//   localhost        → /serpapi (proxy_server.py)
+//   그 외 (배포)     → Cloudflare Worker (환경변수에 키 숨김)
+// Worker 배포 후 아래 URL 교체. '' 로 두면 로컬 모드 전용.
+const CLOUDFLARE_WORKER_URL = 'https://fare-worker.lsuk3165.workers.dev';
+const _isLocalhost = ['localhost', '127.0.0.1'].includes(location.hostname);
+const CORS_PROXY = (_isLocalhost || !CLOUDFLARE_WORKER_URL) ? '' : CLOUDFLARE_WORKER_URL;
 
 // 한국-일본 노선 주요 항공사. logo URL 은 Google Flights 가 쓰는 CDN (SerpApi 응답과 동일).
 const AIRLINES = [
@@ -842,13 +840,16 @@ function interpolateMissing(dates, dirKey) {
 //  SerpApi 호출 — Google Flights
 // ══════════════════════════════════════════════════════════════════
 async function serpApiFetch(dateStr, dir) {
-  // CORS_PROXY='' 면 로컬 proxy_server.py 를 쓴다 ("/serpapi?..." 경로 호출)
-  //   proxy_server.py 가 SerpApi 로 투명 전달하며 CORS 헤더 추가.
-  // CORS_PROXY 값이 있으면 공개 프록시 경유.
+  // 3가지 경로:
+  //   (a) localhost : /serpapi 경로 (proxy_server.py)
+  //   (b) 배포 + Worker URL 설정됨 : Cloudflare Worker (키 Worker 환경변수에서 주입)
+  //   (c) 그 외 : 공개 CORS 프록시 (레거시, 거의 안 씀)
   const useLocal = !CORS_PROXY;
-  const url = useLocal
-    ? new URL('/serpapi', location.origin)
-    : new URL('https://serpapi.com/search.json');
+  const useWorker = CORS_PROXY && CORS_PROXY.startsWith('https://') &&
+                    !CORS_PROXY.includes('?url=') && !CORS_PROXY.includes('?quest=');
+  const url = useLocal ? new URL('/serpapi', location.origin)
+            : useWorker ? new URL(CORS_PROXY)
+            : new URL('https://serpapi.com/search.json');
   url.searchParams.set('engine',       'google_flights');
   url.searchParams.set('departure_id', dir.from);
   url.searchParams.set('arrival_id',   dir.to);
@@ -858,20 +859,21 @@ async function serpApiFetch(dateStr, dir) {
   url.searchParams.set('currency',     state.settings.currency || 'KRW');
   url.searchParams.set('hl',           meta.hlApi);
   url.searchParams.set('gl',           meta.glApi);
-  // 좌석등급 · 인원 · 직항 (PUS↔FUK 은 애초에 직항만 운항하므로 고정)
   url.searchParams.set('travel_class', String(state.settings.travelClass || 1));
   url.searchParams.set('adults',       String(state.settings.adults || 1));
   if ((state.settings.children || 0) > 0) {
     url.searchParams.set('children',   String(state.settings.children));
   }
-  url.searchParams.set('stops',        '1');     // 1 = nonstop only (직항)
-  url.searchParams.set('api_key',      state.apiKey);
+  url.searchParams.set('stops',        '1');
+  // Worker 는 환경변수에서 키 주입 → URL 에 키 넣지 않음 (보안)
+  // 로컬·공개프록시 는 URL 에 키 넣음
+  if (!useWorker) url.searchParams.set('api_key', state.apiKey);
   const targetUrl = url.toString();
-  const fetchUrl = useLocal
+  const fetchUrl = (useLocal || useWorker)
     ? targetUrl
     : CORS_PROXY + encodeURIComponent('https://serpapi.com/search.json?' + url.searchParams.toString());
   console.log('[SerpApi]', dir.key, dateStr, targetUrl.replace(/api_key=[^&]+/, 'api_key=***'),
-              useLocal ? '(local proxy)' : '(public CORS proxy)');
+              useLocal ? '(local proxy)' : useWorker ? '(cloudflare worker)' : '(public CORS proxy)');
   const res = await fetch(fetchUrl);
   if (!res.ok) {
     const txt = await res.text().catch(() => '');
