@@ -471,13 +471,16 @@ const AIRLINES = [
 //  상태 & 저장
 // ══════════════════════════════════════════════════════════════════
 // 키 우선순위 : localStorage > 하드코딩 > ''
+// Worker 모드에선 키가 브라우저에 없어도 됨 (Worker 환경변수에서 주입)
 const _initialKey = localStorage.getItem('serpApiKey') || HARDCODED_SERPAPI_KEY || '';
+const _usingWorker = CORS_PROXY && CORS_PROXY.startsWith('https://') &&
+                     !CORS_PROXY.includes('?url=') && !CORS_PROXY.includes('?quest=');
 const state = {
   rangeStart: new Date(),
   data: loadData(),
   selected: null,
   settings: loadSettings(),
-  mock: !_initialKey,                         // 키 있으면 자동으로 실제 모드
+  mock: !_initialKey && !_usingWorker,       // 로컬 키 OR Worker 중 하나만 있으면 실제 모드
   apiKey: _initialKey,
   quota: loadQuota(),
 };
@@ -743,7 +746,7 @@ async function refreshAll() {
     spinSub.textContent = `${stepDone} / ${totalSteps}`;
   };
 
-  if (state.mock || !state.apiKey) {
+  if (state.mock || (!state.apiKey && !_usingWorker)) {
     for (const dir of DIRECTIONS) {
       for (let i = 0; i < dates.length; i++) {
         const dateStr = dates[i];
@@ -1249,7 +1252,8 @@ function clearCache() {
 }
 function onModeChange() {
   state.mock = document.getElementById('useMock').checked;
-  if (!state.mock && !state.apiKey) {
+  // Worker 모드면 로컬 키 필요 없음 (Worker 가 서버에서 키 주입)
+  if (!state.mock && !state.apiKey && !_usingWorker) {
     showKeyNotice('실제 모드는 키가 필요 — 더미 모드로 되돌림', 'warn');
     document.getElementById('useMock').checked = true;
     state.mock = true;
