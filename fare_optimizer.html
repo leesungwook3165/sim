@@ -949,9 +949,16 @@ async function refreshAll() {
     saveData();
     document.getElementById('statusMode').textContent =
       `SerpApi · 이번 재조회 ${totalCalls}회 호출`;
-    // ── 카멜리아 ── 전 날짜 실조회. 일자별 요금제가 달라 보간 불가 →
-    // 화면을 막지 않도록 백그라운드로 채우고 배치마다 캘린더 갱신 (await 안 함).
-    fillCamellia(dates, `SerpApi · 이번 재조회 ${totalCalls}회 호출`);
+    // ── 카멜리아 ── 전 날짜 실조회 (일자별 요금제가 달라 보간 불가).
+    // 스피너를 유지한 채 전부 받은 뒤 한 번에 캘린더에 반영.
+    spinText.textContent = '카멜리아 호출 중…';
+    spinSub.textContent = '0 / —'; spinBar.style.width = '0%'; pb.style.width = '0%';
+    await fillCamellia(dates, `SerpApi · 이번 재조회 ${totalCalls}회 호출`, (done, total) => {
+      const pct = (total ? done / total * 100 : 100).toFixed(1) + '%';
+      spinText.textContent = `카멜리아 호출 중 · ${total}일`;
+      spinSub.textContent = `${done} / ${total}`;
+      spinBar.style.width = pct; pb.style.width = pct;
+    });
   }
 
   // 활성 bucket (편도 양방향 OR 왕복 rt_N) 전부 ferryRec 재계산
@@ -1145,9 +1152,9 @@ function camView(cam) {
   return { price: Math.min(...listed), soldOut: true };
 }
 
-// 카멜리아 전 날짜 백그라운드 조회 — 가까운 날짜부터, TTL 내 캐시는 건너뜀.
+// 카멜리아 전 날짜 조회 — 가까운 날짜부터, TTL 내 캐시는 건너뜀. 렌더는 호출측에서 완료 후 1회.
 let _camRun = 0;
-async function fillCamellia(dates, statusPrefix) {
+async function fillCamellia(dates, statusPrefix, onProgress) {
   const run = ++_camRun;                       // 재조회 시 이전 실행 중단
   if (!state.data.camellia) state.data.camellia = {};
   const bucket = state.data.camellia;
@@ -1175,14 +1182,12 @@ async function fillCamellia(dates, statusPrefix) {
       done++;
     }));
     if (run !== _camRun) return;
-    statusEl.textContent = `${statusPrefix} · 카멜리아 ${done}/${toFetch.length}`;
-    renderCalendar();
+    if (onProgress) onProgress(done, toFetch.length);
     if (b % (CAM_BATCH * 5) === 0) saveData();
     if (b + CAM_BATCH < toFetch.length) await new Promise(r => setTimeout(r, 300));
   }
   saveData();
   statusEl.textContent = `${statusPrefix} · 카멜리아 ${done - fail}건` + (fail ? ` (실패 ${fail})` : '');
-  renderCalendar();
 }
 
 // 더미 카멜리아 데이터 — 실제 가격대 기반 (공식 운임표 참고)
